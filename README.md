@@ -1,16 +1,63 @@
-# React + Vite
+# Smart Solar Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React-based dashboard for monitoring and managing the Smart Solar IoT system.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dashboard**: Real-time overview of device status and telemetry data
+- **Device Management**: View and manage registered IoT devices
+- **Configuration**: Display gateway configuration and Modbus settings
+- **Telemetry**: Advanced data visualization and analytics
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 16+ and npm
+- Running Django backend at `http://localhost:8000`
 
-## Expanding the ESLint configuration
+## Installation
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start the development server:
+   ```bash
+   npm start
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## API Endpoints
+
+The frontend connects to these Django API endpoints:
+
+- `GET /api/devices/` - List all devices
+- `GET /api/config/` - Get gateway configuration
+- `GET /api/telemetry/` - Get telemetry data
+
+## Technologies Used
+
+- React 18 with TypeScript
+- React Router for navigation
+- Recharts for data visualization
+- Axios for API calls
+- CSS for styling
+
+## Development
+
+- `npm start` - Start development server
+- `npm build` - Build for production
+- `npm test` - Run tests
+
+## Architecture
+
+The frontend follows a component-based architecture:
+
+- `Dashboard` - Main overview with charts and metrics
+- `Devices` - Device management interface
+- `Configuration` - Configuration display
+- `Telemetry` - Data visualization and analytics
+- `Navbar` - Navigation component
+
+All components fetch data from the Django REST API and display it in user-friendly formats.
