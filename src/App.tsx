@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Login from './components/Login';
 import Devices from './components/Devices';
 import Configuration from './components/Configuration';
@@ -10,6 +11,7 @@ import Telemetry from './components/Telemetry';
 import Alerts from './components/Alerts';
 import SystemHealth from './components/SystemHealth';
 import Users from './components/Users';
+import Employees from './components/Employees';
 import DevicePresets from './components/DevicePresets';
 import Profile from './components/Profile';
 import Navbar from './components/Navbar';
@@ -60,6 +62,11 @@ function App() {
                 <ProtectedRoute>
                   <Users />
                 </ProtectedRoute>
+              } />
+              <Route path="/employees" element={
+                <AdminRoute>
+                  <Employees />
+                </AdminRoute>
               } />
               <Route path="/device-presets" element={
                 <ProtectedRoute>

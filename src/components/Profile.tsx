@@ -46,6 +46,7 @@ const Profile: React.FC = () => {
     try {
       setLoading(true);
       const data = await apiService.getProfile();
+      console.log('Profile data received:', data);
       setProfile(data);
       setEditForm({
         first_name: data.first_name || '',
@@ -56,6 +57,7 @@ const Profile: React.FC = () => {
       });
       setError(null);
     } catch (err) {
+      console.error('Profile fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);

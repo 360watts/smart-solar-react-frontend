@@ -11,6 +11,7 @@ interface User {
   mobile_number?: string;
   address?: string;
   is_staff: boolean;
+  is_superuser: boolean;
 }
 
 interface AuthTokens {
@@ -80,6 +81,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Login response user data:', data.user);
+        console.log('is_staff:', data.user.is_staff);
+        console.log('is_superuser:', data.user.is_superuser);
         setUser(data.user);
         setTokens(data.tokens);
 
@@ -136,9 +140,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     updateUser,
     isAuthenticated: !!user && !!tokens,
-    isAdmin: !!(user && user.is_staff),
+    isAdmin: !!(user && user.is_superuser),
     loading,
   };
+
+  console.log('AuthContext - user:', user);
+  console.log('AuthContext - isAdmin:', !!(user && user.is_superuser));
 
   return (
     <AuthContext.Provider value={value}>

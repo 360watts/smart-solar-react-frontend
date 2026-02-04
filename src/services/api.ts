@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
@@ -136,6 +136,17 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+  }
+
+  async createEmployee(employeeData: any): Promise<any> {
+    return this.request('/users/create/', {
+      method: 'POST',
+      body: JSON.stringify({ ...employeeData, is_staff: true }),
+    });
+  }
+
+  async getUserDevices(userId: number): Promise<any[]> {
+    return this.request(`/users/${userId}/devices/`);
   }
 
   async updateUser(userId: number, data: any): Promise<any> {

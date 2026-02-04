@@ -10,7 +10,16 @@ interface User {
   mobile_number?: string;
   address?: string;
   is_staff: boolean;
+  is_superuser: boolean;
   date_joined: string;
+}
+
+interface Device {
+  id: number;
+  serial_number: string;
+  name: string;
+  status: string;
+  last_heartbeat?: string;
 }
 
 const Users: React.FC = () => {
@@ -21,6 +30,9 @@ const Users: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userDevices, setUserDevices] = useState<Device[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -119,10 +131,34 @@ const Users: React.FC = () => {
       try {
         await apiService.deleteUser(user.id);
         setUsers(users.filter(u => u.id !== user.id));
+        setFilteredUsers(filteredUsers.filter(u => u.id !== user.id));
+        if (selectedUser?.id === user.id) {
+          setSelectedUser(null);
+          setUserDevices([]);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete user');
       }
     }
+  };
+
+  const handleViewUser = async (user: User) => {
+    setSelectedUser(user);
+    setLoadingDevices(true);
+    try {
+      const devices = await apiService.getUserDevices(user.id);
+      setUserDevices(devices);
+    } catch (err) {
+      // If no devices endpoint or error, just show empty
+      setUserDevices([]);
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const handleBackToList = () => {
+    setSelectedUser(null);
+    setUserDevices([]);
   };
 
   const handleCancel = () => {
@@ -136,6 +172,171 @@ const Users: React.FC = () => {
 
   if (error) {
     return <div className="error">Error: {error}</div>;
+  }
+
+  // Show user dashboard when a user is selected
+  if (selectedUser) {
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+          <button 
+            onClick={handleBackToList} 
+            className="btn btn-secondary"
+            style={{ marginRight: '15px' }}
+          >
+            ← Back to Users
+          </button>
+          <h1 style={{ margin: 0 }}>{selectedUser.first_name} {selectedUser.last_name}'s Dashboard</h1>
+        </div>
+
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <h2>User Information</h2>
+            <button onClick={() => handleEdit(selectedUser)} className="btn">
+              Edit User
+            </button>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+              <div>
+                <strong>Username:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedUser.username}</p>
+              </div>
+              <div>
+                <strong>Email:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedUser.email}</p>
+              </div>
+              <div>
+                <strong>Mobile:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedUser.mobile_number || '-'}</p>
+              </div>
+              <div>
+                <strong>Address:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedUser.address || '-'}</p>
+              </div>
+              <div>
+                <strong>Joined:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  {selectedUser.date_joined 
+                    ? new Date(selectedUser.date_joined).toLocaleDateString() 
+                    : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h2>Assigned Devices ({userDevices.length})</h2>
+          </div>
+          {loadingDevices ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>Loading devices...</div>
+          ) : userDevices.length > 0 ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'center' }}>Serial Number</th>
+                  <th style={{ textAlign: 'center' }}>Name</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
+                  <th style={{ textAlign: 'center' }}>Last Heartbeat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userDevices.map((device) => (
+                  <tr key={device.id}>
+                    <td>{device.serial_number}</td>
+                    <td>{device.name}</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: device.status === 'online' ? '#27ae60' : '#e74c3c',
+                        color: 'white',
+                        fontSize: '0.85em'
+                      }}>
+                        {device.status}
+                      </span>
+                    </td>
+                    <td>
+                      {device.last_heartbeat 
+                        ? new Date(device.last_heartbeat).toLocaleString() 
+                        : 'Never'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+              No devices assigned to this user yet.
+            </div>
+          )}
+        </div>
+
+        {editingUser && (
+          <div className="modal">
+            <div className="modal-content">
+              <h3>Edit User: {editingUser.username}</h3>
+              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label>Email:</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label>Mobile Number:</label>
+                  <input
+                    type="tel"
+                    value={editForm.mobile_number}
+                    onChange={(e) => setEditForm({...editForm, mobile_number: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: '15px' }}>
+                  <label>Address:</label>
+                  <textarea
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn">Save</button>
+                  <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -171,7 +372,12 @@ const Users: React.FC = () => {
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr 
+                key={user.id} 
+                onClick={() => handleViewUser(user)}
+                style={{ cursor: 'pointer' }}
+                className="clickable-row"
+              >
                 <td>{user.first_name} {user.last_name}</td>
                 <td>{user.email}</td>
                 <td>{user.mobile_number || '-'}</td>
@@ -183,7 +389,7 @@ const Users: React.FC = () => {
                     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
                   })()}
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
