@@ -111,7 +111,7 @@ const Navbar: React.FC = () => {
             <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
               <p className="user-name">{user.first_name} {user.last_name}</p>
               <p className="user-email">{user.email}</p>
-              <p className="user-role" style={{ fontSize: '0.85rem', color: '#3498db', marginTop: '5px' }}>
+              <p className="user-role">
                 {user.is_superuser ? '👑 Admin' : user.is_staff ? '👤 Employee' : '👤 User'}
               </p>
             </Link>

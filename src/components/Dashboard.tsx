@@ -102,8 +102,8 @@ const Dashboard: React.FC = () => {
   const getDeviceStatusData = () => {
     if (!systemHealth) return [];
     return [
-      { name: 'Active', value: systemHealth.active_devices, color: '#4caf50' },
-      { name: 'Inactive', value: systemHealth.total_devices - systemHealth.active_devices, color: '#f44336' }
+      { name: 'Active', value: systemHealth.active_devices, color: '#10b981' },
+      { name: 'Inactive', value: systemHealth.total_devices - systemHealth.active_devices, color: '#ef4444' }
     ];
   };
 
@@ -112,9 +112,9 @@ const Dashboard: React.FC = () => {
     const warning = alerts.filter(a => a.severity === 'warning').length;
     const info = alerts.filter(a => a.severity === 'info').length;
     return [
-      { name: 'Critical', value: critical, color: '#f44336' },
-      { name: 'Warning', value: warning, color: '#ff9800' },
-      { name: 'Info', value: info, color: '#2196f3' }
+      { name: 'Critical', value: critical, color: '#ef4444' },
+      { name: 'Warning', value: warning, color: '#f59e0b' },
+      { name: 'Info', value: info, color: '#3b82f6' }
     ];
   };
 
@@ -203,17 +203,24 @@ const Dashboard: React.FC = () => {
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+                <XAxis dataKey="time" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '8px',
+                    color: '#f8fafc'
+                  }}
+                />
                 <Legend />
                 {latestValues.map((item, index) => (
                   <Line
                     key={item.data_type}
                     type="monotone"
                     dataKey={item.data_type}
-                    stroke={`hsl(${index * 60}, 70%, 50%)`}
+                    stroke={`hsl(${index * 60 + 240}, 70%, 60%)`}
                     strokeWidth={2}
                     dot={false}
                   />
@@ -240,7 +247,14 @@ const Dashboard: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '8px',
+                    color: '#f8fafc'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -254,11 +268,18 @@ const Dashboard: React.FC = () => {
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={alertSeverityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8">
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    border: '1px solid rgba(148, 163, 184, 0.2)',
+                    borderRadius: '8px',
+                    color: '#f8fafc'
+                  }}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
                   {alertSeverityData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}

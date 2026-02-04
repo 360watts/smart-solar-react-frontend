@@ -220,13 +220,13 @@ const Devices: React.FC = () => {
                   })()}
                 </td>
                 <td>
-                  <button onClick={() => handleEdit(device)} style={{ background: 'none', border: 'none', cursor: 'pointer' }} title="Edit">
+                  <button onClick={() => handleEdit(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button onClick={() => handleDelete(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'red' }} title="Delete">
+                  <button onClick={() => handleDelete(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)' }} title="Delete">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -271,7 +271,7 @@ const Devices: React.FC = () => {
                     autoComplete="off"
                   />
                   {(editingDevice ? editForm.user : createForm.user) && (
-                    <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>
+                    <div style={{ marginTop: '8px', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
                       Selected: {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
                       <button
                         type="button"
@@ -283,7 +283,7 @@ const Devices: React.FC = () => {
                           }
                           setUserSearchTerm('');
                         }}
-                        style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'red', cursor: 'pointer' }}
+                        style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'var(--danger-color, #ef4444)', cursor: 'pointer', fontSize: '1.25rem' }}
                       >
                         ×
                       </button>
@@ -295,12 +295,13 @@ const Devices: React.FC = () => {
                       top: '100%',
                       left: 0,
                       right: 0,
-                      background: 'white',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
+                      background: 'var(--bg-secondary, #0f172a)',
+                      border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                      borderRadius: '10px',
                       maxHeight: '200px',
                       overflowY: 'auto',
-                      zIndex: 1000
+                      zIndex: 1000,
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)'
                     }}>
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
@@ -316,19 +317,22 @@ const Devices: React.FC = () => {
                               setShowUserDropdown(false);
                             }}
                             style={{
-                              padding: '8px 12px',
+                              padding: '12px 16px',
                               cursor: 'pointer',
-                              borderBottom: '1px solid #eee',
-                              background: (editingDevice ? editForm.user : createForm.user) === user.username ? '#f0f0f0' : 'white'
+                              borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                              background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                              color: 'var(--text-primary, #f8fafc)',
+                              transition: 'all 0.15s ease',
+                              fontSize: '0.875rem'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? '#f0f0f0' : 'white'}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
                           >
                             {user.first_name} {user.last_name} ({user.username}) - {user.email}
                           </div>
                         ))
                       ) : (
-                        <div style={{ padding: '8px 12px', color: '#666' }}>
+                        <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
                           {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
                         </div>
                       )}

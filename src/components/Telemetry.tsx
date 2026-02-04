@@ -169,17 +169,24 @@ const Telemetry: React.FC = () => {
         <div className="chart-container">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+              <XAxis dataKey="time" stroke="#64748b" fontSize={12} />
+              <YAxis stroke="#64748b" fontSize={12} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#0f172a', 
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: '8px',
+                  color: '#f8fafc'
+                }}
+              />
               <Legend />
               {dataTypes.map((type, index) => (
                 <Line
                   key={type}
                   type="monotone"
                   dataKey={type}
-                  stroke={`hsl(${index * 60}, 70%, 50%)`}
+                  stroke={`hsl(${index * 60 + 240}, 70%, 60%)`}
                   strokeWidth={2}
                 />
               ))}
