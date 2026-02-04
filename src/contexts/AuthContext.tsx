@@ -81,9 +81,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Login response user data:', data.user);
-        console.log('is_staff:', data.user.is_staff);
-        console.log('is_superuser:', data.user.is_superuser);
         setUser(data.user);
         setTokens(data.tokens);
 
@@ -143,9 +140,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAdmin: !!(user && user.is_superuser),
     loading,
   };
-
-  console.log('AuthContext - user:', user);
-  console.log('AuthContext - isAdmin:', !!(user && user.is_superuser));
 
   return (
     <AuthContext.Provider value={value}>

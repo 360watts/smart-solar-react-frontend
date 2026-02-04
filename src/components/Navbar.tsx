@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
@@ -95,8 +96,10 @@ const Navbar: React.FC = () => {
     },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
+    // Navigate to login with replace to clear history
+    navigate('/login', { replace: true });
   };
 
   return (

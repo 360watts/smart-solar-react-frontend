@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,8 +8,15 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect authenticated users away from login page
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/devices', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +26,8 @@ const Login: React.FC = () => {
     try {
       const success = await login(username, password);
       if (success) {
-        navigate('/');
+        // Use replace: true to prevent back button returning to login
+        navigate('/devices', { replace: true });
       } else {
         setError('Invalid username or password');
       }
@@ -29,6 +37,16 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="auth-container">
