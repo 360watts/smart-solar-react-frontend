@@ -29,14 +29,6 @@ interface AuthContextType {
   loading: boolean;
 }
 
-interface RegisterData {
-  username: string;
-  email: string;
-  password: string;
-  first_name?: string;
-  last_name?: string;
-}
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
