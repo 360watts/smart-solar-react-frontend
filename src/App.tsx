@@ -1,11 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Login';
-import Register from './components/Register';
-import Dashboard from './components/Dashboard';
 import Devices from './components/Devices';
 import Configuration from './components/Configuration';
 import Telemetry from './components/Telemetry';
@@ -13,6 +11,7 @@ import Alerts from './components/Alerts';
 import SystemHealth from './components/SystemHealth';
 import Users from './components/Users';
 import DevicePresets from './components/DevicePresets';
+import Profile from './components/Profile';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -25,12 +24,11 @@ function App() {
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
 
               {/* Protected routes */}
               <Route path="/" element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Navigate to="/devices" replace />
                 </ProtectedRoute>
               } />
               <Route path="/devices" element={
@@ -66,6 +64,11 @@ function App() {
               <Route path="/device-presets" element={
                 <ProtectedRoute>
                   <DevicePresets />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
             </Routes>

@@ -151,6 +151,55 @@ class ApiService {
     });
   }
 
+  // Profile Management (for current logged-in user)
+  async getProfile(): Promise<any> {
+    return this.request('/profile/');
+  }
+
+  async updateProfile(data: any): Promise<any> {
+    return this.request('/profile/update/', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(data: { current_password: string; new_password: string }): Promise<any> {
+    return this.request('/profile/change-password/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Customer Management (separate from staff users/employees)
+  async getCustomers(search?: string): Promise<any[]> {
+    const params = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.request(`/customers/${params}`);
+  }
+
+  async createCustomer(customerData: any): Promise<any> {
+    return this.request('/customers/create/', {
+      method: 'POST',
+      body: JSON.stringify(customerData),
+    });
+  }
+
+  async getCustomer(customerId: number): Promise<any> {
+    return this.request(`/customers/${customerId}/`);
+  }
+
+  async updateCustomer(customerId: number, data: any): Promise<any> {
+    return this.request(`/customers/${customerId}/update/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCustomer(customerId: number): Promise<any> {
+    return this.request(`/customers/${customerId}/delete/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getPresets(): Promise<any[]> {
     return this.request('/presets/');
   }

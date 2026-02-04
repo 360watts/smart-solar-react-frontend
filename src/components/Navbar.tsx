@@ -4,24 +4,24 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
 
   const navItems = [
     {
-      path: '/',
-      label: 'Dashboard',
+      path: '/users',
+      label: 'Users',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
         </svg>
       )
     },
     {
       path: '/devices',
       label: 'Devices',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -31,18 +31,9 @@ const Navbar: React.FC = () => {
       )
     },
     {
-      path: '/users',
-      label: 'Users',
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-      )
-    },
-    {
       path: '/configuration',
       label: 'Configuration',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3"></circle>
@@ -53,6 +44,7 @@ const Navbar: React.FC = () => {
     {
       path: '/telemetry',
       label: 'Telemetry',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="22" y1="12" x2="2" y2="12"></line>
@@ -65,6 +57,7 @@ const Navbar: React.FC = () => {
     {
       path: '/alerts',
       label: 'Alerts',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -76,6 +69,7 @@ const Navbar: React.FC = () => {
     {
       path: '/device-presets',
       label: 'Device Presets',
+      adminOnly: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -98,8 +92,13 @@ const Navbar: React.FC = () => {
         <h2>Smart Solar</h2>
         {isAuthenticated && user && (
           <div className="user-info">
-            <p className="user-name">{user.first_name} {user.last_name}</p>
-            <p className="user-email">{user.email}</p>
+            <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <p className="user-name">{user.first_name} {user.last_name}</p>
+              <p className="user-email">{user.email}</p>
+              <p className="user-role" style={{ fontSize: '0.85rem', color: '#3498db', marginTop: '5px' }}>
+                {user.is_staff ? '👑 Admin' : '👤 Employee'}
+              </p>
+            </Link>
           </div>
         )}
       </div>
@@ -107,7 +106,7 @@ const Navbar: React.FC = () => {
       {isAuthenticated ? (
         <>
           <ul className="sidebar-nav">
-            {navItems.map((item) => (
+            {navItems.filter(item => !item.adminOnly || isAdmin).map((item) => (
               <li key={item.path} className={location.pathname === item.path ? 'active' : ''}>
                 <Link to={item.path} className="sidebar-link">
                   <span className="sidebar-icon">{item.icon}</span>
@@ -136,15 +135,6 @@ const Navbar: React.FC = () => {
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
             Login
-          </Link>
-          <Link to="/register" className="auth-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <line x1="19" y1="8" x2="19" y2="14"></line>
-              <line x1="22" y1="11" x2="16" y2="11"></line>
-            </svg>
-            Register
           </Link>
         </div>
       )}

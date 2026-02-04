@@ -35,11 +35,21 @@ const Login: React.FC = () => {
       <div className="auth-card">
         <div className="auth-header">
           <h1>Smart Solar Monitor</h1>
-          <p>Sign in to your account</p>
+          <p>Employee & Admin Access</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <div className="auth-error">{error}</div>}
+
+          <div className="login-info-box">
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '10px' }}>
+              <strong>Access Levels:</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '15px', fontSize: '0.85rem' }}>
+              <span style={{ color: '#3498db' }}>👑 Admin - Full Access</span>
+              <span style={{ color: '#666' }}>👤 Employee - Standard Access</span>
+            </div>
+          </div>
 
           <div className="form-group" style={{ marginBottom: '15px' }}>
             <label htmlFor="username">Username</label>
@@ -73,10 +83,6 @@ const Login: React.FC = () => {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="auth-links">
-          <p>Don't have an account? <Link to="/register">Sign up</Link></p>
-        </div>
       </div>
     </div>
   );

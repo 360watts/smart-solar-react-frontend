@@ -10,6 +10,7 @@ interface User {
   last_name: string;
   mobile_number?: string;
   address?: string;
+  is_staff: boolean;
 }
 
 interface AuthTokens {
@@ -21,9 +22,10 @@ interface AuthContextType {
   user: User | null;
   tokens: AuthTokens | null;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   loading: boolean;
 }
 
@@ -104,29 +106,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (userData: RegisterData): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (response.ok) {
-        // Registration successful, but don't auto-login
-        return true;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      return false;
-    }
-  };
-
   const logout = async () => {
     try {
       if (tokens?.refresh) {
@@ -150,13 +129,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('authUser', JSON.stringify(updatedUser));
+    }
+  };
+
   const value: AuthContextType = {
     user,
     tokens,
     login,
-    register,
     logout,
+    updateUser,
     isAuthenticated: !!user && !!tokens,
+    isAdmin: !!(user && user.is_staff),
     loading,
   };
 
