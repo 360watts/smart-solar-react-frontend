@@ -707,6 +707,14 @@ p {
   margin: var(--space-5) 0;
 }
 
+.form-group:first-child {
+  margin-top: 0;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
 .form-group label {
   display: block;
   margin-bottom: var(--space-2);
@@ -781,9 +789,19 @@ p {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
+  padding: var(--space-5) var(--space-6);
   border-top: 1px solid var(--border-color);
+  background: var(--bg-glass);
+  flex-shrink: 0;
+  margin: 0;
+}
+
+/* Make form actions sticky in modal */
+.modal-content .form-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  z-index: 10;
 }
 
 .search-input {
@@ -978,6 +996,7 @@ p {
   z-index: 2000;
   padding: var(--space-5);
   animation: fadeIn 0.25s ease;
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {
@@ -992,10 +1011,13 @@ p {
   padding: 0;
   width: 90%;
   max-width: 520px;
-  max-height: 90vh;
-  overflow: hidden;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-xl);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+  position: relative;
 }
 
 @keyframes slideUp {
@@ -1017,12 +1039,41 @@ p {
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-glass);
+  flex-shrink: 0;
+}
+
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 .modal-body {
   padding: var(--space-6);
   overflow-y: auto;
-  max-height: calc(90vh - 140px);
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Scrollbar styling for modal body */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.05);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.3);
 }
 
 /* Large Modal (User Dashboard) */
@@ -1033,7 +1084,8 @@ p {
   width: 95%;
   max-width: 1400px;
   max-height: 95vh;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-xl);
   animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }

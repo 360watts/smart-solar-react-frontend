@@ -246,19 +246,20 @@ const Devices: React.FC = () => {
           <div className="modal-content">
             <h3>{editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}</h3>
             <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }}>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Device Serial:</label>
-                <input
-                  type="text"
-                  value={editingDevice ? editForm.device_serial : createForm.device_serial}
-                  onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>User:</label>
-                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Device Serial:</label>
+                  <input
+                    type="text"
+                    value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                    onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>User:</label>
+                  <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <input
                     type="text"
                     placeholder="Search and select user..."
@@ -340,7 +341,7 @@ const Devices: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
+              <div className="form-group">
                 <label>Config Version:</label>
                 <input
                   type="text"
@@ -349,14 +350,15 @@ const Devices: React.FC = () => {
                   autoComplete="off"
                 />
               </div>
-              <div className="form-actions">
-                <button type="submit" className="btn">{editingDevice ? 'Save' : 'Create'}</button>
-                <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
-              </div>
-            </form>
-          </div>
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn">{editingDevice ? 'Save' : 'Create'}</button>
+              <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 };
