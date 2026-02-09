@@ -217,78 +217,80 @@ const Employees: React.FC = () => {
           <div className="modal-content">
             <h3>{editingEmployee ? `Edit Employee: ${editingEmployee.username}` : 'Add New Employee'}</h3>
             <form onSubmit={(e) => { e.preventDefault(); editingEmployee ? handleSave() : handleCreate(); }}>
-              {creatingEmployee && (
-                <>
-                  <input type="text" autoComplete="username" style={{display: 'none'}} />
-                  <input type="password" autoComplete="current-password" style={{display: 'none'}} />
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label>Username:</label>
-                    <input
-                      type="text"
-                      value={createForm.username}
-                      onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
-                      required
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label>Password:</label>
-                    <input
-                      type="password"
-                      value={createForm.password}
-                      onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                      required
-                      autoComplete="new-password"
-                    />
-                  </div>
-                </>
-              )}
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>First Name:</label>
-                <input
-                  type="text"
-                  value={editingEmployee ? editForm.first_name : createForm.first_name}
-                  onChange={(e) => editingEmployee ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Last Name:</label>
-                <input
-                  type="text"
-                  value={editingEmployee ? editForm.last_name : createForm.last_name}
-                  onChange={(e) => editingEmployee ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Email:</label>
-                <input
-                  type="email"
-                  value={editingEmployee ? editForm.email : createForm.email}
-                  onChange={(e) => editingEmployee ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Mobile Number:</label>
-                <input
-                  type="tel"
-                  value={editingEmployee ? editForm.mobile_number : createForm.mobile_number}
-                  onChange={(e) => editingEmployee ? setEditForm({...editForm, mobile_number: e.target.value}) : setCreateForm({...createForm, mobile_number: e.target.value})}
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Address:</label>
-                <textarea
-                  value={editingEmployee ? editForm.address : createForm.address}
-                  onChange={(e) => editingEmployee ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
-                  autoComplete="off"
-                />
+              <div className="modal-body">
+                {creatingEmployee && (
+                  <>
+                    <input type="text" autoComplete="username" style={{display: 'none'}} />
+                    <input type="password" autoComplete="current-password" style={{display: 'none'}} />
+                    <div className="form-group">
+                      <label>Username:</label>
+                      <input
+                        type="text"
+                        value={createForm.username}
+                        onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Password:</label>
+                      <input
+                        type="password"
+                        value={createForm.password}
+                        onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                        required
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="form-group">
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={editingEmployee ? editForm.first_name : createForm.first_name}
+                    onChange={(e) => editingEmployee ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={editingEmployee ? editForm.last_name : createForm.last_name}
+                    onChange={(e) => editingEmployee ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email:</label>
+                  <input
+                    type="email"
+                    value={editingEmployee ? editForm.email : createForm.email}
+                    onChange={(e) => editingEmployee ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Mobile Number:</label>
+                  <input
+                    type="tel"
+                    value={editingEmployee ? editForm.mobile_number : createForm.mobile_number}
+                    onChange={(e) => editingEmployee ? setEditForm({...editForm, mobile_number: e.target.value}) : setCreateForm({...createForm, mobile_number: e.target.value})}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Address:</label>
+                  <textarea
+                    value={editingEmployee ? editForm.address : createForm.address}
+                    onChange={(e) => editingEmployee ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
+                    autoComplete="off"
+                  />
+                </div>
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn">{editingEmployee ? 'Save' : 'Create'}</button>
