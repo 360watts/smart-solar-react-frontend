@@ -78,7 +78,6 @@ const Navbar: React.FC = () => {
       const prevPath = navigationHistory[navigationHistory.length - 2];
       setIsNavigating(true);
       navigate(prevPath);
-      setShowHistory(false);
     }
   };
 
