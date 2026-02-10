@@ -71,7 +71,7 @@ const Alerts: React.FC = () => {
     <div>
       <h1>System Alerts</h1>
 
-      <div className="grid">
+      <div className="grid-cols-2">
         <div className="card">
           <h3>Alert Summary</h3>
           <p><strong>Total Alerts:</strong> {alerts.length}</p>
@@ -82,17 +82,17 @@ const Alerts: React.FC = () => {
 
         <div className="card">
           <h3>Filter by Severity</h3>
-          <select
-            value={filterSeverity}
-            onChange={(e) => setFilterSeverity(e.target.value)}
-            className="form-group"
-            style={{ marginBottom: '15px' }}
-          >
-            <option value="all">All Severities</option>
-            <option value="critical">Critical</option>
-            <option value="warning">Warning</option>
-            <option value="info">Info</option>
-          </select>
+          <div className="form-group">
+            <select
+              value={filterSeverity}
+              onChange={(e) => setFilterSeverity(e.target.value)}
+            >
+              <option value="all">All Severities</option>
+              <option value="critical">Critical</option>
+              <option value="warning">Warning</option>
+              <option value="info">Info</option>
+            </select>
+          </div>
         </div>
       </div>
 

@@ -379,231 +379,212 @@ const Configuration: React.FC = () => {
       </div>
       )}
 
+      {/* Slave Configuration Modal */}
       {(creatingSlave || editingSlave) && (
         <div className="modal">
-          <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
-            <h3 style={{ marginBottom: '20px', color: '#333' }}>{editingSlave ? `Edit Slave: ${editingSlave.deviceName}` : 'Configure New Slave'}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
-              {/* Basic Slave Information */}
-              <div className="card" style={{ marginBottom: '20px' }}>
-                <h4 style={{ marginBottom: '15px', color: '#555' }}>Basic Information</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Slave ID:</label>
-                    <input
-                      type="number"
-                      value={slaveForm.slave_id}
-                      onChange={(e) => setSlaveForm({...slaveForm, slave_id: e.target.value})}
-                      required
-                      min="1"
-                      max="247"
-                      autoComplete="off"
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                    />
-                    <small style={{ color: '#666', fontSize: '0.8em' }}>
-                      Unique identifier (1-247)
-                      {slaves.length > 0 && (
-                        <span style={{ display: 'block', marginTop: '3px', color: '#007bff' }}>
-                          Existing IDs: {slaves.map(s => s.slaveId).join(', ')}
-                        </span>
-                      )}
-                    </small>
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Device Name:</label>
-                    <input
-                      type="text"
-                      value={slaveForm.device_name}
-                      onChange={(e) => setSlaveForm({...slaveForm, device_name: e.target.value})}
-                      required
-                      autoComplete="off"
-                      placeholder="e.g., Solar Inverter"
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Communication Settings */}
-              <div className="card" style={{ marginBottom: '20px' }}>
-                <h4 style={{ marginBottom: '15px', color: '#555' }}>Communication Settings</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Polling Interval (ms):</label>
-                    <input
-                      type="number"
-                      value={slaveForm.polling_interval_ms}
-                      onChange={(e) => setSlaveForm({...slaveForm, polling_interval_ms: parseInt(e.target.value)})}
-                      min="100"
-                      autoComplete="off"
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                    />
-                    <small style={{ color: '#666', fontSize: '0.8em' }}>How often to poll this device</small>
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Timeout (ms):</label>
-                    <input
-                      type="number"
-                      value={slaveForm.timeout_ms}
-                      onChange={(e) => setSlaveForm({...slaveForm, timeout_ms: parseInt(e.target.value)})}
-                      min="100"
-                      autoComplete="off"
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                    />
-                    <small style={{ color: '#666', fontSize: '0.8em' }}>Response timeout</small>
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Status:</label>
-                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
+          <div className="modal-content large-modal slave-config-modal">
+            <h3>{editingSlave ? `Edit Slave: ${editingSlave.deviceName}` : 'Configure New Slave'}</h3>
+            
+            <div className="modal-body">
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
+                
+                {/* Section 1: Basic Information */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Basic Information</h4>
+                  <div className="form-grid form-grid-2">
+                    <div className="form-group">
+                      <label>Slave ID</label>
                       <input
-                        type="checkbox"
-                        checked={slaveForm.enabled}
-                        onChange={(e) => setSlaveForm({...slaveForm, enabled: e.target.checked})}
-                        style={{ marginRight: '8px', transform: 'scale(1.2)' }}
+                        type="number"
+                        value={slaveForm.slave_id}
+                        onChange={(e) => setSlaveForm({...slaveForm, slave_id: e.target.value})}
+                        required
+                        min="1"
+                        max="247"
+                        placeholder="1-247"
                       />
-                      <span style={{ fontWeight: 'bold', color: slaveForm.enabled ? '#28a745' : '#dc3545' }}>
-                        {slaveForm.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
+                      <small className="form-hint">
+                        Unique identifier (1-247)
+                        {slaves.length > 0 && (
+                          <span className="form-hint-accent">
+                            Existing: {slaves.map(s => s.slaveId).join(', ')}
+                          </span>
+                        )}
+                      </small>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Register Mappings */}
-              <div className="card" style={{ marginBottom: '20px' }}>
-                <h4 style={{ marginBottom: '15px', color: '#555' }}>Register Mappings</h4>
-                <p style={{ color: '#666', marginBottom: '15px', fontSize: '0.9em' }}>
-                  Configure the Modbus registers to read from this slave device.
-                </p>
-
-                {/* Add Register Form */}
-                <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                  <h5 style={{ marginBottom: '10px', color: '#333' }}>Add New Register</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', alignItems: 'end' }}>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Label:</label>
+                    <div className="form-group">
+                      <label>Device Name</label>
                       <input
                         type="text"
-                        placeholder="e.g., voltage"
-                        value={registerForm.label}
-                        onChange={(e) => setRegisterForm({...registerForm, label: e.target.value})}
-                        autoComplete="off"
-                        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9em' }}
+                        value={slaveForm.device_name}
+                        onChange={(e) => setSlaveForm({...slaveForm, device_name: e.target.value})}
+                        required
+                        placeholder="e.g., Solar Inverter"
                       />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Address:</label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={registerForm.address}
-                        onChange={(e) => setRegisterForm({...registerForm, address: parseInt(e.target.value)})}
-                        min="0"
-                        autoComplete="off"
-                        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9em' }}
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Data Type:</label>
-                      <select
-                        value={registerForm.data_type}
-                        onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
-                        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9em' }}
-                      >
-                        <option value={0}>UINT16</option>
-                        <option value={1}>INT16</option>
-                        <option value={2}>UINT32</option>
-                        <option value={3}>INT32</option>
-                        <option value={4}>FLOAT32</option>
-                        <option value={5}>FLOAT64</option>
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Scale:</label>
-                      <input
-                        type="number"
-                        placeholder="1.0"
-                        value={registerForm.scale_factor}
-                        onChange={(e) => setRegisterForm({...registerForm, scale_factor: parseFloat(e.target.value)})}
-                        step="0.01"
-                        autoComplete="off"
-                        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9em' }}
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Offset:</label>
-                      <input
-                        type="number"
-                        placeholder="0.0"
-                        value={registerForm.offset}
-                        onChange={(e) => setRegisterForm({...registerForm, offset: parseFloat(e.target.value)})}
-                        step="0.01"
-                        autoComplete="off"
-                        style={{ width: '100%', padding: '6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9em' }}
-                      />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '3px', fontSize: '0.9em', fontWeight: 'bold' }}>Enabled:</label>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={registerForm.enabled}
-                          onChange={(e) => setRegisterForm({...registerForm, enabled: e.target.checked})}
-                          style={{ marginRight: '5px', transform: 'scale(1.1)' }}
-                        />
-                        <span style={{ fontSize: '0.9em' }}>Active</span>
-                      </div>
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <button
-                        type="button"
-                        onClick={addRegister}
-                        className="btn"
-                        style={{ padding: '8px 16px', fontSize: '0.9em' }}
-                      >
-                        Add Register
-                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Current Registers Table */}
-                {slaveForm.registers.length > 0 && (
-                  <div>
-                    <h5 style={{ marginBottom: '10px', color: '#333' }}>Configured Registers ({slaveForm.registers.length})</h5>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table className="table" style={{ fontSize: '0.9em' }}>
+                {/* Section 2: Communication Settings */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Communication Settings</h4>
+                  <div className="form-grid form-grid-3">
+                    <div className="form-group">
+                      <label>Polling Interval (ms)</label>
+                      <input
+                        type="number"
+                        value={slaveForm.polling_interval_ms}
+                        onChange={(e) => setSlaveForm({...slaveForm, polling_interval_ms: parseInt(e.target.value)})}
+                        min="100"
+                        placeholder="5000"
+                      />
+                      <small className="form-hint">How often to poll</small>
+                    </div>
+                    <div className="form-group">
+                      <label>Timeout (ms)</label>
+                      <input
+                        type="number"
+                        value={slaveForm.timeout_ms}
+                        onChange={(e) => setSlaveForm({...slaveForm, timeout_ms: parseInt(e.target.value)})}
+                        min="100"
+                        placeholder="1000"
+                      />
+                      <small className="form-hint">Response timeout</small>
+                    </div>
+                    <div className="form-group checkbox-group">
+                      <label>Status</label>
+                      <label className="checkbox-label checkbox-vertical">
+                        <input
+                          type="checkbox"
+                          checked={slaveForm.enabled}
+                          onChange={(e) => setSlaveForm({...slaveForm, enabled: e.target.checked})}
+                        />
+                        <span className={slaveForm.enabled ? 'status-text-enabled' : 'status-text-disabled'}>
+                          {slaveForm.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Register Mappings */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Register Mappings</h4>
+                  <p className="form-section-desc">Configure the Modbus registers to read from this slave device.</p>
+
+                  {/* Add Register Sub-form */}
+                  <div className="form-subsection">
+                    <h5 className="form-subsection-title">Add New Register</h5>
+                    <div className="form-grid form-grid-auto">
+                      <div className="form-group">
+                        <label>Label</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., voltage"
+                          value={registerForm.label}
+                          onChange={(e) => setRegisterForm({...registerForm, label: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Address</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={registerForm.address}
+                          onChange={(e) => setRegisterForm({...registerForm, address: parseInt(e.target.value)})}
+                          min="0"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Data Type</label>
+                        <select
+                          value={registerForm.data_type}
+                          onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>UINT16</option>
+                          <option value={1}>INT16</option>
+                          <option value={2}>UINT32</option>
+                          <option value={3}>INT32</option>
+                          <option value={4}>FLOAT32</option>
+                          <option value={5}>FLOAT64</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Scale</label>
+                        <input
+                          type="number"
+                          placeholder="1.0"
+                          value={registerForm.scale_factor}
+                          onChange={(e) => setRegisterForm({...registerForm, scale_factor: parseFloat(e.target.value)})}
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Offset</label>
+                        <input
+                          type="number"
+                          placeholder="0.0"
+                          value={registerForm.offset}
+                          onChange={(e) => setRegisterForm({...registerForm, offset: parseFloat(e.target.value)})}
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="form-group checkbox-group">
+                        <label>Active</label>
+                        <label className="checkbox-label checkbox-vertical">
+                          <input
+                          type="checkbox"
+                          checked={registerForm.enabled}
+                            onChange={(e) => setRegisterForm({...registerForm, enabled: e.target.checked})}
+                          />
+                          <span>{registerForm.enabled ? 'Yes' : 'No'}</span>
+                        </label>
+                      </div>
+                      <div className="form-group form-group-btn">
+                        <button type="button" onClick={addRegister} className="btn btn-sm">
+                          Add Register
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Registers Table */}
+                  {slaveForm.registers.length > 0 ? (
+                    <div className="registers-table-wrapper">
+                      <h5 className="form-subsection-title">Configured Registers ({slaveForm.registers.length})</h5>
+                      <table className="table registers-table">
                         <thead>
                           <tr>
-                            <th style={{ padding: '8px' }}>Label</th>
-                            <th style={{ padding: '8px' }}>Address</th>
-                            <th style={{ padding: '8px' }}>Data Type</th>
-                            <th style={{ padding: '8px' }}>Scale</th>
-                            <th style={{ padding: '8px' }}>Offset</th>
-                            <th style={{ padding: '8px' }}>Status</th>
-                            <th style={{ padding: '8px' }}>Actions</th>
+                            <th>Label</th>
+                            <th>Address</th>
+                            <th>Data Type</th>
+                            <th>Scale</th>
+                            <th>Offset</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {slaveForm.registers.map((reg, index) => (
                             <tr key={index}>
-                              <td style={{ padding: '8px' }}>{reg.label}</td>
-                              <td style={{ padding: '8px' }}>{reg.address}</td>
-                              <td style={{ padding: '8px' }}>{getDataTypeName(reg.dataType)}</td>
-                              <td style={{ padding: '8px' }}>{reg.scaleFactor}</td>
-                              <td style={{ padding: '8px' }}>{reg.offset}</td>
-                              <td style={{ padding: '8px' }}>
-                                <span className={reg.enabled ? 'status-online' : 'status-offline'} style={{ fontSize: '0.8em', padding: '2px 6px', borderRadius: '3px' }}>
+                              <td>{reg.label}</td>
+                              <td>{reg.address}</td>
+                              <td>{getDataTypeName(reg.dataType)}</td>
+                              <td>{reg.scaleFactor}</td>
+                              <td>{reg.offset}</td>
+                              <td>
+                                <span className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}>
                                   {reg.enabled ? 'Enabled' : 'Disabled'}
                                 </span>
                               </td>
-                              <td style={{ padding: '8px' }}>
+                              <td>
                                 <button
                                   type="button"
                                   onClick={() => removeRegister(index)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'red', fontSize: '0.8em' }}
+                                  className="btn-icon btn-icon-danger"
+                                  title="Remove"
                                 >
-                                  Remove
+                                  ✕
                                 </button>
                               </td>
                             </tr>
@@ -611,30 +592,25 @@ const Configuration: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="empty-state">
+                      No registers configured yet. Add registers above to define what data to read from this slave device.
+                    </div>
+                  )}
+                </div>
 
-                {slaveForm.registers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontStyle: 'italic' }}>
-                    No registers configured yet. Add registers above to define what data to read from this slave device.
-                  </div>
-                )}
-              </div>
+              </form>
+            </div>
 
-              <div className="form-actions" style={{ borderTop: '1px solid #eee', paddingTop: '20px', marginTop: '20px' }}>
-                <button type="submit" className="btn" style={{ backgroundColor: '#007bff', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '1em' }}>
-                  {editingSlave ? 'Save Changes' : 'Create Slave'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="btn btn-secondary"
-                  style={{ backgroundColor: '#6c757d', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '1em', marginLeft: '10px' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+            {/* Modal Footer */}
+            <div className="modal-footer">
+              <button type="button" className="btn btn-primary" onClick={(e) => { e.preventDefault(); handleSaveSlave(); }}>
+                {editingSlave ? 'Save Changes' : 'Create Slave'}
+              </button>
+              <button type="button" onClick={handleCancel} className="btn btn-secondary">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

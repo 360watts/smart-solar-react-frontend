@@ -1,138 +1,172 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '../contexts/NavigationContext';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const { setIsNavigating, navigationHistory, goBack } = useNavigation();
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const navItems = [
-    {
-      path: '/users',
-      label: 'Users',
-      adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-      )
-    },
-    {
-      path: '/employees',
-      label: 'Employees',
-      adminOnly: true,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-      )
-    },
     {
       path: '/devices',
       label: 'Devices',
       adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-          <line x1="8" y1="21" x2="16" y2="21"></line>
-          <line x1="12" y1="17" x2="12" y2="21"></line>
-        </svg>
-      )
+      icon: '📱'
     },
     {
       path: '/configuration',
       label: 'Configuration',
       adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-      )
+      icon: '⚙️'
     },
     {
       path: '/telemetry',
       label: 'Telemetry',
       adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="22" y1="12" x2="2" y2="12"></line>
-          <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 1 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
-          <line x1="6" y1="16" x2="6.01" y2="16"></line>
-          <line x1="10" y1="16" x2="10.01" y2="16"></line>
-        </svg>
-      )
+      icon: '📊'
     },
     {
       path: '/alerts',
       label: 'Alerts',
       adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-          <line x1="12" y1="9" x2="12" y2="13"></line>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-      )
+      icon: '🔔'
+    },
+    {
+      path: '/health',
+      label: 'System Health',
+      adminOnly: false,
+      icon: '💚'
+    },
+    {
+      path: '/users',
+      label: 'Users',
+      adminOnly: false,
+      icon: '👥'
+    },
+    {
+      path: '/employees',
+      label: 'Employees',
+      adminOnly: true,
+      icon: '👔'
     },
     {
       path: '/device-presets',
       label: 'Device Presets',
       adminOnly: false,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14,2 14,8 20,8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10,9 9,9 8,9"></polyline>
-        </svg>
-      )
+      icon: '⭐'
     },
   ];
 
+  const handleNavigation = (path: string) => {
+    setIsNavigating(true);
+    navigate(path);
+    setExpandedMenu(null);
+  };
+
   const handleLogout = async () => {
     await logout();
-    // Navigate to login with replace to clear history
+    setIsNavigating(true);
     navigate('/login', { replace: true });
   };
 
+  const handleGoBack = () => {
+    if (navigationHistory.length > 1) {
+      const prevPath = navigationHistory[navigationHistory.length - 2];
+      setIsNavigating(true);
+      navigate(prevPath);
+      setShowHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsNavigating(false), 500);
+    return () => clearTimeout(timer);
+  }, [location, setIsNavigating]);
+
+  // Don't render navbar on login page or when not authenticated
+  if (location.pathname === '/login' || !isAuthenticated) {
+    return null;
+  }
+
   return (
     <nav className="sidebar">
+      {/* Enhanced Header with Gradient */}
       <div className="sidebar-header">
-        <h2>Smart Solar</h2>
-        {isAuthenticated && user && (
-          <div className="user-info">
-            <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <p className="user-name">{user.first_name} {user.last_name}</p>
-              <p className="user-email">{user.email}</p>
-              <p className="user-role">
-                {user.is_superuser ? '👑 Admin' : user.is_staff ? '👤 Employee' : '👤 User'}
-              </p>
-            </Link>
+        <div className="logo-container">
+          <div className="logo-badge">☀️</div>
+          <div className="logo-text">
+            <h2>Smart Solar</h2>
+            <p className="logo-subtitle">IoT Platform</p>
           </div>
+        </div>
+        
+        {isAuthenticated && user && (
+          <Link to="/profile" className="user-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="user-avatar">
+              {user.first_name.charAt(0).toUpperCase()}
+              {user.last_name.charAt(0).toUpperCase()}
+            </div>
+            <div className="user-details">
+              <p className="user-name">{user.first_name} {user.last_name}</p>
+              <p className="user-role-badge">
+                {user.is_superuser ? '👑 Admin' : user.is_staff ? '👤 Staff' : '👤 User'}
+              </p>
+            </div>
+          </Link>
         )}
       </div>
 
       {isAuthenticated ? (
         <>
           <ul className="sidebar-nav">
-            {navItems.filter(item => !item.adminOnly || isAdmin).map((item) => (
-              <li key={item.path} className={location.pathname === item.path ? 'active' : ''}>
-                <Link to={item.path} className="sidebar-link">
-                  <span className="sidebar-icon">{item.icon}</span>
-                  <span className="sidebar-text">{item.label}</span>
-                </Link>
-              </li>
-            ))}
+            {navItems.filter(item => !item.adminOnly || isAdmin).map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <li 
+                  key={item.path} 
+                  className={isActive ? 'active' : ''}
+                  onMouseEnter={() => setExpandedMenu(item.path)}
+                  onMouseLeave={() => setExpandedMenu(null)}
+                >
+                  <Link 
+                    to={item.path} 
+                    className="sidebar-link"
+                    onClick={() => {
+                      if (location.pathname !== item.path) {
+                        handleNavigation(item.path);
+                      }
+                    }}
+                  >
+                    <span className="sidebar-icon">{item.icon}</span>
+                    <span className="sidebar-text">{item.label}</span>
+                    {expandedMenu === item.path && (
+                      <span className="nav-tooltip">{item.label}</span>
+                    )}
+                  </Link>
+                  <div className="nav-active-indicator"></div>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="sidebar-footer">
+            {navigationHistory.length > 1 && (
+              <button
+                onClick={handleGoBack}
+                className="logout-button"
+                title="Go back to previous page"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back
+              </button>
+            )}
             <button onClick={handleLogout} className="logout-button">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

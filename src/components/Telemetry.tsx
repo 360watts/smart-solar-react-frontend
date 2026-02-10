@@ -115,8 +115,8 @@ const Telemetry: React.FC = () => {
 
       <div className="card">
         <h2>Filters</h2>
-        <div className="grid">
-          <div className="form-group" style={{ marginBottom: '15px' }}>
+        <div className="grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+          <div className="form-group">
             <label>Data Type:</label>
             <select
               value={selectedDataType}
@@ -128,7 +128,7 @@ const Telemetry: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="form-group" style={{ marginBottom: '15px' }}>
+          <div className="form-group">
             <label>Device:</label>
             <select
               value={selectedDevice}

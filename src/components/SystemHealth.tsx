@@ -77,7 +77,7 @@ const SystemHealth: React.FC = () => {
     <div>
       <h1>System Health Dashboard</h1>
 
-      <div className="grid">
+      <div className="grid grid-cols-2">
         <div className="card">
           <h3>Overall System Status</h3>
           <div className={`status-indicator ${getStatusColor(health.overall_health)}`}>
@@ -111,7 +111,7 @@ const SystemHealth: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid">
+      <div className="grid grid-cols-2">
         <div className="card">
           <h3>Service Status</h3>
           <div className="service-status">
