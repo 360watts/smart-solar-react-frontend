@@ -7,9 +7,8 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
-  const { setIsNavigating, navigationHistory, goBack } = useNavigation();
+  const { setIsNavigating, navigationHistory } = useNavigation();
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   const navItems = [
     {
