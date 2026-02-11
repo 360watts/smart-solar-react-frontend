@@ -235,9 +235,14 @@ class ApiService {
     });
   }
 
-  async getDevices(search?: string): Promise<any[]> {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request(`/devices/${params}`);
+  async getDevices(search?: string, page: number = 1, pageSize: number = 25): Promise<any> {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    params.append('page', page.toString());
+    params.append('page_size', pageSize.toString());
+    
+    const queryString = params.toString();
+    return this.request(`/devices/?${queryString}`);
   }
 
   async createDevice(deviceData: any): Promise<any> {

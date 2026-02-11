@@ -31,6 +31,11 @@ const Devices: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -46,7 +51,10 @@ const Devices: React.FC = () => {
     fetchDevices();
     fetchUsers();
   }, []);
-
+  // Re-fetch devices when page or search term changes
+  useEffect(() => {
+    fetchDevices(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
   useEffect(() => {
     const handleClickOutside = () => {
       setShowUserDropdown(false);
@@ -80,11 +88,27 @@ const Devices: React.FC = () => {
     }
   }, [users, userSearchTerm]);
 
-  const fetchDevices = async (search?: string) => {
+  const fetchDevices = async (page: number = 1, search: string = searchTerm) => {
     try {
-      const data = await apiService.getDevices(search);
-      setDevices(data);
-      setFilteredDevices(data);
+      setLoading(true);
+      const response = await apiService.getDevices(search || undefined, page, pageSize);
+      
+      // Handle paginated response
+      if (response.results) {
+        setDevices(response.results);
+        setFilteredDevices(response.results);
+        setTotalCount(response.count);
+        setTotalPages(response.total_pages);
+        setCurrentPage(response.current_page);
+      } else {
+        // Fallback for non-paginated response
+        setDevices(Array.isArray(response) ? response : []);
+        setFilteredDevices(Array.isArray(response) ? response : []);
+        setTotalCount(Array.isArray(response) ? response.length : 0);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
+      
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -104,6 +128,7 @@ const Devices: React.FC = () => {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+    setCurrentPage(1);  // Reset to page 1 on new search
   };
 
   const handleEdit = (device: Device) => {
@@ -326,6 +351,111 @@ const Devices: React.FC = () => {
             ))}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px',
+            borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+            gap: '16px'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+              Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} devices
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
+                  color: 'var(--text-primary, #f8fafc)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPage === 1 ? '0.5' : '1'
+                }}
+              >
+                ← Previous
+              </button>
+              
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show current page and adjacent pages only
+                  const showPage = Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages;
+                  
+                  if (!showPage && totalPages > 5) {
+                    return null;
+                  }
+                  
+                  if (!showPage && totalPages > 5 && page === currentPage - 2) {
+                    return <span key="dots" style={{ padding: '0 4px' }}>...</span>;
+                  }
+                  
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        padding: '6px 10px',
+                        border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                        borderRadius: '4px',
+                        background: page === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                        color: 'var(--text-primary, #f8fafc)',
+                        cursor: 'pointer',
+                        fontWeight: page === currentPage ? 'bold' : 'normal'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                }).filter(Boolean)}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
+                  color: 'var(--text-primary, #f8fafc)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  opacity: currentPage === totalPages ? '0.5' : '1'
+                }}
+              >
+                Next →
+              </button>
+            </div>
+            
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(parseInt(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px',
+                border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                borderRadius: '6px',
+                background: 'var(--bg-primary, #0f172a)',
+                color: 'var(--text-primary, #f8fafc)',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {(editingDevice || creatingDevice) && (
