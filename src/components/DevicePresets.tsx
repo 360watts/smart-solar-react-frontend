@@ -154,18 +154,10 @@ const DevicePresets: React.FC = () => {
     if (!editingPreset) return;
 
     try {
-      const updatedPreset = await apiService.updatePreset(editingPreset.id, editForm);
-      const updatedPresets = presets.map(p => p.id === editingPreset.id ? updatedPreset : p);
-      setPresets(updatedPresets);
-      // Also update filtered presets to reflect the changes immediately
-      const searchLower = searchTerm.toLowerCase();
-      const updatedFiltered = updatedPresets.filter((preset: Preset) =>
-        preset.name.toLowerCase().includes(searchLower) ||
-        preset.config_id.toLowerCase().includes(searchLower) ||
-        preset.description.toLowerCase().includes(searchLower)
-      );
-      setFilteredPresets(updatedFiltered);
+      await apiService.updatePreset(editingPreset.id, editForm);
       setEditingPreset(null);
+      // Refetch to get the updated preset with all fields
+      await fetchPresets(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update preset');
     }
@@ -173,17 +165,7 @@ const DevicePresets: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      const newPreset = await apiService.createPreset(createForm);
-      const updatedPresets = [...presets, newPreset];
-      setPresets(updatedPresets);
-      // Also update filtered presets to show the new preset immediately
-      const searchLower = searchTerm.toLowerCase();
-      const updatedFiltered = updatedPresets.filter((preset: Preset) =>
-        preset.name.toLowerCase().includes(searchLower) ||
-        preset.config_id.toLowerCase().includes(searchLower) ||
-        preset.description.toLowerCase().includes(searchLower)
-      );
-      setFilteredPresets(updatedFiltered);
+      await apiService.createPreset(createForm);
       setCreatingPreset(false);
       setCreateForm({
         name: '',
@@ -193,6 +175,8 @@ const DevicePresets: React.FC = () => {
         stop_bits: 1,
         parity: 0,
       });
+      // Refetch to get the new preset with all fields
+      await fetchPresets(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create preset');
     }

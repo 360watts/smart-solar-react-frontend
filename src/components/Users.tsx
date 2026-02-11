@@ -16,10 +16,9 @@ interface User {
 
 interface Device {
   id: number;
-  serial_number: string;
-  name: string;
-  status: string;
-  last_heartbeat?: string;
+  device_serial: string;
+  provisioned_at?: string;
+  config_version?: string;
 }
 
 const Users: React.FC = () => {
@@ -99,9 +98,10 @@ const Users: React.FC = () => {
     if (!editingUser) return;
 
     try {
-      const updatedUser = await apiService.updateUser(editingUser.id, editForm);
-      setUsers(users.map(u => u.id === editingUser.id ? updatedUser : u));
+      await apiService.updateUser(editingUser.id, editForm);
       setEditingUser(null);
+      // Refetch to get the updated user with all fields
+      await fetchUsers(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
     }
@@ -109,8 +109,7 @@ const Users: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      const newUser = await apiService.createUser(createForm);
-      setUsers([...users, newUser]);
+      await apiService.createUser(createForm);
       setCreatingUser(false);
       setCreateForm({
         username: '',
@@ -121,6 +120,8 @@ const Users: React.FC = () => {
         mobile_number: '',
         address: '',
       });
+      // Refetch to get the new user with all fields
+      await fetchUsers(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     }
@@ -146,9 +147,12 @@ const Users: React.FC = () => {
     setSelectedUser(user);
     setLoadingDevices(true);
     try {
+      console.log('Fetching devices for user:', user.id);
       const devices = await apiService.getUserDevices(user.id);
+      console.log('Devices received:', devices);
       setUserDevices(devices);
     } catch (err) {
+      console.error('Error fetching user devices:', err);
       // If no devices endpoint or error, just show empty
       setUserDevices([]);
     } finally {
@@ -236,26 +240,20 @@ const Users: React.FC = () => {
             <table className="table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'center' }}>Serial Number</th>
-                  <th style={{ textAlign: 'center' }}>Name</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>Last Heartbeat</th>
+                  <th style={{ textAlign: 'center' }}>Device Serial</th>
+                  <th style={{ textAlign: 'center' }}>Config Version</th>
+                  <th style={{ textAlign: 'center' }}>Provisioned At</th>
                 </tr>
               </thead>
               <tbody>
                 {userDevices.map((device) => (
                   <tr key={device.id}>
-                    <td>{device.serial_number}</td>
-                    <td>{device.name}</td>
-                    <td>
-                      <span className={`status-indicator ${device.status === 'online' ? 'status-online' : 'status-offline'}`}>
-                        {device.status}
-                      </span>
-                    </td>
-                    <td>
-                      {device.last_heartbeat 
-                        ? new Date(device.last_heartbeat).toLocaleString() 
-                        : 'Never'}
+                    <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
+                    <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {device.provisioned_at 
+                        ? new Date(device.provisioned_at).toLocaleDateString() 
+                        : '-'}
                     </td>
                   </tr>
                 ))}

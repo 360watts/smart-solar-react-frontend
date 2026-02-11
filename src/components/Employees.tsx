@@ -95,10 +95,10 @@ const Employees: React.FC = () => {
     if (!editingEmployee) return;
 
     try {
-      const updatedEmployee = await apiService.updateUser(editingEmployee.id, editForm);
-      setEmployees(employees.map(e => e.id === editingEmployee.id ? updatedEmployee : e));
-      setFilteredEmployees(filteredEmployees.map(e => e.id === editingEmployee.id ? updatedEmployee : e));
+      await apiService.updateUser(editingEmployee.id, editForm);
       setEditingEmployee(null);
+      // Refetch to get the updated employee with audit trail fields
+      await fetchEmployees(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update employee');
     }
@@ -106,9 +106,7 @@ const Employees: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      const newEmployee = await apiService.createEmployee(createForm);
-      setEmployees([...employees, newEmployee]);
-      setFilteredEmployees([...filteredEmployees, newEmployee]);
+      await apiService.createEmployee(createForm);
       setCreatingEmployee(false);
       setCreateForm({
         username: '',
@@ -120,6 +118,8 @@ const Employees: React.FC = () => {
         address: '',
         is_staff: true,
       });
+      // Refetch to get the new employee with all fields including audit trail
+      await fetchEmployees(searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create employee');
     }

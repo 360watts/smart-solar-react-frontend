@@ -163,9 +163,10 @@ const Devices: React.FC = () => {
     if (!editingDevice) return;
 
     try {
-      const updatedDevice = await apiService.updateDevice(editingDevice.id, editForm);
-      setDevices(devices.map(d => d.id === editingDevice.id ? updatedDevice : d));
+      await apiService.updateDevice(editingDevice.id, editForm);
       setEditingDevice(null);
+      // Refetch to get the updated device with all fields including audit trail
+      await fetchDevices(currentPage, searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update device');
     }
@@ -173,14 +174,15 @@ const Devices: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      const newDevice = await apiService.createDevice(createForm);
-      setDevices([...devices, newDevice]);
+      await apiService.createDevice(createForm);
       setCreatingDevice(false);
       setCreateForm({
         device_serial: '',
         user: '',
         config_version: '',
       });
+      // Refetch to get the new device with all fields including audit trail
+      await fetchDevices(currentPage, searchTerm);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create device');
     }
@@ -322,7 +324,7 @@ const Devices: React.FC = () => {
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
-              <th style={{ textAlign: 'center' }}>User</th>
+              <th style={{ textAlign: 'center' }}>Assigned To</th>
               <th style={{ textAlign: 'center' }}>Created By</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
@@ -339,20 +341,20 @@ const Devices: React.FC = () => {
                     onChange={() => handleSelectDevice(device.id)}
                   />
                 </td>
-                <td>{device.device_serial}</td>
-                <td>{device.user || '-'}</td>
-                <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
+                <td style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
                   {device.created_by_username || '-'}
                 </td>
-                <td>{device.config_version || '-'}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                <td style={{ textAlign: 'center' }}>
                   {(() => {
                     if (!device.provisioned_at) return 'N/A';
                     const date = new Date(device.provisioned_at);
                     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
                   })()}
                 </td>
-                <td>
+                <td style={{ textAlign: 'center' }}>
                   <button onClick={() => handleEdit(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>

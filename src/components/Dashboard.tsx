@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { apiService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TelemetryData {
   deviceId: string;
@@ -43,10 +44,12 @@ interface SystemHealth {
 }
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [userDevices, setUserDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,17 +62,30 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [telemetry, alertsData, kpisData, healthData] = await Promise.all([
+      const promises: Promise<any>[] = [
         apiService.getTelemetry(),
         apiService.getAlerts(),
         apiService.getKPIs(),
         apiService.getSystemHealth()
-      ]);
+      ];
       
-      setTelemetryData(telemetry);
-      setAlerts(alertsData);
-      setKpis(kpisData);
-      setSystemHealth(healthData);
+      // For non-staff users, also fetch their assigned devices
+      if (user && !user.is_staff) {
+        promises.push(apiService.getUserDevices(user.id));
+      }
+      
+      const results = await Promise.all(promises);
+      
+      setTelemetryData(results[0]);
+      setAlerts(results[1]);
+      setKpis(results[2]);
+      setSystemHealth(results[3]);
+      
+      // Set user devices if fetched
+      if (results[4]) {
+        setUserDevices(results[4]);
+      }
+      
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -181,6 +197,33 @@ const Dashboard: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* User Devices Section (for non-staff users) */}
+      {user && !user.is_staff && userDevices.length > 0 && (
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <h2>My Devices</h2>
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'center' }}>Device Serial</th>
+                <th style={{ textAlign: 'center' }}>Config Version</th>
+                <th style={{ textAlign: 'center' }}>Provisioned At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {userDevices.map((device) => (
+                <tr key={device.id}>
+                  <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
+                  <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {device.provisioned_at ? new Date(device.provisioned_at).toLocaleDateString() : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Real-time Metrics */}
       <div className="grid">
