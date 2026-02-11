@@ -324,6 +324,7 @@ const Devices: React.FC = () => {
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
               <th style={{ textAlign: 'center' }}>User</th>
+              <th style={{ textAlign: 'center' }}>Created By</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
               <th style={{ textAlign: 'center' }}>Actions</th>
@@ -341,6 +342,9 @@ const Devices: React.FC = () => {
                 </td>
                 <td>{device.device_serial}</td>
                 <td>{device.user || '-'}</td>
+                <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                  {device.created_by_username || '-'}
+                </td>
                 <td>{device.config_version || '-'}</td>
                 <td>
                   {(() => {
