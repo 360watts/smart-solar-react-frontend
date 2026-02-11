@@ -29,6 +29,8 @@ const Devices: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -157,6 +159,57 @@ const Devices: React.FC = () => {
     }
   };
 
+  const handleSelectDevice = (deviceId: number) => {
+    const newSelected = new Set(selectedDevices);
+    if (newSelected.has(deviceId)) {
+      newSelected.delete(deviceId);
+    } else {
+      newSelected.add(deviceId);
+    }
+    setSelectedDevices(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDevices.size === filteredDevices.length) {
+      setSelectedDevices(new Set());
+    } else {
+      const allIds = new Set(filteredDevices.map(d => d.id));
+      setSelectedDevices(allIds);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDevices.size === 0) {
+      setError('No devices selected for deletion');
+      return;
+    }
+
+    const deviceList = Array.from(selectedDevices)
+      .map(id => devices.find(d => d.id === id))
+      .filter(Boolean);
+
+    const confirmMessage = `Are you sure you want to delete ${selectedDevices.size} device(s)?\n\n${deviceList.map(d => d?.device_serial).join(', ')}`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        setBulkDeleteLoading(true);
+        await apiService.deleteDevicesBulk(Array.from(selectedDevices));
+        
+        const updatedDevices = devices.filter(d => !selectedDevices.has(d.id));
+        setDevices(updatedDevices);
+        setFilteredDevices(updatedDevices.filter(d => 
+          d.device_serial.toLowerCase().includes(searchTerm.toLowerCase())
+        ));
+        setSelectedDevices(new Set());
+        setBulkDeleteLoading(false);
+      } catch (err) {
+        setBulkDeleteLoading(false);
+        console.error('Bulk delete error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to delete devices');
+      }
+    }
+  };
+
   const handleCancel = () => {
     setEditingDevice(null);
     setCreatingDevice(false);
@@ -187,6 +240,25 @@ const Devices: React.FC = () => {
               onChange={handleSearch}
               className="search-input"
             />
+            {selectedDevices.size > 0 && (
+              <button 
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteLoading}
+                style={{ 
+                  background: 'var(--danger-color, #ef4444)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: bulkDeleteLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  opacity: bulkDeleteLoading ? '0.6' : '1'
+                }}
+              >
+                {bulkDeleteLoading ? `Deleting ${selectedDevices.size}...` : `Delete Selected (${selectedDevices.size})`}
+              </button>
+            )}
             <button onClick={() => {
               setCreatingDevice(true);
               setUserSearchTerm('');
@@ -199,6 +271,14 @@ const Devices: React.FC = () => {
         <table className="table">
           <thead>
             <tr>
+              <th style={{ textAlign: 'center', width: '40px' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
+                  onChange={handleSelectAll}
+                  title="Select all displayed devices"
+                />
+              </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
               <th style={{ textAlign: 'center' }}>User</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
@@ -208,7 +288,14 @@ const Devices: React.FC = () => {
           </thead>
           <tbody>
             {filteredDevices.map((device) => (
-              <tr key={device.id}>
+              <tr key={device.id} style={{ background: selectedDevices.has(device.id) ? 'rgba(99, 102, 241, 0.1)' : 'transparent' }}>
+                <td style={{ textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedDevices.has(device.id)}
+                    onChange={() => handleSelectDevice(device.id)}
+                  />
+                </td>
                 <td>{device.device_serial}</td>
                 <td>{device.user || '-'}</td>
                 <td>{device.config_version || '-'}</td>

@@ -260,6 +260,13 @@ class ApiService {
     });
   }
 
+  async deleteDevicesBulk(deviceIds: number[]): Promise<any> {
+    return this.request(`/devices/delete-bulk/`, {
+      method: 'POST',
+      body: JSON.stringify({ device_ids: deviceIds }),
+    });
+  }
+
   async getSlaves(configId: string): Promise<any[]> {
     return this.request(`/presets/${configId}/slaves/`);
   }
