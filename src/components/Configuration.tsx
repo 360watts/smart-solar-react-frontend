@@ -163,52 +163,10 @@ const Configuration: React.FC = () => {
       };
 
       if (editingSlave) {
-        const updatedSlave = await apiService.updateSlave(config.configId, editingSlave.slaveId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: updatedSlave.id,
-          slaveId: updatedSlave.slave_id,
-          deviceName: updatedSlave.device_name,
-          pollingIntervalMs: updatedSlave.polling_interval_ms,
-          timeoutMs: updatedSlave.timeout_ms,
-          enabled: updatedSlave.enabled,
-          registers: updatedSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        setSlaves(slaves.map(s => s.slaveId === editingSlave.slaveId ? mappedSlave : s));
+        await apiService.updateSlave(config.configId, editingSlave.slaveId, slaveData);
         setEditingSlave(null);
       } else {
-        const newSlave = await apiService.createSlave(config.configId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: newSlave.id,
-          slaveId: newSlave.slave_id,
-          deviceName: newSlave.device_name,
-          pollingIntervalMs: newSlave.polling_interval_ms,
-          timeoutMs: newSlave.timeout_ms,
-          enabled: newSlave.enabled,
-          registers: newSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        setSlaves([...slaves, mappedSlave]);
+        await apiService.createSlave(config.configId, slaveData);
         setCreatingSlave(false);
       }
 
@@ -220,6 +178,9 @@ const Configuration: React.FC = () => {
         enabled: true,
         registers: []
       });
+      
+      // Refetch to get updated slave list
+      await fetchSlaves(config.configId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save slave');
     }
@@ -231,7 +192,8 @@ const Configuration: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete slave ${slave.deviceName}?`)) {
       try {
         await apiService.deleteSlave(config.configId, slave.slaveId);
-        setSlaves(slaves.filter(s => s.id !== slave.id));
+        // Refetch slaves to update the list
+        await fetchSlaves(config.configId);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete slave');
       }

@@ -131,12 +131,12 @@ const Users: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete user ${user.username}?`)) {
       try {
         await apiService.deleteUser(user.id);
-        setUsers(users.filter(u => u.id !== user.id));
-        setFilteredUsers(filteredUsers.filter(u => u.id !== user.id));
         if (selectedUser?.id === user.id) {
           setSelectedUser(null);
           setUserDevices([]);
         }
+        // Refetch to update the list
+        await fetchUsers(searchTerm);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete user');
       }

@@ -193,9 +193,8 @@ const Devices: React.FC = () => {
       try {
         console.log('Deleting device with ID:', device.id, 'Serial:', device.device_serial);
         await apiService.deleteDevice(device.id);
-        const updatedDevices = devices.filter(d => d.id !== device.id);
-        setDevices(updatedDevices);
-        setFilteredDevices(updatedDevices);
+        // Refetch to update the list and pagination
+        await fetchDevices(currentPage, searchTerm);
       } catch (err) {
         console.error('Delete error:', err);
         setError(err instanceof Error ? err.message : 'Failed to delete device');
@@ -238,13 +237,9 @@ const Devices: React.FC = () => {
       try {
         setBulkDeleteLoading(true);
         await apiService.deleteDevicesBulk(Array.from(selectedDevices));
-        
-        const updatedDevices = devices.filter(d => !selectedDevices.has(d.id));
-        setDevices(updatedDevices);
-        setFilteredDevices(updatedDevices.filter(d => 
-          d.device_serial.toLowerCase().includes(searchTerm.toLowerCase())
-        ));
         setSelectedDevices(new Set());
+        // Refetch to update the list and pagination
+        await fetchDevices(currentPage, searchTerm);
         setBulkDeleteLoading(false);
       } catch (err) {
         setBulkDeleteLoading(false);

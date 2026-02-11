@@ -129,8 +129,8 @@ const Employees: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete employee ${employee.username}?`)) {
       try {
         await apiService.deleteUser(employee.id);
-        setEmployees(employees.filter(e => e.id !== employee.id));
-        setFilteredEmployees(filteredEmployees.filter(e => e.id !== employee.id));
+        // Refetch to update the list
+        await fetchEmployees(searchTerm);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete employee');
       }

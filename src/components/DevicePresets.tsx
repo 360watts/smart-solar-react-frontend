@@ -186,16 +186,8 @@ const DevicePresets: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete preset ${preset.name}?`)) {
       try {
         await apiService.deletePreset(preset.id);
-        const updatedPresets = presets.filter(p => p.id !== preset.id);
-        setPresets(updatedPresets);
-        // Also update filtered presets to remove the deleted preset immediately
-        const searchLower = searchTerm.toLowerCase();
-        const updatedFiltered = updatedPresets.filter((preset: Preset) =>
-          preset.name.toLowerCase().includes(searchLower) ||
-          preset.config_id.toLowerCase().includes(searchLower) ||
-          preset.description.toLowerCase().includes(searchLower)
-        );
-        setFilteredPresets(updatedFiltered);
+        // Refetch to update the list
+        await fetchPresets(searchTerm);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete preset');
       }
@@ -340,58 +332,10 @@ const DevicePresets: React.FC = () => {
       };
 
       if (editingSlave) {
-        const updatedSlave = await apiService.updateSlave(configuringSlaves.config_id, editingSlave.slaveId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: updatedSlave.id,
-          slaveId: updatedSlave.slave_id,
-          deviceName: updatedSlave.device_name,
-          pollingIntervalMs: updatedSlave.polling_interval_ms,
-          timeoutMs: updatedSlave.timeout_ms,
-          enabled: updatedSlave.enabled,
-          registers: updatedSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        const updatedSlaves = slaves.map(s => s.slaveId === editingSlave.slaveId ? mappedSlave : s);
-        setSlaves(updatedSlaves);
-        // Update preset count
-        updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
+        await apiService.updateSlave(configuringSlaves.config_id, editingSlave.slaveId, slaveData);
         setEditingSlave(null);
       } else {
-        const newSlave = await apiService.createSlave(configuringSlaves.config_id, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: newSlave.id,
-          slaveId: newSlave.slave_id,
-          deviceName: newSlave.device_name,
-          pollingIntervalMs: newSlave.polling_interval_ms,
-          timeoutMs: newSlave.timeout_ms,
-          enabled: newSlave.enabled,
-          registers: newSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        const updatedSlaves = [...slaves, mappedSlave];
-        setSlaves(updatedSlaves);
-        // Update preset count
-        updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
+        await apiService.createSlave(configuringSlaves.config_id, slaveData);
         setCreatingSlave(false);
       }
 
@@ -403,6 +347,9 @@ const DevicePresets: React.FC = () => {
         enabled: true,
         registers: []
       });
+      
+      // Refetch to get updated slave list and count
+      await fetchSlavesForPreset(configuringSlaves.config_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save slave');
     }
@@ -414,10 +361,8 @@ const DevicePresets: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete slave ${slave.deviceName}?`)) {
       try {
         await apiService.deleteSlave(configuringSlaves.config_id, slave.slaveId);
-        const updatedSlaves = slaves.filter(s => s.id !== slave.id);
-        setSlaves(updatedSlaves);
-        // Update preset count
-        updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
+        // Refetch slaves to update the list and count
+        await fetchSlavesForPreset(configuringSlaves.config_id);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete slave');
       }
