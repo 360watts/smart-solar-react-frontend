@@ -92,13 +92,12 @@ const Devices: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDevices();
     fetchUsers();
-  }, [fetchDevices]);
+  }, []);
   
   useEffect(() => {
     fetchDevices(currentPage, searchTerm);
-  }, [currentPage, searchTerm, fetchDevices]);
+  }, [currentPage, searchTerm, pageSize, fetchDevices]);
   
   useEffect(() => {
     const handleClickOutside = () => {
@@ -375,7 +374,7 @@ const Devices: React.FC = () => {
         </table>
         
         {/* Pagination Controls */}
-        {totalPages > 1 && (
+        {totalCount > 0 && (
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -406,36 +405,44 @@ const Devices: React.FC = () => {
               </button>
               
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  // Show current page and adjacent pages only
-                  const showPage = Math.abs(page - currentPage) <= 1 || page === 1 || page === totalPages;
+                {(() => {
+                  const pages = [];
                   
-                  if (!showPage && totalPages > 5) {
-                    return null;
+                  for (let i = 1; i <= totalPages; i++) {
+                    // Always show first page, last page, current page, and adjacent pages
+                    const showPage = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
+                    
+                    if (showPage) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i)}
+                          style={{
+                            padding: '6px 10px',
+                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                            borderRadius: '4px',
+                            background: i === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                            color: 'var(--text-primary, #f8fafc)',
+                            cursor: 'pointer',
+                            fontWeight: i === currentPage ? 'bold' : 'normal',
+                            minWidth: '32px'
+                          }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    } else if (pages[pages.length - 1]?.key !== 'ellipsis-' + Math.floor(i / 10)) {
+                      // Add ellipsis if we skipped pages and haven't added one recently
+                      pages.push(
+                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--text-secondary, #94a3b8)' }}>
+                          ...
+                        </span>
+                      );
+                    }
                   }
                   
-                  if (!showPage && totalPages > 5 && page === currentPage - 2) {
-                    return <span key="dots" style={{ padding: '0 4px' }}>...</span>;
-                  }
-                  
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      style={{
-                        padding: '6px 10px',
-                        border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                        borderRadius: '4px',
-                        background: page === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                        color: 'var(--text-primary, #f8fafc)',
-                        cursor: 'pointer',
-                        fontWeight: page === currentPage ? 'bold' : 'normal'
-                      }}
-                    >
-                      {page}
-                    </button>
-                  );
-                }).filter(Boolean)}
+                  return pages;
+                })()}
               </div>
               
               <button
