@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import AuditTrail from './AuditTrail';
 
 interface Employee {
   id: number;
@@ -12,6 +13,10 @@ interface Employee {
   is_staff: boolean;
   is_superuser: boolean;
   date_joined: string;
+  created_by_username?: string;
+  created_at?: string;
+  updated_by_username?: string;
+  updated_at?: string;
 }
 
 const Employees: React.FC = () => {
@@ -292,6 +297,14 @@ const Employees: React.FC = () => {
                   />
                 </div>
               </div>
+              {editingEmployee && (
+                <AuditTrail
+                  createdBy={editingEmployee.created_by_username}
+                  createdAt={editingEmployee.created_at}
+                  updatedBy={editingEmployee.updated_by_username}
+                  updatedAt={editingEmployee.updated_at}
+                />
+              )}
               <div className="form-actions">
                 <button type="submit" className="btn">{editingEmployee ? 'Save' : 'Create'}</button>
                 <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>

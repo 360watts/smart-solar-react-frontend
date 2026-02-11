@@ -50,6 +50,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/serve-static": "^2.2.0",
     "@types/stack-utils": "^2.0.3",
+    "ajv": "^8.17.1",
     "baseline-browser-mapping": "^2.9.17"
   }
 }

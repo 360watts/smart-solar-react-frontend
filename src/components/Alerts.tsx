@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import AuditTrail from './AuditTrail';
 
 interface Alert {
   id: string;
@@ -9,6 +10,8 @@ interface Alert {
   device_id: string;
   timestamp: string;
   resolved: boolean;
+  created_by_username?: string;
+  created_at?: string;
 }
 
 const Alerts: React.FC = () => {
@@ -114,6 +117,10 @@ const Alerts: React.FC = () => {
                 <div className="alert-status">
                   Status: {alert.resolved ? 'Resolved' : 'Active'}
                 </div>
+                <AuditTrail 
+                  createdBy={alert.created_by_username}
+                  createdAt={alert.created_at}
+                />
               </div>
             ))}
           </div>

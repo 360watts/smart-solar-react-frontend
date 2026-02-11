@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './contexts/AuthContext';
@@ -6,18 +6,21 @@ import { NavigationProvider } from './contexts/NavigationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import Login from './components/Login';
-import Devices from './components/Devices';
-import Configuration from './components/Configuration';
-import Telemetry from './components/Telemetry';
-import Alerts from './components/Alerts';
-import SystemHealth from './components/SystemHealth';
-import Users from './components/Users';
-import Employees from './components/Employees';
-import DevicePresets from './components/DevicePresets';
-import Profile from './components/Profile';
 import Navbar from './components/Navbar';
 import NavigationProgress from './components/NavigationProgress';
 import PageTransition from './components/PageTransition';
+import { SkeletonDashboard } from './components/SkeletonLoader';
+
+// Lazy load components for better initial load performance
+const Devices = lazy(() => import('./components/Devices'));
+const Configuration = lazy(() => import('./components/Configuration'));
+const Telemetry = lazy(() => import('./components/Telemetry'));
+const Alerts = lazy(() => import('./components/Alerts'));
+const SystemHealth = lazy(() => import('./components/SystemHealth'));
+const Users = lazy(() => import('./components/Users'));
+const Employees = lazy(() => import('./components/Employees'));
+const DevicePresets = lazy(() => import('./components/DevicePresets'));
+const Profile = lazy(() => import('./components/Profile'));
 
 function App() {
   return (
@@ -52,7 +55,9 @@ function App() {
                             path="/devices"
                             element={
                               <ProtectedRoute>
-                                <Devices />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Devices />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -60,7 +65,9 @@ function App() {
                             path="/configuration"
                             element={
                               <ProtectedRoute>
-                                <Configuration />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Configuration />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -68,7 +75,9 @@ function App() {
                             path="/telemetry"
                             element={
                               <ProtectedRoute>
-                                <Telemetry />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Telemetry />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -76,7 +85,9 @@ function App() {
                             path="/alerts"
                             element={
                               <ProtectedRoute>
-                                <Alerts />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Alerts />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -84,7 +95,9 @@ function App() {
                             path="/health"
                             element={
                               <ProtectedRoute>
-                                <SystemHealth />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <SystemHealth />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -92,7 +105,9 @@ function App() {
                             path="/users"
                             element={
                               <ProtectedRoute>
-                                <Users />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Users />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -100,7 +115,9 @@ function App() {
                             path="/employees"
                             element={
                               <AdminRoute>
-                                <Employees />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Employees />
+                                </Suspense>
                               </AdminRoute>
                             }
                           />
@@ -108,7 +125,9 @@ function App() {
                             path="/device-presets"
                             element={
                               <ProtectedRoute>
-                                <DevicePresets />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <DevicePresets />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />
@@ -116,7 +135,9 @@ function App() {
                             path="/profile"
                             element={
                               <ProtectedRoute>
-                                <Profile />
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Profile />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />

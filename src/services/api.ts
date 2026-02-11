@@ -1,3 +1,5 @@
+import { cacheService, DEFAULT_TTL, LONG_TTL } from './cacheService';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
 
 class ApiService {
@@ -115,34 +117,64 @@ class ApiService {
   }
 
   async getAlerts(): Promise<any[]> {
-    return this.request('/alerts/');
+    const cacheKey = 'alerts';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.request('/alerts/');
+    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
   }
 
   async getSystemHealth(): Promise<any> {
-    return this.request('/health/');
+    const cacheKey = 'system_health';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.request('/health/');
+    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
   }
 
   async getKPIs(): Promise<any> {
-    return this.request('/kpis/');
+    const cacheKey = 'kpis';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.request('/kpis/');
+    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
   }
 
   async getUsers(search?: string): Promise<any[]> {
+    const cacheKey = `users_${search || 'all'}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request(`/users/${params}`);
+    const data = await this.request(`/users/${params}`);
+    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
   }
 
   async createUser(userData: any): Promise<any> {
-    return this.request('/users/create/', {
+    const result = await this.request('/users/create/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+    // Invalidate users cache
+    cacheService.clear('users_all');
+    cacheService.clearAll(); // Clear all cache for safety
+    return result;
   }
 
   async createEmployee(employeeData: any): Promise<any> {
-    return this.request('/users/create/', {
+    const result = await this.request('/users/create/', {
       method: 'POST',
       body: JSON.stringify({ ...employeeData, is_staff: true }),
     });
+    cacheService.clear('users_all');
+    return result;
   }
 
   async getUserDevices(userId: number): Promise<any[]> {
@@ -150,16 +182,20 @@ class ApiService {
   }
 
   async updateUser(userId: number, data: any): Promise<any> {
-    return this.request(`/users/${userId}/`, {
+    const result = await this.request(`/users/${userId}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    cacheService.clear('users_all');
+    return result;
   }
 
   async deleteUser(userId: number): Promise<any> {
-    return this.request(`/users/${userId}/delete/`, {
+    const result = await this.request(`/users/${userId}/delete/`, {
       method: 'DELETE',
     });
+    cacheService.clear('users_all');
+    return result;
   }
 
   // Profile Management (for current logged-in user)
@@ -212,27 +248,40 @@ class ApiService {
   }
 
   async getPresets(): Promise<any[]> {
-    return this.request('/presets/');
+    const cacheKey = 'presets';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.request('/presets/');
+    // Use longer TTL for presets as they change less frequently
+    cacheService.set(cacheKey, data, 30 * 60 * 1000); // 30 minutes
+    return data;
   }
 
   async createPreset(data: any): Promise<any> {
-    return this.request('/presets/create/', {
+    const result = await this.request('/presets/create/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    cacheService.clear('presets');
+    return result;
   }
 
   async updatePreset(id: number, data: any): Promise<any> {
-    return this.request(`/presets/${id}/`, {
+    const result = await this.request(`/presets/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    cacheService.clear('presets');
+    return result;
   }
 
   async deletePreset(id: number): Promise<any> {
-    return this.request(`/presets/${id}/delete/`, {
+    const result = await this.request(`/presets/${id}/delete/`, {
       method: 'DELETE',
     });
+    cacheService.clear('presets');
+    return result;
   }
 
   async getDevices(search?: string, page: number = 1, pageSize: number = 25): Promise<any> {

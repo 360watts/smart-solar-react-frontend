@@ -618,7 +618,13 @@ p {
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
   margin: var(--space-6) 0;
-  align-items: start;
+  align-items: stretch;
+}
+
+.grid-cols-2 .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 768px) {
@@ -5006,3 +5012,184 @@ body::before {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================
+   SKELETON LOADERS
+   ============================================ */
+.skeleton-loader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeleton-line {
+  background: linear-gradient(
+    90deg,
+    var(--bg-glass),
+    rgba(255, 255, 255, 0.1),
+    var(--bg-glass)
+  );
+  background-size: 200% 100%;
+  animation: shimmerLoading 2s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmerLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  padding: var(--space-6) !important;
+}
+
+.skeleton-card .skeleton-line {
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-card .skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-loading {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6);
+  margin: var(--space-6) 0;
+}
+
+.skeleton-dashboard {
+  animation: fadeIn 0.3s ease;
+}
+
+.skeleton-dashboard .skeleton-line:first-child {
+  height: 32px !important;
+  width: 40%;
+  margin-bottom: var(--space-8);
+}
+
+.skeleton-row {
+  animation: fadeIn 0.3s ease;
+}
+
+.skeleton-row td {
+  padding: var(--space-4) var(--space-5);
+}
+
+.skeleton-row .skeleton-line {
+  height: 16px !important;
+}
+
+/* Skeleton Variants */
+.skeleton-text {
+  height: 16px;
+}
+
+.skeleton-heading {
+  height: 24px;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 100px;
+}
+
+.skeleton-table-cell {
+  height: 16px;
+  width: 100%;
+}
+
+/* Multiple Skeleton Lines */
+.skeleton-lines-3 {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-lines-3 .skeleton-line {
+  height: 16px;
+}
+
+.skeleton-lines-3 .skeleton-line:last-child {
+  width: 80%;
+}
+
+/* ============================================
+   AUDIT TRAIL STYLES
+   ============================================ */
+
+.audit-trail {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: var(--space-3);
+  margin-top: var(--space-3);
+  font-size: 0.85rem;
+}
+
+.audit-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  color: var(--text-secondary);
+}
+
+.audit-row:not(:last-child) {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.audit-label {
+  font-weight: 600;
+  color: var(--text-accent);
+  min-width: 110px;
+}
+
+.audit-value {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.audit-value strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Audit Trail in different contexts */
+.modal .audit-trail {
+  margin-top: var(--space-4);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.card .audit-trail {
+  margin-top: var(--space-4);
+  padding: var(--space-2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .audit-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .audit-label {
+    min-width: auto;
+  }
+}
+

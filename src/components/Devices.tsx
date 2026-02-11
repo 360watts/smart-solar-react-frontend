@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
+import { useDebouncedCallback } from '../hooks/useDebounce';
+import AuditTrail from './AuditTrail';
 
 interface User {
   id: number;
@@ -15,6 +17,10 @@ interface Device {
   user?: string;
   provisioned_at: string;
   config_version?: string;
+  created_by_username?: string;
+  created_at?: string;
+  updated_by_username?: string;
+  updated_at?: string;
 }
 
 const Devices: React.FC = () => {
@@ -47,14 +53,53 @@ const Devices: React.FC = () => {
     config_version: '',
   });
 
+  const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
+    try {
+      setLoading(true);
+      const response = await apiService.getDevices(search || undefined, page, pageSize);
+      
+      // Handle paginated response
+      if (response.results) {
+        setDevices(response.results);
+        setFilteredDevices(response.results);
+        setTotalCount(response.count);
+        setTotalPages(response.total_pages);
+        setCurrentPage(response.current_page);
+      } else {
+        // Fallback for non-paginated response
+        setDevices(Array.isArray(response) ? response : []);
+        setFilteredDevices(Array.isArray(response) ? response : []);
+        setTotalCount(Array.isArray(response) ? response.length : 0);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
+    }
+  }, [pageSize]);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await apiService.getUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+      setError('Failed to load users for device assignment');
+    }
+  };
+
   useEffect(() => {
     fetchDevices();
     fetchUsers();
-  }, []);
-  // Re-fetch devices when page or search term changes
+  }, [fetchDevices]);
+  
   useEffect(() => {
     fetchDevices(currentPage, searchTerm);
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, fetchDevices]);
+  
   useEffect(() => {
     const handleClickOutside = () => {
       setShowUserDropdown(false);
@@ -88,47 +133,20 @@ const Devices: React.FC = () => {
     }
   }, [users, userSearchTerm]);
 
-  const fetchDevices = async (page: number = 1, search: string = searchTerm) => {
-    try {
-      setLoading(true);
-      const response = await apiService.getDevices(search || undefined, page, pageSize);
-      
-      // Handle paginated response
-      if (response.results) {
-        setDevices(response.results);
-        setFilteredDevices(response.results);
-        setTotalCount(response.count);
-        setTotalPages(response.total_pages);
-        setCurrentPage(response.current_page);
-      } else {
-        // Fallback for non-paginated response
-        setDevices(Array.isArray(response) ? response : []);
-        setFilteredDevices(Array.isArray(response) ? response : []);
-        setTotalCount(Array.isArray(response) ? response.length : 0);
-        setTotalPages(1);
-        setCurrentPage(1);
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const data = await apiService.getUsers();
-      setUsers(data);
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-      setError('Failed to load users for device assignment');
-    }
-  };
+  // Debounced search function that runs the actual search after 300ms of inactivity
+  const debouncedSearch = useDebouncedCallback(
+    (query: string) => {
+      // The actual search happens via useEffect that watches currentPage and searchTerm
+      // This ensures we don't make too many API calls
+    },
+    300
+  );
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+    const query = e.target.value;
+    setSearchTerm(query);
     setCurrentPage(1);  // Reset to page 1 on new search
+    debouncedSearch(query);  // Debounce the search
   };
 
   const handleEdit = (device: Device) => {
@@ -568,6 +586,14 @@ const Devices: React.FC = () => {
                 />
               </div>
             </div>
+            {editingDevice && (
+              <AuditTrail
+                createdBy={editingDevice.created_by_username}
+                createdAt={editingDevice.created_at}
+                updatedBy={editingDevice.updated_by_username}
+                updatedAt={editingDevice.updated_at}
+              />
+            )}
             <div className="form-actions">
               <button type="submit" className="btn">{editingDevice ? 'Save' : 'Create'}</button>
               <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
