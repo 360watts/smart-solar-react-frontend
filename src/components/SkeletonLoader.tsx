@@ -13,7 +13,7 @@ interface SkeletonProps {
  * Skeleton loader component for showing loading states
  * Provides better UX than plain "Loading..." text
  */
-export const SkeletonLoader: React.FC<SkeletonProps> = ({
+export const SkeletonLoader: React.FC<SkeletonProps> = React.memo(({
   rows = 3,
   height = '20px',
   width = '100%',
@@ -36,12 +36,12 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
       ))}
     </div>
   );
-};
+});
 
 /**
  * Skeleton card loader for grid layouts
  */
-export const SkeletonCard: React.FC = () => {
+export const SkeletonCard: React.FC = React.memo(() => {
   return (
     <div className="skeleton-card card">
       <div className="skeleton-line" style={{ height: '24px', width: '60%', marginBottom: '16px' }} />
@@ -49,7 +49,7 @@ export const SkeletonCard: React.FC = () => {
       <div className="skeleton-line" style={{ height: '16px', width: '80%' }} />
     </div>
   );
-};
+});
 
 /**
  * Skeleton for table rows

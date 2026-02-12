@@ -9,6 +9,7 @@ import Login from './components/Login';
 import Navbar from './components/Navbar';
 import NavigationProgress from './components/NavigationProgress';
 import PageTransition from './components/PageTransition';
+import ErrorBoundary from './components/ErrorBoundary';
 import { SkeletonDashboard } from './components/SkeletonLoader';
 
 // Lazy load components for better initial load performance
@@ -24,9 +25,10 @@ const Profile = lazy(() => import('./components/Profile'));
 
 function App() {
   return (
-    <AuthProvider>
-      <NavigationProvider>
-        <Router>
+    <ErrorBoundary>
+      <AuthProvider>
+        <NavigationProvider>
+          <Router>
           <div className="App">
             <Routes>
               {/* Public login route - no navbar, breadcrumbs, or page transition */}
@@ -151,8 +153,7 @@ function App() {
           </div>
         </Router>
       </NavigationProvider>
-    </AuthProvider>
-  );
+    </AuthProvider>    </ErrorBoundary>  );
 }
 
 export default App;

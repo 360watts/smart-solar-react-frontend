@@ -191,7 +191,6 @@ const Devices: React.FC = () => {
   const handleDelete = async (device: any) => {
     if (window.confirm(`Are you sure you want to delete device ${device.device_serial}?`)) {
       try {
-        console.log('Deleting device with ID:', device.id, 'Serial:', device.device_serial);
         await apiService.deleteDevice(device.id);
         const updatedDevices = devices.filter(d => d.id !== device.id);
         setDevices(updatedDevices);

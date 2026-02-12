@@ -147,9 +147,7 @@ const Users: React.FC = () => {
     setSelectedUser(user);
     setLoadingDevices(true);
     try {
-      console.log('Fetching devices for user:', user.id);
       const devices = await apiService.getUserDevices(user.id);
-      console.log('Devices received:', devices);
       setUserDevices(devices);
     } catch (err) {
       console.error('Error fetching user devices:', err);

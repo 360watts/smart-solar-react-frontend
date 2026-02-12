@@ -49,4 +49,4 @@ const AuditTrail: React.FC<AuditTrailProps> = ({
   );
 };
 
-export default AuditTrail;
+export default React.memo(AuditTrail);

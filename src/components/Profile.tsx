@@ -46,7 +46,6 @@ const Profile: React.FC = () => {
     try {
       setLoading(true);
       const data = await apiService.getProfile();
-      console.log('Profile data received:', data);
       setProfile(data);
       setEditForm({
         first_name: data.first_name || '',
