@@ -1,103 +1,357 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 
+// Comprehensive Modbus Configuration Interfaces
+interface DevicePreset {
+  id: number;
+  name: string;
+  manufacturer: string;
+  model: string;
+  device_type: string;
+  description: string;
+  version: string;
+  is_active: boolean;
+  default_baud_rate: number;
+  default_parity: string;
+  default_data_bits: number;
+  default_stop_bits: number;
+  default_timeout_ms: number;
+  default_poll_interval_ms: number;
+  register_count: number;
+  registers: PresetRegister[];
+}
+
+interface PresetRegister {
+  id: number;
+  name: string;
+  address: number;
+  register_type: string;
+  function_code: number;
+  register_count: number;
+  data_type: string;
+  byte_order: string;
+  word_order?: string;
+  scale_factor: number;
+  offset: number;
+  unit: string;
+  category: string;
+  decimal_places: number;
+  min_value?: number;
+  max_value?: number;
+  description: string;
+  value_mapping: Record<string, string>;
+  is_required: boolean;
+  display_order: number;
+}
+
 interface GatewayConfig {
-  configId: string;
-  updatedAt: string;
-  configSchemaVer: number;
-  uartConfig: {
-    baudRate: number;
-    dataBits: number;
-    stopBits: number;
-    parity: number;
-  };
+  id: number;
+  config_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  config_schema_ver: number;
+  
+  // Communication Layer
+  protocol_type: string;
+  baud_rate: number;
+  parity: string;
+  data_bits: number;
+  stop_bits: number;
+  interface_type: string;
+  
+  // Timing Configuration
+  global_response_timeout_ms: number;
+  inter_frame_delay_ms: number;
+  global_retry_count: number;
+  global_retry_delay_ms: number;
+  global_poll_interval_ms: number;
+  
+  // Related data
   slaves: SlaveDevice[];
+  slave_count: number;
+  total_registers: number;
 }
 
 interface SlaveDevice {
   id: number;
-  slaveId: number;
-  deviceName: string;
-  pollingIntervalMs: number;
-  timeoutMs: number;
+  slave_id: number;
+  device_name: string;
+  device_type: string;
   enabled: boolean;
+  polling_interval_ms: number;
+  response_timeout_ms: number;
+  retry_count: number;
+  retry_delay_ms: number;
+  priority: string;
+  description: string;
+  preset?: number;
+  preset_name?: string;
   registers: RegisterMapping[];
+  register_count: number;
 }
 
 interface RegisterMapping {
   id: number;
-  label: string;
+  name: string;
   address: number;
-  numRegisters: number;
-  functionCode: number;
-  dataType: number;
-  scaleFactor: number;
-  offset: number;
+  register_type: string;
+  function_code: number;
+  register_count: number;
   enabled: boolean;
+  
+  // Data Interpretation
+  data_type: string;
+  byte_order: string;
+  word_order?: string;
+  bit_position?: number;
+  
+  // Value Transformation
+  scale_factor: number;
+  offset: number;
+  formula?: string;
+  decimal_places: number;
+  
+  // Metadata & Validation
+  unit: string;
+  category: string;
+  min_value?: number;
+  max_value?: number;
+  dead_band?: number;
+  access_mode: string;
+  
+  // Alarm Configuration
+  high_alarm_threshold?: number;
+  low_alarm_threshold?: number;
+  
+  // Additional
+  value_mapping: Record<string, string>;
+  string_length?: number;
+  is_signed: boolean;
+  description: string;
+  preset_register?: number;
+  preset_register_name?: string;
 }
 
 const Configuration: React.FC = () => {
+  // State management
   const [config, setConfig] = useState<GatewayConfig | null>(null);
-  const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
+  const [presets, setPresets] = useState<DevicePreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [creatingSlave, setCreatingSlave] = useState(false);
+  const [activeTab, setActiveTab] = useState('communication');
+  
+  // Form states
+  const [editingConfig, setEditingConfig] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
-  const [slaveForm, setSlaveForm] = useState({
-    slave_id: '',
-    device_name: '',
-    polling_interval_ms: 5000,
-    timeout_ms: 1000,
-    enabled: true,
-    registers: [] as RegisterMapping[]
+  const [editingRegister, setEditingRegister] = useState<RegisterMapping | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<DevicePreset | null>(null);
+  
+  // Communication Layer Form
+  const [commForm, setCommForm] = useState({
+    protocol_type: 'RTU',
+    baud_rate: 9600,
+    parity: 'N',
+    data_bits: 8,
+    stop_bits: 1,
+    interface_type: 'RS485',
+    global_response_timeout_ms: 1000,
+    inter_frame_delay_ms: 50,
+    global_retry_count: 3,
+    global_retry_delay_ms: 100,
+    global_poll_interval_ms: 5000
   });
+  
+  // Slave Device Form
+  const [slaveForm, setSlaveForm] = useState({
+    slave_id: 1,
+    device_name: '',
+    device_type: '',
+    enabled: true,
+    polling_interval_ms: 5000,
+    response_timeout_ms: 1000,
+    retry_count: 3,
+    retry_delay_ms: 100,
+    priority: 'NORMAL',
+    description: '',
+    preset: null as number | null
+  });
+  
+  // Register Mapping Form
   const [registerForm, setRegisterForm] = useState({
-    label: '',
+    name: '',
     address: 0,
-    num_registers: 1,
+    register_type: 'HOLDING',
     function_code: 3,
-    data_type: 0,
+    register_count: 1,
+    enabled: true,
+    data_type: 'UINT16',
+    byte_order: 'BE',
+    word_order: 'BE',
+    bit_position: null as number | null,
     scale_factor: 1.0,
     offset: 0.0,
-    enabled: true
+    formula: '',
+    decimal_places: 2,
+    unit: '',
+    category: '',
+    min_value: null as number | null,
+    max_value: null as number | null,
+    dead_band: null as number | null,
+    access_mode: 'R',
+    high_alarm_threshold: null as number | null,
+    low_alarm_threshold: null as number | null,
+    value_mapping: {},
+    string_length: null as number | null,
+    is_signed: true,
+    description: ''
   });
 
-  const fetchSlaves = useCallback(async (configId: string) => {
-    try {
-      const slavesData = await apiService.getSlaves(configId);
-      // Map API response to match interface
-      const mappedSlaves = slavesData.map((slave: any) => ({
-        id: slave.id,
-        slaveId: slave.slave_id,
-        deviceName: slave.device_name,
-        pollingIntervalMs: slave.polling_interval_ms,
-        timeoutMs: slave.timeout_ms,
-        enabled: slave.enabled,
-        registers: slave.registers.map((reg: any) => ({
-          id: reg.id,
-          label: reg.label,
-          address: reg.address,
-          numRegisters: reg.num_registers,
-          functionCode: reg.function_code,
-          dataType: reg.data_type,
-          scaleFactor: reg.scale_factor,
-          offset: reg.offset,
-          enabled: reg.enabled,
-        }))
-      }));
-      setSlaves(mappedSlaves);
-    } catch (err) {
-      console.error('Failed to fetch slaves:', err);
-    }
-  }, []);
-
+  // Data fetching functions
   const fetchConfiguration = useCallback(async () => {
     try {
-      const data = await apiService.getConfiguration();
-      setConfig(data);
-      // Fetch slaves for the current config
-      if (data.configId) {
-        await fetchSlaves(data.configId);
+      const data = await apiService.get('/modbus/configurations/summary/');
+      if (data.configurations && data.configurations.length > 0) {
+        // Get the first configuration for now, extend for multiple configs later
+        const configData = await apiService.get(`/modbus/configurations/${data.configurations[0].config_id}/`);
+        setConfig(configData);
+        setCommForm({
+          protocol_type: configData.protocol_type,
+          baud_rate: configData.baud_rate,
+          parity: configData.parity,
+          data_bits: configData.data_bits,
+          stop_bits: configData.stop_bits,
+          interface_type: configData.interface_type,
+          global_response_timeout_ms: configData.global_response_timeout_ms,
+          inter_frame_delay_ms: configData.inter_frame_delay_ms,
+          global_retry_count: configData.global_retry_count,
+          global_retry_delay_ms: configData.global_retry_delay_ms,
+          global_poll_interval_ms: configData.global_poll_interval_ms
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch configuration:', err);
+      setError('Failed to load configuration');
+    }
+  }, []);
+  
+  const fetchPresets = useCallback(async () => {
+    try {
+      const data = await apiService.get('/modbus/presets/');
+      setPresets(data.results || []);
+    } catch (err) {
+      console.error('Failed to fetch presets:', err);
+    }
+  }, []);
+  
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchConfiguration(), fetchPresets()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchConfiguration, fetchPresets]);
+  
+  // Form handlers
+  const handleSaveCommunication = async () => {
+    if (!config) return;
+    
+    try {
+      const updatedConfig = await apiService.put(`/modbus/configurations/${config.config_id}/`, commForm);
+      setConfig(updatedConfig);
+      setEditingConfig(false);
+    } catch (err) {
+      console.error('Failed to save communication settings:', err);
+      setError('Failed to save communication settings');
+    }
+  };
+  
+  const handleCreateSlave = async () => {
+    if (!config) return;
+    
+    try {
+      const newSlave = await apiService.post(`/modbus/configurations/${config.config_id}/slaves/create/`, slaveForm);
+      const updatedConfig = await apiService.get(`/modbus/configurations/${config.config_id}/`);
+      setConfig(updatedConfig);
+      setSlaveForm({
+        slave_id: 1,
+        device_name: '',
+        device_type: '',
+        enabled: true,
+        polling_interval_ms: 5000,
+        response_timeout_ms: 1000,
+        retry_count: 3,
+        retry_delay_ms: 100,
+        priority: 'NORMAL',
+        description: '',
+        preset: null
+      });
+    } catch (err) {
+      console.error('Failed to create slave:', err);
+      setError('Failed to create slave device');
+    }
+  };
+  
+  const handleApplyPreset = async (slaveId: number, presetId: number) => {
+    if (!config) return;
+    
+    try {
+      await apiService.post(`/modbus/configurations/${config.config_id}/slaves/${slaveId}/apply-preset/`, {
+        preset_id: presetId,
+        overwrite: true
+      });
+      const updatedConfig = await apiService.get(`/modbus/configurations/${config.config_id}/`);
+      setConfig(updatedConfig);
+    } catch (err) {
+      console.error('Failed to apply preset:', err);
+      setError('Failed to apply preset');
+    }
+  };
+  
+  const handleCreateRegister = async (slaveId: number) => {
+    if (!config) return;
+    
+    try {
+      await apiService.post(`/modbus/configurations/${config.config_id}/slaves/${slaveId}/registers/create/`, registerForm);
+      const updatedConfig = await apiService.get(`/modbus/configurations/${config.config_id}/`);
+      setConfig(updatedConfig);
+      setEditingRegister(null);
+    } catch (err) {
+      console.error('Failed to create register:', err);
+      setError('Failed to create register mapping');
+    }
+  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading configuration...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+          <div className="text-red-500 text-center">
+            <h2 className="text-xl font-semibold mb-4">Error</h2>
+            <p>{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
       }
       setLoading(false);
     } catch (err) {
