@@ -1325,6 +1325,16 @@ p {
   min-height: 38px; /* Match input height */
 }
 
+.ota-checkbox-label {
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.ota-checkbox-label span {
+  line-height: 1.3;
+  padding-top: 1px;
+}
+
 .checkbox-label.checkbox-vertical {
   flex-direction: column;
   align-items: flex-start;
@@ -5398,6 +5408,57 @@ select.full-width {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.ota-file-input {
+  padding: 0;
+  color: var(--text-secondary);
+}
+
+.ota-file-input::file-selector-button {
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  border: 1px solid var(--primary-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+
+.ota-file-input::file-selector-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-primary);
+  filter: brightness(1.05);
+}
+
+.ota-file-input::file-selector-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.ota-file-input::-webkit-file-upload-button {
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  border: 1px solid var(--primary-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+
+.ota-file-input::-webkit-file-upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-primary);
+  filter: brightness(1.05);
+}
+
+.ota-file-input::-webkit-file-upload-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .admin-card h4 {

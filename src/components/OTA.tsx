@@ -201,7 +201,7 @@ export const OTA: React.FC = () => {
               <label>Firmware File</label>
               <input
                 type="file"
-                className="form-control"
+                className="form-control ota-file-input"
                 accept=".bin,.hex,.elf"
                 onChange={handleFileSelect}
               />
@@ -287,7 +287,7 @@ export const OTA: React.FC = () => {
           {configForm && (
             <form onSubmit={handleSaveConfig} className="form">
               <div className="form-group">
-                <label className="checkbox-label">
+                <label className="checkbox-label ota-checkbox-label">
                   <input
                     type="checkbox"
                     checked={configForm.enable_auto_update}
