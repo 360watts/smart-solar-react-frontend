@@ -286,18 +286,7 @@ export const OTA: React.FC = () => {
           <h2>OTA Configuration</h2>
           {configForm && (
             <form onSubmit={handleSaveConfig} className="form">
-              <div className="form-group">
-                <label className="checkbox-label ota-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={configForm.enable_auto_update}
-                    onChange={(e) =>
-                      setConfigForm({ ...configForm, enable_auto_update: e.target.checked })
-                    }
-                  />
-                  <span>Enable Automatic Updates</span>
-                </label>
-              </div>
+              
 
               <div className="form-group">
                 <label>Update Strategy</label>

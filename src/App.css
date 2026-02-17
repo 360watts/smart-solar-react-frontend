@@ -1325,15 +1325,7 @@ p {
   min-height: 38px; /* Match input height */
 }
 
-.ota-checkbox-label {
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.ota-checkbox-label span {
-  line-height: 1.3;
-  padding-top: 1px;
-}
+/* Removed OTA automatic-updates checkbox styles (feature deleted) */
 
 .checkbox-label.checkbox-vertical {
   flex-direction: column;
