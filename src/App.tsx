@@ -28,7 +28,12 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <NavigationProvider>
-          <Router>
+          <Router
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
           <div className="App">
             <Routes>
               {/* Public login route - no navbar, breadcrumbs, or page transition */}
