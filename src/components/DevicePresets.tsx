@@ -57,6 +57,10 @@ const DevicePresets: React.FC = () => {
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
+  const [createPresetSlaveMode, setCreatePresetSlaveMode] = useState<'none' | 'create' | 'select'>('none');
+  const [globalSlaves, setGlobalSlaves] = useState<SlaveDevice[]>([]);
+  const [globalSlavesLoading, setGlobalSlavesLoading] = useState(false);
+  const [selectedGlobalSlaveId, setSelectedGlobalSlaveId] = useState<number | ''>('');
   const [editForm, setEditForm] = useState({
     config_id: '',
     name: '',
@@ -97,6 +101,33 @@ const DevicePresets: React.FC = () => {
     fetchPresets();
   }, []);
 
+  useEffect(() => {
+    if (!creatingPreset || createPresetSlaveMode !== 'select') return;
+
+    const fetchGlobalSlaves = async () => {
+      try {
+        setGlobalSlavesLoading(true);
+        const data = await apiService.getGlobalSlaves();
+        const mapped = data.map((slave: any) => ({
+          id: slave.id,
+          slaveId: slave.slave_id,
+          deviceName: slave.device_name,
+          pollingIntervalMs: slave.polling_interval_ms,
+          timeoutMs: slave.timeout_ms,
+          enabled: slave.enabled,
+          registers: slave.registers || [],
+        }));
+        setGlobalSlaves(mapped);
+      } catch (err) {
+        console.error('Failed to fetch global slaves:', err);
+      } finally {
+        setGlobalSlavesLoading(false);
+      }
+    };
+
+    fetchGlobalSlaves();
+  }, [creatingPreset, createPresetSlaveMode]);
+
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
@@ -109,6 +140,28 @@ const DevicePresets: React.FC = () => {
   useEffect(() => {
     fetchPresets(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    if (!creatingPreset) return;
+    setSlaveForm({
+      slave_id: '',
+      device_name: '',
+      polling_interval_ms: 5000,
+      timeout_ms: 1000,
+      enabled: true,
+      registers: [] as RegisterMapping[]
+    });
+    setRegisterForm({
+      label: '',
+      address: 0,
+      num_registers: 1,
+      function_code: 3,
+      data_type: 0,
+      scale_factor: 1.0,
+      offset: 0.0,
+      enabled: true
+    });
+  }, [creatingPreset]);
 
   const fetchPresets = async (search?: string) => {
     try {
@@ -165,8 +218,39 @@ const DevicePresets: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiService.createPreset(createForm);
+      const result = await apiService.createPreset(createForm);
+      const createdConfigId =
+        result?.gateway_configuration?.general_settings?.config_id ||
+        result?.config_id ||
+        result?.configId ||
+        '';
+
+      if (!createdConfigId && createPresetSlaveMode !== 'none') {
+        setError('Preset created but config id was not returned. Slave setup skipped.');
+      }
+
+      if (createdConfigId && createPresetSlaveMode === 'create') {
+        if (!slaveForm.slave_id || !slaveForm.device_name) {
+          setError('Slave ID and Device Name are required to create a slave.');
+          return;
+        }
+        await apiService.createSlave(createdConfigId, {
+          slave_id: parseInt(slaveForm.slave_id),
+          device_name: slaveForm.device_name,
+          polling_interval_ms: slaveForm.polling_interval_ms,
+          timeout_ms: slaveForm.timeout_ms,
+          enabled: slaveForm.enabled,
+          registers: slaveForm.registers,
+        });
+      }
+
+      if (createdConfigId && createPresetSlaveMode === 'select' && selectedGlobalSlaveId) {
+        await apiService.addSlavesToPreset(createdConfigId, [selectedGlobalSlaveId as number]);
+      }
+
       setCreatingPreset(false);
+      setCreatePresetSlaveMode('none');
+      setSelectedGlobalSlaveId('');
       setCreateForm({
         name: '',
         description: '',
@@ -213,6 +297,8 @@ const DevicePresets: React.FC = () => {
   const handleCancel = () => {
     setEditingPreset(null);
     setCreatingPreset(false);
+    setCreatePresetSlaveMode('none');
+    setSelectedGlobalSlaveId('');
   };
 
   const getDataTypeName = (dataType: number): string => {
@@ -549,80 +635,225 @@ const DevicePresets: React.FC = () => {
             <h3>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</h3>
             <div className="modal-body">
               <form onSubmit={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }}>
-                {editingPreset && (
-                  <div className="form-group">
-                    <label>Config ID:</label>
-                    <input
-                      type="text"
-                      value={editForm.config_id}
-                      onChange={(e) => setEditForm({...editForm, config_id: e.target.value})}
-                      required
-                      autoComplete="off"
-                    />
+                
+                {/* Section 1: Preset Information */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Preset Details</h4>
+                  <div className="form-grid form-grid-2">
+                    {editingPreset && (
+                      <div className="form-group">
+                        <label>Config ID</label>
+                        <input
+                          type="text"
+                          value={editForm.config_id}
+                          onChange={(e) => setEditForm({...editForm, config_id: e.target.value})}
+                          required
+                          autoComplete="off"
+                          readOnly
+                          className="form-control-readonly"
+                        />
+                      </div>
+                    )}
+                    <div className="form-group" style={editingPreset ? {} : { gridColumn: '1 / -1' }}>
+                      <label>Preset Name</label>
+                      <input
+                        type="text"
+                        value={editingPreset ? editForm.name : createForm.name}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})}
+                        required
+                        autoComplete="off"
+                        placeholder="e.g., Standard Gateway Config"
+                      />
+                    </div>
+                    <div className="form-group full-width">
+                      <label>Description</label>
+                      <textarea
+                        value={editingPreset ? editForm.description : createForm.description}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, description: e.target.value}) : setCreateForm({...createForm, description: e.target.value})}
+                        autoComplete="off"
+                        placeholder="Describe the purpose of this preset..."
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: UART Configuration */}
+                <div className="form-section compact-inputs">
+                  <h4 className="form-section-title">UART Configuration</h4>
+                  <div className="form-grid form-grid-4">
+                    <div className="form-group">
+                      <label>Baud Rate</label>
+                      <select
+                        value={editingPreset ? editForm.baud_rate : createForm.baud_rate}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, baud_rate: parseInt(e.target.value)}) : setCreateForm({...createForm, baud_rate: parseInt(e.target.value)})}
+                      >
+                        <option value={9600}>9600</option>
+                        <option value={19200}>19200</option>
+                        <option value={38400}>38400</option>
+                        <option value={57600}>57600</option>
+                        <option value={115200}>115200</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Data Bits</label>
+                      <select
+                        value={editingPreset ? editForm.data_bits : createForm.data_bits}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, data_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, data_bits: parseInt(e.target.value)})}
+                      >
+                        <option value={7}>7</option>
+                        <option value={8}>8</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Stop Bits</label>
+                      <select
+                        value={editingPreset ? editForm.stop_bits : createForm.stop_bits}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, stop_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, stop_bits: parseInt(e.target.value)})}
+                      >
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Parity</label>
+                      <select
+                        value={editingPreset ? editForm.parity : createForm.parity}
+                        onChange={(e) => editingPreset ? setEditForm({...editForm, parity: parseInt(e.target.value)}) : setCreateForm({...createForm, parity: parseInt(e.target.value)})}
+                      >
+                        <option value={0}>None</option>
+                        <option value={1}>Odd</option>
+                        <option value={2}>Even</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Initial Slave Setup (Create Mode Only) */}
+                {creatingPreset && (
+                  <div className="form-section">
+                    <h4 className="form-section-title">Initial Slave Setup</h4>
+                    <p className="form-section-desc">Optionally configure a slave device for this preset immediately.</p>
+                    
+                    <div className="slave-options-container">
+                      <div className="slave-option-card">
+                        <div className="slave-option-header">
+                          <label className="radio-card-label">
+                            <input
+                              type="radio"
+                              name="slaveMode"
+                              checked={createPresetSlaveMode === 'create'}
+                              onChange={() => setCreatePresetSlaveMode('create')}
+                            />
+                            <span>Create New Slave</span>
+                          </label>
+                        </div>
+                        <div className={`slave-option-content ${createPresetSlaveMode === 'create' ? 'active' : ''}`}>
+                          <p className="text-sm text-muted">Define a new slave device configuration from scratch.</p>
+                          {createPresetSlaveMode === 'create' && (
+                             <div className="nested-form">
+                                <div className="form-grid form-grid-2">
+                                  <div className="form-group">
+                                    <label>Slave ID</label>
+                                    <input
+                                      type="number"
+                                      value={slaveForm.slave_id}
+                                      onChange={(e) => setSlaveForm({ ...slaveForm, slave_id: e.target.value })}
+                                      required
+                                      placeholder="1-247"
+                                    />
+                                  </div>
+                                  <div className="form-group">
+                                    <label>Device Name</label>
+                                    <input
+                                      type="text"
+                                      value={slaveForm.device_name}
+                                      onChange={(e) => setSlaveForm({ ...slaveForm, device_name: e.target.value })}
+                                      required
+                                      placeholder="Device Name"
+                                    />
+                                  </div>
+                                  <div className="form-group">
+                                    <label>Polling (ms)</label>
+                                    <input
+                                      type="number"
+                                      value={slaveForm.polling_interval_ms}
+                                      onChange={(e) => setSlaveForm({ ...slaveForm, polling_interval_ms: parseInt(e.target.value) })}
+                                      placeholder="5000"
+                                    />
+                                  </div>
+                                  <div className="form-group">
+                                    <label>Timeout (ms)</label>
+                                    <input
+                                      type="number"
+                                      value={slaveForm.timeout_ms}
+                                      onChange={(e) => setSlaveForm({ ...slaveForm, timeout_ms: parseInt(e.target.value) })}
+                                      placeholder="1000"
+                                    />
+                                  </div>
+                                </div>
+                             </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="slave-option-card">
+                        <div className="slave-option-header">
+                          <label className="radio-card-label">
+                            <input
+                              type="radio"
+                              name="slaveMode"
+                              checked={createPresetSlaveMode === 'select'}
+                              onChange={() => setCreatePresetSlaveMode('select')}
+                            />
+                            <span>Link Existing Slave</span>
+                          </label>
+                        </div>
+                        <div className={`slave-option-content ${createPresetSlaveMode === 'select' ? 'active' : ''}`}>
+                           <p className="text-sm text-muted">Select an existing slave configuration to reuse.</p>
+                           {createPresetSlaveMode === 'select' && (
+                              <div className="form-group" style={{ marginTop: '10px' }}>
+                                <select
+                                  value={selectedGlobalSlaveId}
+                                  onChange={(e) => setSelectedGlobalSlaveId(e.target.value ? parseInt(e.target.value) : '')}
+                                  className="full-width"
+                                >
+                                  <option value="">Select a slave configuration...</option>
+                                  {globalSlavesLoading ? (
+                                    <option disabled>Loading...</option>
+                                  ) : (
+                                    globalSlaves.map((slave) => (
+                                      <option key={slave.id} value={slave.id}>
+                                        {slave.deviceName} (ID: {slave.slaveId})
+                                      </option>
+                                    ))
+                                  )}
+                                </select>
+                              </div>
+                           )}
+                        </div>
+                      </div>
+
+                      <div className="slave-option-card">
+                        <div className="slave-option-header">
+                          <label className="radio-card-label">
+                            <input
+                              type="radio"
+                              name="slaveMode"
+                              checked={createPresetSlaveMode === 'none'}
+                              onChange={() => setCreatePresetSlaveMode('none')}
+                            />
+                            <span>Skip for Now</span>
+                          </label>
+                        </div>
+                        <div className="slave-option-content">
+                          <p className="text-sm text-muted">Create preset without any initial slave configuration.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-                <div className="form-group">
-                  <label>Name:</label>
-                  <input
-                    type="text"
-                    value={editingPreset ? editForm.name : createForm.name}
-                    onChange={(e) => editingPreset ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Description:</label>
-                  <textarea
-                    value={editingPreset ? editForm.description : createForm.description}
-                    onChange={(e) => editingPreset ? setEditForm({...editForm, description: e.target.value}) : setCreateForm({...createForm, description: e.target.value})}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Baud Rate:</label>
-                  <select
-                    value={editingPreset ? editForm.baud_rate : createForm.baud_rate}
-                  onChange={(e) => editingPreset ? setEditForm({...editForm, baud_rate: parseInt(e.target.value)}) : setCreateForm({...createForm, baud_rate: parseInt(e.target.value)})}
-                >
-                  <option value={9600}>9600</option>
-                  <option value={19200}>19200</option>
-                  <option value={38400}>38400</option>
-                  <option value={57600}>57600</option>
-                  <option value={115200}>115200</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Data Bits:</label>
-                <select
-                  value={editingPreset ? editForm.data_bits : createForm.data_bits}
-                  onChange={(e) => editingPreset ? setEditForm({...editForm, data_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, data_bits: parseInt(e.target.value)})}
-                >
-                  <option value={7}>7</option>
-                  <option value={8}>8</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Stop Bits:</label>
-                <select
-                  value={editingPreset ? editForm.stop_bits : createForm.stop_bits}
-                  onChange={(e) => editingPreset ? setEditForm({...editForm, stop_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, stop_bits: parseInt(e.target.value)})}
-                >
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                </select>
-              </div>
-                <div className="form-group">
-                  <label>Parity:</label>
-                  <select
-                    value={editingPreset ? editForm.parity : createForm.parity}
-                    onChange={(e) => editingPreset ? setEditForm({...editForm, parity: parseInt(e.target.value)}) : setCreateForm({...createForm, parity: parseInt(e.target.value)})}
-                  >
-                    <option value={0}>None</option>
-                    <option value={1}>Odd</option>
-                    <option value={2}>Even</option>
-                  </select>
-                </div>
+
               </form>
             </div>
             <div className="form-actions">

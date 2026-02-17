@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import AuditTrail from './AuditTrail';
@@ -9,6 +10,8 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
+  is_staff: boolean;
+  is_superuser: boolean;
 }
 
 interface Device {
@@ -23,7 +26,43 @@ interface Device {
   updated_at?: string;
 }
 
+interface Preset {
+  id: number;
+  config_id?: string;
+  name: string;
+  gateway_configuration?: {
+    general_settings?: {
+      config_id?: string;
+    };
+  };
+}
+
+interface SystemHealthData {
+  total_devices: number;
+  active_devices: number;
+  total_telemetry_points: number;
+  uptime_seconds: number;
+  database_status: string;
+  mqtt_status: string;
+  overall_health: string;
+}
+
+interface TelemetryData {
+  deviceId: string;
+  timestamp: string;
+  data_type: string;
+  value: number;
+  unit: string;
+}
+
+interface TelemetrySummary {
+  totalPoints: number;
+  deviceCount: number;
+  latestTimestamp: string | null;
+}
+
 const Devices: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +81,13 @@ const Devices: React.FC = () => {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(true);
+  const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
+  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -83,17 +129,77 @@ const Devices: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const data = await apiService.getUsers();
-      setUsers(data);
+      const data: User[] = await apiService.getUsers();
+      // Filter out staff and superusers, only showing regular customers
+      const customers = data.filter(user => !user.is_staff && !user.is_superuser);
+      setUsers(customers);
     } catch (err) {
       console.error('Failed to fetch users:', err);
       setError('Failed to load users for device assignment');
     }
   };
 
+  const fetchPresets = async () => {
+    try {
+      const data = await apiService.getPresets();
+      setPresets(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch presets:', err);
+    } finally {
+      setPresetsLoading(false);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      const [healthData, telemetryData] = await Promise.all([
+        apiService.getSystemHealth(),
+        apiService.getTelemetry(),
+      ]);
+
+      setHealth(healthData || null);
+
+      const telemetryArray = Array.isArray(telemetryData) ? telemetryData : [];
+      setTelemetryData(telemetryArray);
+      const latest = telemetryArray.reduce<string | null>((currentLatest, item) => {
+        if (!item?.timestamp) return currentLatest;
+        const itemDate = new Date(item.timestamp);
+        if (Number.isNaN(itemDate.getTime())) return currentLatest;
+        if (!currentLatest) return item.timestamp;
+        const currentDate = new Date(currentLatest);
+        return itemDate > currentDate ? item.timestamp : currentLatest;
+      }, null);
+
+      const deviceCount = new Set(telemetryArray.map((item: TelemetryData) => item.deviceId)).size;
+      setTelemetrySummary({
+        totalPoints: telemetryArray.length,
+        deviceCount,
+        latestTimestamp: latest,
+      });
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      setDashboardError('Failed to load device dashboards');
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchPresets();
+    fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const deviceIdParam = searchParams.get('deviceId');
+    if (deviceIdParam) {
+      const deviceId = parseInt(deviceIdParam, 10);
+      if (!isNaN(deviceId)) {
+        const foundDevice = devices.find(d => d.id === deviceId);
+        if (foundDevice) {
+          setSelectedDevice(foundDevice);
+        }
+      }
+    }
+  }, [searchParams, devices]);
   
   useEffect(() => {
     fetchDevices(currentPage, searchTerm);
@@ -260,12 +366,266 @@ const Devices: React.FC = () => {
     setShowUserDropdown(false);
   };
 
+  const handleViewDevice = (device: Device) => {
+    setSelectedDevice(device);
+  };
+
+  const handleBackToList = () => {
+    setSelectedDevice(null);
+  };
+
   if (loading) {
     return <div className="loading">Loading devices...</div>;
   }
 
   if (error) {
     return <div className="error">Error: {error}</div>;
+  }
+
+  const getPresetConfigId = (preset: Preset): string => {
+    return preset.gateway_configuration?.general_settings?.config_id || preset.config_id || '';
+  };
+
+  if (selectedDevice) {
+    const deviceTelemetry = telemetryData.filter((entry) => entry.deviceId === selectedDevice.device_serial);
+    const latestTelemetry = deviceTelemetry.reduce<string | null>((currentLatest, item) => {
+      if (!item?.timestamp) return currentLatest;
+      const itemDate = new Date(item.timestamp);
+      if (Number.isNaN(itemDate.getTime())) return currentLatest;
+      if (!currentLatest) return item.timestamp;
+      const currentDate = new Date(currentLatest);
+      return itemDate > currentDate ? item.timestamp : currentLatest;
+    }, null);
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+          <button
+            onClick={handleBackToList}
+            className="btn btn-secondary"
+            style={{ marginRight: '15px' }}
+          >
+            ← Back to Devices
+          </button>
+          <h1 style={{ margin: 0 }}>{selectedDevice.device_serial} Dashboard</h1>
+        </div>
+
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <h2>Device Details</h2>
+            <button onClick={() => handleEdit(selectedDevice)} className="btn">
+              Edit Device
+            </button>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+              <div>
+                <strong>Assigned User:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
+              </div>
+              <div>
+                <strong>Config Version:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedDevice.config_version || '-'}</p>
+              </div>
+              <div>
+                <strong>Provisioned At:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  {selectedDevice.provisioned_at
+                    ? new Date(selectedDevice.provisioned_at).toLocaleDateString()
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <strong>Created By:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedDevice.created_by_username || '-'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)' }}>
+          <div className="card">
+            <h2>System Health</h2>
+            {dashboardError && <p className="error">{dashboardError}</p>}
+            {!dashboardError && !health && <p>Loading system health...</p>}
+            {health && (
+              <div>
+                <p><strong>Overall:</strong> {health.overall_health}</p>
+                <p><strong>Devices:</strong> {health.active_devices}/{health.total_devices} active</p>
+                <p><strong>Telemetry Points:</strong> {health.total_telemetry_points.toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>Telemetry Snapshot</h2>
+            {dashboardError && <p className="error">{dashboardError}</p>}
+            {!dashboardError && !telemetrySummary && <p>Loading telemetry...</p>}
+            {telemetrySummary && (
+              <div>
+                <p><strong>Total Points:</strong> {deviceTelemetry.length.toLocaleString()}</p>
+                <p><strong>Data Types:</strong> {new Set(deviceTelemetry.map((entry) => entry.data_type)).size}</p>
+                <p><strong>Latest:</strong> {latestTelemetry ? new Date(latestTelemetry).toLocaleString() : 'N/A'}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {editingDevice && (
+          <div className="modal">
+            <div className="modal-content">
+              <h3>{editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}</h3>
+              <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }}>
+                <div className="modal-body">
+                  
+                  {/* Device Identity */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Device Identity</h4>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Device Serial Number</label>
+                        <input
+                          type="text"
+                          value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                          onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="SN-12345678"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ownership */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Ownership & Assignment</h4>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Assigned User</label>
+                        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            placeholder="Search by name, username, or email..."
+                            value={userSearchTerm}
+                            onChange={(e) => {
+                              setUserSearchTerm(e.target.value);
+                              setShowUserDropdown(true);
+                            }}
+                            onFocus={() => setShowUserDropdown(true)}
+                            autoComplete="off"
+                            className="full-width"
+                          />
+                          {showUserDropdown && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '0',
+                              right: '0',
+                              background: 'var(--bg-secondary, #1e293b)',
+                              border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                              borderRadius: '6px',
+                              marginTop: '4px',
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              zIndex: 10,
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                            }}>
+                              {filteredUsers.length > 0 ? (
+                                filteredUsers.map((user) => (
+                                  <div
+                                    key={user.id}
+                                    onClick={() => {
+                                      if (editingDevice) {
+                                        setEditForm({...editForm, user: user.username});
+                                      } else {
+                                        setCreateForm({...createForm, user: user.username});
+                                      }
+                                      setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
+                                      setShowUserDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: '12px 16px',
+                                      cursor: 'pointer',
+                                      borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                                      background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                      color: 'var(--text-primary, #f8fafc)',
+                                      transition: 'all 0.15s ease',
+                                      fontSize: '0.875rem'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
+                                  >
+                                    {user.first_name} {user.last_name} ({user.username}) <br/>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                                  {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuration */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Configuration</h4>
+                    <div className="form-grid form-grid-2">
+                      <div className="form-group">
+                        <label>Preset Template</label>
+                        <select
+                          value={editingDevice ? editForm.config_version : createForm.config_version}
+                          onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
+                          className="full-width"
+                        >
+                          <option value="">-- Manual Configuration --</option>
+                          {presetsLoading && <option value="" disabled>Loading presets...</option>}
+                          {!presetsLoading && presets.map((preset) => (
+                            <option key={preset.id} value={getPresetConfigId(preset)}>
+                              {preset.name} ({getPresetConfigId(preset) || 'no ID'})
+                            </option>
+                          ))}
+                        </select>
+                        <small className="form-hint">Selecting a preset sets the Config Version ID below.</small>
+                      </div>
+                      <div className="form-group">
+                        <label>Config Version ID</label>
+                        <input
+                          type="text"
+                          value={editingDevice ? editForm.config_version : createForm.config_version}
+                          onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
+                          autoComplete="off"
+                          placeholder="Manual Config ID"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                {editingDevice && (
+                  <div style={{ padding: '0 24px' }}>
+                     <AuditTrail
+                       createdBy={editingDevice.created_by_username}
+                       createdAt={editingDevice.created_at}
+                       updatedBy={editingDevice.updated_by_username}
+                       updatedAt={editingDevice.updated_at}
+                     />
+                  </div>
+                )}
+                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
+                  <button type="submit" className="btn">{editingDevice ? 'Save Changes' : 'Create Device'}</button>
+                  <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -332,7 +692,15 @@ const Devices: React.FC = () => {
           </thead>
           <tbody>
             {filteredDevices.map((device) => (
-              <tr key={device.id} style={{ background: selectedDevices.has(device.id) ? 'rgba(99, 102, 241, 0.1)' : 'transparent' }}>
+              <tr
+                key={device.id}
+                onClick={() => handleViewDevice(device)}
+                style={{
+                  background: selectedDevices.has(device.id) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  cursor: 'pointer'
+                }}
+                className="clickable-row"
+              >
                 <td style={{ textAlign: 'center' }}>
                   <input
                     type="checkbox"
@@ -354,13 +722,27 @@ const Devices: React.FC = () => {
                   })()}
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                  <button onClick={() => handleEdit(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)' }} title="Edit">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(device);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)' }}
+                    title="Edit"
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button onClick={() => handleDelete(device)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)' }} title="Delete">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(device);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)' }}
+                    title="Delete"
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -494,123 +876,170 @@ const Devices: React.FC = () => {
             <h3>{editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}</h3>
             <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label>Device Serial:</label>
-                  <input
-                    type="text"
-                    value={editingDevice ? editForm.device_serial : createForm.device_serial}
-                    onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>User:</label>
-                  <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="text"
-                    placeholder="Search and select user..."
-                    value={userSearchTerm}
-                    onChange={(e) => {
-                      setUserSearchTerm(e.target.value);
-                      setShowUserDropdown(true);
-                    }}
-                    onFocus={() => setShowUserDropdown(true)}
-                    autoComplete="off"
-                  />
-                  {(editingDevice ? editForm.user : createForm.user) && (
-                    <div style={{ marginTop: '8px', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
-                      Selected: {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (editingDevice) {
-                            setEditForm({...editForm, user: ''});
-                          } else {
-                            setCreateForm({...createForm, user: ''});
-                          }
-                          setUserSearchTerm('');
-                        }}
-                        style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'var(--danger-color, #ef4444)', cursor: 'pointer', fontSize: '1.25rem' }}
-                      >
-                        ×
-                      </button>
+                
+                {/* Device Identity */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Device Identity</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Device Serial Number</label>
+                      <input
+                        type="text"
+                        value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                        onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                        required
+                        autoComplete="off"
+                        placeholder="SN-12345678"
+                      />
                     </div>
-                  )}
-                  {showUserDropdown && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: 'var(--bg-secondary, #0f172a)',
-                      border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
-                      borderRadius: '10px',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      zIndex: 1000,
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)'
-                    }}>
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
-                          <div
-                            key={user.id}
-                            onClick={() => {
-                              if (editingDevice) {
-                                setEditForm({...editForm, user: user.username});
-                              } else {
-                                setCreateForm({...createForm, user: user.username});
-                              }
-                              setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
-                              setShowUserDropdown(false);
-                            }}
-                            style={{
-                              padding: '12px 16px',
-                              cursor: 'pointer',
-                              borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
-                              background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                              color: 'var(--text-primary, #f8fafc)',
-                              transition: 'all 0.15s ease',
-                              fontSize: '0.875rem'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
-                          >
-                            {user.first_name} {user.last_name} ({user.username}) - {user.email}
+                  </div>
+                </div>
+
+                {/* Ownership */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Ownership & Assignment</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Assigned User</label>
+                      <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          placeholder="Search and select user..."
+                          value={userSearchTerm}
+                          onChange={(e) => {
+                            setUserSearchTerm(e.target.value);
+                            setShowUserDropdown(true);
+                          }}
+                          onFocus={() => setShowUserDropdown(true)}
+                          autoComplete="off"
+                        />
+                        {(editingDevice ? editForm.user : createForm.user) && (
+                          <div style={{ marginTop: '8px', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                            <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (editingDevice) {
+                                  setEditForm({...editForm, user: ''});
+                                } else {
+                                  setCreateForm({...createForm, user: ''});
+                                }
+                                setUserSearchTerm('');
+                              }}
+                              className="btn-icon btn-icon-danger"
+                              style={{ marginLeft: '10px' }}
+                              title="Remove Assignment"
+                            >
+                              ✕
+                            </button>
                           </div>
-                        ))
-                      ) : (
-                        <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
-                          {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
-                        </div>
-                      )}
+                        )}
+                        {showUserDropdown && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            background: 'var(--bg-secondary, #0f172a)',
+                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                            borderRadius: '8px',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                            zIndex: 1000,
+                            boxShadow: 'var(--shadow-xl)',
+                            marginTop: '4px'
+                          }}>
+                            {filteredUsers.length > 0 ? (
+                              filteredUsers.map((user) => (
+                                <div
+                                  key={user.id}
+                                  onClick={() => {
+                                    if (editingDevice) {
+                                      setEditForm({...editForm, user: user.username});
+                                    } else {
+                                      setCreateForm({...createForm, user: user.username});
+                                    }
+                                    setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
+                                    setShowUserDropdown(false);
+                                  }}
+                                  style={{
+                                    padding: '12px 16px',
+                                    cursor: 'pointer',
+                                    borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                                    background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                    color: 'var(--text-primary, #f8fafc)',
+                                    transition: 'all 0.15s ease',
+                                    fontSize: '0.875rem'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
+                                >
+                                  {user.first_name} {user.last_name} ({user.username}) <br/>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                                {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
+
+                {/* Configuration */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Configuration</h4>
+                  <div className="form-grid form-grid-2">
+                    <div className="form-group">
+                      <label>Preset Template</label>
+                      <select
+                        value={editingDevice ? editForm.config_version : createForm.config_version}
+                        onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
+                        className="full-width"
+                      >
+                        <option value="">-- Manual Configuration --</option>
+                        {presetsLoading && <option value="" disabled>Loading presets...</option>}
+                        {!presetsLoading && presets.map((preset) => (
+                          <option key={preset.id} value={getPresetConfigId(preset)}>
+                            {preset.name} ({getPresetConfigId(preset) || 'no ID'})
+                          </option>
+                        ))}
+                      </select>
+                      <small className="form-hint">Selecting a preset sets the Config Version ID below.</small>
+                    </div>
+                    <div className="form-group">
+                      <label>Config Version ID</label>
+                      <input
+                        type="text"
+                        value={editingDevice ? editForm.config_version : createForm.config_version}
+                        onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
+                        autoComplete="off"
+                        placeholder="Manual Config ID"
+                      />
+                    </div>
+                  </div>
+                </div>
+
               </div>
-              <div className="form-group">
-                <label>Config Version:</label>
-                <input
-                  type="text"
-                  value={editingDevice ? editForm.config_version : createForm.config_version}
-                  onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
-                  autoComplete="off"
-                />
+              {editingDevice && (
+                <div style={{ padding: '0 24px' }}>
+                   <AuditTrail
+                     createdBy={editingDevice.created_by_username}
+                     createdAt={editingDevice.created_at}
+                     updatedBy={editingDevice.updated_by_username}
+                     updatedAt={editingDevice.updated_at}
+                   />
+                </div>
+              )}
+              <div className="form-actions" style={{ padding: '24px' }}>
+                <button type="submit" className="btn">{editingDevice ? 'Save Changes' : 'Register Device'}</button>
+                <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
               </div>
-            </div>
-            {editingDevice && (
-              <AuditTrail
-                createdBy={editingDevice.created_by_username}
-                createdAt={editingDevice.created_at}
-                updatedBy={editingDevice.updated_by_username}
-                updatedAt={editingDevice.updated_at}
-              />
-            )}
-            <div className="form-actions">
-              <button type="submit" className="btn">{editingDevice ? 'Save' : 'Create'}</button>
-              <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
-            </div>
-          </form>
+            </form>
         </div>
       </div>
     )}
