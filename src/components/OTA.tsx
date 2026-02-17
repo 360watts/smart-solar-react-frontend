@@ -83,11 +83,12 @@ export const OTA: React.FC = () => {
 
     try {
       setLoading(true);
+      setErrorMessage('');
+      setSuccessMessage('');
+      
       const formData = new FormData();
       formData.append('file', uploadingFile);
       formData.append('version', uploadingMetadata.version);
-      formData.append('filename', uploadingFile.name);
-      formData.append('size', uploadingFile.size.toString());
       formData.append('description', uploadingMetadata.description || '');
       formData.append('release_notes', uploadingMetadata.release_notes || '');
       formData.append('is_active', 'false');
@@ -96,8 +97,14 @@ export const OTA: React.FC = () => {
       setSuccessMessage('Firmware uploaded successfully');
       setUploadingFile(null);
       setUploadingMetadata({ version: '', description: '', release_notes: '' });
+      
+      // Reset file input
+      const fileInput = document.querySelector('.ota-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
       loadOTAData();
     } catch (error: any) {
+      console.error('Upload error:', error);
       setErrorMessage(error.message || 'Failed to upload firmware');
     } finally {
       setLoading(false);

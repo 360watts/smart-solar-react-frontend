@@ -384,17 +384,54 @@ class ApiService {
   }
 
   async uploadFirmwareVersion(formData: FormData): Promise<any> {
-    const headers = this.getAuthHeaders();
-    delete (headers as any)['Content-Type']; // Let browser set it for FormData
+    const url = `${API_BASE_URL}/ota/firmware/create/`;
+    const tokens = localStorage.getItem('authTokens');
     
-    return fetch(`${API_BASE_URL}/ota/firmware/create/`, {
+    if (!tokens) {
+      throw new Error('Authentication required');
+    }
+    
+    const parsedTokens = JSON.parse(tokens);
+    let headers: HeadersInit = {
+      'Authorization': `Bearer ${parsedTokens.access}`,
+    };
+    // Don't set Content-Type - let browser set it with boundary for multipart/form-data
+    
+    let response = await fetch(url, {
       method: 'POST',
-      headers: {
-        ...headers,
-        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('authTokens') || '{}').access}`,
-      },
+      headers,
       body: formData,
-    }).then(res => res.json());
+    });
+
+    // Handle 401 with token refresh
+    if (response.status === 401) {
+      const refreshSuccess = await this.refreshToken();
+      if (refreshSuccess) {
+        const newTokens = JSON.parse(localStorage.getItem('authTokens') || '{}');
+        headers = {
+          'Authorization': `Bearer ${newTokens.access}`,
+        };
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+      }
+    }
+
+    if (response.status === 401) {
+      localStorage.removeItem('authTokens');
+      localStorage.removeItem('authUser');
+      window.location.href = '/login';
+      throw new Error('Authentication required');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return response.json();
   }
 
   async updateFirmwareVersion(firmwareId: number, data: any): Promise<any> {
