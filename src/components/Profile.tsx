@@ -173,59 +173,86 @@ const Profile: React.FC = () => {
 
         {isEditing ? (
           <form onSubmit={handleEditSubmit} style={{ padding: '20px' }}>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>Username:</label>
-              <input
-                type="text"
-                value={profile?.username || ''}
-                disabled
-                style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-              />
-              <small style={{ color: '#666' }}>Username cannot be changed</small>
+            
+            {/* Account Information */}
+            <div className="form-section">
+              <h4 className="form-section-title">Account Information</h4>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    value={profile?.username || ''}
+                    disabled
+                    className="input-disabled"
+                  />
+                  <small className="form-hint">Username cannot be changed</small>
+                </div>
+              </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>First Name:</label>
-              <input
-                type="text"
-                value={editForm.first_name}
-                onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                required
-              />
+
+            {/* Personal Details */}
+            <div className="form-section">
+              <h4 className="form-section-title">Personal Details</h4>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    required
+                    placeholder="John"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    required
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>Last Name:</label>
-              <input
-                type="text"
-                value={editForm.last_name}
-                onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                required
-              />
+
+            {/* Contact Information */}
+            <div className="form-section">
+              <h4 className="form-section-title">Contact Information</h4>
+              <div className="form-grid form-grid-2">
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    required
+                    placeholder="john.doe@example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={editForm.mobile_number}
+                    onChange={(e) => setEditForm({ ...editForm, mobile_number: e.target.value })}
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Address</label>
+                  <textarea
+                    value={editForm.address}
+                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    rows={3}
+                    placeholder="123 Solar Street..."
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>Email:</label>
-              <input
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>Mobile Number:</label>
-              <input
-                type="tel"
-                value={editForm.mobile_number}
-                onChange={(e) => setEditForm({ ...editForm, mobile_number: e.target.value })}
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: '15px' }}>
-              <label>Address:</label>
-              <textarea
-                value={editForm.address}
-                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                rows={3}
-              />
-            </div>
+
             <div className="form-actions">
               <button type="submit" className="btn">Save Changes</button>
               <button type="button" onClick={handleCancelEdit} className="btn btn-secondary">Cancel</button>

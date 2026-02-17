@@ -1,6 +1,6 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://smart-solar-django-backend-git-dev0-360watts-projects.vercel.app/api';
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
@@ -284,6 +284,30 @@ class ApiService {
     return result;
   }
 
+  async getGlobalSlaves(): Promise<any[]> {
+    return this.request('/slaves/');
+  }
+
+  async createGlobalSlave(slaveData: any): Promise<any> {
+    return this.request('/slaves/create/', {
+      method: 'POST',
+      body: JSON.stringify(slaveData),
+    });
+  }
+
+  async updateGlobalSlave(slaveId: number, slaveData: any): Promise<any> {
+    return this.request(`/slaves/${slaveId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(slaveData),
+    });
+  }
+
+  async deleteGlobalSlave(slaveId: number): Promise<any> {
+    return this.request(`/slaves/${slaveId}/delete/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getDevices(search?: string, page: number = 1, pageSize: number = 25): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -343,6 +367,60 @@ class ApiService {
     return this.request(`/presets/${configId}/slaves/${slaveId}/delete/`, {
       method: 'DELETE',
     });
+  }
+
+  async addSlavesToPreset(configId: string, slaveIds: number[]): Promise<any> {
+    return this.request(`/presets/${configId}/slaves/add/`, {
+      method: 'POST',
+      body: JSON.stringify({ slave_ids: slaveIds }),
+    });
+  }
+
+  // OTA (Over-The-Air) Update Endpoints
+  async getFirmwareVersions(activeOnly: boolean = true): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('active', activeOnly.toString());
+    return this.request(`/ota/firmware/?${params.toString()}`);
+  }
+
+  async uploadFirmwareVersion(formData: FormData): Promise<any> {
+    const headers = this.getAuthHeaders();
+    delete (headers as any)['Content-Type']; // Let browser set it for FormData
+    
+    return fetch(`${API_BASE_URL}/ota/firmware/create/`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('authTokens') || '{}').access}`,
+      },
+      body: formData,
+    }).then(res => res.json());
+  }
+
+  async updateFirmwareVersion(firmwareId: number, data: any): Promise<any> {
+    return this.request(`/ota/firmware/${firmwareId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getDeviceUpdateLogs(deviceId: string): Promise<any> {
+    return this.request(`/ota/devices/${deviceId}/logs`);
+  }
+
+  async getOTAConfig(): Promise<any> {
+    return this.request(`/ota/config/`);
+  }
+
+  async updateOTAConfig(config: any): Promise<any> {
+    return this.request(`/ota/config/update/`, {
+      method: 'PATCH',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getOTAHealth(): Promise<any> {
+    return this.request(`/ota/health/`);
   }
 }
 

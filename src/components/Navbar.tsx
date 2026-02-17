@@ -24,22 +24,10 @@ const Navbar: React.FC = () => {
       icon: '⚙️'
     },
     {
-      path: '/telemetry',
-      label: 'Telemetry',
-      adminOnly: false,
-      icon: '📊'
-    },
-    {
       path: '/alerts',
       label: 'Alerts',
       adminOnly: false,
       icon: '🔔'
-    },
-    {
-      path: '/health',
-      label: 'System Health',
-      adminOnly: false,
-      icon: '💚'
     },
     {
       path: '/users',
@@ -58,6 +46,12 @@ const Navbar: React.FC = () => {
       label: 'Device Presets',
       adminOnly: false,
       icon: '⭐'
+    },
+    {
+      path: '/ota',
+      label: 'OTA Updates',
+      adminOnly: true,
+      icon: '🔄'
     },
   ];
 

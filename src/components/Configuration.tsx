@@ -43,6 +43,7 @@ const Configuration: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
+  const [globalMode, setGlobalMode] = useState(false);
   const [slaveForm, setSlaveForm] = useState({
     slave_id: '',
     device_name: '',
@@ -62,32 +63,41 @@ const Configuration: React.FC = () => {
     enabled: true
   });
 
+  const mapSlave = (slave: any): SlaveDevice => ({
+    id: slave.id,
+    slaveId: slave.slave_id,
+    deviceName: slave.device_name,
+    pollingIntervalMs: slave.polling_interval_ms,
+    timeoutMs: slave.timeout_ms,
+    enabled: slave.enabled,
+    registers: (slave.registers || []).map((reg: any) => ({
+      id: reg.id,
+      label: reg.label,
+      address: reg.address,
+      numRegisters: reg.num_registers,
+      functionCode: reg.function_code,
+      dataType: reg.data_type,
+      scaleFactor: reg.scale_factor,
+      offset: reg.offset,
+      enabled: reg.enabled,
+    }))
+  });
+
   const fetchSlaves = useCallback(async (configId: string) => {
     try {
       const slavesData = await apiService.getSlaves(configId);
-      // Map API response to match interface
-      const mappedSlaves = slavesData.map((slave: any) => ({
-        id: slave.id,
-        slaveId: slave.slave_id,
-        deviceName: slave.device_name,
-        pollingIntervalMs: slave.polling_interval_ms,
-        timeoutMs: slave.timeout_ms,
-        enabled: slave.enabled,
-        registers: slave.registers.map((reg: any) => ({
-          id: reg.id,
-          label: reg.label,
-          address: reg.address,
-          numRegisters: reg.num_registers,
-          functionCode: reg.function_code,
-          dataType: reg.data_type,
-          scaleFactor: reg.scale_factor,
-          offset: reg.offset,
-          enabled: reg.enabled,
-        }))
-      }));
-      setSlaves(mappedSlaves);
+      setSlaves(slavesData.map(mapSlave));
     } catch (err) {
       console.error('Failed to fetch slaves:', err);
+    }
+  }, []);
+
+  const fetchGlobalSlaves = useCallback(async () => {
+    try {
+      const slavesData = await apiService.getGlobalSlaves();
+      setSlaves(slavesData.map(mapSlave));
+    } catch (err) {
+      console.error('Failed to fetch global slaves:', err);
     }
   }, []);
 
@@ -95,21 +105,27 @@ const Configuration: React.FC = () => {
     try {
       const data = await apiService.getConfiguration();
       setConfig(data);
-      // Fetch slaves for the current config
-      if (data.configId) {
+      if (data?.configId) {
+        setGlobalMode(false);
         await fetchSlaves(data.configId);
+      } else {
+        setConfig(null);
+        setGlobalMode(true);
+        await fetchGlobalSlaves();
       }
       setLoading(false);
     } catch (err) {
       // If no configuration exists, set config to null
       if (err instanceof Error && err.message.includes('No configuration available')) {
         setConfig(null);
+        setGlobalMode(true);
+        await fetchGlobalSlaves();
       } else {
         setError(err instanceof Error ? err.message : 'An error occurred');
       }
       setLoading(false);
     }
-  }, [fetchSlaves]);
+  }, [fetchSlaves, fetchGlobalSlaves]);
 
   useEffect(() => {
     fetchConfiguration();
@@ -140,7 +156,7 @@ const Configuration: React.FC = () => {
   };
 
   const handleSaveSlave = async () => {
-    if (!config) return;
+    const isGlobal = globalMode || !config;
 
     // Validate slave ID uniqueness for new slaves
     if (!editingSlave) {
@@ -163,55 +179,21 @@ const Configuration: React.FC = () => {
       };
 
       if (editingSlave) {
-        const updatedSlave = await apiService.updateSlave(config.configId, editingSlave.slaveId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: updatedSlave.id,
-          slaveId: updatedSlave.slave_id,
-          deviceName: updatedSlave.device_name,
-          pollingIntervalMs: updatedSlave.polling_interval_ms,
-          timeoutMs: updatedSlave.timeout_ms,
-          enabled: updatedSlave.enabled,
-          registers: updatedSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        setSlaves(slaves.map(s => s.slaveId === editingSlave.slaveId ? mappedSlave : s));
+        const updatedSlave = isGlobal
+          ? await apiService.updateGlobalSlave(editingSlave.id, slaveData)
+          : await apiService.updateSlave(config.configId, editingSlave.slaveId, slaveData);
+        const mappedSlave = mapSlave(updatedSlave);
+        setSlaves(slaves.map(s => s.id === editingSlave.id ? mappedSlave : s));
         setEditingSlave(null);
       } else {
-        const newSlave = await apiService.createSlave(config.configId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: newSlave.id,
-          slaveId: newSlave.slave_id,
-          deviceName: newSlave.device_name,
-          pollingIntervalMs: newSlave.polling_interval_ms,
-          timeoutMs: newSlave.timeout_ms,
-          enabled: newSlave.enabled,
-          registers: newSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
+        const newSlave = isGlobal
+          ? await apiService.createGlobalSlave(slaveData)
+          : await apiService.createSlave(config.configId, slaveData);
+        const mappedSlave = mapSlave(newSlave);
         setSlaves([...slaves, mappedSlave]);
-        setCreatingSlave(false);
       }
 
+      setCreatingSlave(false);
       setSlaveForm({
         slave_id: '',
         device_name: '',
@@ -226,11 +208,15 @@ const Configuration: React.FC = () => {
   };
 
   const handleDeleteSlave = async (slave: SlaveDevice) => {
-    if (!config) return;
+    const isGlobal = globalMode || !config;
 
     if (window.confirm(`Are you sure you want to delete slave ${slave.deviceName}?`)) {
       try {
-        await apiService.deleteSlave(config.configId, slave.slaveId);
+        if (isGlobal) {
+          await apiService.deleteGlobalSlave(slave.id);
+        } else {
+          await apiService.deleteSlave(config.configId, slave.slaveId);
+        }
         setSlaves(slaves.filter(s => s.id !== slave.id));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to delete slave');
@@ -310,24 +296,16 @@ const Configuration: React.FC = () => {
         </div>
       )}
 
-      {!config ? (
-        <div className="card">
-          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <h3>No Configuration Available</h3>
-            <p>Create a preset in the Device Presets section first, then configure slaves here.</p>
-          </div>
-        </div>
-      ) : (
-        <div className="card">
+      <div className="card">
         <div className="card-header">
-          <h2>Slave Devices ({slaves.length})</h2>
+          <h2>{globalMode || !config ? 'Global Slave Devices' : 'Preset Slave Devices'} ({slaves.length})</h2>
           <button onClick={handleCreateSlave} className="btn">Configure New Slave</button>
         </div>
 
         {slaves.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
             <p>No slave devices configured yet.</p>
-            <p>Click "Create New Slave" to add your first slave device.</p>
+            <p>Click "Configure New Slave" to add your first slave device.</p>
           </div>
         ) : (
           <table className="table">
@@ -377,7 +355,6 @@ const Configuration: React.FC = () => {
           </table>
         )}
       </div>
-      )}
 
       {/* Slave Configuration Modal */}
       {(creatingSlave || editingSlave) && (

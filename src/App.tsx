@@ -22,6 +22,7 @@ const Users = lazy(() => import('./components/Users'));
 const Employees = lazy(() => import('./components/Employees'));
 const DevicePresets = lazy(() => import('./components/DevicePresets'));
 const Profile = lazy(() => import('./components/Profile'));
+const OTA = lazy(() => import('./components/OTA').then(m => ({ default: m.OTA })));
 
 function App() {
   return (
@@ -136,6 +137,16 @@ function App() {
                                   <DevicePresets />
                                 </Suspense>
                               </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/ota"
+                            element={
+                              <AdminRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <OTA />
+                                </Suspense>
+                              </AdminRoute>
                             }
                           />
                           <Route

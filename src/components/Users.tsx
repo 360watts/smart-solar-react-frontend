@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 
 interface User {
@@ -22,6 +23,7 @@ interface Device {
 }
 
 const Users: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,7 +247,12 @@ const Users: React.FC = () => {
               </thead>
               <tbody>
                 {userDevices.map((device) => (
-                  <tr key={device.id}>
+                  <tr 
+                    key={device.id} 
+                    className="clickable-row"
+                    onClick={() => navigate(`/devices?deviceId=${device.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
                     <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
                     <td style={{ textAlign: 'center' }}>
@@ -269,56 +276,86 @@ const Users: React.FC = () => {
             <div className="modal-content">
               <h3>Edit User: {editingUser.username}</h3>
               <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label>First Name:</label>
-                  <input
-                    type="text"
-                    value={editForm.first_name}
-                    onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
+                <div className="modal-body">
+                  
+                  {/* Account Information */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Account Information</h4>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Email Address</label>
+                        <input
+                          type="email"
+                          value={editForm.email}
+                          onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="john.doe@example.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Personal Details */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Personal Details</h4>
+                    <div className="form-grid form-grid-2">
+                      <div className="form-group">
+                        <label>First Name</label>
+                        <input
+                          type="text"
+                          value={editForm.first_name}
+                          onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="John"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Last Name</label>
+                        <input
+                          type="text"
+                          value={editForm.last_name}
+                          onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div className="form-section">
+                    <h4 className="form-section-title">Contact Information</h4>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Mobile Number</label>
+                        <input
+                          type="tel"
+                          value={editForm.mobile_number}
+                          onChange={(e) => setEditForm({...editForm, mobile_number: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="+1 (555) 000-0000"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Address</label>
+                        <textarea
+                          value={editForm.address}
+                          onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                          autoComplete="off"
+                          rows={3}
+                          placeholder="123 Solar Street..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={editForm.last_name}
-                    onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label>Email:</label>
-                  <input
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label>Mobile Number:</label>
-                  <input
-                    type="tel"
-                    value={editForm.mobile_number}
-                    onChange={(e) => setEditForm({...editForm, mobile_number: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: '15px' }}>
-                  <label>Address:</label>
-                  <textarea
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({...editForm, address: e.target.value})}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-actions">
-                  <button type="submit" className="btn">Save</button>
+                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
+                  <button type="submit" className="btn">Save Changes</button>
                   <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
                 </div>
               </form>
@@ -407,84 +444,115 @@ const Users: React.FC = () => {
             <h3>{editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}</h3>
             <form onSubmit={(e) => { e.preventDefault(); editingUser ? handleSave() : handleCreate(); }}>
               <div className="modal-body">
-                {creatingUser && (
-                  <>
-                    {/* Hidden inputs to prevent autofill */}
-                    <input type="text" autoComplete="username" style={{display: 'none'}} />
-                    <input type="password" autoComplete="current-password" style={{display: 'none'}} />
+                
+                {/* Account Information */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Account Information</h4>
+                  <div className="form-grid">
+                    {creatingUser && (
+                      <>
+                        {/* Hidden inputs to prevent autofill */}
+                        <input type="text" autoComplete="username" style={{display: 'none'}} />
+                        <input type="password" autoComplete="current-password" style={{display: 'none'}} />
+                        
+                        <div className="form-group">
+                          <label>Username</label>
+                          <input
+                            type="text"
+                            value={createForm.username}
+                            onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
+                            required
+                            autoComplete="off"
+                            placeholder="jdoe"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Password</label>
+                          <input
+                            type="password"
+                            value={createForm.password}
+                            onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                            required
+                            autoComplete="new-password"
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className="form-group">
-                      <label>Username:</label>
+                      <label>Email Address</label>
                       <input
-                        type="text"
-                        value={createForm.username}
-                        onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
+                        type="email"
+                        value={editingUser ? editForm.email : createForm.email}
+                        onChange={(e) => editingUser ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
                         required
                         autoComplete="off"
+                        placeholder="john.doe@example.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personal Details */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Personal Details</h4>
+                  <div className="form-grid form-grid-2">
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        value={editingUser ? editForm.first_name : createForm.first_name}
+                        onChange={(e) => editingUser ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
+                        required
+                        autoComplete="off"
+                        placeholder="John"
                       />
                     </div>
                     <div className="form-group">
-                      <label>Password:</label>
+                      <label>Last Name</label>
                       <input
-                        type="password"
-                        value={createForm.password}
-                        onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                        type="text"
+                        value={editingUser ? editForm.last_name : createForm.last_name}
+                        onChange={(e) => editingUser ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
                         required
-                        autoComplete="new-password"
+                        autoComplete="off"
+                        placeholder="Doe"
                       />
                     </div>
-                  </>
-                )}
-                <div className="form-group">
-                  <label>First Name:</label>
-                  <input
-                    type="text"
-                    value={editingUser ? editForm.first_name : createForm.first_name}
-                    onChange={(e) => editingUser ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={editingUser ? editForm.last_name : createForm.last_name}
-                    onChange={(e) => editingUser ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
+
+                {/* Contact Information */}
+                <div className="form-section">
+                  <h4 className="form-section-title">Contact Information</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Mobile Number</label>
+                      <input
+                        type="tel"
+                        value={editingUser ? editForm.mobile_number : createForm.mobile_number}
+                        onChange={(e) => editingUser ? setEditForm({...editForm, mobile_number: e.target.value}) : setCreateForm({...createForm, mobile_number: e.target.value})}
+                        required
+                        autoComplete="off"
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Address</label>
+                      <textarea
+                        value={editingUser ? editForm.address : createForm.address}
+                        onChange={(e) => editingUser ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
+                        autoComplete="off"
+                        rows={3}
+                        placeholder="123 Solar Street..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Email:</label>
-                  <input
-                    type="email"
-                    value={editingUser ? editForm.email : createForm.email}
-                    onChange={(e) => editingUser ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Mobile Number:</label>
-                  <input
-                    type="tel"
-                    value={editingUser ? editForm.mobile_number : createForm.mobile_number}
-                    onChange={(e) => editingUser ? setEditForm({...editForm, mobile_number: e.target.value}) : setCreateForm({...createForm, mobile_number: e.target.value})}
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Address:</label>
-                  <textarea
-                    value={editingUser ? editForm.address : createForm.address}
-                    onChange={(e) => editingUser ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
-                    autoComplete="off"
-                  />
-                </div>
+
               </div>
-              <div className="form-actions">
-                <button type="submit" className="btn">{editingUser ? 'Save' : 'Create'}</button>
+              <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
+                <button type="submit" className="btn">{editingUser ? 'Save Changes' : 'Create Customer'}</button>
                 <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
               </div>
             </form>
