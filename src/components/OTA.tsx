@@ -126,6 +126,35 @@ export const OTA: React.FC = () => {
     }
   };
 
+  const handleDeleteFirmware = async (firmware: FirmwareVersion) => {
+    if (firmware.is_active) {
+      setErrorMessage('Cannot delete active firmware. Deactivate it first.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete firmware version ${firmware.version}?\n\n` +
+      `This will permanently delete the firmware file from storage.\n\n` +
+      `This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      setErrorMessage('');
+      setSuccessMessage('');
+      
+      await apiService.deleteFirmwareVersion(firmware.id);
+      setSuccessMessage(`Firmware version ${firmware.version} deleted successfully`);
+      loadOTAData();
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to delete firmware');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!configForm) return;
@@ -268,13 +297,23 @@ export const OTA: React.FC = () => {
                     <small className="text-muted">
                       Created: {new Date(fw.created_at).toLocaleDateString()}
                     </small>
-                    <button
-                      className={`btn btn-sm ${fw.is_active ? 'btn-danger' : 'btn-success'}`}
-                      onClick={() => handleToggleFirmwareActive(fw)}
-                      disabled={loading}
-                    >
-                      {fw.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
+                    <div className="firmware-actions">
+                      <button
+                        className={`btn btn-sm ${fw.is_active ? 'btn-danger' : 'btn-success'}`}
+                        onClick={() => handleToggleFirmwareActive(fw)}
+                        disabled={loading}
+                      >
+                        {fw.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleDeleteFirmware(fw)}
+                        disabled={loading || fw.is_active}
+                        title={fw.is_active ? 'Deactivate firmware before deleting' : 'Delete firmware'}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                   {fw.release_notes && (
                     <details className="mt-2">

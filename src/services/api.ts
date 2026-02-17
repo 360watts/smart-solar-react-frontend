@@ -441,6 +441,12 @@ class ApiService {
     });
   }
 
+  async deleteFirmwareVersion(firmwareId: number): Promise<any> {
+    return this.request(`/ota/firmware/${firmwareId}/delete/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getDeviceUpdateLogs(deviceId: string): Promise<any> {
     return this.request(`/ota/devices/${deviceId}/logs`);
   }
