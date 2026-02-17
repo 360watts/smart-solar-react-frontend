@@ -20,6 +20,7 @@ interface SlaveDevice {
   deviceName: string;
   pollingIntervalMs: number;
   timeoutMs: number;
+  priority?: number;
   enabled: boolean;
   registers: RegisterMapping[];
 }
@@ -34,6 +35,7 @@ interface RegisterMapping {
   dataType: number;
   byteOrder?: number;
   wordOrder?: number;
+  accessMode?: number;
   scaleFactor: number;
   offset: number;
   unit?: string;
@@ -71,6 +73,7 @@ const Configuration: React.FC = () => {
     data_type: 0,
     byte_order: 0,
     word_order: 0,
+    access_mode: 0,
     scale_factor: 1.0,
     offset: 0.0,
     unit: '',
@@ -88,6 +91,7 @@ const Configuration: React.FC = () => {
     deviceName: slave.device_name,
     pollingIntervalMs: slave.polling_interval_ms,
     timeoutMs: slave.timeout_ms,
+    priority: slave.priority,
     enabled: slave.enabled,
     registers: (slave.registers || []).map((reg: any) => ({
       id: reg.id,
@@ -156,6 +160,7 @@ const Configuration: React.FC = () => {
       device_name: '',
       polling_interval_ms: 5000,
       timeout_ms: 1000,
+      priority: 1,
       enabled: true,
       registers: []
     });
@@ -168,6 +173,7 @@ const Configuration: React.FC = () => {
       device_name: slave.deviceName,
       polling_interval_ms: slave.pollingIntervalMs,
       timeout_ms: slave.timeoutMs,
+      priority: slave.priority || 1,
       enabled: slave.enabled,
       registers: [...slave.registers]
     });
@@ -218,6 +224,7 @@ const Configuration: React.FC = () => {
         device_name: '',
         polling_interval_ms: 5000,
         timeout_ms: 1000,
+        priority: 1,
         enabled: true,
         registers: []
       });
@@ -251,6 +258,7 @@ const Configuration: React.FC = () => {
       device_name: '',
       polling_interval_ms: 5000,
       timeout_ms: 1000,
+      priority: 1,
       enabled: true,
       registers: []
     });
@@ -267,6 +275,7 @@ const Configuration: React.FC = () => {
       dataType: registerForm.data_type,
       byteOrder: registerForm.byte_order,
       wordOrder: registerForm.word_order,
+      accessMode: registerForm.access_mode,
       scaleFactor: registerForm.scale_factor,
       offset: registerForm.offset,
       unit: registerForm.unit,
@@ -293,6 +302,7 @@ const Configuration: React.FC = () => {
       data_type: 0,
       byte_order: 0,
       word_order: 0,
+      access_mode: 0,
       scale_factor: 1.0,
       offset: 0.0,
       unit: '',
@@ -525,15 +535,31 @@ const Configuration: React.FC = () => {
                         />
                       </div>
                       <div className="form-group">
+                        <label>Num Registers</label>
+                        <input
+                          type="number"
+                          placeholder="1"
+                          value={registerForm.num_registers || 1}
+                          onChange={(e) => setRegisterForm({...registerForm, num_registers: parseInt(e.target.value)})}
+                          min="1"
+                          max="125"
+                        />
+                        <small className="form-hint">Count (1-125)</small>
+                      </div>
+                      <div className="form-group">
                         <label>Function Code *</label>
                         <select
                           value={registerForm.function_code || 3}
                           onChange={(e) => setRegisterForm({...registerForm, function_code: parseInt(e.target.value)})}
                         >
-                          <option value={1}>01 - Read Coils</option>
-                          <option value={2}>02 - Read Discrete Inputs</option>
-                          <option value={3}>03 - Read Holding Registers</option>
-                          <option value={4}>04 - Read Input Registers</option>
+                          <option value={0x01}>0x01 - Read Coils</option>
+                          <option value={0x02}>0x02 - Read Discrete Inputs</option>
+                          <option value={0x03}>0x03 - Read Holding Registers</option>
+                          <option value={0x04}>0x04 - Read Input Registers</option>
+                          <option value={0x05}>0x05 - Write Single Coil</option>
+                          <option value={0x06}>0x06 - Write Single Register</option>
+                          <option value={0x0F}>0x0F - Write Multiple Coils</option>
+                          <option value={0x10}>0x10 - Write Multiple Registers</option>
                         </select>
                       </div>
                       <div className="form-group">
@@ -542,10 +568,10 @@ const Configuration: React.FC = () => {
                           value={registerForm.register_type || 3}
                           onChange={(e) => setRegisterForm({...registerForm, register_type: parseInt(e.target.value)})}
                         >
-                          <option value={0}>Coil (00001-09999)</option>
-                          <option value={1}>Discrete Input (10001-19999)</option>
-                          <option value={2}>Input Register (30001-39999)</option>
-                          <option value={3}>Holding Register (40001-49999)</option>
+                          <option value={0}>Coil (0x - R/W Discrete)</option>
+                          <option value={1}>Discrete Input (1x - RO Discrete)</option>
+                          <option value={2}>Input Register (3x - RO Analog)</option>
+                          <option value={3}>Holding Register (4x - R/W Analog)</option>
                         </select>
                       </div>
                       
@@ -556,15 +582,16 @@ const Configuration: React.FC = () => {
                           value={registerForm.data_type}
                           onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
                         >
-                          <option value={0}>UINT16</option>
-                          <option value={1}>INT16</option>
-                          <option value={2}>UINT32</option>
-                          <option value={3}>INT32</option>
-                          <option value={4}>FLOAT32</option>
-                          <option value={5}>FLOAT64</option>
-                          <option value={6}>STRING</option>
-                          <option value={7}>BYTES</option>
-                          <option value={8}>BIT</option>
+                          <option value={0}>UINT16 (16-bit Unsigned)</option>
+                          <option value={1}>INT16 (16-bit Signed)</option>
+                          <option value={2}>UINT32 (32-bit Unsigned)</option>
+                          <option value={3}>INT32 (32-bit Signed)</option>
+                          <option value={4}>FLOAT32 (32-bit Float)</option>
+                          <option value={5}>UINT64 (64-bit Unsigned)</option>
+                          <option value={6}>INT64 (64-bit Signed)</option>
+                          <option value={7}>FLOAT64 (64-bit Float)</option>
+                          <option value={8}>BOOL (Single Bit)</option>
+                          <option value={9}>STRING (ASCII)</option>
                         </select>
                       </div>
                       <div className="form-group">
@@ -583,8 +610,10 @@ const Configuration: React.FC = () => {
                           value={registerForm.word_order || 0}
                           onChange={(e) => setRegisterForm({...registerForm, word_order: parseInt(e.target.value)})}
                         >
-                          <option value={0}>Big Endian (ABCD)</option>
-                          <option value={1}>Little Endian (CDAB)</option>
+                          <option value={0}>Big Endian (AB CD)</option>
+                          <option value={1}>Little Endian (CD AB)</option>
+                          <option value={2}>Mid-Big Endian (BA DC)</option>
+                          <option value={3}>Mid-Little Endian (DC BA)</option>
                         </select>
                       </div>
                       <div className="form-group">
@@ -597,6 +626,17 @@ const Configuration: React.FC = () => {
                           min="0"
                           max="6"
                         />
+                      </div>
+                      <div className="form-group">
+                        <label>Access Mode</label>
+                        <select
+                          value={registerForm.access_mode || 0}
+                          onChange={(e) => setRegisterForm({...registerForm, access_mode: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>Read Only</option>
+                          <option value={1}>Read/Write</option>
+                          <option value={2}>Write Only</option>
+                        </select>
                       </div>
                       
                       {/* Row 3: Scaling & Units */}
@@ -722,18 +762,18 @@ const Configuration: React.FC = () => {
                             <tr key={index}>
                               <td>{reg.label}</td>
                               <td>{reg.address}</td>
-                              <td>{reg.functionCode || reg.function_code || 3}</td>
-                              <td>{getDataTypeName(reg.dataType || reg.data_type)}</td>
+                              <td>{reg.functionCode || 3}</td>
+                              <td>{getDataTypeName(reg.dataType)}</td>
                               <td>{reg.unit || '-'}</td>
-                              <td>{reg.scaleFactor || reg.scale_factor}</td>
+                              <td>{reg.scaleFactor}</td>
                               <td>{reg.offset}</td>
                               <td>{reg.category || '-'}</td>
                               <td>
-                                {reg.high_alarm_threshold || reg.low_alarm_threshold ? (
+                                {reg.highAlarmThreshold || reg.lowAlarmThreshold ? (
                                   <small>
-                                    {reg.high_alarm_threshold && `H:${reg.high_alarm_threshold}`}
-                                    {reg.high_alarm_threshold && reg.low_alarm_threshold && ' / '}
-                                    {reg.low_alarm_threshold && `L:${reg.low_alarm_threshold}`}
+                                    {reg.highAlarmThreshold && `H:${reg.highAlarmThreshold}`}
+                                    {reg.highAlarmThreshold && reg.lowAlarmThreshold && ' / '}
+                                    {reg.lowAlarmThreshold && `L:${reg.lowAlarmThreshold}`}
                                   </small>
                                 ) : '-'}
                               </td>
@@ -790,10 +830,11 @@ const getDataTypeName = (dataType: number): string => {
     2: 'UINT32',
     3: 'INT32',
     4: 'FLOAT32',
-    5: 'FLOAT64',
-    6: 'STRING',
-    7: 'BYTES',
-    8: 'BIT'
+    5: 'UINT64',
+    6: 'INT64',
+    7: 'FLOAT64',
+    8: 'BOOL',
+    9: 'STRING'
   };
   return types[dataType as keyof typeof types] || `Unknown (${dataType})`;
 };
