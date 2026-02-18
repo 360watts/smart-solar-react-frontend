@@ -39,9 +39,19 @@ interface RegisterMapping {
   address: number;
   numRegisters: number;
   functionCode: number;
+  registerType?: number;
   dataType: number;
+  byteOrder?: number;
+  wordOrder?: number;
+  accessMode?: number;
   scaleFactor: number;
   offset: number;
+  unit?: string;
+  decimalPlaces?: number;
+  category?: string;
+  highAlarmThreshold?: number | null;
+  lowAlarmThreshold?: number | null;
+  description?: string;
   enabled: boolean;
 }
 
@@ -61,7 +71,7 @@ const DevicePresets: React.FC = () => {
   const [createPresetSlaveMode, setCreatePresetSlaveMode] = useState<'none' | 'create' | 'select'>('none');
   const [globalSlaves, setGlobalSlaves] = useState<SlaveDevice[]>([]);
   const [globalSlavesLoading, setGlobalSlavesLoading] = useState(false);
-  const [selectedGlobalSlaveId, setSelectedGlobalSlaveId] = useState<number | ''>('');
+  const [selectedGlobalSlaveIds, setSelectedGlobalSlaveIds] = useState<number[]>([]);
   const [editForm, setEditForm] = useState({
     config_id: '',
     name: '',
@@ -92,10 +102,20 @@ const DevicePresets: React.FC = () => {
     address: 0,
     num_registers: 1,
     function_code: 3,
+    register_type: 3,
     data_type: 0,
+    byte_order: 0,
+    word_order: 0,
+    access_mode: 0,
     scale_factor: 1.0,
     offset: 0.0,
-    enabled: true
+    unit: '',
+    decimal_places: 2,
+    category: 'Electrical',
+    high_alarm_threshold: null as number | null,
+    low_alarm_threshold: null as number | null,
+    description: '',
+    enabled: true,
   });
 
   useEffect(() => {
@@ -157,10 +177,20 @@ const DevicePresets: React.FC = () => {
       address: 0,
       num_registers: 1,
       function_code: 3,
+      register_type: 3,
       data_type: 0,
+      byte_order: 0,
+      word_order: 0,
+      access_mode: 0,
       scale_factor: 1.0,
       offset: 0.0,
-      enabled: true
+      unit: '',
+      decimal_places: 2,
+      category: 'Electrical',
+      high_alarm_threshold: null,
+      low_alarm_threshold: null,
+      description: '',
+      enabled: true,
     });
   }, [creatingPreset]);
 
@@ -249,13 +279,13 @@ const DevicePresets: React.FC = () => {
         });
       }
 
-      if (createdConfigId && createPresetSlaveMode === 'select' && selectedGlobalSlaveId) {
-        await apiService.addSlavesToPreset(createdConfigId, [selectedGlobalSlaveId as number]);
+      if (createdConfigId && createPresetSlaveMode === 'select' && selectedGlobalSlaveIds.length > 0) {
+        await apiService.addSlavesToPreset(createdConfigId, selectedGlobalSlaveIds);
       }
 
       setCreatingPreset(false);
       setCreatePresetSlaveMode('none');
-      setSelectedGlobalSlaveId('');
+      setSelectedGlobalSlaveIds([]);
       setCreateForm({
         name: '',
         description: '',
@@ -303,12 +333,16 @@ const DevicePresets: React.FC = () => {
     setEditingPreset(null);
     setCreatingPreset(false);
     setCreatePresetSlaveMode('none');
-    setSelectedGlobalSlaveId('');
+    setSelectedGlobalSlaveIds([]);
   };
 
   const getDataTypeName = (dataType: number): string => {
-    const types = ['UINT16', 'INT16', 'UINT32', 'INT32', 'FLOAT32', 'FLOAT64'];
-    return types[dataType] || 'UNKNOWN';
+    const types: Record<number, string> = {
+      0: 'UINT16', 1: 'INT16', 2: 'UINT32', 3: 'INT32',
+      4: 'FLOAT32', 5: 'UINT64', 6: 'INT64', 7: 'FLOAT64',
+      8: 'BOOL', 9: 'STRING',
+    };
+    return types[dataType] ?? `Unknown (${dataType})`;
   };
 
   const handleConfigureSlaves = async (preset: Preset) => {
@@ -557,32 +591,48 @@ const DevicePresets: React.FC = () => {
 
   const addRegister = () => {
     const newRegister: RegisterMapping = {
-      id: Date.now(), // Temporary ID for form management
+      id: Date.now(),
       label: registerForm.label,
       address: registerForm.address,
       numRegisters: registerForm.num_registers,
       functionCode: registerForm.function_code,
+      registerType: registerForm.register_type,
       dataType: registerForm.data_type,
+      byteOrder: registerForm.byte_order,
+      wordOrder: registerForm.word_order,
+      accessMode: registerForm.access_mode,
       scaleFactor: registerForm.scale_factor,
       offset: registerForm.offset,
-      enabled: registerForm.enabled
+      unit: registerForm.unit,
+      decimalPlaces: registerForm.decimal_places,
+      category: registerForm.category,
+      highAlarmThreshold: registerForm.high_alarm_threshold,
+      lowAlarmThreshold: registerForm.low_alarm_threshold,
+      description: registerForm.description,
+      enabled: registerForm.enabled,
     };
 
-    setSlaveForm({
-      ...slaveForm,
-      registers: [...slaveForm.registers, newRegister]
-    });
+    setSlaveForm({ ...slaveForm, registers: [...slaveForm.registers, newRegister] });
 
-    // Reset register form
     setRegisterForm({
       label: '',
       address: 0,
       num_registers: 1,
       function_code: 3,
+      register_type: 3,
       data_type: 0,
+      byte_order: 0,
+      word_order: 0,
+      access_mode: 0,
       scale_factor: 1.0,
       offset: 0.0,
-      enabled: true
+      unit: '',
+      decimal_places: 2,
+      category: 'Electrical',
+      high_alarm_threshold: null,
+      low_alarm_threshold: null,
+      description: '',
+      enabled: true,
     });
   };
 
@@ -639,13 +689,13 @@ const DevicePresets: React.FC = () => {
                 <td>{preset.description}</td>
                 <td>{preset.slaves_count || 0}</td>
                 <td>
-                  <button onClick={() => handleViewDetails(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer' }} title="View Details">
+                  <button onClick={() => handleViewDetails(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }} title="View Details">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                   </button>
-                  <button onClick={() => handleConfigureSlaves(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#007bff' }} title="Configure Slaves">
+                  <button onClick={() => handleConfigureSlaves(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Configure Slaves">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                       <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -653,13 +703,13 @@ const DevicePresets: React.FC = () => {
                       <line x1="21" y1="3" x2="3" y2="21"></line>
                     </svg>
                   </button>
-                  <button onClick={() => handleEdit(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer' }} title="Edit">
+                  <button onClick={() => handleEdit(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f8fafc' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button onClick={() => handleDelete(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'red' }} title="Delete">
+                  <button onClick={() => handleDelete(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -857,23 +907,36 @@ const DevicePresets: React.FC = () => {
                         <div className={`slave-option-content ${createPresetSlaveMode === 'select' ? 'active' : ''}`}>
                            <p className="text-sm text-muted">Select an existing slave configuration to reuse.</p>
                            {createPresetSlaveMode === 'select' && (
-                              <div className="form-group" style={{ marginTop: '10px' }}>
-                                <select
-                                  value={selectedGlobalSlaveId}
-                                  onChange={(e) => setSelectedGlobalSlaveId(e.target.value ? parseInt(e.target.value) : '')}
-                                  className="full-width"
-                                >
-                                  <option value="">Select a slave configuration...</option>
-                                  {globalSlavesLoading ? (
-                                    <option disabled>Loading...</option>
-                                  ) : (
-                                    globalSlaves.map((slave) => (
-                                      <option key={slave.id} value={slave.id}>
-                                        {slave.deviceName} (ID: {slave.slaveId})
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
+                              <div style={{ marginTop: '10px' }}>
+                                {globalSlavesLoading ? (
+                                  <p className="text-sm text-muted">Loading slaves...</p>
+                                ) : globalSlaves.length === 0 ? (
+                                  <p className="text-sm text-muted">No existing slaves found.</p>
+                                ) : (
+                                  <>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '4px', padding: '8px' }}>
+                                      {globalSlaves.map((slave) => (
+                                        <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedGlobalSlaveIds.includes(slave.id)}
+                                            onChange={(e) => {
+                                              if (e.target.checked) {
+                                                setSelectedGlobalSlaveIds([...selectedGlobalSlaveIds, slave.id]);
+                                              } else {
+                                                setSelectedGlobalSlaveIds(selectedGlobalSlaveIds.filter(id => id !== slave.id));
+                                              }
+                                            }}
+                                          />
+                                          <span><strong>{slave.deviceName}</strong> <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                    {selectedGlobalSlaveIds.length > 0 && (
+                                      <small className="form-hint form-hint-accent">{selectedGlobalSlaveIds.length} slave{selectedGlobalSlaveIds.length > 1 ? 's' : ''} selected.</small>
+                                    )}
+                                  </>
+                                )}
                               </div>
                            )}
                         </div>
@@ -1039,21 +1102,21 @@ const DevicePresets: React.FC = () => {
                         <td style={{ textAlign: 'center' }}>{slave.registers.length}</td>
                         <td style={{ textAlign: 'center' }}>
                           {slave.attached ? (
-                            <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d9534f', marginRight: '8px' }} title="Remove from preset">
+                            <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginRight: '8px' }} title="Remove from preset">
                               Remove
                             </button>
                           ) : (
-                            <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#28a745', marginRight: '8px' }} title="Add to preset">
+                            <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '8px' }} title="Add to preset">
                               Add
                             </button>
                           )}
-                          <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: '10px' }} title="Edit">
+                          <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f8fafc', marginRight: '10px' }} title="Edit">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                           </button>
-                          <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'red' }} title="Delete">
+                          <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <polyline points="3,6 5,6 21,6"></polyline>
                               <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -1169,51 +1232,143 @@ const DevicePresets: React.FC = () => {
                   <h4 className="form-section-title">Register Mappings</h4>
                   <p className="form-section-desc">Configure the Modbus registers to read from this slave device.</p>
 
-                  {/* Add Register Sub-form */}
                   <div className="form-subsection">
                     <h5 className="form-subsection-title">Add New Register</h5>
                     <div className="form-grid form-grid-auto">
+                      {/* Row 1: Basic Info */}
                       <div className="form-group">
-                        <label>Label</label>
+                        <label>Label *</label>
                         <input
                           type="text"
-                          placeholder="e.g., voltage"
+                          placeholder="e.g., Battery_Voltage"
                           value={registerForm.label}
                           onChange={(e) => setRegisterForm({...registerForm, label: e.target.value})}
                         />
                       </div>
                       <div className="form-group">
-                        <label>Address</label>
+                        <label>Address *</label>
                         <input
                           type="number"
-                          placeholder="0"
+                          placeholder="40001"
                           value={registerForm.address}
                           onChange={(e) => setRegisterForm({...registerForm, address: parseInt(e.target.value)})}
-                          min="0"
+                          min="1"
                         />
                       </div>
                       <div className="form-group">
-                        <label>Data Type</label>
+                        <label>Num Registers</label>
+                        <input
+                          type="number"
+                          placeholder="1"
+                          value={registerForm.num_registers || 1}
+                          onChange={(e) => setRegisterForm({...registerForm, num_registers: parseInt(e.target.value)})}
+                          min="1"
+                          max="125"
+                        />
+                        <small className="form-hint">Count (1-125)</small>
+                      </div>
+                      <div className="form-group">
+                        <label>Function Code *</label>
+                        <select
+                          value={registerForm.function_code || 3}
+                          onChange={(e) => setRegisterForm({...registerForm, function_code: parseInt(e.target.value)})}
+                        >
+                          <option value={0x01}>0x01 - Read Coils</option>
+                          <option value={0x02}>0x02 - Read Discrete Inputs</option>
+                          <option value={0x03}>0x03 - Read Holding Registers</option>
+                          <option value={0x04}>0x04 - Read Input Registers</option>
+                          <option value={0x05}>0x05 - Write Single Coil</option>
+                          <option value={0x06}>0x06 - Write Single Register</option>
+                          <option value={0x0F}>0x0F - Write Multiple Coils</option>
+                          <option value={0x10}>0x10 - Write Multiple Registers</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Register Type</label>
+                        <select
+                          value={registerForm.register_type || 3}
+                          onChange={(e) => setRegisterForm({...registerForm, register_type: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>Coil (0x - R/W Discrete)</option>
+                          <option value={1}>Discrete Input (1x - RO Discrete)</option>
+                          <option value={2}>Input Register (3x - RO Analog)</option>
+                          <option value={3}>Holding Register (4x - R/W Analog)</option>
+                        </select>
+                      </div>
+
+                      {/* Row 2: Data Type & Format */}
+                      <div className="form-group">
+                        <label>Data Type *</label>
                         <select
                           value={registerForm.data_type}
                           onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
                         >
-                          <option value={0}>UINT16</option>
-                          <option value={1}>INT16</option>
-                          <option value={2}>UINT32</option>
-                          <option value={3}>INT32</option>
-                          <option value={4}>FLOAT32</option>
-                          <option value={5}>FLOAT64</option>
+                          <option value={0}>UINT16 (16-bit Unsigned)</option>
+                          <option value={1}>INT16 (16-bit Signed)</option>
+                          <option value={2}>UINT32 (32-bit Unsigned)</option>
+                          <option value={3}>INT32 (32-bit Signed)</option>
+                          <option value={4}>FLOAT32 (32-bit Float)</option>
+                          <option value={5}>UINT64 (64-bit Unsigned)</option>
+                          <option value={6}>INT64 (64-bit Signed)</option>
+                          <option value={7}>FLOAT64 (64-bit Float)</option>
+                          <option value={8}>BOOL (Single Bit)</option>
+                          <option value={9}>STRING (ASCII)</option>
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>Scale</label>
+                        <label>Byte Order</label>
+                        <select
+                          value={registerForm.byte_order || 0}
+                          onChange={(e) => setRegisterForm({...registerForm, byte_order: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>Big Endian (AB)</option>
+                          <option value={1}>Little Endian (BA)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Word Order</label>
+                        <select
+                          value={registerForm.word_order || 0}
+                          onChange={(e) => setRegisterForm({...registerForm, word_order: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>Big Endian (AB CD)</option>
+                          <option value={1}>Little Endian (CD AB)</option>
+                          <option value={2}>Mid-Big Endian (BA DC)</option>
+                          <option value={3}>Mid-Little Endian (DC BA)</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Decimal Places</label>
+                        <input
+                          type="number"
+                          placeholder="2"
+                          value={registerForm.decimal_places || 2}
+                          onChange={(e) => setRegisterForm({...registerForm, decimal_places: parseInt(e.target.value)})}
+                          min="0"
+                          max="6"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Access Mode</label>
+                        <select
+                          value={registerForm.access_mode || 0}
+                          onChange={(e) => setRegisterForm({...registerForm, access_mode: parseInt(e.target.value)})}
+                        >
+                          <option value={0}>Read Only</option>
+                          <option value={1}>Read/Write</option>
+                          <option value={2}>Write Only</option>
+                        </select>
+                      </div>
+
+                      {/* Row 3: Scaling & Units */}
+                      <div className="form-group">
+                        <label>Scale Factor</label>
                         <input
                           type="number"
                           placeholder="1.0"
                           value={registerForm.scale_factor}
                           onChange={(e) => setRegisterForm({...registerForm, scale_factor: parseFloat(e.target.value)})}
-                          step="0.01"
+                          step="0.001"
                         />
                       </div>
                       <div className="form-group">
@@ -1226,12 +1381,58 @@ const DevicePresets: React.FC = () => {
                           step="0.01"
                         />
                       </div>
+                      <div className="form-group">
+                        <label>Unit</label>
+                        <input
+                          type="text"
+                          placeholder="V, A, W, °C, etc."
+                          value={registerForm.unit || ''}
+                          onChange={(e) => setRegisterForm({...registerForm, unit: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Category</label>
+                        <select
+                          value={registerForm.category || 'Electrical'}
+                          onChange={(e) => setRegisterForm({...registerForm, category: e.target.value})}
+                        >
+                          <option value="Electrical">Electrical</option>
+                          <option value="Temperature">Temperature</option>
+                          <option value="Status">Status</option>
+                          <option value="Control">Control</option>
+                          <option value="Energy">Energy</option>
+                          <option value="Power">Power</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Row 4: Alarms & Status */}
+                      <div className="form-group">
+                        <label>High Alarm</label>
+                        <input
+                          type="number"
+                          placeholder="Optional"
+                          value={registerForm.high_alarm_threshold ?? ''}
+                          onChange={(e) => setRegisterForm({...registerForm, high_alarm_threshold: e.target.value ? parseFloat(e.target.value) : null})}
+                          step="0.01"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Low Alarm</label>
+                        <input
+                          type="number"
+                          placeholder="Optional"
+                          value={registerForm.low_alarm_threshold ?? ''}
+                          onChange={(e) => setRegisterForm({...registerForm, low_alarm_threshold: e.target.value ? parseFloat(e.target.value) : null})}
+                          step="0.01"
+                        />
+                      </div>
                       <div className="form-group checkbox-group">
-                        <label>Active</label>
+                        <label>Enabled</label>
                         <label className="checkbox-label checkbox-vertical">
                           <input
-                          type="checkbox"
-                          checked={registerForm.enabled}
+                            type="checkbox"
+                            checked={registerForm.enabled}
                             onChange={(e) => setRegisterForm({...registerForm, enabled: e.target.checked})}
                           />
                           <span>{registerForm.enabled ? 'Yes' : 'No'}</span>
@@ -1242,6 +1443,18 @@ const DevicePresets: React.FC = () => {
                           Add Register
                         </button>
                       </div>
+                    </div>
+
+                    {/* Description - full width */}
+                    <div className="form-group" style={{ marginTop: '10px' }}>
+                      <label>Description</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., 0=Off, 1=On, 2=Standby"
+                        value={registerForm.description || ''}
+                        onChange={(e) => setRegisterForm({...registerForm, description: e.target.value})}
+                        style={{ width: '100%' }}
+                      />
                     </div>
                   </div>
 
@@ -1254,9 +1467,13 @@ const DevicePresets: React.FC = () => {
                           <tr>
                             <th>Label</th>
                             <th>Address</th>
+                            <th>Function</th>
                             <th>Data Type</th>
+                            <th>Unit</th>
                             <th>Scale</th>
                             <th>Offset</th>
+                            <th>Category</th>
+                            <th>Alarms</th>
                             <th>Status</th>
                             <th>Actions</th>
                           </tr>
@@ -1266,9 +1483,21 @@ const DevicePresets: React.FC = () => {
                             <tr key={index}>
                               <td>{reg.label}</td>
                               <td>{reg.address}</td>
+                              <td>{reg.functionCode || 3}</td>
                               <td>{getDataTypeName(reg.dataType)}</td>
+                              <td>{reg.unit || '-'}</td>
                               <td>{reg.scaleFactor}</td>
                               <td>{reg.offset}</td>
+                              <td>{reg.category || '-'}</td>
+                              <td>
+                                {reg.highAlarmThreshold || reg.lowAlarmThreshold ? (
+                                  <small>
+                                    {reg.highAlarmThreshold && `H:${reg.highAlarmThreshold}`}
+                                    {reg.highAlarmThreshold && reg.lowAlarmThreshold && ' / '}
+                                    {reg.lowAlarmThreshold && `L:${reg.lowAlarmThreshold}`}
+                                  </small>
+                                ) : '-'}
+                              </td>
                               <td>
                                 <span className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}>
                                   {reg.enabled ? 'Enabled' : 'Disabled'}
