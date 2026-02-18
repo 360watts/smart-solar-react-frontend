@@ -55,7 +55,6 @@ const Configuration: React.FC = () => {
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
   const [globalMode, setGlobalMode] = useState(false);
-  const [presets, setPresets] = useState<any[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<number | ''>('');
   const [slaveForm, setSlaveForm] = useState({
     slave_id: '',
@@ -126,7 +125,7 @@ const Configuration: React.FC = () => {
     }
   }, []);
 
-  const fetchConfiguration = useCallback(async () => {
+  const fetchConfiguration = async () => {
     try {
       const data = await apiService.getConfiguration();
       if (data?.configId) {
@@ -137,23 +136,19 @@ const Configuration: React.FC = () => {
         // No config in DB yet — operate in global (config-less) mode
         setConfig(null);
         setGlobalMode(true);
-        const [slavesResult, presetsResult] = await Promise.all([
-          apiService.getGlobalSlaves(),
-          apiService.getPresets(),
-        ]);
+        const slavesResult = await apiService.getGlobalSlaves();
         setSlaves(slavesResult.map(mapSlave));
-        setPresets(presetsResult);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  }, [fetchSlaves, fetchGlobalSlaves]);
+  };
 
   useEffect(() => {
     fetchConfiguration();
-  }, [fetchConfiguration]);
+  }, []);
 
   const handleCreateSlave = () => {
     setSlaveForm({
