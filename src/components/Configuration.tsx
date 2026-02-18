@@ -127,25 +127,19 @@ const Configuration: React.FC = () => {
   const fetchConfiguration = useCallback(async () => {
     try {
       const data = await apiService.getConfiguration();
-      setConfig(data);
       if (data?.configId) {
+        setConfig(data);
         setGlobalMode(false);
         await fetchSlaves(data.configId);
       } else {
+        // No config in DB yet — operate in global (config-less) mode
         setConfig(null);
         setGlobalMode(true);
         await fetchGlobalSlaves();
       }
-      setLoading(false);
     } catch (err) {
-      // If no configuration exists, set config to null
-      if (err instanceof Error && err.message.includes('No configuration available')) {
-        setConfig(null);
-        setGlobalMode(true);
-        await fetchGlobalSlaves();
-      } else {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      }
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
       setLoading(false);
     }
   }, [fetchSlaves, fetchGlobalSlaves]);
