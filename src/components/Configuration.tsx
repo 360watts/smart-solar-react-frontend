@@ -115,40 +115,32 @@ const Configuration: React.FC = () => {
       console.error('Failed to fetch slaves:', err);
     }
   }, []);
-
-  const fetchGlobalSlaves = useCallback(async () => {
-    try {
-      const slavesData = await apiService.getGlobalSlaves();
-      setSlaves(slavesData.map(mapSlave));
-    } catch (err) {
-      console.error('Failed to fetch global slaves:', err);
-    }
-  }, []);
-
-  const fetchConfiguration = async () => {
-    try {
-      const data = await apiService.getConfiguration();
-      if (data?.configId) {
-        setConfig(data);
-        setGlobalMode(false);
-        await fetchSlaves(data.configId);
-      } else {
-        // No config in DB yet — operate in global (config-less) mode
-        setConfig(null);
-        setGlobalMode(true);
-        const slavesResult = await apiService.getGlobalSlaves();
-        setSlaves(slavesResult.map(mapSlave));
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  
   useEffect(() => {
-    fetchConfiguration();
-  }, []);
+    const load = async () => {
+      try {
+        const data = await apiService.getConfiguration();
+        if (data?.configId) {
+          setConfig(data);
+          setGlobalMode(false);
+          await fetchSlaves(data.configId);
+        } else {
+          // No config in DB yet — operate in global (config-less) mode
+          setConfig(null);
+          setGlobalMode(true);
+          const slavesResult = await apiService.getGlobalSlaves();
+          setSlaves(slavesResult.map(mapSlave));
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [fetchSlaves]);
+
+  
 
   const handleCreateSlave = () => {
     setSlaveForm({
