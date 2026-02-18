@@ -376,6 +376,12 @@ class ApiService {
     });
   }
 
+  async detachSlaveFromPreset(configId: string, slaveId: number): Promise<any> {
+    return this.request(`/presets/${configId}/slaves/${slaveId}/detach/`, {
+      method: 'POST',
+    });
+  }
+
   // OTA (Over-The-Air) Update Endpoints
   async getFirmwareVersions(activeOnly: boolean = true): Promise<any> {
     const params = new URLSearchParams();

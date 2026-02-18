@@ -29,6 +29,7 @@ interface SlaveDevice {
   pollingIntervalMs: number;
   timeoutMs: number;
   enabled: boolean;
+  attached?: boolean;
   registers: RegisterMapping[];
 }
 
@@ -201,6 +202,10 @@ const DevicePresets: React.FC = () => {
       parity: preset.gateway_configuration.uart_configuration.parity === 'None' ? 0 : 
               preset.gateway_configuration.uart_configuration.parity === 'Odd' ? 1 : 2,
     });
+    // Load slaves for this preset so they are visible in the edit modal
+    fetchSlavesForPreset(preset.gateway_configuration.general_settings.config_id).catch((e) => {
+      console.error('Failed to load slaves for preset edit:', e);
+    });
   };
 
   const handleSave = async () => {
@@ -313,16 +318,23 @@ const DevicePresets: React.FC = () => {
 
   const fetchSlavesForPreset = async (configId: string) => {
     try {
-      const slavesData = await apiService.getSlaves(configId);
-      // Map API response to match interface
-      const mappedSlaves = slavesData.map((slave: any) => ({
+      // Fetch both preset-attached slaves and global (unattached) slaves
+      const [attachedData, globalData] = await Promise.all([
+        apiService.getSlaves(configId),
+        apiService.getGlobalSlaves(),
+      ]);
+
+      const attachedIds = new Set(attachedData.map((s: any) => s.id));
+
+      const mapSlave = (slave: any, attached: boolean) => ({
         id: slave.id,
         slaveId: slave.slave_id,
         deviceName: slave.device_name,
         pollingIntervalMs: slave.polling_interval_ms,
         timeoutMs: slave.timeout_ms,
         enabled: slave.enabled,
-        registers: slave.registers.map((reg: any) => ({
+        attached,
+        registers: (slave.registers || []).map((reg: any) => ({
           id: reg.id,
           label: reg.label,
           address: reg.address,
@@ -333,8 +345,15 @@ const DevicePresets: React.FC = () => {
           offset: reg.offset,
           enabled: reg.enabled,
         }))
-      }));
-      setSlaves(mappedSlaves);
+      });
+
+      const mappedAttached = attachedData.map((s: any) => mapSlave(s, true));
+      const mappedGlobals = (globalData || [])
+        .filter((s: any) => !attachedIds.has(s.id))
+        .map((s: any) => mapSlave(s, false));
+
+      // Show attached slaves first, then available global slaves
+      setSlaves([...mappedAttached, ...mappedGlobals]);
     } catch (err) {
       console.error('Failed to fetch slaves:', err);
       setError('Failed to load slaves for this preset');
@@ -387,6 +406,8 @@ const DevicePresets: React.FC = () => {
       enabled: true,
       registers: []
     });
+    // Ensure we are not editing an existing slave when opening the create modal
+    setEditingSlave(null);
     setCreatingSlave(true);
   };
 
@@ -400,6 +421,30 @@ const DevicePresets: React.FC = () => {
       registers: [...slave.registers]
     });
     setEditingSlave(slave);
+  };
+
+  const handleAttachSlaveToPreset = async (slave: SlaveDevice) => {
+    if (!configuringSlaves) return;
+    try {
+      await apiService.addSlavesToPreset(configuringSlaves.config_id, [slave.id]);
+      // refresh list for this preset
+      await fetchSlavesForPreset(configuringSlaves.config_id);
+      updatePresetSlaveCount(configuringSlaves.config_id, slaves.filter(s => s.attached).length + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to attach slave to preset');
+    }
+  };
+
+  const handleDetachSlaveFromPreset = async (slave: SlaveDevice) => {
+    if (!configuringSlaves) return;
+    try {
+      await apiService.detachSlaveFromPreset(configuringSlaves.config_id, slave.slaveId);
+      // refresh list for this preset
+      await fetchSlavesForPreset(configuringSlaves.config_id);
+      updatePresetSlaveCount(configuringSlaves.config_id, slaves.filter(s => s.attached).length - 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to detach slave from preset');
+    }
   };
 
   const handleSaveSlave = async () => {
@@ -854,6 +899,47 @@ const DevicePresets: React.FC = () => {
                   </div>
                 )}
 
+                {/* Section 4: Existing Slaves for this Preset (when editing) */}
+                {editingPreset && (
+                  <div className="form-section">
+                    <h4 className="form-section-title">Preset Slave Devices</h4>
+                    <div className="card">
+                      <div className="card-header">
+                        <h5>Slaves ({slaves.length})</h5>
+                        <button type="button" onClick={() => handleConfigureSlaves(editingPreset)} className="btn btn-sm">Configure Slaves</button>
+                      </div>
+                      {slaves.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '10px', color: '#666' }}>
+                          <p>No slave devices for this preset.</p>
+                        </div>
+                      ) : (
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'center' }}>Slave ID</th>
+                              <th style={{ textAlign: 'center' }}>Device Name</th>
+                              <th style={{ textAlign: 'center' }}>Polling</th>
+                              <th style={{ textAlign: 'center' }}>Timeout</th>
+                              <th style={{ textAlign: 'center' }}>Registers</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {slaves.map(s => (
+                              <tr key={s.id}>
+                                <td style={{ textAlign: 'center' }}>{s.slaveId}</td>
+                                <td>{s.deviceName}</td>
+                                <td style={{ textAlign: 'center' }}>{s.pollingIntervalMs}ms</td>
+                                <td style={{ textAlign: 'center' }}>{s.timeoutMs}ms</td>
+                                <td style={{ textAlign: 'center' }}>{s.registers.length}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </form>
             </div>
             <div className="form-actions">
@@ -952,6 +1038,15 @@ const DevicePresets: React.FC = () => {
                         </td>
                         <td style={{ textAlign: 'center' }}>{slave.registers.length}</td>
                         <td style={{ textAlign: 'center' }}>
+                          {slave.attached ? (
+                            <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d9534f', marginRight: '8px' }} title="Remove from preset">
+                              Remove
+                            </button>
+                          ) : (
+                            <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#28a745', marginRight: '8px' }} title="Add to preset">
+                              Add
+                            </button>
+                          )}
                           <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: '10px' }} title="Edit">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>

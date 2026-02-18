@@ -22,6 +22,8 @@ interface SlaveDevice {
   timeoutMs: number;
   priority?: number;
   enabled: boolean;
+  configId?: number | null;
+  configName?: string;
   registers: RegisterMapping[];
 }
 
@@ -94,6 +96,8 @@ const Configuration: React.FC = () => {
     timeoutMs: slave.timeout_ms,
     priority: slave.priority,
     enabled: slave.enabled,
+    configId: slave.config_id ?? null,
+    configName: slave.config_name ?? 'global',
     registers: (slave.registers || []).map((reg: any) => ({
       id: reg.id,
       label: reg.label,
@@ -117,28 +121,21 @@ const Configuration: React.FC = () => {
   }, []);
   
   useEffect(() => {
-    const load = async () => {
+    const loadAllSlaves = async () => {
       try {
-        const data = await apiService.getConfiguration();
-        if (data?.configId) {
-          setConfig(data);
-          setGlobalMode(false);
-          await fetchSlaves(data.configId);
-        } else {
-          // No config in DB yet — operate in global (config-less) mode
-          setConfig(null);
-          setGlobalMode(true);
-          const slavesResult = await apiService.getGlobalSlaves();
-          setSlaves(slavesResult.map(mapSlave));
-        }
+        // Default to listing all slaves across presets
+        const slavesResult = await apiService.getGlobalSlaves();
+        setSlaves(slavesResult.map(mapSlave));
+        setConfig(null);
+        setGlobalMode(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
     };
-    load();
-  }, [fetchSlaves]);
+    loadAllSlaves();
+  }, []);
 
   
 
@@ -339,7 +336,7 @@ const Configuration: React.FC = () => {
 
       <div className="card">
         <div className="card-header">
-          <h2>{globalMode || !config ? 'Global Slave Devices' : 'Preset Slave Devices'} ({slaves.length})</h2>
+          <h2>All Slave Devices ({slaves.length})</h2>
           <button onClick={handleCreateSlave} className="btn">Configure New Slave</button>
         </div>
 
@@ -354,6 +351,7 @@ const Configuration: React.FC = () => {
               <tr>
                 <th style={{ textAlign: 'center' }}>Slave ID</th>
                 <th style={{ textAlign: 'center' }}>Device Name</th>
+                <th style={{ textAlign: 'center' }}>Config</th>
                 <th style={{ textAlign: 'center' }}>Polling Interval</th>
                 <th style={{ textAlign: 'center' }}>Timeout</th>
                 <th style={{ textAlign: 'center' }}>Status</th>
@@ -366,6 +364,7 @@ const Configuration: React.FC = () => {
                 <tr key={slave.id}>
                   <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
                   <td>{slave.deviceName}</td>
+                  <td style={{ textAlign: 'center' }}>{(slave as any).configName || 'global'}</td>
                   <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
                   <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
                   <td style={{ textAlign: 'center' }}>
