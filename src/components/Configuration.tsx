@@ -323,7 +323,8 @@ const Configuration: React.FC = () => {
     <div>
       <h1>Slave Configuration</h1>
 
-      {error && (
+      {/* Show global error banner only when modal is not open */}
+      {!creatingSlave && !editingSlave && error && (
         <div className="error" style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
           <strong>Error:</strong> {error}
           <button
@@ -403,6 +404,19 @@ const Configuration: React.FC = () => {
             <h3>{editingSlave ? `Edit Slave: ${editingSlave.deviceName}` : 'Configure New Slave'}</h3>
             
             <div className="modal-body">
+              {/* Show errors inside modal when configuring/creating a slave */}
+              {error && (
+                <div className="error" style={{ marginBottom: '12px', padding: '8px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
+                  <strong>Error:</strong> {error}
+                  <button
+                    onClick={() => setError(null)}
+                    style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '14px' }}
+                    title="Close error"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
                 
                 {/* Config selector removed: creating a new slave no longer requires selecting a preset */}
