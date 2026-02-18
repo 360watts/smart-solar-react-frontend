@@ -55,6 +55,8 @@ const Configuration: React.FC = () => {
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
   const [globalMode, setGlobalMode] = useState(false);
+  const [presets, setPresets] = useState<any[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<number | ''>('');
   const [slaveForm, setSlaveForm] = useState({
     slave_id: '',
     device_name: '',
@@ -135,7 +137,12 @@ const Configuration: React.FC = () => {
         // No config in DB yet — operate in global (config-less) mode
         setConfig(null);
         setGlobalMode(true);
-        await fetchGlobalSlaves();
+        const [slavesResult, presetsResult] = await Promise.all([
+          apiService.getGlobalSlaves(),
+          apiService.getPresets(),
+        ]);
+        setSlaves(slavesResult.map(mapSlave));
+        setPresets(presetsResult);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -175,7 +182,10 @@ const Configuration: React.FC = () => {
   };
 
   const handleSaveSlave = async () => {
-    const isGlobal = globalMode || !config;
+    // Treat missing preset selection as global: allow creating slaves without any config
+    const isGlobal = globalMode || !config || (!editingSlave && !selectedPresetId);
+
+    // In global mode, allow creating a slave without attaching to a preset (global slave)
 
     // Validate slave ID uniqueness for new slaves
     if (!editingSlave) {
@@ -200,19 +210,20 @@ const Configuration: React.FC = () => {
       if (editingSlave) {
         const updatedSlave = isGlobal
           ? await apiService.updateGlobalSlave(editingSlave.id, slaveData)
-          : await apiService.updateSlave(config.configId, editingSlave.slaveId, slaveData);
+          : await apiService.updateSlave(config!.configId, editingSlave.slaveId, slaveData);
         const mappedSlave = mapSlave(updatedSlave);
         setSlaves(slaves.map(s => s.id === editingSlave.id ? mappedSlave : s));
         setEditingSlave(null);
       } else {
         const newSlave = isGlobal
-          ? await apiService.createGlobalSlave(slaveData)
-          : await apiService.createSlave(config.configId, slaveData);
+          ? await apiService.createGlobalSlave(selectedPresetId ? { ...slaveData, config_id: selectedPresetId } : slaveData)
+          : await apiService.createSlave(config!.configId, slaveData);
         const mappedSlave = mapSlave(newSlave);
         setSlaves([...slaves, mappedSlave]);
       }
 
       setCreatingSlave(false);
+      setSelectedPresetId('');
       setSlaveForm({
         slave_id: '',
         device_name: '',
@@ -247,6 +258,7 @@ const Configuration: React.FC = () => {
   const handleCancel = () => {
     setCreatingSlave(false);
     setEditingSlave(null);
+    setSelectedPresetId('');
     setSlaveForm({
       slave_id: '',
       device_name: '',
@@ -406,6 +418,8 @@ const Configuration: React.FC = () => {
             <div className="modal-body">
               <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
                 
+                {/* Config selector removed: creating a new slave no longer requires selecting a preset */}
+
                 {/* Section 1: Basic Information */}
                 <div className="form-section">
                   <h4 className="form-section-title">Basic Information</h4>
