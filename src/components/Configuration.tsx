@@ -111,15 +111,6 @@ const Configuration: React.FC = () => {
     }))
   });
 
-  const fetchSlaves = useCallback(async (configId: string) => {
-    try {
-      const slavesData = await apiService.getSlaves(configId);
-      setSlaves(slavesData.map(mapSlave));
-    } catch (err) {
-      console.error('Failed to fetch slaves:', err);
-    }
-  }, []);
-  
   useEffect(() => {
     const loadAllSlaves = async () => {
       try {
