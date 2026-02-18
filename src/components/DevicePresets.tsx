@@ -72,6 +72,7 @@ const DevicePresets: React.FC = () => {
   const [globalSlaves, setGlobalSlaves] = useState<SlaveDevice[]>([]);
   const [globalSlavesLoading, setGlobalSlavesLoading] = useState(false);
   const [selectedGlobalSlaveIds, setSelectedGlobalSlaveIds] = useState<number[]>([]);
+  const [slaveSearch, setSlaveSearch] = useState('');
   const [editForm, setEditForm] = useState({
     config_id: '',
     name: '',
@@ -334,6 +335,7 @@ const DevicePresets: React.FC = () => {
     setCreatingPreset(false);
     setCreatePresetSlaveMode('none');
     setSelectedGlobalSlaveIds([]);
+    setSlaveSearch('');
   };
 
   const getDataTypeName = (dataType: number): string => {
@@ -912,31 +914,49 @@ const DevicePresets: React.FC = () => {
                                   <p className="text-sm text-muted">Loading slaves...</p>
                                 ) : globalSlaves.length === 0 ? (
                                   <p className="text-sm text-muted">No existing slaves found.</p>
-                                ) : (
-                                  <>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '4px', padding: '8px' }}>
-                                      {globalSlaves.map((slave) => (
-                                        <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedGlobalSlaveIds.includes(slave.id)}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setSelectedGlobalSlaveIds([...selectedGlobalSlaveIds, slave.id]);
-                                              } else {
-                                                setSelectedGlobalSlaveIds(selectedGlobalSlaveIds.filter(id => id !== slave.id));
-                                              }
-                                            }}
-                                          />
-                                          <span><strong>{slave.deviceName}</strong> <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                    {selectedGlobalSlaveIds.length > 0 && (
-                                      <small className="form-hint form-hint-accent">{selectedGlobalSlaveIds.length} slave{selectedGlobalSlaveIds.length > 1 ? 's' : ''} selected.</small>
-                                    )}
-                                  </>
-                                )}
+                                ) : (() => {
+                                  const filtered = globalSlaves.filter(s =>
+                                    s.deviceName.toLowerCase().includes(slaveSearch.toLowerCase()) ||
+                                    String(s.slaveId).includes(slaveSearch)
+                                  );
+                                  return (
+                                    <>
+                                      <input
+                                        type="text"
+                                        placeholder="Search by name or slave ID…"
+                                        value={slaveSearch}
+                                        onChange={(e) => setSlaveSearch(e.target.value)}
+                                        style={{ width: '100%', marginBottom: '8px', padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(148,163,184,0.25)', background: 'rgba(15,23,42,0.6)', color: '#f8fafc', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                                      />
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(148,163,184,0.15)', borderRadius: '4px', padding: '8px' }}>
+                                        {filtered.length === 0 ? (
+                                          <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85em' }}>No slaves match your search.</p>
+                                        ) : filtered.map((slave) => (
+                                          <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
+                                            <input
+                                              type="checkbox"
+                                              checked={selectedGlobalSlaveIds.includes(slave.id)}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setSelectedGlobalSlaveIds([...selectedGlobalSlaveIds, slave.id]);
+                                                } else {
+                                                  setSelectedGlobalSlaveIds(selectedGlobalSlaveIds.filter(id => id !== slave.id));
+                                                }
+                                              }}
+                                            />
+                                            <span><strong>{slave.deviceName}</strong> <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                      <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
+                                        {filtered.length} of {globalSlaves.length} shown
+                                        {selectedGlobalSlaveIds.length > 0 && (
+                                          <span className="form-hint-accent"> · {selectedGlobalSlaveIds.length} selected</span>
+                                        )}
+                                      </small>
+                                    </>
+                                  );
+                                })()}
                               </div>
                            )}
                         </div>
