@@ -11,6 +11,8 @@ import NavigationProgress from './components/NavigationProgress';
 import PageTransition from './components/PageTransition';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SkeletonDashboard } from './components/SkeletonLoader';
+import { ToastProvider } from './contexts/ToastContext';
+import { ToastContainer } from './components/Toast';
 
 // Lazy load components for better initial load performance
 const Devices = lazy(() => import('./components/Devices'));
@@ -27,6 +29,7 @@ const OTA = lazy(() => import('./components/OTA').then(m => ({ default: m.OTA })
 function App() {
   return (
     <ErrorBoundary>
+      <ToastProvider>
       <AuthProvider>
         <NavigationProvider>
           <Router
@@ -166,10 +169,14 @@ function App() {
                 }
               />
             </Routes>
+            <ToastContainer />
           </div>
         </Router>
       </NavigationProvider>
-    </AuthProvider>    </ErrorBoundary>  );
+      </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App;

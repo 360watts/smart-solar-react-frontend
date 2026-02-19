@@ -62,22 +62,7 @@ const Login: React.FC = () => {
       <div className="auth-container">
         <div className="auth-loading-screen">
           <div className="solar-loader">
-            <svg viewBox="0 0 100 100" className="solar-icon-animated">
-              <circle cx="50" cy="50" r="20" fill="#f59e0b" />
-              {[...Array(8)].map((_, i) => (
-                <line
-                  key={i}
-                  x1="50"
-                  y1="15"
-                  x2="50"
-                  y2="5"
-                  stroke="#f59e0b"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  transform={`rotate(${i * 45} 50 50)`}
-                />
-              ))}
-            </svg>
+            <img src="/logo_with_font.png" alt="360watts" className="auth-logo-img auth-logo-img--pulse" />
           </div>
           <p className="loading-text">Initializing...</p>
         </div>
@@ -93,41 +78,13 @@ const Login: React.FC = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        {/* Solar logo */}
+        {/* Official 360watts logo */}
         <div className="auth-logo">
-          <svg viewBox="0 0 100 100" className="solar-icon-login">
-            <defs>
-              <linearGradient id="sunGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#fbbf24" />
-                <stop offset="100%" stopColor="#f59e0b" />
-              </linearGradient>
-              <linearGradient id="rayGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#fbbf24" />
-                <stop offset="100%" stopColor="#f97316" />
-              </linearGradient>
-            </defs>
-            <circle cx="50" cy="50" r="18" fill="url(#sunGradient)" className="sun-core" />
-            {[...Array(8)].map((_, i) => (
-              <line
-                key={i}
-                x1="50"
-                y1="22"
-                x2="50"
-                y2="8"
-                stroke="url(#rayGradient)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                transform={`rotate(${i * 45} 50 50)`}
-                className="sun-ray"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              />
-            ))}
-          </svg>
+          <img src="/logo_with_font.png" alt="360watts" className="auth-logo-img" />
         </div>
 
         <div className="auth-header">
-          <h1>Smart Solar Monitor</h1>
-          <p>Secure Energy Management Portal</p>
+          <p>Smart Solar Monitor &mdash; Secure Portal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
