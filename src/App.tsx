@@ -13,6 +13,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { SkeletonDashboard } from './components/SkeletonLoader';
 import { ToastProvider } from './contexts/ToastContext';
 import { ToastContainer } from './components/Toast';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Lazy load components for better initial load performance
 const Devices = lazy(() => import('./components/Devices'));
@@ -29,6 +30,7 @@ const OTA = lazy(() => import('./components/OTA').then(m => ({ default: m.OTA })
 function App() {
   return (
     <ErrorBoundary>
+      <ThemeProvider>
       <ToastProvider>
       <AuthProvider>
         <NavigationProvider>
@@ -175,6 +177,7 @@ function App() {
       </NavigationProvider>
       </AuthProvider>
       </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
