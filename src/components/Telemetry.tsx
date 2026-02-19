@@ -200,23 +200,23 @@ const Telemetry: React.FC = () => {
         <table className="table">
           <thead>
             <tr>
-              <th>Device</th>
-              <th>Data Type</th>
-              <th>Value</th>
-              <th>Unit</th>
-              <th>Timestamp</th>
-              <th>Quality</th>
+              <th style={{ textAlign: 'center' }}>Device</th>
+              <th style={{ textAlign: 'center' }}>Data Type</th>
+              <th style={{ textAlign: 'center' }}>Value</th>
+              <th style={{ textAlign: 'center' }}>Unit</th>
+              <th style={{ textAlign: 'center' }}>Timestamp</th>
+              <th style={{ textAlign: 'center' }}>Quality</th>
             </tr>
           </thead>
           <tbody>
             {filteredData.slice(-100).reverse().map((item, index) => (
               <tr key={index}>
-                <td>{item.deviceId}</td>
-                <td>{item.data_type}</td>
-                <td>{item.value}</td>
-                <td>{item.unit}</td>
-                <td>{new Date(item.timestamp).toLocaleString()}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{item.deviceId}</td>
+                <td style={{ textAlign: 'center' }}>{item.data_type}</td>
+                <td style={{ textAlign: 'center' }}>{item.value}</td>
+                <td style={{ textAlign: 'center' }}>{item.unit}</td>
+                <td style={{ textAlign: 'center' }}>{new Date(item.timestamp).toLocaleString()}</td>
+                <td style={{ textAlign: 'center' }}>
                   <span className={item.quality === 'good' ? 'status-online' : 'status-offline'}>
                     {item.quality}
                   </span>

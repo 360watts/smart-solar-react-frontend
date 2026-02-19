@@ -686,18 +686,18 @@ const DevicePresets: React.FC = () => {
           <tbody>
             {filteredPresets.map((preset) => (
               <tr key={preset.id}>
-                <td>{preset.name}</td>
-                <td>{preset.config_id}</td>
-                <td>{preset.description}</td>
-                <td>{preset.slaves_count || 0}</td>
-                <td>
-                  <button onClick={() => handleViewDetails(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }} title="View Details">
+                <td style={{ textAlign: 'center' }}>{preset.name}</td>
+                <td style={{ textAlign: 'center' }}>{preset.config_id}</td>
+                <td style={{ textAlign: 'center' }}>{preset.description}</td>
+                <td style={{ textAlign: 'center' }}>{preset.slaves_count || 0}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <button onClick={() => handleViewDetails(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', margin: '0 6px' }} title="View Details">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                   </button>
-                  <button onClick={() => handleConfigureSlaves(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1' }} title="Configure Slaves">
+                  <button onClick={() => handleConfigureSlaves(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', margin: '0 6px' }} title="Configure Slaves">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                       <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -705,13 +705,13 @@ const DevicePresets: React.FC = () => {
                       <line x1="21" y1="3" x2="3" y2="21"></line>
                     </svg>
                   </button>
-                  <button onClick={() => handleEdit(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f8fafc' }} title="Edit">
+                  <button onClick={() => handleEdit(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f8fafc', margin: '0 6px' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button onClick={() => handleDelete(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete">
+                  <button onClick={() => handleDelete(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
@@ -1035,28 +1035,33 @@ const DevicePresets: React.FC = () => {
 
       {selectedPreset && (
         <div className="modal">
-          <div className="modal-content" style={{ maxWidth: '600px' }}>
-            <h3>Gateway Configuration: {selectedPreset.name}</h3>
-            <div style={{ marginBottom: '20px' }}>
-              <h4>General Settings</h4>
-              <div style={{ marginLeft: '20px' }}>
-                <p><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
-                <p><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
-                <p><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
+          <div className="modal-content" style={{ maxWidth: '700px' }}>
+            <h3 style={{ marginBottom: 12 }}>Gateway Configuration: {selectedPreset.name}</h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16, paddingLeft: 20 }}>
+              <div>
+                <h4 style={{ marginBottom: 8 }}>General Settings</h4>
+                <div style={{ paddingLeft: 0 }}>
+                  <p style={{ margin: '6px 0', wordBreak: 'break-word' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ marginBottom: 8 }}>UART Configuration</h4>
+                <div style={{ paddingLeft: 0 }}>
+                  <p style={{ margin: '6px 0' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
+                  <p style={{ margin: '6px 0' }}><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
+                </div>
               </div>
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <h4>UART Configuration</h4>
-              <div style={{ marginLeft: '20px' }}>
-                <p><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
-                <p><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
-                <p><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
-                <p><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
-              </div>
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <p><strong>Description:</strong> {selectedPreset.description}</p>
-              <p><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
+
+            <div style={{ marginBottom: '20px', paddingLeft: 20 }}>
+              <p style={{ margin: '6px 0', wordBreak: 'break-word' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
+              <p style={{ margin: '6px 0' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
             </div>
             <div className="form-actions">
               <button onClick={handleCloseDetails} className="btn btn-secondary">Close</button>

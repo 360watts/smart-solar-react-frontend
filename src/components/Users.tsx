@@ -405,25 +405,25 @@ const Users: React.FC = () => {
                 style={{ cursor: 'pointer' }}
                 className="clickable-row"
               >
-                <td>{user.first_name} {user.last_name}</td>
-                <td>{user.email}</td>
-                <td>{user.mobile_number || '-'}</td>
-                <td>{user.address || '-'}</td>
-                <td>
+                <td style={{ textAlign: 'center' }}>{user.first_name} {user.last_name}</td>
+                <td style={{ textAlign: 'center' }}>{user.email}</td>
+                <td style={{ textAlign: 'center' }}>{user.mobile_number || '-'}</td>
+                <td style={{ textAlign: 'center' }}>{user.address || '-'}</td>
+                <td style={{ textAlign: 'center' }}>
                   {(() => {
                     if (!user.date_joined) return 'N/A';
                     const date = new Date(user.date_joined);
                     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
                   })()}
                 </td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)' }} title="Edit">
+                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)', margin: '0 6px' }} title="Edit">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                   </button>
-                  <button onClick={() => handleDelete(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)' }} title="Delete">
+                  <button onClick={() => handleDelete(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)', margin: '0 6px' }} title="Delete">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3,6 5,6 21,6"></polyline>
                       <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
