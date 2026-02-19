@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import finalLogo from '../assets/finalLogo.png';
 
 /* ---- SVG icon components ---- */
 const IconDevices = () => (
@@ -133,7 +134,7 @@ const Navbar: React.FC = () => {
       <div className="sidebar-header">
         <div className="logo-container">
           <div className="logo-badge">
-            <img src="/finalLogo.png" alt="360watts" className="sidebar-logo-img" />
+            <img src={finalLogo} alt="360watts" className="sidebar-logo-img" />
           </div>
           <div className="logo-text">
             <h2>Smart Solar</h2>

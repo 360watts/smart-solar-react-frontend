@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import logoWithFont from '../assets/logo_with_font.png';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -62,7 +63,7 @@ const Login: React.FC = () => {
       <div className="auth-container">
         <div className="auth-loading-screen">
           <div className="solar-loader">
-            <img src="/logo_with_font.png" alt="360watts" className="auth-logo-img auth-logo-img--pulse" />
+            <img src={logoWithFont} alt="360watts" className="auth-logo-img auth-logo-img--pulse" />
           </div>
           <p className="loading-text">Initializing...</p>
         </div>
@@ -80,7 +81,7 @@ const Login: React.FC = () => {
       <div className="auth-card">
         {/* Official 360watts logo */}
         <div className="auth-logo">
-          <img src="/logo_with_font.png" alt="360watts" className="auth-logo-img" />
+          <img src={logoWithFont} alt="360watts" className="auth-logo-img" />
         </div>
 
         <div className="auth-header">
