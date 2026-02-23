@@ -637,7 +637,7 @@ const Devices: React.FC = () => {
                 <strong>Assigned User:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
               </div>
-              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: '1px solid var(--border-color, #e5e7eb)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
                     <strong style={{ fontSize: '0.95rem' }}>Configuration</strong>
@@ -665,12 +665,12 @@ const Devices: React.FC = () => {
                 </div>
                 {selectedDevice.config_version && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
-                    <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                    <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
                       <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Preset ID</div>
                       <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>{selectedDevice.config_version}</div>
                     </div>
                     {devicePreset?.slaves_count != null && (
-                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Slaves</div>
                         <div style={{ fontWeight: '500' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
                       </div>
@@ -678,10 +678,10 @@ const Devices: React.FC = () => {
                     {selectedDevice.config_ack_ver != null && devicePreset?.version != null && (
                       <div style={{ 
                         padding: '8px', 
-                        backgroundColor: 'white', 
+                        backgroundColor: 'var(--card-bg, #f9fafb)', 
                         borderRadius: '6px',
                         gridColumn: '1 / -1',
-                        border: selectedDevice.config_ack_ver === devicePreset.version ? '1px solid #dcfce7' : '1px solid #fef9c3'
+                        border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #dcfce7' : '2px solid #fef9c3'
                       }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '4px' }}>Version Status</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -701,13 +701,13 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version == null && (
-                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Device Version</div>
                         <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{selectedDevice.config_ack_ver}</div>
                       </div>
                     )}
                     {devicePreset?.gateway_configuration?.general_settings?.last_updated && (
-                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Modified</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
                           {new Date(devicePreset.gateway_configuration.general_settings.last_updated).toLocaleDateString()}
@@ -715,7 +715,7 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px', gridColumn: '1 / -1' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)', gridColumn: '1 / -1' }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Synced</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
                           {new Date(selectedDevice.config_acked_at).toLocaleString()}
@@ -735,7 +735,7 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px', gridColumn: '1 / -1' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)', gridColumn: '1 / -1' }}>
                         <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Apply Duration</div>
                         <div style={{ fontWeight: '500' }}>
                           {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)} seconds
