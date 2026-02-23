@@ -181,6 +181,37 @@ class ApiService {
     return this.request(`/users/${userId}/devices/`);
   }
 
+  async getUserSite(userId: number): Promise<any> {
+    return this.request(`/users/${userId}/site/`);
+  }
+
+  async createUserSite(userId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/users/${userId}/site/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUserSite(userId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/users/${userId}/site/update/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // DynamoDB site data
+  async getSiteTelemetry(siteId: string): Promise<any[]> {
+    return this.request(`/sites/${siteId}/telemetry/`);
+  }
+
+  async getSiteForecast(siteId: string): Promise<any[]> {
+    return this.request(`/sites/${siteId}/forecast/`);
+  }
+
+  async getSiteWeather(siteId: string): Promise<any> {
+    return this.request(`/sites/${siteId}/weather/`);
+  }
+
   async updateUser(userId: number, data: any): Promise<any> {
     const result = await this.request(`/users/${userId}/`, {
       method: 'PUT',
