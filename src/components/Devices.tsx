@@ -40,9 +40,14 @@ interface Preset {
   id: number;
   config_id?: string;
   name: string;
+  description?: string;
+  slaves_count?: number;
+  version?: number;
+  updated_at?: string;
   gateway_configuration?: {
     general_settings?: {
       config_id?: string;
+      last_updated?: string;
     };
   };
 }
@@ -150,6 +155,7 @@ const Devices: React.FC = () => {
   });
   const [siteSaving, setSiteSaving] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
+  const [devicePreset, setDevicePreset] = useState<Preset | null>(null);
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
     try {
@@ -253,6 +259,14 @@ const Devices: React.FC = () => {
     setSiteLoading(true);
     setDeviceLogs([]);
     
+    // Load preset details if device has config
+    if (device.config_version) {
+      const preset = presets.find(p => p.config_id === device.config_version);
+      setDevicePreset(preset || null);
+    } else {
+      setDevicePreset(null);
+    }
+    
     // Fetch site details and logs in parallel
     Promise.all([
       apiService.getDeviceSite(device.id)
@@ -263,7 +277,7 @@ const Devices: React.FC = () => {
         }),
       fetchDeviceLogs(device.id)
     ]).finally(() => setSiteLoading(false));
-  }, [fetchDeviceLogs]);
+  }, [fetchDeviceLogs, presets]);
 
   useEffect(() => {
     fetchUsers();
@@ -623,38 +637,88 @@ const Devices: React.FC = () => {
                 <strong>Assigned User:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
               </div>
-              <div>
-                <strong>Config Version:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedDevice.config_version || '-'}</p>
-              </div>
-              <div>
-                <strong>Config Sync:</strong>
-                <p style={{ margin: '5px 0' }}>
+              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div>
+                    <strong style={{ fontSize: '0.95rem' }}>Configuration</strong>
+                    {devicePreset && (
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)', marginTop: '2px' }}>
+                        {devicePreset.name || selectedDevice.config_version}
+                      </div>
+                    )}
+                  </div>
                   {!selectedDevice.config_version ? (
                     <span style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.875rem' }}>No preset assigned</span>
                   ) : selectedDevice.pending_config_update ? (
-                    <>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                        padding: '3px 10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '500',
-                        backgroundColor: '#fef9c3', color: '#854d0e'
-                      }}>⏳ Pending update</span>
-                      {selectedDevice.config_downloaded_at && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '4px' }}>
-                          Last download: {new Date(selectedDevice.config_downloaded_at).toLocaleString()}
-                        </div>
-                      )}
-                    </>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500',
+                      backgroundColor: '#fef9c3', color: '#854d0e'
+                    }}>⏳ Pending update</span>
                   ) : (
-                    <>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                        padding: '3px 10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '500',
-                        backgroundColor: '#dcfce7', color: '#166534'
-                      }}>✓ Synced{selectedDevice.config_ack_ver != null ? ` (v${selectedDevice.config_ack_ver})` : ''}</span>
-                      {selectedDevice.config_acked_at && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '4px' }}>
-                          Last synced: {new Date(selectedDevice.config_acked_at).toLocaleString()}
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500',
+                      backgroundColor: '#dcfce7', color: '#166534'
+                    }}>✓ Synced</span>
+                  )}
+                </div>
+                {selectedDevice.config_version && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
+                    <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                      <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Preset ID</div>
+                      <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>{selectedDevice.config_version}</div>
+                    </div>
+                    {devicePreset?.slaves_count != null && (
+                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Slaves</div>
+                        <div style={{ fontWeight: '500' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
+                      </div>
+                    )}
+                    {selectedDevice.config_ack_ver != null && devicePreset?.version != null && (
+                      <div style={{ 
+                        padding: '8px', 
+                        backgroundColor: 'white', 
+                        borderRadius: '6px',
+                        gridColumn: '1 / -1',
+                        border: selectedDevice.config_ack_ver === devicePreset.version ? '1px solid #dcfce7' : '1px solid #fef9c3'
+                      }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '4px' }}>Version Status</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>Device: </span>
+                            <span style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{selectedDevice.config_ack_ver}</span>
+                            <span style={{ margin: '0 8px', color: 'var(--text-muted, #9ca3af)' }}>→</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>Latest: </span>
+                            <span style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{devicePreset.version}</span>
+                          </div>
+                          {selectedDevice.config_ack_ver === devicePreset.version ? (
+                            <span style={{ color: '#166534', fontSize: '0.75rem', fontWeight: '500' }}>✓ Up to date</span>
+                          ) : (
+                            <span style={{ color: '#854d0e', fontSize: '0.75rem', fontWeight: '500' }}>⟳ Update available</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {selectedDevice.config_ack_ver != null && devicePreset?.version == null && (
+                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Device Version</div>
+                        <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{selectedDevice.config_ack_ver}</div>
+                      </div>
+                    )}
+                    {devicePreset?.gateway_configuration?.general_settings?.last_updated && (
+                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Modified</div>
+                        <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
+                          {new Date(devicePreset.gateway_configuration.general_settings.last_updated).toLocaleDateString()}
+                        </div>
+                      </div>
+                    )}
+                    {selectedDevice.config_acked_at && (
+                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px', gridColumn: '1 / -1' }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Synced</div>
+                        <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
+                          {new Date(selectedDevice.config_acked_at).toLocaleString()}
                           {(() => {
                             const ackTime = new Date(selectedDevice.config_acked_at);
                             const now = new Date();
@@ -662,21 +726,27 @@ const Devices: React.FC = () => {
                             const diffMins = Math.floor(diffMs / 60000);
                             const diffHours = Math.floor(diffMins / 60);
                             const diffDays = Math.floor(diffHours / 24);
-                            if (diffMins < 1) return ' (just now)';
-                            if (diffMins < 60) return ` (${diffMins}m ago)`;
-                            if (diffHours < 24) return ` (${diffHours}h ago)`;
-                            return ` (${diffDays}d ago)`;
+                            if (diffMins < 1) return ' • just now';
+                            if (diffMins < 60) return ` • ${diffMins}m ago`;
+                            if (diffHours < 24) return ` • ${diffHours}h ago`;
+                            return ` • ${diffDays}d ago`;
                           })()}
                         </div>
-                      )}
-                      {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '2px' }}>
-                          Download → Ack: {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)}s
+                      </div>
+                    )}
+                    {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
+                      <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '6px', gridColumn: '1 / -1' }}>
+                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Apply Duration</div>
+                        <div style={{ fontWeight: '500' }}>
+                          {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)} seconds
+                          <span style={{ color: 'var(--text-muted, #9ca3af)', marginLeft: '8px', fontSize: '0.75rem' }}>
+                            (download → acknowledge)
+                          </span>
                         </div>
-                      )}
-                    </>
-                  )}
-                </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <strong>Provisioned At:</strong>
