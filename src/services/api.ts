@@ -62,6 +62,7 @@ class ApiService {
       throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
+    if (response.status === 204) return null;
     return response.json();
   }
 
