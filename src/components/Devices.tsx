@@ -238,7 +238,7 @@ const Devices: React.FC = () => {
       if (!isNaN(deviceId)) {
         const foundDevice = devices.find(d => d.id === deviceId);
         if (foundDevice) {
-          setSelectedDevice(foundDevice);
+          handleViewDevice(foundDevice);
         }
       }
     }
