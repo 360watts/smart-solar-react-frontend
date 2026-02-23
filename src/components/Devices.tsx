@@ -777,7 +777,7 @@ const Devices: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)' }}>
+        <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)', marginTop: '32px' }}>
           <div className="card">
             <h2>System Health</h2>
             {dashboardError && <p className="error">{dashboardError}</p>}
@@ -806,7 +806,7 @@ const Devices: React.FC = () => {
         </div>
 
         {/* ── Site Configuration ── */}
-        <div className="card" style={{ marginTop: '20px' }}>
+        <div className="card" style={{ marginTop: '48px' }}>
           <div className="card-header">
             <h2>Site Configuration</h2>
             {!siteLoading && (
@@ -856,11 +856,13 @@ const Devices: React.FC = () => {
 
         {/* ── Live Site Intelligence (DynamoDB) ── */}
         {siteDetails && (
-          <SiteDataPanel siteId={siteDetails.site_id} autoRefresh />
+          <div style={{ marginTop: '48px' }}>
+            <SiteDataPanel siteId={siteDetails.site_id} autoRefresh />
+          </div>
         )}
 
         {/* ── Device Logs ── */}
-        <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
           <div className="card-header">
             <h2>Device Logs</h2>
             <button onClick={() => fetchDeviceLogs(selectedDevice.id)} className="btn" disabled={logsLoading}>
