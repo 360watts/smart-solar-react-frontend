@@ -388,6 +388,29 @@ class ApiService {
     });
   }
 
+  async rebootDevice(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/reboot/`, {
+      method: 'POST',
+    });
+  }
+
+  async hardResetDevice(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/hard-reset/`, {
+      method: 'POST',
+    });
+  }
+
+  async getDeviceLogs(deviceId: number, limit: number = 100, offset: number = 0): Promise<any> {
+    return this.request(`/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`);
+  }
+
+  async toggleDeviceLogs(deviceId: number, enabled: boolean): Promise<any> {
+    return this.request(`/devices/${deviceId}/logs/toggle/`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    });
+  }
+
   async deleteDevicesBulk(deviceIds: number[]): Promise<any> {
     return this.request(`/devices/delete-bulk/`, {
       method: 'POST',

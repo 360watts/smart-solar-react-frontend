@@ -23,6 +23,9 @@ interface Device {
   user?: string;
   provisioned_at: string;
   config_version?: string;
+  is_online?: boolean;
+  last_heartbeat?: string;
+  logs_enabled?: boolean;
   created_by_username?: string;
   created_at?: string;
   updated_by_username?: string;
@@ -119,6 +122,8 @@ const Devices: React.FC = () => {
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -225,6 +230,37 @@ const Devices: React.FC = () => {
     }
   };
 
+  const fetchDeviceLogs = async (deviceId: number) => {
+    setLogsLoading(true);
+    try {
+      const response = await apiService.getDeviceLogs(deviceId, 50, 0);
+      setDeviceLogs(response.logs || []);
+    } catch (err) {
+      console.error('Failed to fetch device logs:', err);
+      setDeviceLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleViewDevice = useCallback((device: Device) => {
+    setSelectedDevice(device);
+    setSiteDetails(null);
+    setSiteLoading(true);
+    setDeviceLogs([]);
+    
+    // Fetch site details and logs in parallel
+    Promise.all([
+      apiService.getDeviceSite(device.id)
+        .then(data => setSiteDetails(data))
+        .catch((err) => {
+          console.error('Failed to fetch site for device', device.id, ':', err);
+          setSiteDetails(null);
+        }),
+      fetchDeviceLogs(device.id)
+    ]).finally(() => setSiteLoading(false));
+  }, [fetchDeviceLogs]);
+
   useEffect(() => {
     fetchUsers();
     fetchPresets();
@@ -242,7 +278,7 @@ const Devices: React.FC = () => {
         }
       }
     }
-  }, [searchParams, devices]);
+  }, [searchParams, devices, handleViewDevice]);
   
   useEffect(() => {
     fetchDevices(currentPage, searchTerm);
@@ -351,6 +387,55 @@ const Devices: React.FC = () => {
     }
   };
 
+  const handleReboot = async (device: any) => {
+    if (window.confirm(`Are you sure you want to reboot device ${device.device_serial}? The device will restart on its next heartbeat.`)) {
+      try {
+        await apiService.rebootDevice(device.id);
+        alert(`Reboot command queued for ${device.device_serial}. Device will reboot on next heartbeat.`);
+      } catch (err) {
+        console.error('Reboot error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to queue reboot command');
+      }
+    }
+  };
+
+  const handleHardReset = async (device: any) => {
+    if (window.confirm(`⚠️ WARNING: Hard reset will erase device configuration and restart it.\n\nAre you sure you want to hard reset device ${device.device_serial}?`)) {
+      try {
+        await apiService.hardResetDevice(device.id);
+        alert(`Hard reset command queued for ${device.device_serial}. Device will reset on next heartbeat.`);
+      } catch (err) {
+        console.error('Hard reset error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to queue hard reset command');
+      }
+    }
+  };
+
+  const handleDeleteDevice = async (device: any) => {
+    if (window.confirm(`⚠️ WARNING: This will permanently delete device ${device.device_serial} and all its data.\n\nAre you sure you want to delete this device?`)) {
+      try {
+        await apiService.deleteDevice(device.id);
+        alert(`Device ${device.device_serial} deleted successfully.`);
+        setSelectedDevice(null);
+        fetchDevices(); // Refresh device list
+      } catch (err) {
+        console.error('Delete device error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to delete device');
+      }
+    }
+  };
+
+  const handleToggleLogs = async (device: any, enabled: boolean) => {
+    try {
+      await apiService.toggleDeviceLogs(device.id, enabled);
+      setSelectedDevice({ ...device, logs_enabled: enabled });
+      fetchDevices(); // Refresh device list
+    } catch (err) {
+      console.error('Toggle logs error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to toggle device logs');
+    }
+  };
+
   const handleSelectDevice = (deviceId: number) => {
     const newSelected = new Set(selectedDevices);
     if (newSelected.has(deviceId)) {
@@ -409,21 +494,6 @@ const Devices: React.FC = () => {
     setShowUserDropdown(false);
   };
 
-  const handleViewDevice = (device: Device) => {
-    setSelectedDevice(device);
-    setSiteDetails(null);
-    setSiteLoading(true);
-    apiService.getDeviceSite(device.id)
-      .then(data => {
-        setSiteDetails(data);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch site for device', device.id, ':', err);
-        setSiteDetails(null);
-      })
-      .finally(() => setSiteLoading(false));
-  };
-
   const handleBackToList = () => {
     setSelectedDevice(null);
     setSiteDetails(null);
@@ -469,12 +539,74 @@ const Devices: React.FC = () => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <h2>Device Details</h2>
-            <button onClick={() => handleEdit(selectedDevice)} className="btn">
-              Edit Device
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => handleEdit(selectedDevice)} className="btn">
+                Edit Device
+              </button>
+              <button 
+                onClick={() => handleReboot(selectedDevice)} 
+                className="btn"
+                style={{ 
+                  backgroundColor: '#f59e0b', 
+                  color: 'white',
+                  border: 'none'
+                }}
+                title="Queue reboot command for device"
+              >
+                🔄 Reboot
+              </button>
+              <button 
+                onClick={() => handleHardReset(selectedDevice)} 
+                className="btn"
+                style={{ 
+                  backgroundColor: '#dc2626', 
+                  color: 'white',
+                  border: 'none'
+                }}
+                title="Queue hard reset command for device (erases config)"
+              >
+                ⚠️ Hard Reset
+              </button>
+              <button 
+                onClick={() => handleDeleteDevice(selectedDevice)} 
+                className="btn"
+                style={{ 
+                  backgroundColor: '#7f1d1d', 
+                  color: 'white',
+                  border: 'none'
+                }}
+                title="Permanently delete device and all its data"
+              >
+                🗑️ Delete
+              </button>
+            </div>
           </div>
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+              <div>
+                <strong>Status:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    backgroundColor: selectedDevice.is_online ? '#dcfce7' : '#fee2e2',
+                    color: selectedDevice.is_online ? '#166534' : '#991b1b'
+                  }}>
+                    {selectedDevice.is_online ? '🟢 Online' : '🔴 Offline'}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <strong>Last Heartbeat:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  {selectedDevice.last_heartbeat
+                    ? new Date(selectedDevice.last_heartbeat).toLocaleString()
+                    : 'Never'}
+                </p>
+              </div>
               <div>
                 <strong>MAC / HW ID:</strong>
                 <p style={{ margin: '5px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem' }}>{selectedDevice.hw_id || '—'}</p>
@@ -502,6 +634,19 @@ const Devices: React.FC = () => {
               <div>
                 <strong>Created By:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.created_by_username || '-'}</p>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedDevice.logs_enabled || false}
+                    onChange={(e) => handleToggleLogs(selectedDevice, e.target.checked)}
+                  />
+                  <strong>Enable Device Logs</strong>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted, #9ca3af)' }}>
+                    (Device will send logs when enabled)
+                  </span>
+                </label>
               </div>
             </div>
           </div>
@@ -588,6 +733,54 @@ const Devices: React.FC = () => {
         {siteDetails && (
           <SiteDataPanel siteId={siteDetails.site_id} autoRefresh />
         )}
+
+        {/* ── Device Logs ── */}
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <h2>Device Logs</h2>
+            <button onClick={() => fetchDeviceLogs(selectedDevice.id)} className="btn" disabled={logsLoading}>
+              {logsLoading ? 'Loading...' : '🔄 Refresh'}
+            </button>
+          </div>
+          <div style={{ padding: '20px' }}>
+            {!selectedDevice.logs_enabled && (
+              <p style={{ color: 'var(--text-muted, #9ca3af)', fontStyle: 'italic' }}>
+                Logging is disabled for this device. Enable it in Device Details to receive logs.
+              </p>
+            )}
+            {deviceLogs.length === 0 && selectedDevice.logs_enabled && (
+              <p style={{ color: 'var(--text-muted, #9ca3af)' }}>
+                No logs available yet. Logs will appear when device sends them.
+              </p>
+            )}
+            {deviceLogs.length > 0 && (
+              <div style={{ 
+                maxHeight: '400px', 
+                overflowY: 'auto', 
+                fontFamily: 'JetBrains Mono, monospace', 
+                fontSize: '0.85rem',
+                backgroundColor: '#1e1e1e',
+                padding: '10px',
+                borderRadius: '4px'
+              }}>
+                {deviceLogs.map((log) => (
+                  <div key={log.id} style={{ 
+                    marginBottom: '8px', 
+                    paddingBottom: '8px', 
+                    borderBottom: '1px solid #333',
+                    color: log.level === 'ERROR' ? '#ff6b6b' : 
+                           log.level === 'WARNING' ? '#ffa500' : 
+                           log.level === 'INFO' ? '#4dabf7' : '#ced4da'
+                  }}>
+                    <span style={{ color: '#888' }}>[{new Date(log.timestamp).toLocaleString()}]</span>
+                    <span style={{ fontWeight: 'bold', marginLeft: '8px' }}>[{log.level}]</span>
+                    <span style={{ marginLeft: '8px' }}>{log.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* ── Site edit modal ── */}
         {editingSite && (
@@ -917,6 +1110,7 @@ const Devices: React.FC = () => {
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
               <th style={{ textAlign: 'center' }}>MAC / HW ID</th>
               <th style={{ textAlign: 'center' }}>Model</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
@@ -944,6 +1138,19 @@ const Devices: React.FC = () => {
                   />
                 </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    backgroundColor: device.is_online ? '#dcfce7' : '#fee2e2',
+                    color: device.is_online ? '#166534' : '#991b1b'
+                  }}>
+                    {device.is_online ? '🟢 Online' : '🔴 Offline'}
+                  </span>
+                </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', color: device.hw_id ? 'inherit' : 'var(--text-muted, #9ca3af)' }}>{device.hw_id || '—'}</td>
                 <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{device.model || <span style={{ color: 'var(--text-muted, #9ca3af)' }}>—</span>}</td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
