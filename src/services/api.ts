@@ -219,12 +219,22 @@ class ApiService {
   }
 
   // DynamoDB site data
-  async getSiteTelemetry(siteId: string): Promise<any[]> {
-    return this.request(`/sites/${siteId}/telemetry/`);
+  async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number }): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.start_date) query.append('start_date', params.start_date);
+    if (params?.end_date) query.append('end_date', params.end_date);
+    if (params?.days) query.append('days', params.days.toString());
+    const url = `/sites/${siteId}/telemetry/${query.toString() ? '?' + query.toString() : ''}`;
+    return this.request(url);
   }
 
-  async getSiteForecast(siteId: string): Promise<any[]> {
-    return this.request(`/sites/${siteId}/forecast/`);
+  async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
+    const query = new URLSearchParams();
+    if (params?.date) query.append('date', params.date);
+    if (params?.start_date) query.append('start_date', params.start_date);
+    if (params?.end_date) query.append('end_date', params.end_date);
+    const url = `/sites/${siteId}/forecast/${query.toString() ? '?' + query.toString() : ''}`;
+    return this.request(url);
   }
 
   async getSiteWeather(siteId: string): Promise<any> {

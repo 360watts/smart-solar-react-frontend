@@ -15,15 +15,85 @@ import { apiService } from '../services/api';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(ts: string): string {
-  // "2026-02-23T14:30:00Z" → "14:30"
-  try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  catch { return ts; }
+function fmt(ts: string, range: string): string {
+  // Format timestamp based on date range
+  try {
+    const date = new Date(ts);
+    if (range === '24h') {
+      // "14:30"
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (range === '7d') {
+      // "Mon 14:00" for 7 days
+      return date.toLocaleDateString([], { weekday: 'short' }) + ' ' + 
+             date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      // "Feb 23" for 30d or custom
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  } catch { return ts; }
 }
 
 function fmtForecast(ts: string): string {
   // "FORECAST#2026-02-23T14:30:00Z" → "14:30"
-  return fmt(ts.replace('FORECAST#', ''));
+  const cleanTs = ts.replace('FORECAST#', '');
+  try {
+    return new Date(cleanTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch { return cleanTs; }
+}
+
+function aggregateByPeriod(data: any[], range: string): any[] {
+  // Aggregate telemetry data based on date range
+  if (!data || data.length === 0) return [];
+  
+  if (range === '24h') {
+    // 24h: downsample to ~48 points (every other 15-min = 30-min)
+    return data.filter((_, i) => i % 2 === 0 || i === data.length - 1);
+  } else if (range === '7d') {
+    // 7d: aggregate by hour (~168 points max)
+    const buckets = new Map<string, any[]>();
+    data.forEach(row => {
+      const date = new Date(row.timestamp);
+      const hourKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}`;
+      if (!buckets.has(hourKey)) buckets.set(hourKey, []);
+      buckets.get(hourKey)!.push(row);
+    });
+    
+    return Array.from(buckets.values()).map(bucket => {
+      const first = bucket[0];
+      return {
+        timestamp: first.timestamp,
+        pv1_power_w: bucket.reduce((sum, r) => sum + (r.pv1_power_w ?? 0), 0) / bucket.length,
+        pv2_power_w: bucket.reduce((sum, r) => sum + (r.pv2_power_w ?? 0), 0) / bucket.length,
+        load_power_w: bucket.reduce((sum, r) => sum + (r.load_power_w ?? 0), 0) / bucket.length,
+        grid_power_w: bucket.reduce((sum, r) => sum + (r.grid_power_w ?? 0), 0) / bucket.length,
+        battery_soc_percent: bucket.reduce((sum, r) => sum + (r.battery_soc_percent ?? 0), 0) / bucket.length,
+        pv_today_kwh: first.pv_today_kwh,
+      };
+    });
+  } else {
+    // 30d or custom: aggregate by day (max 30-90 points)
+    const buckets = new Map<string, any[]>();
+    data.forEach(row => {
+      const date = new Date(row.timestamp);
+      const dayKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      if (!buckets.has(dayKey)) buckets.set(dayKey, []);
+      buckets.get(dayKey)!.push(row);
+    });
+    
+    return Array.from(buckets.values()).map(bucket => {
+      const first = bucket[0];
+      // For daily aggregation, use averages for instantaneous values, max for daily energy
+      return {
+        timestamp: first.timestamp,
+        pv1_power_w: bucket.reduce((sum, r) => sum + (r.pv1_power_w ?? 0), 0) / bucket.length,
+        pv2_power_w: bucket.reduce((sum, r) => sum + (r.pv2_power_w ?? 0), 0) / bucket.length,
+        load_power_w: bucket.reduce((sum, r) => sum + (r.load_power_w ?? 0), 0) / bucket.length,
+        grid_power_w: bucket.reduce((sum, r) => sum + (r.grid_power_w ?? 0), 0) / bucket.length,
+        battery_soc_percent: bucket.reduce((sum, r) => sum + (r.battery_soc_percent ?? 0), 0) / bucket.length,
+        pv_today_kwh: Math.max(...bucket.map(r => r.pv_today_kwh ?? 0)),
+      };
+    });
+  }
 }
 
 const TOOLTIP_STYLE = {
@@ -110,12 +180,43 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  
+  // Date range controls
+  const [dateRange, setDateRange] = useState<string>('24h'); // '24h' | '7d' | '30d' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
 
   const fetchAll = useCallback(async () => {
     try {
+      // Calculate date range parameters
+      let telemetryParams: any = {};
+      let forecastParams: any = {};
+      
+      if (dateRange === 'custom' && customStartDate && customEndDate) {
+        telemetryParams = {
+          start_date: new Date(customStartDate).toISOString(),
+          end_date: new Date(customEndDate).toISOString(),
+        };
+        forecastParams = {
+          start_date: new Date(customStartDate).toISOString(),
+          end_date: new Date(customEndDate).toISOString(),
+        };
+      } else if (dateRange === '7d') {
+        telemetryParams = { days: 7 };
+        // For forecast, get today's forecast
+        forecastParams = {};
+      } else if (dateRange === '30d') {
+        telemetryParams = { days: 30 };
+        forecastParams = {};
+      } else {
+        // Default 24h
+        telemetryParams = {};
+        forecastParams = {};
+      }
+      
       const [tel, fcst, wth] = await Promise.all([
-        apiService.getSiteTelemetry(siteId),
-        apiService.getSiteForecast(siteId),
+        apiService.getSiteTelemetry(siteId, telemetryParams),
+        apiService.getSiteForecast(siteId, forecastParams),
         apiService.getSiteWeather(siteId),
       ]);
       setTelemetry(Array.isArray(tel) ? tel : []);
@@ -128,7 +229,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     } finally {
       setLoading(false);
     }
-  }, [siteId]);
+  }, [siteId, dateRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     setLoading(true);
@@ -146,16 +247,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const loadKw  = latest ? (latest.load_power_w ?? 0) / 1000 : null;
   const todayKwh = latest?.pv_today_kwh ?? null;
 
-  // History chart: down-sample to at most 48 points (every other 15-min = 30-min buckets)
-  const historyData = telemetry
-    .filter((_, i) => i % 2 === 0 || i === telemetry.length - 1)
-    .map(row => ({
-      time: fmt(row.timestamp),
-      'PV (kW)': +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
-      'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
-      'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
-      'Batt SOC (%)': row.battery_soc_percent ?? null,
-    }));
+  // History chart: aggregate based on date range
+  const aggregated = aggregateByPeriod(telemetry, dateRange);
+  const historyData = aggregated.map(row => ({
+    time: fmt(row.timestamp, dateRange),
+    'PV (kW)': +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
+    'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
+    'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
+    'Batt SOC (%)': row.battery_soc_percent ?? null,
+  }));
 
   // Forecast chart
   const forecastData = forecast.map(row => ({
@@ -194,9 +294,69 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   return (
     <div style={{ marginTop: '1.5rem' }}>
       {/* Section header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
         <p className="dash-section-label" style={{ margin: 0 }}>Live Site Intelligence — <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#00a63e' }}>{siteId}</span></p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Date range selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              style={{
+                background: 'var(--card-bg, #fff)',
+                border: '1px solid rgba(0,166,62,0.2)',
+                borderRadius: 8,
+                padding: '0.3rem 0.6rem',
+                fontSize: '0.72rem',
+                color: 'var(--text-color, #0a0a0a)',
+                cursor: 'pointer',
+                fontFamily: 'Poppins, sans-serif',
+                fontWeight: 600,
+              }}
+            >
+              <option value="24h">Last 24 hours</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="custom">Custom range</option>
+            </select>
+            
+            {dateRange === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  style={{
+                    background: 'var(--card-bg, #fff)',
+                    border: '1px solid rgba(0,166,62,0.2)',
+                    borderRadius: 8,
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-color, #0a0a0a)',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 600,
+                  }}
+                />
+                <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>to</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  style={{
+                    background: 'var(--card-bg, #fff)',
+                    border: '1px solid rgba(0,166,62,0.2)',
+                    borderRadius: 8,
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-color, #0a0a0a)',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 600,
+                  }}
+                />
+              </>
+            )}
+          </div>
+          
           {lastUpdated && (
             <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -248,15 +408,29 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             </div>
           )}
 
-          {/* ── 24 h history chart ── */}
+          {/* ── History chart ── */}
           {historyData.length > 0 && (
             <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>
-                24 h Power History
-              </h3>
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>
+                  Power History — {
+                    dateRange === '24h' ? 'Last 24 hours' :
+                    dateRange === '7d' ? 'Last 7 days' :
+                    dateRange === '30d' ? 'Last 30 days' :
+                    dateRange === 'custom' && customStartDate && customEndDate ? 
+                      `${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()}` :
+                      'Custom range'
+                  }
+                </h3>
+                {(dateRange === '7d' || dateRange === '30d' || dateRange === 'custom') && (
+                  <p style={{ margin: 0, fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
+                    {dateRange === '7d' ? 'Data aggregated by hour' : 'Data aggregated by day'}
+                  </p>
+                )}
+              </div>
               <div style={{ height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={historyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <AreaChart data={historyData} margin={{ top: 4, right: 8, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}>
                     <defs>
                       <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
@@ -268,7 +442,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
-                    <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} interval="preserveStartEnd" />
+                    <XAxis 
+                      dataKey="time" 
+                      stroke="#9ca3af" 
+                      fontSize={dateRange === '30d' ? 9 : 10} 
+                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(historyData.length / 10)}
+                      angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
+                      textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
+                    />
                     <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={v => `${v}kW`} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, name: string) => [`${v} ${name.includes('%') ? '%' : 'kW'}`, name]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif' }} />
