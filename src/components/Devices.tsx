@@ -135,18 +135,6 @@ const Devices: React.FC = () => {
     config_version: '',
   });
 
-  // Site management state
-  const [siteDetails, setSiteDetails] = useState<SolarSite | null>(null);
-  const [siteLoading, setSiteLoading] = useState(false);
-  const [editingSite, setEditingSite] = useState(false);
-  const [siteForm, setSiteForm] = useState<SolarSiteForm>({
-    site_id: '', display_name: '', latitude: '', longitude: '',
-    capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
-    timezone: 'Asia/Kolkata', is_active: true,
-  });
-  const [siteSaving, setSiteSaving] = useState(false);
-  const [siteError, setSiteError] = useState<string | null>(null);
-
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
     try {
       setLoading(true);
@@ -230,7 +218,7 @@ const Devices: React.FC = () => {
     }
   };
 
-  const fetchDeviceLogs = async (deviceId: number) => {
+  const fetchDeviceLogs = useCallback(async (deviceId: number) => {
     setLogsLoading(true);
     try {
       const response = await apiService.getDeviceLogs(deviceId, 50, 0);
@@ -241,7 +229,7 @@ const Devices: React.FC = () => {
     } finally {
       setLogsLoading(false);
     }
-  };
+  }, [apiService]);
 
   const handleViewDevice = useCallback((device: Device) => {
     setSelectedDevice(device);
