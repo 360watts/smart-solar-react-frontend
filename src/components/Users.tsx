@@ -19,6 +19,8 @@ interface User {
 interface Device {
   id: number;
   device_serial: string;
+  hw_id?: string;
+  model?: string;
   provisioned_at?: string;
   config_version?: string;
 }
@@ -388,6 +390,8 @@ const Users: React.FC = () => {
               <thead>
                 <tr>
                   <th style={{ textAlign: 'center' }}>Device Serial</th>
+                  <th style={{ textAlign: 'center' }}>MAC / HW ID</th>
+                  <th style={{ textAlign: 'center' }}>Model</th>
                   <th style={{ textAlign: 'center' }}>Config Version</th>
                   <th style={{ textAlign: 'center' }}>Provisioned At</th>
                 </tr>
@@ -400,7 +404,9 @@ const Users: React.FC = () => {
                     onClick={() => navigate(`/devices?deviceId=${device.id}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.hw_id || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+                    <td style={{ textAlign: 'center' }}>{device.model || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
                     <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
                     <td style={{ textAlign: 'center' }}>
                       {device.provisioned_at
