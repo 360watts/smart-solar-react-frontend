@@ -748,9 +748,14 @@ const Devices: React.FC = () => {
                 Logging is disabled for this device. Enable it in Device Details to receive logs.
               </p>
             )}
-            {deviceLogs.length === 0 && selectedDevice.logs_enabled && (
+            {deviceLogs.length === 0 && selectedDevice.logs_enabled && !logsLoading && (
               <p style={{ color: 'var(--text-muted, #9ca3af)' }}>
                 No logs available yet. Logs will appear when device sends them.
+              </p>
+            )}
+            {logsLoading && (
+              <p style={{ color: 'var(--text-muted, #9ca3af)' }}>
+                Loading logs...
               </p>
             )}
             {deviceLogs.length > 0 && (
