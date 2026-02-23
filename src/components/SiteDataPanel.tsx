@@ -8,7 +8,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AreaChart, Area, LineChart, Line,
+  AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { apiService } from '../services/api';
@@ -24,11 +24,6 @@ function fmt(ts: string): string {
 function fmtForecast(ts: string): string {
   // "FORECAST#2026-02-23T14:30:00Z" → "14:30"
   return fmt(ts.replace('FORECAST#', ''));
-}
-
-function kw(w: number | undefined | null): string {
-  if (w == null) return '—';
-  return (w / 1000).toFixed(2);
 }
 
 const TOOLTIP_STYLE = {
