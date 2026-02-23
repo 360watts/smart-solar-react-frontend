@@ -8,8 +8,6 @@ import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { AnimatedNumber } from './AnimatedNumber';
 import { StatusPill } from './StatusPill';
-import SiteDataPanel from './SiteDataPanel';
-
 interface TelemetryData {
   deviceId: string;
   timestamp: string;
@@ -115,16 +113,6 @@ const Dashboard: React.FC = () => {
   const [userDevices, setUserDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userSiteId, setUserSiteId] = useState<string | null>(null);
-
-  // Fetch the logged-in user's site_id once (for DynamoDB panel)
-  useEffect(() => {
-    if (!user) return;
-    apiService.getUserSite(user.id)
-      .then((site: any) => { if (site?.site_id) setUserSiteId(site.site_id); })
-      .catch(() => {/* no site configured — ignore */});
-  }, [user]);
-
   useEffect(() => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 30000);
@@ -635,11 +623,6 @@ const Dashboard: React.FC = () => {
             </table>
           </div>
         </>
-      )}
-
-      {/* DynamoDB Solar Intelligence panel — shown when the user has a configured site */}
-      {userSiteId && (
-        <SiteDataPanel siteId={userSiteId} autoRefresh />
       )}
 
     </div>

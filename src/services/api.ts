@@ -200,6 +200,24 @@ class ApiService {
     });
   }
 
+  async getDeviceSite(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/site/`);
+  }
+
+  async createDeviceSite(deviceId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/devices/${deviceId}/site/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDeviceSite(deviceId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/devices/${deviceId}/site/update/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // DynamoDB site data
   async getSiteTelemetry(siteId: string): Promise<any[]> {
     return this.request(`/sites/${siteId}/telemetry/`);

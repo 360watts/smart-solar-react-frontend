@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import AuditTrail from './AuditTrail';
+import SiteDataPanel from './SiteDataPanel';
 
 interface User {
   id: number;
@@ -17,6 +18,8 @@ interface User {
 interface Device {
   id: number;
   device_serial: string;
+  hw_id?: string;
+  model?: string;
   user?: string;
   provisioned_at: string;
   config_version?: string;
@@ -61,6 +64,34 @@ interface TelemetrySummary {
   latestTimestamp: string | null;
 }
 
+interface SolarSite {
+  id: number;
+  device_id: number;
+  site_id: string;
+  display_name: string;
+  latitude: number;
+  longitude: number;
+  capacity_kw: number;
+  tilt_deg: number;
+  azimuth_deg: number;
+  timezone: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface SolarSiteForm {
+  site_id: string;
+  display_name: string;
+  latitude: string;
+  longitude: string;
+  capacity_kw: string;
+  tilt_deg: string;
+  azimuth_deg: string;
+  timezone: string;
+  is_active: boolean;
+}
+
 const Devices: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -98,6 +129,18 @@ const Devices: React.FC = () => {
     user: '',
     config_version: '',
   });
+
+  // Site management state
+  const [siteDetails, setSiteDetails] = useState<SolarSite | null>(null);
+  const [siteLoading, setSiteLoading] = useState(false);
+  const [editingSite, setEditingSite] = useState(false);
+  const [siteForm, setSiteForm] = useState<SolarSiteForm>({
+    site_id: '', display_name: '', latitude: '', longitude: '',
+    capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
+    timezone: 'Asia/Kolkata', is_active: true,
+  });
+  const [siteSaving, setSiteSaving] = useState(false);
+  const [siteError, setSiteError] = useState<string | null>(null);
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
     try {
@@ -368,10 +411,24 @@ const Devices: React.FC = () => {
 
   const handleViewDevice = (device: Device) => {
     setSelectedDevice(device);
+    setSiteDetails(null);
+    setSiteLoading(true);
+    apiService.getDeviceSite(device.id)
+      .then(data => {
+        console.log('Site data received for device', device.id, ':', data);
+        setSiteDetails(data);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch site for device', device.id, ':', err);
+        setSiteDetails(null);
+      })
+      .finally(() => setSiteLoading(false));
   };
 
   const handleBackToList = () => {
     setSelectedDevice(null);
+    setSiteDetails(null);
+    setEditingSite(false);
   };
 
   if (loading) {
@@ -419,6 +476,14 @@ const Devices: React.FC = () => {
           </div>
           <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+              <div>
+                <strong>MAC / HW ID:</strong>
+                <p style={{ margin: '5px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem' }}>{selectedDevice.hw_id || '—'}</p>
+              </div>
+              <div>
+                <strong>Model:</strong>
+                <p style={{ margin: '5px 0' }}>{selectedDevice.model || '—'}</p>
+              </div>
               <div>
                 <strong>Assigned User:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
@@ -470,6 +535,181 @@ const Devices: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* ── Site Configuration ── */}
+        <div className="card" style={{ marginTop: '20px' }}>
+          <div className="card-header">
+            <h2>Site Configuration</h2>
+            {!siteLoading && (
+              <button className="btn" onClick={() => {
+                if (siteDetails) {
+                  setSiteForm({
+                    site_id: siteDetails.site_id,
+                    display_name: siteDetails.display_name,
+                    latitude: String(siteDetails.latitude),
+                    longitude: String(siteDetails.longitude),
+                    capacity_kw: String(siteDetails.capacity_kw),
+                    tilt_deg: String(siteDetails.tilt_deg),
+                    azimuth_deg: String(siteDetails.azimuth_deg),
+                    timezone: siteDetails.timezone,
+                    is_active: siteDetails.is_active,
+                  });
+                } else {
+                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: 'Asia/Kolkata', is_active: true });
+                }
+                setSiteError(null);
+                setEditingSite(true);
+              }}>
+                {siteDetails ? 'Edit Site' : 'Add Site'}
+              </button>
+            )}
+          </div>
+          <div style={{ padding: '20px' }}>
+            {siteLoading ? (
+              <p style={{ color: 'var(--text-muted)' }}>Loading site details…</p>
+            ) : !siteDetails ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No site configured for this device yet.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                <div><strong>Site ID:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem', color: '#00a63e' }}>{siteDetails.site_id}</p></div>
+                <div><strong>Display Name:</strong><p style={{ margin: '4px 0' }}>{siteDetails.display_name || '—'}</p></div>
+                <div><strong>Status:</strong><p style={{ margin: '4px 0' }}><span className={siteDetails.is_active ? 'status-badge status-badge-success' : 'status-badge status-badge-danger'}>{siteDetails.is_active ? 'Active' : 'Inactive'}</span></p></div>
+                <div><strong>Latitude:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem' }}>{siteDetails.latitude}°</p></div>
+                <div><strong>Longitude:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem' }}>{siteDetails.longitude}°</p></div>
+                <div><strong>Timezone:</strong><p style={{ margin: '4px 0' }}>{siteDetails.timezone}</p></div>
+                <div><strong>Capacity:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.capacity_kw} kW</p></div>
+                <div><strong>Tilt:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.tilt_deg}°</p></div>
+                <div><strong>Azimuth:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.azimuth_deg}°</p></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Live Site Intelligence (DynamoDB) ── */}
+        {siteDetails && (
+          <SiteDataPanel siteId={siteDetails.site_id} autoRefresh />
+        )}
+
+        {/* ── Site edit modal ── */}
+        {editingSite && (
+          <div className="modal" onClick={() => setEditingSite(false)}>
+            <div className="modal-content" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'white' }}>{siteDetails ? 'Edit Site Configuration' : 'Add Site Configuration'}</h3>
+                <button className="close-button" onClick={() => setEditingSite(false)}>×</button>
+              </div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setSiteSaving(true);
+                setSiteError(null);
+                try {
+                  const payload = {
+                    site_id: siteForm.site_id.trim(),
+                    display_name: siteForm.display_name.trim(),
+                    latitude: parseFloat(siteForm.latitude),
+                    longitude: parseFloat(siteForm.longitude),
+                    capacity_kw: parseFloat(siteForm.capacity_kw),
+                    tilt_deg: parseFloat(siteForm.tilt_deg),
+                    azimuth_deg: parseFloat(siteForm.azimuth_deg),
+                    timezone: siteForm.timezone.trim(),
+                    is_active: siteForm.is_active,
+                  };
+                  
+                  console.log('Saving site for device', selectedDevice.id, 'with payload:', payload);
+                  
+                  let updated;
+                  if (siteDetails) {
+                    updated = await apiService.updateDeviceSite(selectedDevice.id, payload);
+                  } else {
+                    updated = await apiService.createDeviceSite(selectedDevice.id, payload);
+                  }
+                  
+                  console.log('Site save response:', updated);
+                  
+                  // Ensure the response contains site data
+                  if (!updated || !updated.site_id) {
+                    throw new Error('Invalid response from server - site data missing');
+                  }
+                  
+                  // Update local state and re-fetch to ensure fresh data
+                  setSiteDetails(updated);
+                  setEditingSite(false);
+                  setSiteSaving(false);
+                  
+                  // Re-fetch site details to ensure we have the complete data
+                  if (!siteDetails) {
+                    // Only refetch if it was a new site creation
+                    setTimeout(() => {
+                      apiService.getDeviceSite(selectedDevice.id)
+                        .then(data => {
+                          console.log('Re-fetched site data:', data);
+                          if (data) setSiteDetails(data);
+                        })
+                        .catch(err => console.error('Failed to re-fetch site:', err));
+                    }, 500);
+                  }
+                } catch (err: any) {
+                  setSiteError(err.message || 'Failed to save site');
+                  setSiteSaving(false);
+                }
+              }}>
+                <div className="modal-body" style={{ padding: '24px' }}>
+                  {siteError && <p style={{ color: '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>}
+                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Identification</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Site ID *</label>
+                      <input required value={siteForm.site_id} disabled={!!siteDetails} onChange={e => setSiteForm({ ...siteForm, site_id: e.target.value })} placeholder="e.g. site_mumbai_01" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Display Name</label>
+                      <input value={siteForm.display_name} onChange={e => setSiteForm({ ...siteForm, display_name: e.target.value })} placeholder="e.g. Mumbai Rooftop" />
+                    </div>
+                  </div>
+                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Location</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Latitude *</label>
+                      <input required type="number" step="any" value={siteForm.latitude} onChange={e => setSiteForm({ ...siteForm, latitude: e.target.value })} placeholder="19.0760" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Longitude *</label>
+                      <input required type="number" step="any" value={siteForm.longitude} onChange={e => setSiteForm({ ...siteForm, longitude: e.target.value })} placeholder="72.8777" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Timezone</label>
+                      <input value={siteForm.timezone} onChange={e => setSiteForm({ ...siteForm, timezone: e.target.value })} placeholder="Asia/Kolkata" />
+                    </div>
+                  </div>
+                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Panel Configuration</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Capacity (kW) *</label>
+                      <input required type="number" step="any" value={siteForm.capacity_kw} onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })} placeholder="5.0" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Tilt (°)</label>
+                      <input type="number" step="any" value={siteForm.tilt_deg} onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })} />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label>Azimuth (°)</label>
+                      <input type="number" step="any" value={siteForm.azimuth_deg} onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '1rem 0 0 0' }}>
+                    <input type="checkbox" id="dev-site-active" checked={siteForm.is_active} onChange={e => setSiteForm({ ...siteForm, is_active: e.target.checked })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    <label htmlFor="dev-site-active" style={{ margin: 0, cursor: 'pointer', fontSize: '0.95rem', fontWeight: 600 }}>Active</label>
+                  </div>
+                  
+                  <div className="form-actions" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(148, 163, 184, 0.15)' }}>
+                    <button type="submit" className="btn" disabled={siteSaving}>{siteSaving ? 'Saving…' : siteDetails ? 'Save Changes' : 'Add Site'}</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingSite(false)} disabled={siteSaving}>Cancel</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {editingDevice && (
           <div className="modal">
@@ -683,8 +923,9 @@ const Devices: React.FC = () => {
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
+              <th style={{ textAlign: 'center' }}>MAC / HW ID</th>
+              <th style={{ textAlign: 'center' }}>Model</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
-              <th style={{ textAlign: 'center' }}>Created By</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
               <th style={{ textAlign: 'center' }}>Actions</th>
@@ -708,11 +949,10 @@ const Devices: React.FC = () => {
                     onChange={() => handleSelectDevice(device.id)}
                   />
                 </td>
-                <td style={{ textAlign: 'center' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', color: device.hw_id ? 'inherit' : 'var(--text-muted, #9ca3af)' }}>{device.hw_id || '—'}</td>
+                <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{device.model || <span style={{ color: 'var(--text-muted, #9ca3af)' }}>—</span>}</td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
-                <td style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
-                  {device.created_by_username || '-'}
-                </td>
                 <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
