@@ -149,8 +149,6 @@ const Devices: React.FC = () => {
       
       // Handle paginated response
       if (response.results) {
-        console.log('✅ Devices fetched:', response.results.length, 'devices');
-        console.log('📋 Sample device data:', response.results[0]);
         setDevices(response.results);
         setFilteredDevices(response.results);
         setTotalCount(response.count);
@@ -417,7 +415,6 @@ const Devices: React.FC = () => {
     setSiteLoading(true);
     apiService.getDeviceSite(device.id)
       .then(data => {
-        console.log('Site data received for device', device.id, ':', data);
         setSiteDetails(data);
       })
       .catch((err) => {
@@ -617,16 +614,12 @@ const Devices: React.FC = () => {
                     is_active: siteForm.is_active,
                   };
                   
-                  console.log('Saving site for device', selectedDevice.id, 'with payload:', payload);
-                  
                   let updated;
                   if (siteDetails) {
                     updated = await apiService.updateDeviceSite(selectedDevice.id, payload);
                   } else {
                     updated = await apiService.createDeviceSite(selectedDevice.id, payload);
                   }
-                  
-                  console.log('Site save response:', updated);
                   
                   // Ensure the response contains site data
                   if (!updated || !updated.site_id) {
@@ -644,7 +637,6 @@ const Devices: React.FC = () => {
                     setTimeout(() => {
                       apiService.getDeviceSite(selectedDevice.id)
                         .then(data => {
-                          console.log('Re-fetched site data:', data);
                           if (data) setSiteDetails(data);
                         })
                         .catch(err => console.error('Failed to re-fetch site:', err));
