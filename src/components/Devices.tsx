@@ -149,6 +149,8 @@ const Devices: React.FC = () => {
       
       // Handle paginated response
       if (response.results) {
+        console.log('✅ Devices fetched:', response.results.length, 'devices');
+        console.log('📋 Sample device data:', response.results[0]);
         setDevices(response.results);
         setFilteredDevices(response.results);
         setTotalCount(response.count);
