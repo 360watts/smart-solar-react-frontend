@@ -26,6 +26,10 @@ interface Device {
   is_online?: boolean;
   last_heartbeat?: string;
   logs_enabled?: boolean;
+  pending_config_update?: boolean;
+  config_ack_ver?: number | null;
+  config_downloaded_at?: string | null;
+  config_acked_at?: string | null;
   created_by_username?: string;
   created_at?: string;
   updated_by_username?: string;
@@ -624,6 +628,57 @@ const Devices: React.FC = () => {
                 <p style={{ margin: '5px 0' }}>{selectedDevice.config_version || '-'}</p>
               </div>
               <div>
+                <strong>Config Sync:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  {!selectedDevice.config_version ? (
+                    <span style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.875rem' }}>No preset assigned</span>
+                  ) : selectedDevice.pending_config_update ? (
+                    <>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        padding: '3px 10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '500',
+                        backgroundColor: '#fef9c3', color: '#854d0e'
+                      }}>⏳ Pending update</span>
+                      {selectedDevice.config_downloaded_at && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '4px' }}>
+                          Last download: {new Date(selectedDevice.config_downloaded_at).toLocaleString()}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        padding: '3px 10px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: '500',
+                        backgroundColor: '#dcfce7', color: '#166534'
+                      }}>✓ Synced{selectedDevice.config_ack_ver != null ? ` (v${selectedDevice.config_ack_ver})` : ''}</span>
+                      {selectedDevice.config_acked_at && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '4px' }}>
+                          Last synced: {new Date(selectedDevice.config_acked_at).toLocaleString()}
+                          {(() => {
+                            const ackTime = new Date(selectedDevice.config_acked_at);
+                            const now = new Date();
+                            const diffMs = now.getTime() - ackTime.getTime();
+                            const diffMins = Math.floor(diffMs / 60000);
+                            const diffHours = Math.floor(diffMins / 60);
+                            const diffDays = Math.floor(diffHours / 24);
+                            if (diffMins < 1) return ' (just now)';
+                            if (diffMins < 60) return ` (${diffMins}m ago)`;
+                            if (diffHours < 24) return ` (${diffHours}h ago)`;
+                            return ` (${diffDays}d ago)`;
+                          })()}
+                        </div>
+                      )}
+                      {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #9ca3af)', marginTop: '2px' }}>
+                          Download → Ack: {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)}s
+                        </div>
+                      )}
+                    </>
+                  )}
+                </p>
+              </div>
+              <div>
                 <strong>Provisioned At:</strong>
                 <p style={{ margin: '5px 0' }}>
                   {selectedDevice.provisioned_at
@@ -789,12 +844,9 @@ const Devices: React.FC = () => {
 
         {/* ── Site edit modal ── */}
         {editingSite && (
-          <div className="modal" onClick={() => setEditingSite(false)}>
-            <div className="modal-content" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'white' }}>{siteDetails ? 'Edit Site Configuration' : 'Add Site Configuration'}</h3>
-                <button className="close-button" onClick={() => setEditingSite(false)}>×</button>
-              </div>
+          <div className="modal">
+            <div className="modal-content">
+              <h3>{siteDetails ? `Edit Site: ${siteDetails.site_id}` : 'Add Site Configuration'}</h3>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setSiteSaving(true);
@@ -811,32 +863,27 @@ const Devices: React.FC = () => {
                     timezone: siteForm.timezone.trim(),
                     is_active: siteForm.is_active,
                   };
-                  
+
                   let updated;
                   if (siteDetails) {
                     updated = await apiService.updateDeviceSite(selectedDevice.id, payload);
                   } else {
                     updated = await apiService.createDeviceSite(selectedDevice.id, payload);
                   }
-                  
-                  // Ensure the response contains site data
+
                   if (!updated || !updated.site_id) {
-                    throw new Error('Invalid response from server - site data missing');
+                    throw new Error('Invalid response from server — site data missing');
                   }
-                  
-                  // Update local state and re-fetch to ensure fresh data
+
                   setSiteDetails(updated);
                   setEditingSite(false);
                   setSiteSaving(false);
-                  
-                  // Re-fetch site details to ensure we have the complete data
+
+                  // Re-fetch after creation to get server-assigned fields
                   if (!siteDetails) {
-                    // Only refetch if it was a new site creation
                     setTimeout(() => {
                       apiService.getDeviceSite(selectedDevice.id)
-                        .then(data => {
-                          if (data) setSiteDetails(data);
-                        })
+                        .then(data => { if (data) setSiteDetails(data); })
                         .catch(err => console.error('Failed to re-fetch site:', err));
                     }, 500);
                   }
@@ -845,58 +892,133 @@ const Devices: React.FC = () => {
                   setSiteSaving(false);
                 }
               }}>
-                <div className="modal-body" style={{ padding: '24px' }}>
-                  {siteError && <p style={{ color: '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>}
-                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Identification</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Site ID *</label>
-                      <input required value={siteForm.site_id} disabled={!!siteDetails} onChange={e => setSiteForm({ ...siteForm, site_id: e.target.value })} placeholder="e.g. site_mumbai_01" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Display Name</label>
-                      <input value={siteForm.display_name} onChange={e => setSiteForm({ ...siteForm, display_name: e.target.value })} placeholder="e.g. Mumbai Rooftop" />
-                    </div>
-                  </div>
-                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Location</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Latitude *</label>
-                      <input required type="number" step="any" value={siteForm.latitude} onChange={e => setSiteForm({ ...siteForm, latitude: e.target.value })} placeholder="19.0760" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Longitude *</label>
-                      <input required type="number" step="any" value={siteForm.longitude} onChange={e => setSiteForm({ ...siteForm, longitude: e.target.value })} placeholder="72.8777" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Timezone</label>
-                      <input value={siteForm.timezone} onChange={e => setSiteForm({ ...siteForm, timezone: e.target.value })} placeholder="Asia/Kolkata" />
-                    </div>
-                  </div>
-                  <p className="dash-section-label" style={{ marginBottom: '0.5rem' }}>Panel Configuration</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Capacity (kW) *</label>
-                      <input required type="number" step="any" value={siteForm.capacity_kw} onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })} placeholder="5.0" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Tilt (°)</label>
-                      <input type="number" step="any" value={siteForm.tilt_deg} onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })} />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label>Azimuth (°)</label>
-                      <input type="number" step="any" value={siteForm.azimuth_deg} onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })} />
+                <div className="modal-body">
+                  {siteError && (
+                    <p style={{ color: 'var(--danger-color, #ef4444)', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
+                  )}
+
+                  <div className="form-section">
+                    <h4 className="form-section-title">Identification</h4>
+                    <div className="form-grid form-grid-2">
+                      <div className="form-group">
+                        <label>Site ID *</label>
+                        <input
+                          type="text"
+                          required
+                          value={siteForm.site_id}
+                          disabled={!!siteDetails}
+                          onChange={e => setSiteForm({ ...siteForm, site_id: e.target.value })}
+                          placeholder="e.g. site_mumbai_01"
+                          autoComplete="off"
+                        />
+                        {!!siteDetails && <small className="form-hint">Site ID cannot be changed after creation.</small>}
+                      </div>
+                      <div className="form-group">
+                        <label>Display Name</label>
+                        <input
+                          type="text"
+                          value={siteForm.display_name}
+                          onChange={e => setSiteForm({ ...siteForm, display_name: e.target.value })}
+                          placeholder="e.g. Mumbai Rooftop"
+                          autoComplete="off"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '1rem 0 0 0' }}>
-                    <input type="checkbox" id="dev-site-active" checked={siteForm.is_active} onChange={e => setSiteForm({ ...siteForm, is_active: e.target.checked })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                    <label htmlFor="dev-site-active" style={{ margin: 0, cursor: 'pointer', fontSize: '0.95rem', fontWeight: 600 }}>Active</label>
+
+                  <div className="form-section">
+                    <h4 className="form-section-title">Location</h4>
+                    <div className="form-grid form-grid-3">
+                      <div className="form-group">
+                        <label>Latitude *</label>
+                        <input
+                          type="number"
+                          required
+                          step="any"
+                          value={siteForm.latitude}
+                          onChange={e => setSiteForm({ ...siteForm, latitude: e.target.value })}
+                          placeholder="19.0760"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Longitude *</label>
+                        <input
+                          type="number"
+                          required
+                          step="any"
+                          value={siteForm.longitude}
+                          onChange={e => setSiteForm({ ...siteForm, longitude: e.target.value })}
+                          placeholder="72.8777"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Timezone</label>
+                        <input
+                          type="text"
+                          value={siteForm.timezone}
+                          onChange={e => setSiteForm({ ...siteForm, timezone: e.target.value })}
+                          placeholder="Asia/Kolkata"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="form-actions" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(148, 163, 184, 0.15)' }}>
-                    <button type="submit" className="btn" disabled={siteSaving}>{siteSaving ? 'Saving…' : siteDetails ? 'Save Changes' : 'Add Site'}</button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setEditingSite(false)} disabled={siteSaving}>Cancel</button>
+
+                  <div className="form-section">
+                    <h4 className="form-section-title">Panel Configuration</h4>
+                    <div className="form-grid form-grid-3">
+                      <div className="form-group">
+                        <label>Capacity (kW) *</label>
+                        <input
+                          type="number"
+                          required
+                          step="any"
+                          value={siteForm.capacity_kw}
+                          onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })}
+                          placeholder="5.0"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Tilt (°)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={siteForm.tilt_deg}
+                          onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Azimuth (°)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={siteForm.azimuth_deg}
+                          onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          id="dev-site-active"
+                          checked={siteForm.is_active}
+                          onChange={e => setSiteForm({ ...siteForm, is_active: e.target.checked })}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Active
+                      </label>
+                    </div>
                   </div>
+                </div>
+
+                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
+                  <button type="submit" className="btn" disabled={siteSaving}>
+                    {siteSaving ? 'Saving…' : siteDetails ? 'Save Changes' : 'Add Site'}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditingSite(false)} disabled={siteSaving}>
+                    Cancel
+                  </button>
                 </div>
               </form>
             </div>
