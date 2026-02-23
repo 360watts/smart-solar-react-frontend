@@ -637,18 +637,18 @@ const Devices: React.FC = () => {
                 <strong>Assigned User:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
               </div>
-              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: '1px solid var(--border-color, #e5e7eb)' }}>
+              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-sync-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
-                    <strong style={{ fontSize: '0.95rem' }}>Configuration</strong>
+                    <strong style={{ fontSize: '0.95rem', color: 'inherit' }} className="config-heading">Configuration</strong>
                     {devicePreset && (
-                      <div style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginTop: '2px' }} className="config-label">
                         {devicePreset.name || selectedDevice.config_version}
                       </div>
                     )}
                   </div>
                   {!selectedDevice.config_version ? (
-                    <span style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.875rem' }}>No preset assigned</span>
+                    <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '0.875rem' }} className="config-no-preset">No preset assigned</span>
                   ) : selectedDevice.pending_config_update ? (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -665,32 +665,32 @@ const Devices: React.FC = () => {
                 </div>
                 {selectedDevice.config_version && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
-                    <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-                      <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Preset ID</div>
-                      <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>{selectedDevice.config_version}</div>
+                    <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                      <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Preset ID</div>
+                      <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>{selectedDevice.config_version}</div>
                     </div>
                     {devicePreset?.slaves_count != null && (
-                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Slaves</div>
-                        <div style={{ fontWeight: '500' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Slaves</div>
+                        <div style={{ fontWeight: '500', color: 'inherit' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version != null && (
                       <div style={{ 
                         padding: '8px', 
-                        backgroundColor: 'var(--card-bg, #f9fafb)', 
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)', 
                         borderRadius: '6px',
                         gridColumn: '1 / -1',
                         border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #dcfce7' : '2px solid #fef9c3'
-                      }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '4px' }}>Version Status</div>
+                      }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '4px' }} className="config-label">Version Status</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>Device: </span>
-                            <span style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{selectedDevice.config_ack_ver}</span>
-                            <span style={{ margin: '0 8px', color: 'var(--text-muted, #9ca3af)' }}>→</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>Latest: </span>
-                            <span style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{devicePreset.version}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }} className="config-label">Device: </span>
+                            <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</span>
+                            <span style={{ margin: '0 8px', color: 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }} className="config-label">Latest: </span>
+                            <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{devicePreset.version}</span>
                           </div>
                           {selectedDevice.config_ack_ver === devicePreset.version ? (
                             <span style={{ color: '#166534', fontSize: '0.75rem', fontWeight: '500' }}>✓ Up to date</span>
@@ -701,23 +701,23 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version == null && (
-                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Device Version</div>
-                        <div style={{ fontWeight: '500', fontFamily: 'monospace' }}>v{selectedDevice.config_ack_ver}</div>
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Device Version</div>
+                        <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</div>
                       </div>
                     )}
                     {devicePreset?.gateway_configuration?.general_settings?.last_updated && (
-                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Modified</div>
-                        <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Modified</div>
+                        <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(devicePreset.gateway_configuration.general_settings.last_updated).toLocaleDateString()}
                         </div>
                       </div>
                     )}
                     {selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)', gridColumn: '1 / -1' }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Last Synced</div>
-                        <div style={{ fontWeight: '500', fontSize: '0.75rem' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Synced</div>
+                        <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(selectedDevice.config_acked_at).toLocaleString()}
                           {(() => {
                             const ackTime = new Date(selectedDevice.config_acked_at);
@@ -735,11 +735,11 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'var(--card-bg, #f9fafb)', borderRadius: '6px', border: '1px solid var(--border-color, #e5e7eb)', gridColumn: '1 / -1' }}>
-                        <div style={{ color: 'var(--text-muted, #6b7280)', marginBottom: '2px' }}>Apply Duration</div>
-                        <div style={{ fontWeight: '500' }}>
+                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Apply Duration</div>
+                        <div style={{ fontWeight: '500', color: 'inherit' }}>
                           {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)} seconds
-                          <span style={{ color: 'var(--text-muted, #9ca3af)', marginLeft: '8px', fontSize: '0.75rem' }}>
+                          <span style={{ color: 'rgba(0, 0, 0, 0.5)', marginLeft: '8px', fontSize: '0.75rem' }} className="config-label">
                             (download → acknowledge)
                           </span>
                         </div>

@@ -7602,3 +7602,29 @@ body.dark-mode .page-header p { color: #94a3b8 !important; }
 
 /* ── User role badge (sidebar) in dark mode ── */
 body.dark-mode .user-role-badge { color: #64748b !important; }
+
+/* ── Config sync card info boxes in dark mode ── */
+body.dark-mode .config-sync-card {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-mode .config-heading {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body.dark-mode .config-no-preset {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+body.dark-mode .config-info-box {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-mode .config-label {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+body.dark-mode .config-arrow {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
