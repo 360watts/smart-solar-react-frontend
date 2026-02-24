@@ -97,51 +97,17 @@ export const OTA: React.FC = () => {
 
   useEffect(() => {
     loadFirmwareData();
-    loadRealDevices();
     loadDeployments();
+    updateDeviceStatusesFromDeployments(); // Load devices with current deployment statuses
     
     // Real-time status updates - poll for deployment status every 5 seconds
     const interval = setInterval(() => {
       loadDeployments();
-      setDevices(prev => prev.map(d => {
-        if (d.status === 'downloading' && d.progress !== undefined && d.progress < 100) {
-          return { ...d, progress: Math.min(100, d.progress + Math.random() * 10) };
-        }
-        return d;
-      }));
+      updateDeviceStatusesFromDeployments(); // Refresh device statuses
     }, 5000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadRealDevices = async () => {
-    try {
-      setLoadingDevices(true);
-      // Fetch all devices without pagination limit
-      const response = await apiService.getDevices('', 1, 1000);
-      const realDevices = response.results || response;
-      
-      // Transform backend devices to OTA status format
-      const transformedDevices: DeviceStatus[] = (Array.isArray(realDevices) ? realDevices : []).map((device: any) => ({
-        deviceId: device.device_serial || device.serial || `DEV${device.id}`,
-        currentVersion: device.firmware_version || device.config_version || 'v1.0.0',
-        targetVersion: 'v1.4.0', // Default target version
-        activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
-        status: 'idle' as DeviceStatus['status'], // Default status
-        bootCount: device.boot_count || 0,
-        lastError: '',
-        progress: undefined,
-      }));
-      
-      setDevices(transformedDevices);
-    } catch (error) {
-      console.error('Failed to load devices:', error);
-      // Set to empty on error - UI will show empty state
-      setDevices([]);
-    } finally {
-      setLoadingDevices(false);
-    }
-  };
 
   const loadFirmwareData = async () => {
     try {
@@ -195,6 +161,7 @@ export const OTA: React.FC = () => {
 
   const updateDeviceStatusesFromDeployments = async () => {
     try {
+      setLoadingDevices(true);
       // Fetch all devices
       const response = await apiService.getDevices('', 1, 1000);
       const realDevices = response.results || response;
@@ -212,11 +179,13 @@ export const OTA: React.FC = () => {
             const backendStatus = latestLog.status?.toLowerCase();
             switch (backendStatus) {
               case 'pending':
+                status = 'trial'; // Deployment created, waiting for device to check in
+                break;
               case 'checking':
-                status = 'idle';
+                status = 'trial'; // Device is checking for updates
                 break;
               case 'available':
-                status = 'idle'; // Update is available but not started
+                status = 'trial'; // Update available, waiting for device to download
                 break;
               case 'downloading':
                 status = 'downloading';
@@ -261,6 +230,9 @@ export const OTA: React.FC = () => {
       setDevices(updatedDevices);
     } catch (error) {
       console.error('Failed to update device statuses:', error);
+      setDevices([]);
+    } finally {
+      setLoadingDevices(false);
     }
   };
 
@@ -418,7 +390,7 @@ export const OTA: React.FC = () => {
       
       // Refresh device status and deployments after deployment
       await loadDeployments();
-      await loadRealDevices();
+      await updateDeviceStatusesFromDeployments();
     } catch (error: any) {
       setIsDeploying(false);
       console.error('Deployment failed:', error);
