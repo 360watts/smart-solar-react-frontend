@@ -109,7 +109,6 @@ export const OTA: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus['status']>('all');
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [loadingFirmwares, setLoadingFirmwares] = useState(true);
-  const [deploymentCampaigns, setDeploymentCampaigns] = useState<any[]>([]);
   const [activeDeployment, setActiveDeployment] = useState<any>(null);
 
   // Section 4: Emergency Rollback State
@@ -140,6 +139,7 @@ export const OTA: React.FC = () => {
       }));
     }, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadRealDevices = async () => {
@@ -234,7 +234,6 @@ export const OTA: React.FC = () => {
   const loadDeployments = async () => {
     try {
       const campaigns = await apiService.listTargetedUpdates();
-      setDeploymentCampaigns(campaigns);
       
       // Find the most recent in-progress deployment
       const activeCampaign = campaigns.find((c: any) => 
