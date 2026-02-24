@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 import '../App.css';
 
 interface FirmwareVersion {
@@ -73,6 +74,8 @@ const generateMockDevices = (): DeviceStatus[] => {
 };
 
 export const OTA: React.FC = () => {
+  const { isDark } = useTheme();
+  
   // Section 1: Firmware Repository State
   const [firmwares, setFirmwares] = useState<FirmwareVersion[]>([]);
   const [uploadForm, setUploadForm] = useState({
@@ -109,11 +112,15 @@ export const OTA: React.FC = () => {
 
   // Section 4: Emergency Rollback State
   const [rollbackForm, setRollbackForm] = useState({
-    targetVersion: '',
     selectedDevices: [] as string[],
     reason: '',
   });
   const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [rollbackFilters, setRollbackFilters] = useState({
+    currentVersion: 'all',
+    status: 'all',
+    deviceModel: 'all',
+  });
 
   useEffect(() => {
     loadFirmwareData();
@@ -360,10 +367,6 @@ export const OTA: React.FC = () => {
   };
 
   const confirmRollback = () => {
-    if (!rollbackForm.targetVersion) {
-      alert('Please select a target version');
-      return;
-    }
     if (rollbackForm.selectedDevices.length === 0) {
       alert('Please select devices to rollback');
       return;
@@ -373,9 +376,46 @@ export const OTA: React.FC = () => {
       return;
     }
 
+    // TODO: Send updateConfig command with value 2 to trigger rollback on selected devices
+    // This will instruct devices to rollback to their previous firmware version
+    
     setShowRollbackModal(false);
-    alert(`Rolling back ${rollbackForm.selectedDevices.length} devices to ${rollbackForm.targetVersion}`);
-    setRollbackForm({ targetVersion: '', selectedDevices: [], reason: '' });
+    alert(`Sending rollback command (updateConfig=2) to ${rollbackForm.selectedDevices.length} device(s)`);
+    setRollbackForm({ selectedDevices: [], reason: '' });
+  };
+
+  const toggleRollbackDevice = (deviceId: string) => {
+    setRollbackForm(prev => ({
+      ...prev,
+      selectedDevices: prev.selectedDevices.includes(deviceId)
+        ? prev.selectedDevices.filter(id => id !== deviceId)
+        : [...prev.selectedDevices, deviceId]
+    }));
+  };
+
+  const getFilteredRollbackDevices = () => {
+    return devices.filter(device => {
+      if (rollbackFilters.currentVersion !== 'all' && device.currentVersion !== rollbackFilters.currentVersion) {
+        return false;
+      }
+      if (rollbackFilters.status !== 'all' && device.status !== rollbackFilters.status) {
+        return false;
+      }
+      // Add more filter conditions as needed
+      return true;
+    });
+  };
+
+  const selectAllFilteredDevices = () => {
+    const filtered = getFilteredRollbackDevices();
+    setRollbackForm(prev => ({
+      ...prev,
+      selectedDevices: filtered.map(d => d.deviceId)
+    }));
+  };
+
+  const deselectAllDevices = () => {
+    setRollbackForm(prev => ({ ...prev, selectedDevices: [] }));
   };
 
   const filteredDevices = statusFilter === 'all' 
@@ -383,13 +423,13 @@ export const OTA: React.FC = () => {
     : devices.filter(d => d.status === statusFilter);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto', background: '#f5f6fa', minHeight: '100vh' }}>
+    <div style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto', background: isDark ? '#1a1a1a' : '#f5f6fa', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ 
           fontSize: '2rem', 
           fontWeight: '700', 
-          color: '#2c3e50', 
+          color: isDark ? '#e0e0e0' : '#2c3e50', 
           marginBottom: '0.5rem',
           display: 'flex',
           alignItems: 'center',
@@ -402,27 +442,27 @@ export const OTA: React.FC = () => {
           </svg>
           OTA Firmware Management
         </h1>
-        <p style={{ color: '#7f8c8d', margin: 0 }}>
+        <p style={{ color: isDark ? '#a0a0a0' : '#7f8c8d', margin: 0 }}>
           Upload, deploy, and monitor firmware updates across your device fleet
         </p>
       </div>
 
       {/* SECTION 1: Firmware Repository */}
       <div style={{ 
-        background: 'white', 
+        background: isDark ? '#2d2d2d' : 'white', 
         borderRadius: '12px', 
         padding: '2rem',
         marginBottom: '2rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        border: '1px solid #e1e8ed'
+        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        border: isDark ? '1px solid #404040' : '1px solid #e1e8ed'
       }}>
         <h2 style={{ 
           fontSize: '1.5rem', 
           fontWeight: '600', 
-          color: '#2c3e50',
+          color: isDark ? '#e0e0e0' : '#2c3e50',
           marginBottom: '1.5rem',
           paddingBottom: '0.75rem',
-          borderBottom: '2px solid #e1e8ed',
+          borderBottom: isDark ? '2px solid #404040' : '2px solid #e1e8ed',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem'
@@ -433,15 +473,15 @@ export const OTA: React.FC = () => {
 
         {/* Upload Form */}
         <form onSubmit={handleUploadFirmware} style={{ 
-          background: '#f8f9fa', 
+          background: isDark ? '#242424' : '#f8f9fa', 
           padding: '1.5rem', 
           borderRadius: '8px',
           marginBottom: '2rem',
-          border: '1px solid #dee2e6'
+          border: isDark ? '1px solid #404040' : '1px solid #dee2e6'
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Firmware Name *
               </label>
               <input
@@ -454,14 +494,16 @@ export const OTA: React.FC = () => {
                   width: '100%', 
                   padding: '0.75rem', 
                   borderRadius: '6px', 
-                  border: '1px solid #ced4da',
-                  fontSize: '0.95rem'
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.95rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Version (semver) *
               </label>
               <input
@@ -475,14 +517,16 @@ export const OTA: React.FC = () => {
                   width: '100%', 
                   padding: '0.75rem', 
                   borderRadius: '6px', 
-                  border: '1px solid #ced4da',
-                  fontSize: '0.95rem'
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.95rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Device Model
               </label>
               <select
@@ -492,8 +536,10 @@ export const OTA: React.FC = () => {
                   width: '100%', 
                   padding: '0.75rem', 
                   borderRadius: '6px', 
-                  border: '1px solid #ced4da',
-                  fontSize: '0.95rem'
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.95rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
                 }}
               >
                 <option value="ESP32-S3">ESP32-S3</option>
@@ -504,7 +550,7 @@ export const OTA: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Min Bootloader Version
               </label>
               <input
@@ -517,15 +563,17 @@ export const OTA: React.FC = () => {
                   width: '100%', 
                   padding: '0.75rem', 
                   borderRadius: '6px', 
-                  border: '1px solid #ced4da',
-                  fontSize: '0.95rem'
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.95rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
                 }}
               />
             </div>
           </div>
 
           <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Release Notes
             </label>
             <textarea
@@ -537,17 +585,19 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
                 fontSize: '0.95rem',
                 fontFamily: 'inherit',
-                resize: 'vertical'
+                resize: 'vertical',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             />
           </div>
 
           <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'end' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Firmware File (.bin) *
               </label>
               <input
@@ -559,19 +609,21 @@ export const OTA: React.FC = () => {
                   width: '100%', 
                   padding: '0.5rem', 
                   borderRadius: '6px', 
-                  border: '1px solid #ced4da',
-                  fontSize: '0.9rem'
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.9rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
                 }}
               />
               {uploadForm.file && (
-                <small style={{ color: '#6c757d', display: 'block', marginTop: '0.25rem' }}>
+                <small style={{ color: isDark ? '#a0a0a0' : '#6c757d', display: 'block', marginTop: '0.25rem' }}>
                   {uploadForm.file.name} ({(uploadForm.file.size / 1024).toFixed(1)} KB)
                 </small>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 SHA256 (auto-calculated)
               </label>
               <div style={{
@@ -579,9 +631,9 @@ export const OTA: React.FC = () => {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.75rem',
-                background: '#e9ecef',
+                background: isDark ? '#242424' : '#e9ecef',
                 borderRadius: '6px',
-                border: '1px solid #ced4da'
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da'
               }}>
                 <input
                   type="text"
@@ -593,7 +645,7 @@ export const OTA: React.FC = () => {
                     background: 'transparent',
                     fontSize: '0.85rem',
                     fontFamily: 'monospace',
-                    color: '#6c757d'
+                    color: isDark ? '#a0a0a0' : '#6c757d'
                   }}
                 />
                 <span style={{
@@ -640,26 +692,26 @@ export const OTA: React.FC = () => {
 
         {/* Firmware List Table */}
         <div>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: '#495057' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#495057' }}>
             Available Firmware Versions
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Name</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Version</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Device Model</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>File Size</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Upload Date</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Status</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Actions</th>
+                <tr style={{ background: isDark ? '#242424' : '#f8f9fa', borderBottom: isDark ? '2px solid #404040' : '2px solid #dee2e6' }}>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Name</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Version</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Device Model</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>File Size</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Upload Date</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingFirmwares ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#6c757d', fontSize: '0.95rem' }}>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', fontSize: '0.95rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
                           <circle cx="12" cy="12" r="10" opacity="0.25"/>
@@ -671,15 +723,15 @@ export const OTA: React.FC = () => {
                   </tr>
                 ) : firmwares.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#6c757d', fontSize: '0.95rem' }}>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', fontSize: '0.95rem' }}>
                       No firmware versions uploaded yet. Use the form above to upload your first firmware.
                     </td>
                   </tr>
                 ) : (
                   firmwares.map(fw => (
-                  <tr key={fw.id} style={{ borderBottom: '1px solid #e9ecef' }}>
+                  <tr key={fw.id} style={{ borderBottom: isDark ? '1px solid #404040' : '1px solid #e9ecef' }}>
                     <td style={{ padding: '1rem 0.75rem' }}>
-                      <div style={{ fontWeight: '500', color: '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
+                      <div style={{ fontWeight: '500', color: isDark ? '#e0e0e0' : '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
                       {fw.signatureValid && (
                         <span style={{ fontSize: '0.75rem', color: '#28a745', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -755,20 +807,20 @@ export const OTA: React.FC = () => {
 
       {/* SECTION 2: Deployment Panel */}
       <div style={{ 
-        background: 'white', 
+        background: isDark ? '#2d2d2d' : 'white', 
         borderRadius: '12px', 
         padding: '2rem',
         marginBottom: '2rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        border: '2px solid #667eea'
+        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        border: isDark ? '2px solid #667eea' : '2px solid #667eea'
       }}>
         <h2 style={{ 
           fontSize: '1.5rem', 
           fontWeight: '600', 
-          color: '#2c3e50',
+          color: isDark ? '#e0e0e0' : '#2c3e50',
           marginBottom: '1.5rem',
           paddingBottom: '0.75rem',
-          borderBottom: '2px solid #e1e8ed',
+          borderBottom: isDark ? '2px solid #404040' : '2px solid #e1e8ed',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem'
@@ -779,7 +831,7 @@ export const OTA: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Select Firmware Version *
             </label>
             <select
@@ -789,8 +841,10 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
-                fontSize: '0.95rem'
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                fontSize: '0.95rem',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             >
               <option value="">-- Select Version --</option>
@@ -803,7 +857,7 @@ export const OTA: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Deployment Mode
             </label>
             <select
@@ -813,8 +867,10 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
-                fontSize: '0.95rem'
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                fontSize: '0.95rem',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             >
               <option value="immediate">Immediate (Push to all devices)</option>
@@ -823,7 +879,7 @@ export const OTA: React.FC = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Health Confirmation Timeout (seconds)
             </label>
             <input
@@ -836,14 +892,16 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
-                fontSize: '0.95rem'
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                fontSize: '0.95rem',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Failure Threshold (%)
             </label>
             <input
@@ -856,8 +914,10 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
-                fontSize: '0.95rem'
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                fontSize: '0.95rem',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             />
           </div>
@@ -865,7 +925,7 @@ export const OTA: React.FC = () => {
 
         <div style={{ marginTop: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <label style={{ fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Target Devices ({deploymentConfig.targetDevices.length} selected)
             </label>
             <button
@@ -887,17 +947,17 @@ export const OTA: React.FC = () => {
           <div style={{
             maxHeight: '150px',
             overflowY: 'auto',
-            border: '1px solid #ced4da',
+            border: isDark ? '1px solid #404040' : '1px solid #ced4da',
             borderRadius: '6px',
             padding: '0.75rem',
-            background: '#f8f9fa'
+            background: isDark ? '#242424' : '#f8f9fa'
           }}>
             {loadingDevices ? (
-              <div style={{ textAlign: 'center', color: '#6c757d', padding: '1rem' }}>
+              <div style={{ textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', padding: '1rem' }}>
                 Loading devices...
               </div>
             ) : devices.filter(d => d.status === 'idle').length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#6c757d', padding: '1rem' }}>
+              <div style={{ textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', padding: '1rem' }}>
                 No idle devices available for deployment
               </div>
             ) : (
@@ -935,7 +995,7 @@ export const OTA: React.FC = () => {
             gap: '0.5rem',
             cursor: 'pointer',
             fontWeight: '500',
-            color: '#495057'
+            color: isDark ? '#b0b0b0' : '#495057'
           }}>
             <input
               type="checkbox"
@@ -945,7 +1005,7 @@ export const OTA: React.FC = () => {
             />
             Enable Auto Rollback
           </label>
-          <span style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+          <span style={{ fontSize: '0.85rem', color: isDark ? '#a0a0a0' : '#6c757d' }}>
             (Automatically rollback on failure)
           </span>
         </div>
@@ -1025,17 +1085,18 @@ export const OTA: React.FC = () => {
           zIndex: 1000
         }}>
           <div style={{
-            background: 'white',
+            background: isDark ? '#2d2d2d' : 'white',
             borderRadius: '12px',
             padding: '2rem',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '1px solid #404040' : 'none'
           }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2c3e50' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
               Confirm Deployment
             </h3>
-            <div style={{ marginBottom: '1.5rem', color: '#495057', lineHeight: '1.8' }}>
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.8' }}>
               <p><strong>Firmware Version:</strong> {confirmModal.firmware}</p>
               <p><strong>Target Devices:</strong> {confirmModal.deviceCount}</p>
               <p><strong>Estimated Data Transfer:</strong> {confirmModal.dataTransfer}</p>
@@ -1043,12 +1104,12 @@ export const OTA: React.FC = () => {
               <p><strong>Failure Threshold:</strong> {deploymentConfig.failureThreshold}%</p>
             </div>
             <div style={{
-              background: '#fff3cd',
-              border: '1px solid #ffc107',
+              background: isDark ? '#3a2a00' : '#fff3cd',
+              border: isDark ? '1px solid #6b5300' : '1px solid #ffc107',
               borderRadius: '8px',
               padding: '1rem',
               marginBottom: '1.5rem',
-              color: '#856404'
+              color: isDark ? '#ffd966' : '#856404'
             }}>
               <strong>⚠️ Warning:</strong> This will push firmware updates to {confirmModal.deviceCount} devices.
             </div>
@@ -1090,20 +1151,20 @@ export const OTA: React.FC = () => {
 
       {/* SECTION 3: Live Deployment Status */}
       <div style={{ 
-        background: 'white', 
+        background: isDark ? '#2d2d2d' : 'white', 
         borderRadius: '12px', 
         padding: '2rem',
         marginBottom: '2rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        border: '1px solid #e1e8ed'
+        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        border: isDark ? '1px solid #404040' : '1px solid #e1e8ed'
       }}>
         <h2 style={{ 
           fontSize: '1.5rem', 
           fontWeight: '600', 
-          color: '#2c3e50',
+          color: isDark ? '#e0e0e0' : '#2c3e50',
           marginBottom: '1.5rem',
           paddingBottom: '0.75rem',
-          borderBottom: '2px solid #e1e8ed',
+          borderBottom: isDark ? '2px solid #404040' : '2px solid #e1e8ed',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem'
@@ -1111,7 +1172,7 @@ export const OTA: React.FC = () => {
           <span style={{ fontSize: '1.25rem' }}>📊</span>
           Live Deployment Status
           {loadingDevices && (
-            <span style={{ fontSize: '0.85rem', color: '#6c757d', fontWeight: '400', marginLeft: 'auto' }}>
+            <span style={{ fontSize: '0.85rem', color: isDark ? '#a0a0a0' : '#6c757d', fontWeight: '400', marginLeft: 'auto' }}>
               Loading devices...
             </span>
           )}
@@ -1122,7 +1183,7 @@ export const OTA: React.FC = () => {
           <div style={{
             textAlign: 'center',
             padding: '3rem 1rem',
-            color: '#6c757d'
+            color: isDark ? '#a0a0a0' : '#6c757d'
           }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
             <p style={{ fontSize: '1.1rem' }}>Loading devices from backend...</p>
@@ -1131,7 +1192,7 @@ export const OTA: React.FC = () => {
           <div style={{
             textAlign: 'center',
             padding: '3rem 1rem',
-            color: '#6c757d'
+            color: isDark ? '#a0a0a0' : '#6c757d'
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📱</div>
             <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No devices registered yet</p>
@@ -1209,9 +1270,9 @@ export const OTA: React.FC = () => {
               key={status}
               onClick={() => setStatusFilter(status as any)}
               style={{
-                background: statusFilter === status ? '#667eea' : '#f8f9fa',
-                color: statusFilter === status ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                background: statusFilter === status ? '#667eea' : (isDark ? '#242424' : '#f8f9fa'),
+                color: statusFilter === status ? 'white' : (isDark ? '#e0e0e0' : '#495057'),
+                border: isDark ? '1px solid #404040' : '1px solid #dee2e6',
                 padding: '0.5rem 1rem',
                 borderRadius: '20px',
                 fontSize: '0.85rem',
@@ -1228,20 +1289,20 @@ export const OTA: React.FC = () => {
         {/* Device Status Table */}
         <div style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-            <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 1 }}>
-              <tr style={{ borderBottom: '2px solid #dee2e6' }}>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Device ID</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Current</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Target</th>
-                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Slot</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Status</th>
-                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Boot Count</th>
-                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Last Error</th>
+            <thead style={{ position: 'sticky', top: 0, background: isDark ? '#242424' : '#f8f9fa', zIndex: 1 }}>
+              <tr style={{ borderBottom: isDark ? '2px solid #404040' : '2px solid #dee2e6' }}>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Device ID</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Current</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Target</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Slot</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Status</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Boot Count</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : '#495057' }}>Last Error</th>
               </tr>
             </thead>
             <tbody>
               {filteredDevices.map(device => (
-                <tr key={device.deviceId} style={{ borderBottom: '1px solid #e9ecef' }}>
+                <tr key={device.deviceId} style={{ borderBottom: isDark ? '1px solid #404040' : '1px solid #e9ecef' }}>
                   <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontWeight: '500' }}>{device.deviceId}</td>
                   <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{device.currentVersion}</td>
                   <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{device.targetVersion}</td>
@@ -1262,13 +1323,13 @@ export const OTA: React.FC = () => {
                       {device.status}
                     </span>
                     {device.progress !== undefined && (
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#6c757d' }}>
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: isDark ? '#a0a0a0' : '#6c757d' }}>
                         {device.progress.toFixed(0)}%
                       </div>
                     )}
                   </td>
                   <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.9rem' }}>{device.bootCount}</td>
-                  <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: device.lastError ? '#dc3545' : '#6c757d' }}>
+                  <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: device.lastError ? '#dc3545' : (isDark ? '#a0a0a0' : '#6c757d') }}>
                     {device.lastError || '-'}
                   </td>
                 </tr>
@@ -1282,11 +1343,11 @@ export const OTA: React.FC = () => {
 
       {/* SECTION 4: Emergency Rollback */}
       <div style={{ 
-        background: 'white', 
+        background: isDark ? '#2d2d2d' : 'white', 
         borderRadius: '12px', 
         padding: '2rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        border: '2px solid #dc3545'
+        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        border: isDark ? '2px solid #dc3545' : '2px solid #dc3545'
       }}>
         <h2 style={{ 
           fontSize: '1.5rem', 
@@ -1294,7 +1355,7 @@ export const OTA: React.FC = () => {
           color: '#dc3545',
           marginBottom: '1rem',
           paddingBottom: '0.75rem',
-          borderBottom: '2px solid #f8d7da',
+          borderBottom: isDark ? '2px solid #5a1f24' : '2px solid #f8d7da',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem'
@@ -1304,43 +1365,23 @@ export const OTA: React.FC = () => {
         </h2>
         
         <div style={{
-          background: '#f8d7da',
-          border: '1px solid #f5c6cb',
+          background: isDark ? '#3d1a1a' : '#f8d7da',
+          border: isDark ? '1px solid #5a1f24' : '1px solid #f5c6cb',
           borderRadius: '8px',
           padding: '1rem',
           marginBottom: '1.5rem',
-          color: '#721c24'
+          color: isDark ? '#ff9999' : '#721c24'
         }}>
-          <strong>⚠️ Warning:</strong> Use this feature only in emergency situations. Rollback will revert devices to a previous firmware version.
+          <strong>⚠️ Warning:</strong> Use this feature only in emergency situations. Rollback command will revert devices to their previous firmware version automatically.
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
-              Target Version (Rollback To)
-            </label>
-            <select
-              value={rollbackForm.targetVersion}
-              onChange={(e) => setRollbackForm({ ...rollbackForm, targetVersion: e.target.value })}
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: '1px solid #ced4da',
-                fontSize: '0.95rem'
-              }}
-            >
-              <option value="">-- Select Previous Version --</option>
-              {firmwares.filter(f => f.status === 'stable').slice(1).map(f => (
-                <option key={f.id} value={f.version}>
-                  {f.name} - v{f.version}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: isDark ? '#1a2a3a' : '#e7f3ff', border: isDark ? '1px solid #2a4a6a' : '1px solid #b3d9ff', borderRadius: '8px', color: isDark ? '#66b2ff' : '#004085' }}>
+          <strong>ℹ️ How it works:</strong> The rollback sends an <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig</code> command with value <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>2</code> to selected devices, triggering them to automatically revert to their previous firmware version.
+        </div>
 
+        <div>
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Rollback Reason *
             </label>
             <textarea
@@ -1352,62 +1393,278 @@ export const OTA: React.FC = () => {
                 width: '100%', 
                 padding: '0.75rem', 
                 borderRadius: '6px', 
-                border: '1px solid #ced4da',
+                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
                 fontSize: '0.95rem',
                 fontFamily: 'inherit',
-                resize: 'vertical'
+                resize: 'vertical',
+                background: isDark ? '#1a1a1a' : 'white',
+                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             />
           </div>
         </div>
 
-        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => {
-              const failedDevices = devices.filter(d => d.status === 'failed').map(d => d.deviceId);
-              setRollbackForm({ ...rollbackForm, selectedDevices: failedDevices });
-              if (failedDevices.length > 0) {
-                alert(`Selected ${failedDevices.length} failed devices for rollback`);
-              } else {
-                alert('No failed devices to select');
-              }
-            }}
-            style={{
-              background: '#ffc107',
-              color: '#000',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Select Failed Devices ({devices.filter(d => d.status === 'failed').length})
-          </button>
+        {/* Device Selection Filters */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#495057' }}>
+            Device Selection & Filters
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>
+                Filter by Current Version
+              </label>
+              <select
+                value={rollbackFilters.currentVersion}
+                onChange={(e) => setRollbackFilters({ ...rollbackFilters, currentVersion: e.target.value })}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  borderRadius: '6px', 
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.9rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
+                }}
+              >
+                <option value="all">All Versions</option>
+                {Array.from(new Set(devices.map(d => d.currentVersion))).map(version => (
+                  <option key={version} value={version}>{version}</option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            onClick={() => {
-              const allProblemDevices = devices.filter(d => ['failed', 'rolledback'].includes(d.status)).map(d => d.deviceId);
-              setRollbackForm({ ...rollbackForm, selectedDevices: allProblemDevices });
-              if (allProblemDevices.length > 0) {
-                alert(`Selected ${allProblemDevices.length} problem devices for rollback`);
-              }
-            }}
-            style={{
-              background: '#6c757d',
-              color: 'white',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Select All Problem Devices
-          </button>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>
+                Filter by Status
+              </label>
+              <select
+                value={rollbackFilters.status}
+                onChange={(e) => setRollbackFilters({ ...rollbackFilters, status: e.target.value })}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  borderRadius: '6px', 
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.9rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
+                }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="failed">Failed</option>
+                <option value="healthy">Healthy</option>
+                <option value="trial">Trial</option>
+                <option value="downloading">Downloading</option>
+                <option value="flashing">Flashing</option>
+                <option value="rebooting">Rebooting</option>
+                <option value="rolledback">Rolled Back</option>
+                <option value="idle">Idle</option>
+              </select>
+            </div>
 
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>
+                Filter by Target Version
+              </label>
+              <select
+                value={rollbackFilters.deviceModel}
+                onChange={(e) => setRollbackFilters({ ...rollbackFilters, deviceModel: e.target.value })}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  borderRadius: '6px', 
+                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
+                  fontSize: '0.9rem',
+                  background: isDark ? '#1a1a1a' : 'white',
+                  color: isDark ? '#e0e0e0' : 'inherit'
+                }}
+              >
+                <option value="all">All Target Versions</option>
+                {Array.from(new Set(devices.map(d => d.targetVersion))).map(version => (
+                  <option key={version} value={version}>{version}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Selection Buttons */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <button
+              onClick={selectAllFilteredDevices}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Select All Filtered ({getFilteredRollbackDevices().length})
+            </button>
+
+            <button
+              onClick={deselectAllDevices}
+              style={{
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Deselect All
+            </button>
+
+            <button
+              onClick={() => {
+                const failedDevices = devices.filter(d => d.status === 'failed').map(d => d.deviceId);
+                setRollbackForm({ ...rollbackForm, selectedDevices: failedDevices });
+              }}
+              style={{
+                background: '#ffc107',
+                color: '#000',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Select Failed Only ({devices.filter(d => d.status === 'failed').length})
+            </button>
+
+            <button
+              onClick={() => {
+                const problemDevices = devices.filter(d => ['failed', 'rolledback'].includes(d.status)).map(d => d.deviceId);
+                setRollbackForm({ ...rollbackForm, selectedDevices: problemDevices });
+              }}
+              style={{
+                background: '#fd7e14',
+                color: 'white',
+                border: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Select Problem Devices ({devices.filter(d => ['failed', 'rolledback'].includes(d.status)).length})
+            </button>
+          </div>
+
+          {/* Device Selection Table */}
+          <div style={{ 
+            background: isDark ? '#242424' : '#f8f9fa', 
+            borderRadius: '8px', 
+            padding: '1rem',
+            border: isDark ? '1px solid #404040' : '1px solid #dee2e6',
+            maxHeight: '400px',
+            overflowY: 'auto'
+          }}>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <strong style={{ fontSize: '0.95rem', color: isDark ? '#e0e0e0' : 'inherit' }}>
+                Devices List ({getFilteredRollbackDevices().length} available, {rollbackForm.selectedDevices.length} selected)
+              </strong>
+            </div>
+            
+            {loadingDevices ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d' }}>
+                Loading devices...
+              </div>
+            ) : getFilteredRollbackDevices().length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d' }}>
+                No devices match the current filters
+              </div>
+            ) : (
+              <table style={{ width: '100%', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: isDark ? '2px solid #404040' : '2px solid #dee2e6' }}>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', width: '50px', color: isDark ? '#b0b0b0' : 'inherit' }}>
+                      <input
+                        type="checkbox"
+                        checked={getFilteredRollbackDevices().length > 0 && getFilteredRollbackDevices().every(d => rollbackForm.selectedDevices.includes(d.deviceId))}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            selectAllFilteredDevices();
+                          } else {
+                            deselectAllDevices();
+                          }
+                        }}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Device ID</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Current Version</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Target Version</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Status</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Boot Count</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', color: isDark ? '#b0b0b0' : 'inherit' }}>Last Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getFilteredRollbackDevices().map(device => (
+                    <tr 
+                      key={device.deviceId} 
+                      style={{ 
+                        borderBottom: isDark ? '1px solid #404040' : '1px solid #e9ecef',
+                        background: rollbackForm.selectedDevices.includes(device.deviceId) ? (isDark ? '#3a2a00' : '#fff3cd') : 'transparent',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => toggleRollbackDevice(device.deviceId)}
+                    >
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={rollbackForm.selectedDevices.includes(device.deviceId)}
+                          onChange={() => toggleRollbackDevice(device.deviceId)}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', fontFamily: 'monospace', fontWeight: '500' }}>{device.deviceId}</td>
+                      <td style={{ padding: '0.75rem 0.5rem', fontFamily: 'monospace' }}>{device.currentVersion}</td>
+                      <td style={{ padding: '0.75rem 0.5rem', fontFamily: 'monospace' }}>{device.targetVersion}</td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          background: device.status === 'failed' ? (isDark ? '#3d1a1a' : '#f8d7da') : 
+                                     device.status === 'healthy' ? (isDark ? '#1a3d1a' : '#d4edda') : 
+                                     device.status === 'downloading' || device.status === 'flashing' ? (isDark ? '#1a2a3a' : '#cce5ff') :
+                                     device.status === 'rolledback' ? (isDark ? '#3a2a00' : '#fff3cd') : (isDark ? '#2a2a2a' : '#e9ecef'),
+                          color: device.status === 'failed' ? (isDark ? '#ff9999' : '#721c24') : 
+                                 device.status === 'healthy' ? (isDark ? '#99ff99' : '#155724') : 
+                                 device.status === 'downloading' || device.status === 'flashing' ? (isDark ? '#66b2ff' : '#004085') :
+                                 device.status === 'rolledback' ? (isDark ? '#ffd966' : '#856404') : (isDark ? '#b0b0b0' : '#495057')
+                        }}>
+                          {device.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem' }}>{device.bootCount}</td>
+                      <td style={{ padding: '0.75rem 0.5rem', color: device.lastError ? '#dc3545' : (isDark ? '#a0a0a0' : '#6c757d'), fontSize: '0.8rem' }}>
+                        {device.lastError || 'None'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Rollback Action Button */}
+        <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
           <button
             onClick={handleEmergencyRollback}
             disabled={rollbackForm.selectedDevices.length === 0}
@@ -1430,25 +1687,9 @@ export const OTA: React.FC = () => {
               <polyline points="1 4 1 10 7 10"/>
               <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
             </svg>
-            Rollback Entire Deployment
+            Rollback {rollbackForm.selectedDevices.length} Device{rollbackForm.selectedDevices.length !== 1 ? 's' : ''}
           </button>
         </div>
-
-        {rollbackForm.selectedDevices.length > 0 && (
-          <div style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #dee2e6'
-          }}>
-            <strong>Selected Devices ({rollbackForm.selectedDevices.length}):</strong>
-            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6c757d' }}>
-              {rollbackForm.selectedDevices.slice(0, 10).join(', ')}
-              {rollbackForm.selectedDevices.length > 10 && ` ... and ${rollbackForm.selectedDevices.length - 10} more`}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Rollback Confirmation Modal */}
@@ -1466,24 +1707,24 @@ export const OTA: React.FC = () => {
           zIndex: 1000
         }}>
           <div style={{
-            background: 'white',
+            background: isDark ? '#2d2d2d' : 'white',
             borderRadius: '12px',
             padding: '2rem',
             maxWidth: '500px',
             width: '90%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            border: '2px solid #dc3545'
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545'
           }}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#dc3545' }}>
               ⚠️ Confirm Emergency Rollback
             </h3>
             <div style={{
-              background: '#f8d7da',
-              border: '1px solid #f5c6cb',
+              background: isDark ? '#3d1a1a' : '#f8d7da',
+              border: isDark ? '1px solid #5a1f24' : '1px solid #f5c6cb',
               borderRadius: '8px',
               padding: '1rem',
               marginBottom: '1.5rem',
-              color: '#721c24',
+              color: isDark ? '#ff9999' : '#721c24',
               fontSize: '0.95rem'
             }}>
               <strong>This action cannot be undone!</strong>
@@ -1491,8 +1732,8 @@ export const OTA: React.FC = () => {
                 You are about to rollback devices to a previous firmware version.
               </p>
             </div>
-            <div style={{ marginBottom: '1.5rem', color: '#495057', lineHeight: '1.8' }}>
-              <p><strong>Target Version:</strong> {rollbackForm.targetVersion || 'Not selected'}</p>
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.8' }}>
+              <p><strong>Command:</strong> <code style={{ background: isDark ? '#1a1a1a' : '#f8f9fa', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig = 2</code> (automatic rollback to previous version)</p>
               <p><strong>Devices to Rollback:</strong> {rollbackForm.selectedDevices.length}</p>
               <p><strong>Reason:</strong> {rollbackForm.reason || 'Not provided'}</p>
             </div>
