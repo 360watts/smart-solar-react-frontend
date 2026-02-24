@@ -312,13 +312,34 @@ export const OTA: React.FC = () => {
     });
   };
 
-  const confirmDeployment = () => {
+  const confirmDeployment = async () => {
     setConfirmModal({ ...confirmModal, show: false });
     setIsDeploying(true);
-    setTimeout(() => {
+    
+    try {
+      // Find the selected firmware object to get its ID
+      const firmware = firmwares.find(f => f.version === deploymentConfig.firmwareVersion);
+      if (!firmware) {
+        throw new Error('Selected firmware not found');
+      }
+      
+      // Call backend API to create deployment campaign
+      const response = await apiService.deployFirmware(
+        firmware.id,
+        deploymentConfig.targetDevices,
+        `Deployment: ${firmware.version} to ${deploymentConfig.targetDevices.length} device(s)`
+      );
+      
       setIsDeploying(false);
-      alert('Deployment initiated successfully!');
-    }, 2000);
+      alert(`Deployment initiated successfully!\n\nTargeted Update ID: ${response.id || 'N/A'}\nDevices: ${response.devices_total || deploymentConfig.targetDevices.length}\nFirmware: ${firmware.version}\n\nDevices will receive the update on their next check-in.`);
+      
+      // Refresh device status after deployment
+      await loadRealDevices();
+    } catch (error: any) {
+      setIsDeploying(false);
+      console.error('Deployment failed:', error);
+      alert(`Deployment failed: ${error.message || 'Unknown error'}\n\nPlease check the console for details.`);
+    }
   };
 
   const handleSelectAllDevices = () => {

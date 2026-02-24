@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import AuditTrail from './AuditTrail';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Alert {
   id: string;
@@ -15,6 +16,7 @@ interface Alert {
 }
 
 const Alerts: React.FC = () => {
+  const { isDark } = useTheme();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,14 +101,14 @@ const Alerts: React.FC = () => {
         display: 'flex', 
         gap: '0.5rem', 
         marginBottom: '1.5rem',
-        borderBottom: '2px solid var(--border-color)',
+        borderBottom: isDark ? '2px solid #404040' : '2px solid var(--border-color)',
         paddingBottom: '0'
       }}>
         <button
           onClick={() => setActiveTab('overview')}
           style={{
             background: activeTab === 'overview' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'overview' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: activeTab === 'overview' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
             border: 'none',
             padding: '0.75rem 1.5rem',
             cursor: 'pointer',
@@ -131,7 +133,7 @@ const Alerts: React.FC = () => {
           onClick={() => setActiveTab('alerts')}
           style={{
             background: activeTab === 'alerts' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'alerts' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: activeTab === 'alerts' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
             border: 'none',
             padding: '0.75rem 1.5rem',
             cursor: 'pointer',
@@ -155,7 +157,7 @@ const Alerts: React.FC = () => {
           onClick={() => setActiveTab('analytics')}
           style={{
             background: activeTab === 'analytics' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'analytics' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: activeTab === 'analytics' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
             border: 'none',
             padding: '0.75rem 1.5rem',
             cursor: 'pointer',
@@ -192,19 +194,19 @@ const Alerts: React.FC = () => {
               Alert Summary
             </h2>
             <div style={{ display: 'grid', gap: '1rem' }}>
-              <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+              <div style={{ padding: '1rem', background: isDark ? '#242424' : 'var(--bg-secondary)', borderRadius: '8px' }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Alerts</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace' }}>{alerts.length}</p>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : '#2c3e50' }}>{alerts.length}</p>
               </div>
-              <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <div style={{ padding: '1rem', background: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444' }}>Unresolved</p>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#ef4444' }}>{unresolvedAlerts.length}</p>
               </div>
-              <div style={{ padding: '1rem', background: 'rgba(220, 38, 38, 0.1)', borderRadius: '8px', border: '1px solid rgba(220, 38, 38, 0.2)' }}>
+              <div style={{ padding: '1rem', background: isDark ? 'rgba(220, 38, 38, 0.15)' : 'rgba(220, 38, 38, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(220, 38, 38, 0.3)' : '1px solid rgba(220, 38, 38, 0.2)' }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#dc2626' }}>Critical</p>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#dc2626' }}>{alerts.filter(a => a.severity === 'critical').length}</p>
               </div>
-              <div style={{ padding: '1rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+              <div style={{ padding: '1rem', background: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(245, 158, 11, 0.2)' }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#f59e0b' }}>Warnings</p>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#f59e0b' }}>{alerts.filter(a => a.severity === 'warning').length}</p>
               </div>
@@ -227,8 +229,9 @@ const Alerts: React.FC = () => {
                 style={{
                   padding: '0.75rem',
                   borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-secondary)'
+                  border: isDark ? '1px solid #404040' : '1px solid var(--border-color)',
+                  background: isDark ? '#1a1a1a' : 'var(--bg-secondary)',
+                  color: isDark ? '#e0e0e0' : '#2c3e50'
                 }}
               >
                 <option value="all">All Severities</option>
@@ -237,9 +240,9 @@ const Alerts: React.FC = () => {
                 <option value="info">Info</option>
               </select>
             </div>
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
+            <div style={{ marginTop: '1.5rem', padding: '1rem', background: isDark ? '#242424' : 'var(--bg-secondary)', borderRadius: '8px' }}>
               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Filtered Results</p>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: '700' }}>{filteredAlerts.length} alerts</p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: '700', color: isDark ? '#e0e0e0' : '#2c3e50' }}>{filteredAlerts.length} alerts</p>
             </div>
           </div>
         </div>
@@ -273,11 +276,11 @@ const Alerts: React.FC = () => {
             <div className="alerts-list">
               {filteredAlerts.map((alert) => (
                 <div key={alert.id} className={`alert-item ${getSeverityColor(alert.severity)}`} style={{
-                  border: '1px solid var(--border-color)',
+                  border: isDark ? '1px solid #404040' : '1px solid var(--border-color)',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   marginBottom: '1rem',
-                  background: 'var(--bg-secondary)',
+                  background: isDark ? '#242424' : 'var(--bg-secondary)',
                   transition: 'all 0.2s',
                   borderLeft: `4px solid ${alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6'}`
                 }}>
@@ -290,11 +293,12 @@ const Alerts: React.FC = () => {
                   }}>
                     <span className="alert-icon" style={{ fontSize: '1.5rem' }}>{getSeverityIcon(alert.severity)}</span>
                     <span className="alert-type" style={{
-                      background: 'var(--bg-tertiary)',
+                      background: isDark ? '#1a1a1a' : 'var(--bg-tertiary)',
                       padding: '0.25rem 0.75rem',
                       borderRadius: '6px',
                       fontSize: '0.85rem',
-                      fontWeight: '600'
+                      fontWeight: '600',
+                      color: isDark ? '#e0e0e0' : '#2c3e50'
                     }}>{alert.type.replace('_', ' ').toUpperCase()}</span>
                     <span className="alert-device" style={{
                       color: 'var(--text-secondary)',
@@ -317,14 +321,14 @@ const Alerts: React.FC = () => {
                     alignItems: 'center',
                     marginTop: '0.75rem',
                     paddingTop: '0.75rem',
-                    borderTop: '1px solid var(--border-color)'
+                    borderTop: isDark ? '1px solid #404040' : '1px solid var(--border-color)'
                   }}>
                     <div className="alert-status" style={{
                       padding: '0.25rem 0.75rem',
                       borderRadius: '6px',
                       fontSize: '0.8rem',
                       fontWeight: '600',
-                      background: alert.resolved ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      background: alert.resolved ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
                       color: alert.resolved ? '#10b981' : '#ef4444'
                     }}>
                       {alert.resolved ? '✓ Resolved' : '● Active'}
@@ -362,7 +366,7 @@ const Alerts: React.FC = () => {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '1rem',
-                  background: `${item.color}15`,
+                  background: isDark ? `${item.color}20` : `${item.color}15`,
                   borderRadius: '8px',
                   border: `1px solid ${item.color}40`
                 }}>
@@ -386,9 +390,9 @@ const Alerts: React.FC = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '1rem',
-                background: 'rgba(16, 185, 129, 0.1)',
+                background: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
                 borderRadius: '8px',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
+                border: isDark ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)'
               }}>
                 <span style={{ fontWeight: '600', color: '#10b981' }}>Resolved</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'monospace', color: '#10b981' }}>{alerts.filter(a => a.resolved).length}</span>
@@ -398,21 +402,21 @@ const Alerts: React.FC = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '1rem',
-                background: 'rgba(239, 68, 68, 0.1)',
+                background: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
                 borderRadius: '8px',
-                border: '1px solid rgba(239, 68, 68, 0.3)'
+                border: isDark ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(239, 68, 68, 0.3)'
               }}>
                 <span style={{ fontWeight: '600', color: '#ef4444' }}>Unresolved</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'monospace', color: '#ef4444' }}>{unresolvedAlerts.length}</span>
               </div>
               <div style={{
                 padding: '1rem',
-                background: 'var(--bg-secondary)',
+                background: isDark ? '#242424' : 'var(--bg-secondary)',
                 borderRadius: '8px',
                 textAlign: 'center'
               }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resolution Rate</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace' }}>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
                   {alerts.length > 0 ? Math.round((alerts.filter(a => a.resolved).length / alerts.length) * 100) : 0}%
                 </p>
               </div>
@@ -439,7 +443,7 @@ const Alerts: React.FC = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '0.75rem 1rem',
-                    background: 'rgba(239, 68, 68, 0.05)',
+                    background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
                     borderRadius: '8px',
                     borderLeft: '4px solid #ef4444'
                   }}>
@@ -452,7 +456,7 @@ const Alerts: React.FC = () => {
                       borderRadius: '6px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      background: alert.resolved ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      background: alert.resolved ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
                       color: alert.resolved ? '#10b981' : '#ef4444',
                       whiteSpace: 'nowrap',
                       marginLeft: '1rem'

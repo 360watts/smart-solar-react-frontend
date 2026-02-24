@@ -564,6 +564,17 @@ class ApiService {
       }),
     });
   }
+
+  async deployFirmware(firmwareId: number, deviceSerials: string[], notes?: string): Promise<any> {
+    return this.request(`/ota/updates/multiple/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        firmware_id: firmwareId,
+        device_serials: deviceSerials,
+        notes: notes || ''
+      }),
+    });
+  }
 }
 
 export const apiService = new ApiService();

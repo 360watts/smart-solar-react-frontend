@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
+import { useTheme } from '../contexts/ThemeContext';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from './SiteDataPanel';
 
@@ -105,6 +106,7 @@ interface SolarSiteForm {
 }
 
 const Devices: React.FC = () => {
+  const { isDark } = useTheme();
   const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
@@ -637,18 +639,18 @@ const Devices: React.FC = () => {
                 <strong>Assigned User:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
               </div>
-              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-sync-card">
+              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-sync-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
                     <strong style={{ fontSize: '0.95rem', color: 'inherit' }} className="config-heading">Configuration</strong>
                     {devicePreset && (
-                      <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginTop: '2px' }} className="config-label">
+                      <div style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginTop: '2px' }} className="config-label">
                         {devicePreset.name || selectedDevice.config_version}
                       </div>
                     )}
                   </div>
                   {!selectedDevice.config_version ? (
-                    <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '0.875rem' }} className="config-no-preset">No preset assigned</span>
+                    <span style={{ color: isDark ? '#a0a0a0' : 'rgba(0, 0, 0, 0.5)', fontSize: '0.875rem' }} className="config-no-preset">No preset assigned</span>
                   ) : selectedDevice.pending_config_update ? (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -665,31 +667,31 @@ const Devices: React.FC = () => {
                 </div>
                 {selectedDevice.config_version && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
-                    <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                      <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Preset ID</div>
+                    <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                      <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Preset ID</div>
                       <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>{selectedDevice.config_version}</div>
                     </div>
                     {devicePreset?.slaves_count != null && (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Slaves</div>
+                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Slaves</div>
                         <div style={{ fontWeight: '500', color: 'inherit' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version != null && (
                       <div style={{ 
                         padding: '8px', 
-                        backgroundColor: 'rgba(0, 0, 0, 0.05)', 
+                        backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', 
                         borderRadius: '6px',
                         gridColumn: '1 / -1',
                         border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #dcfce7' : '2px solid #fef9c3'
                       }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '4px' }} className="config-label">Version Status</div>
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '4px' }} className="config-label">Version Status</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }} className="config-label">Device: </span>
+                            <span style={{ fontSize: '0.75rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)' }} className="config-label">Device: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</span>
-                            <span style={{ margin: '0 8px', color: 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
-                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }} className="config-label">Latest: </span>
+                            <span style={{ margin: '0 8px', color: isDark ? '#808080' : 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
+                            <span style={{ fontSize: '0.75rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)' }} className="config-label">Latest: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{devicePreset.version}</span>
                           </div>
                           {selectedDevice.config_ack_ver === devicePreset.version ? (
@@ -701,22 +703,22 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version == null && (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Device Version</div>
+                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Device Version</div>
                         <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</div>
                       </div>
                     )}
                     {devicePreset?.gateway_configuration?.general_settings?.last_updated && (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Modified</div>
+                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Modified</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(devicePreset.gateway_configuration.general_settings.last_updated).toLocaleDateString()}
                         </div>
                       </div>
                     )}
                     {selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Synced</div>
+                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Synced</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(selectedDevice.config_acked_at).toLocaleString()}
                           {(() => {
@@ -735,11 +737,11 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
-                        <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Apply Duration</div>
+                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Apply Duration</div>
                         <div style={{ fontWeight: '500', color: 'inherit' }}>
                           {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)} seconds
-                          <span style={{ color: 'rgba(0, 0, 0, 0.5)', marginLeft: '8px', fontSize: '0.75rem' }} className="config-label">
+                          <span style={{ color: isDark ? '#a0a0a0' : 'rgba(0, 0, 0, 0.5)', marginLeft: '8px', fontSize: '0.75rem' }} className="config-label">
                             (download → acknowledge)
                           </span>
                         </div>
@@ -766,9 +768,10 @@ const Devices: React.FC = () => {
                     type="checkbox"
                     checked={selectedDevice.logs_enabled || false}
                     onChange={(e) => handleToggleLogs(selectedDevice, e.target.checked)}
+                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                   />
                   <strong>Enable Device Logs</strong>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted, #9ca3af)' }}>
+                  <span style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#9ca3af' }}>
                     (Device will send logs when enabled)
                   </span>
                 </label>
@@ -966,7 +969,7 @@ const Devices: React.FC = () => {
               }}>
                 <div className="modal-body">
                   {siteError && (
-                    <p style={{ color: 'var(--danger-color, #ef4444)', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
+                    <p style={{ color: isDark ? '#fca5a5' : '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
                   )}
 
                   <div className="form-section">
@@ -982,6 +985,7 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, site_id: e.target.value })}
                           placeholder="e.g. site_mumbai_01"
                           autoComplete="off"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                         {!!siteDetails && <small className="form-hint">Site ID cannot be changed after creation.</small>}
                       </div>
@@ -993,6 +997,7 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, display_name: e.target.value })}
                           placeholder="e.g. Mumbai Rooftop"
                           autoComplete="off"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                     </div>
@@ -1010,6 +1015,7 @@ const Devices: React.FC = () => {
                           value={siteForm.latitude}
                           onChange={e => setSiteForm({ ...siteForm, latitude: e.target.value })}
                           placeholder="19.0760"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                       <div className="form-group">
@@ -1021,6 +1027,7 @@ const Devices: React.FC = () => {
                           value={siteForm.longitude}
                           onChange={e => setSiteForm({ ...siteForm, longitude: e.target.value })}
                           placeholder="72.8777"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                       <div className="form-group">
@@ -1031,6 +1038,7 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, timezone: e.target.value })}
                           placeholder="Asia/Kolkata"
                           autoComplete="off"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                     </div>
@@ -1048,6 +1056,7 @@ const Devices: React.FC = () => {
                           value={siteForm.capacity_kw}
                           onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })}
                           placeholder="5.0"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                       <div className="form-group">
@@ -1057,6 +1066,7 @@ const Devices: React.FC = () => {
                           step="any"
                           value={siteForm.tilt_deg}
                           onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })}
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                       <div className="form-group">
@@ -1066,6 +1076,7 @@ const Devices: React.FC = () => {
                           step="any"
                           value={siteForm.azimuth_deg}
                           onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })}
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                     </div>
@@ -1076,7 +1087,7 @@ const Devices: React.FC = () => {
                           id="dev-site-active"
                           checked={siteForm.is_active}
                           onChange={e => setSiteForm({ ...siteForm, is_active: e.target.checked })}
-                          style={{ width: '16px', height: '16px' }}
+                          style={{ width: '16px', height: '16px', background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                         Active
                       </label>
@@ -1117,6 +1128,7 @@ const Devices: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="SN-12345678"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                     </div>
@@ -1140,6 +1152,7 @@ const Devices: React.FC = () => {
                             onFocus={() => setShowUserDropdown(true)}
                             autoComplete="off"
                             className="full-width"
+                            style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                           />
                           {showUserDropdown && (
                             <div style={{
@@ -1207,6 +1220,7 @@ const Devices: React.FC = () => {
                           value={editingDevice ? editForm.config_version : createForm.config_version}
                           onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
                           className="full-width"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         >
                           <option value="">-- Manual Configuration --</option>
                           {presetsLoading && <option value="" disabled>Loading presets...</option>}
@@ -1226,6 +1240,7 @@ const Devices: React.FC = () => {
                           onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
                           autoComplete="off"
                           placeholder="Manual Config ID"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                       </div>
                     </div>
@@ -1268,6 +1283,7 @@ const Devices: React.FC = () => {
               value={searchTerm}
               onChange={handleSearch}
               className="search-input"
+              style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
             />
             {selectedDevices.size > 0 && (
               <button 
@@ -1306,6 +1322,7 @@ const Devices: React.FC = () => {
                   checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
                   onChange={handleSelectAll}
                   title="Select all displayed devices"
+                  style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
@@ -1334,6 +1351,7 @@ const Devices: React.FC = () => {
                     type="checkbox"
                     checked={selectedDevices.has(device.id)}
                     onChange={() => handleSelectDevice(device.id)}
+                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                   />
                 </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
@@ -1493,10 +1511,10 @@ const Devices: React.FC = () => {
               }}
               style={{
                 padding: '8px',
-                border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
                 borderRadius: '6px',
-                background: 'var(--bg-primary, #0f172a)',
-                color: 'var(--text-primary, #f8fafc)',
+                background: isDark ? '#1a1a1a' : '#0f172a',
+                color: isDark ? '#e0e0e0' : '#f8fafc',
                 cursor: 'pointer',
                 fontSize: '0.875rem'
               }}
@@ -1530,6 +1548,7 @@ const Devices: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="SN-12345678"
+                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                       />
                     </div>
                   </div>
@@ -1552,9 +1571,10 @@ const Devices: React.FC = () => {
                           }}
                           onFocus={() => setShowUserDropdown(true)}
                           autoComplete="off"
+                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                         />
                         {(editingDevice ? editForm.user : createForm.user) && (
-                          <div style={{ marginTop: '8px', fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+                          <div style={{ marginTop: '8px', fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
                             <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
                             <button
                               type="button"
@@ -1640,6 +1660,7 @@ const Devices: React.FC = () => {
                         value={editingDevice ? editForm.config_version : createForm.config_version}
                         onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
                         className="full-width"
+                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                       >
                         <option value="">-- Manual Configuration --</option>
                         {presetsLoading && <option value="" disabled>Loading presets...</option>}
@@ -1659,6 +1680,7 @@ const Devices: React.FC = () => {
                         onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
                         autoComplete="off"
                         placeholder="Manual Config ID"
+                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
                       />
                     </div>
                   </div>
