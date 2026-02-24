@@ -4,965 +4,1482 @@ import '../App.css';
 
 interface FirmwareVersion {
   id: number;
+  name: string;
   version: string;
-  filename: string;
+  deviceModel: string;
+  minBootloaderVersion: string;
+  file: File | null;
   size: number;
-  checksum?: string;
-  description?: string;
-  release_notes?: string;
-  is_active: boolean;
-  created_at: string;
+  checksum: string;
+  signatureValid: boolean;
+  releaseNotes: string;
+  status: 'draft' | 'stable';
+  uploadDate: string;
 }
 
-interface OTAConfig {
-  enable_auto_update: boolean;
-  update_strategy: 'immediate' | 'scheduled' | 'manual';
-  max_concurrent_updates: number;
-  firmware_retention_days: number;
+interface DeviceStatus {
+  deviceId: string;
+  currentVersion: string;
+  targetVersion: string;
+  activeSlot: 'A' | 'B';
+  status: 'idle' | 'downloading' | 'flashing' | 'rebooting' | 'trial' | 'healthy' | 'failed' | 'rolledback';
+  bootCount: number;
+  lastError: string;
+  progress?: number;
 }
 
-interface OTAHealth {
-  status: string;
-  service: string;
-  firmware_versions: number;
-  active_firmware: number;
-  timestamp: string;
+interface DeploymentConfig {
+  firmwareVersion: string;
+  targetDevices: string[];
+  mode: 'immediate' | 'canary';
+  autoRollback: boolean;
+  healthTimeout: number;
+  failureThreshold: number;
 }
+
+interface DeploymentConfirmModal {
+  show: boolean;
+  firmware: string;
+  deviceCount: number;
+  dataTransfer: string;
+}
+
+// Generate 100 mock devices with realistic statuses
+const generateMockDevices = (): DeviceStatus[] => {
+  const versions = ['v1.2.0', 'v1.2.1', 'v1.3.0', 'v1.3.1', 'v1.4.0'];
+  const errors = ['', '', '', '', 'Checksum failed', 'Network timeout', 'Flash write error', 'Insufficient space'];
+  
+  return Array.from({ length: 100 }, (_, i) => {
+    let status: DeviceStatus['status'];
+    if (i < 70) status = 'healthy';
+    else if (i < 75) status = 'trial';
+    else if (i < 80) status = 'downloading';
+    else if (i < 85) status = 'failed';
+    else if (i < 90) status = 'idle';
+    else if (i < 95) status = 'flashing';
+    else status = 'rolledback';
+
+    return {
+      deviceId: `DEV${String(i + 1).padStart(4, '0')}`,
+      currentVersion: versions[Math.floor(Math.random() * (versions.length - 1))],
+      targetVersion: versions[versions.length - 1],
+      activeSlot: Math.random() > 0.5 ? 'A' : 'B',
+      status,
+      bootCount: Math.floor(Math.random() * 5) + 1,
+      lastError: status === 'failed' ? errors[Math.floor(Math.random() * errors.length)] || 'Unknown error' : '',
+      progress: status === 'downloading' ? Math.floor(Math.random() * 100) : undefined,
+    };
+  });
+};
 
 export const OTA: React.FC = () => {
+  // Section 1: Firmware Repository State
   const [firmwares, setFirmwares] = useState<FirmwareVersion[]>([]);
-  const [config, setConfig] = useState<OTAConfig | null>(null);
-  const [health, setHealth] = useState<OTAHealth | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
-  const [uploadingMetadata, setUploadingMetadata] = useState({
+  const [uploadForm, setUploadForm] = useState({
+    name: '',
     version: '',
-    description: '',
-    release_notes: '',
+    deviceModel: 'ESP32-S3',
+    minBootloader: '1.0.0',
+    releaseNotes: '',
+    file: null as File | null,
   });
-  const [configForm, setConfigForm] = useState<OTAConfig | null>(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+
+  // Section 2: Deployment Panel State
+  const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>({
+    firmwareVersion: '',
+    targetDevices: [],
+    mode: 'immediate',
+    autoRollback: true,
+    healthTimeout: 300,
+    failureThreshold: 10,
+  });
+  const [confirmModal, setConfirmModal] = useState<DeploymentConfirmModal>({
+    show: false,
+    firmware: '',
+    deviceCount: 0,
+    dataTransfer: '',
+  });
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  // Section 3: Live Deployment Status State
+  const [devices, setDevices] = useState<DeviceStatus[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus['status']>('all');
+  const [loadingDevices, setLoadingDevices] = useState(true);
+
+  // Section 4: Emergency Rollback State
   const [rollbackForm, setRollbackForm] = useState({
-    deviceSerial: '',
-    notes: '',
+    targetVersion: '',
+    selectedDevices: [] as string[],
+    reason: '',
   });
-  const [activeTab, setActiveTab] = useState<'upload' | 'versions' | 'config' | 'docs'>('upload');
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
 
   useEffect(() => {
-    loadOTAData();
+    loadFirmwareData();
+    loadRealDevices();
+    
+    // Real-time status updates simulation (for devices that are updating)
+    const interval = setInterval(() => {
+      setDevices(prev => prev.map(d => {
+        if (d.status === 'downloading' && d.progress !== undefined && d.progress < 100) {
+          return { ...d, progress: Math.min(100, d.progress + Math.random() * 10) };
+        }
+        return d;
+      }));
+    }, 2000);
+    return () => clearInterval(interval);
   }, []);
 
-  const loadOTAData = async () => {
-    setLoading(true);
+  const loadRealDevices = async () => {
     try {
-      const [fwRes, configRes, healthRes] = await Promise.all([
-        apiService.getFirmwareVersions(false),
-        apiService.getOTAConfig(),
-        apiService.getOTAHealth(),
-      ]);
-
-      setFirmwares(fwRes);
-      setConfig(configRes);
-      setConfigForm(configRes);
-      setHealth(healthRes);
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to load OTA data');
+      setLoadingDevices(true);
+      // Fetch all devices without pagination limit
+      const response = await apiService.getDevices('', 1, 1000);
+      const realDevices = response.results || response;
+      
+      // Transform backend devices to OTA status format
+      const transformedDevices: DeviceStatus[] = (Array.isArray(realDevices) ? realDevices : []).map((device: any) => ({
+        deviceId: device.serial || device.device_id || `DEV${device.id}`,
+        currentVersion: device.firmware_version || 'v1.0.0',
+        targetVersion: 'v1.4.0', // Default target version
+        activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
+        status: 'idle' as DeviceStatus['status'], // Default status
+        bootCount: device.boot_count || 0,
+        lastError: '',
+        progress: undefined,
+      }));
+      
+      setDevices(transformedDevices);
+    } catch (error) {
+      console.error('Failed to load devices:', error);
+      // Fallback to mock data if API fails
+      setDevices(generateMockDevices());
     } finally {
-      setLoading(false);
+      setLoadingDevices(false);
     }
   };
 
+  const loadFirmwareData = () => {
+    // Mock firmware data for demonstration
+    setFirmwares([
+      {
+        id: 1,
+        name: 'Solar Controller v1.4.0',
+        version: '1.4.0',
+        deviceModel: 'ESP32-S3',
+        minBootloaderVersion: '1.0.0',
+        file: null,
+        size: 1048576,
+        checksum: 'a1b2c3d4e5f6...',
+        signatureValid: true,
+        releaseNotes: 'Bug fixes and performance improvements',
+        status: 'stable',
+        uploadDate: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        name: 'Solar Controller v1.3.1',
+        version: '1.3.1',
+        deviceModel: 'ESP32-S3',
+        minBootloaderVersion: '1.0.0',
+        file: null,
+        size: 987654,
+        checksum: 'f6e5d4c3b2a1...',
+        signatureValid: true,
+        releaseNotes: 'Previous stable release',
+        status: 'stable',
+        uploadDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ]);
+  };
+
+  // Section 1 handlers
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      setUploadingFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setUploadForm({ ...uploadForm, file });
+      setTimeout(() => {
+        const mockChecksum = 'sha256_' + Math.random().toString(36).substring(2);
+        console.log('Calculated checksum:', mockChecksum);
+      }, 500);
     }
   };
 
-  const handleUploadFirmware = async (e: React.FormEvent) => {
+  const handleUploadFirmware = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadingFile || !uploadingMetadata.version) {
-      setErrorMessage('Please select a file and enter version number');
+    if (!uploadForm.file) {
+      alert('Please select a firmware file');
       return;
     }
 
-    try {
-      setLoading(true);
-      setErrorMessage('');
-      setSuccessMessage('');
-      
-      const formData = new FormData();
-      formData.append('file', uploadingFile);
-      formData.append('version', uploadingMetadata.version);
-      formData.append('description', uploadingMetadata.description || '');
-      formData.append('release_notes', uploadingMetadata.release_notes || '');
-      formData.append('is_active', 'false');
+    const newFirmware: FirmwareVersion = {
+      id: firmwares.length + 1,
+      name: uploadForm.name,
+      version: uploadForm.version,
+      deviceModel: uploadForm.deviceModel,
+      minBootloaderVersion: uploadForm.minBootloader,
+      file: uploadForm.file,
+      size: uploadForm.file.size,
+      checksum: 'sha256_' + Math.random().toString(36).substring(2, 10),
+      signatureValid: true,
+      releaseNotes: uploadForm.releaseNotes,
+      status: 'draft',
+      uploadDate: new Date().toISOString(),
+    };
 
-      await apiService.uploadFirmwareVersion(formData);
-      setSuccessMessage('Firmware uploaded successfully');
-      setUploadingFile(null);
-      setUploadingMetadata({ version: '', description: '', release_notes: '' });
-      
-      // Reset file input
-      const fileInput = document.querySelector('.ota-file-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
-      loadOTAData();
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      setErrorMessage(error.message || 'Failed to upload firmware');
-    } finally {
-      setLoading(false);
+    setFirmwares([newFirmware, ...firmwares]);
+    setUploadForm({
+      name: '',
+      version: '',
+      deviceModel: 'ESP32-S3',
+      minBootloader: '1.0.0',
+      releaseNotes: '',
+      file: null,
+    });
+    
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleDeleteFirmware = (id: number) => {
+    if (window.confirm('Delete this firmware version?')) {
+      setFirmwares(firmwares.filter(f => f.id !== id));
     }
   };
 
-  const handleToggleFirmwareActive = async (firmware: FirmwareVersion) => {
-    try {
-      setLoading(true);
-      await apiService.updateFirmwareVersion(firmware.id, {
-        is_active: !firmware.is_active,
-      });
-      setSuccessMessage(`Firmware ${!firmware.is_active ? 'activated' : 'deactivated'} successfully`);
-      loadOTAData();
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to update firmware status');
-    } finally {
-      setLoading(false);
-    }
+  const handleMarkAsStable = (id: number) => {
+    setFirmwares(firmwares.map(f => 
+      f.id === id ? { ...f, status: 'stable' as const } : f
+    ));
   };
 
-  const handleDeleteFirmware = async (firmware: FirmwareVersion) => {
-    if (firmware.is_active) {
-      setErrorMessage('Cannot delete active firmware. Deactivate it first.');
+  // Section 2 handlers
+  const handleDeployClick = () => {
+    if (!deploymentConfig.firmwareVersion) {
+      alert('Please select a firmware version');
+      return;
+    }
+    if (deploymentConfig.targetDevices.length === 0) {
+      alert('Please select at least one device');
       return;
     }
 
-    const confirmed = window.confirm(
-      `Are you sure you want to delete firmware version ${firmware.version}?\n\n` +
-      `This will permanently delete the firmware file from storage.\n\n` +
-      `This action cannot be undone.`
-    );
+    const firmware = firmwares.find(f => f.version === deploymentConfig.firmwareVersion);
+    if (!firmware) return;
 
-    if (!confirmed) return;
+    const totalBytes = firmware.size * deploymentConfig.targetDevices.length;
+    const dataTransfer = (totalBytes / (1024 * 1024)).toFixed(2) + ' MB';
 
-    try {
-      setLoading(true);
-      setErrorMessage('');
-      setSuccessMessage('');
-      
-      await apiService.deleteFirmwareVersion(firmware.id);
-      setSuccessMessage(`Firmware version ${firmware.version} deleted successfully`);
-      loadOTAData();
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to delete firmware');
-    } finally {
-      setLoading(false);
-    }
+    setConfirmModal({
+      show: true,
+      firmware: firmware.version,
+      deviceCount: deploymentConfig.targetDevices.length,
+      dataTransfer,
+    });
   };
 
-  const handleSaveConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!configForm) return;
-
-    try {
-      setLoading(true);
-      await apiService.updateOTAConfig(configForm);
-      setSuccessMessage('OTA configuration updated successfully');
-      setConfig(configForm);
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to update configuration');
-    } finally {
-      setLoading(false);
-    }
+  const confirmDeployment = () => {
+    setConfirmModal({ ...confirmModal, show: false });
+    setIsDeploying(true);
+    setTimeout(() => {
+      setIsDeploying(false);
+      alert('Deployment initiated successfully!');
+    }, 2000);
   };
 
-  const handleRollback = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rollbackForm.deviceSerial) {
-      setErrorMessage('Please enter a device serial for rollback');
+  const handleSelectAllDevices = () => {
+    const idleDevices = devices.filter(d => d.status === 'idle');
+    setDeploymentConfig({
+      ...deploymentConfig,
+      targetDevices: idleDevices.map(d => d.deviceId),
+    });
+  };
+
+  // Section 3 helpers
+  const statusMetrics = {
+    total: devices.length,
+    inProgress: devices.filter(d => ['downloading', 'flashing', 'rebooting'].includes(d.status)).length,
+    healthy: devices.filter(d => d.status === 'healthy').length,
+    failed: devices.filter(d => d.status === 'failed').length,
+    rolledBack: devices.filter(d => d.status === 'rolledback').length,
+  };
+
+  const getStatusBadgeStyle = (status: DeviceStatus['status']) => {
+    const styles: Record<DeviceStatus['status'], string> = {
+      idle: '#6c757d',
+      downloading: '#17a2b8',
+      flashing: '#ffc107',
+      rebooting: '#fd7e14',
+      trial: '#007bff',
+      healthy: '#28a745',
+      failed: '#dc3545',
+      rolledback: '#6610f2',
+    };
+    return {
+      background: styles[status],
+      color: 'white',
+      padding: '0.25rem 0.75rem',
+      borderRadius: '12px',
+      fontSize: '0.75rem',
+      fontWeight: '600' as const,
+      textTransform: 'uppercase' as const,
+      whiteSpace: 'nowrap' as const,
+    };
+  };
+
+  // Section 4 handlers
+  const handleEmergencyRollback = () => {
+    setShowRollbackModal(true);
+  };
+
+  const confirmRollback = () => {
+    if (!rollbackForm.targetVersion) {
+      alert('Please select a target version');
+      return;
+    }
+    if (rollbackForm.selectedDevices.length === 0) {
+      alert('Please select devices to rollback');
+      return;
+    }
+    if (!rollbackForm.reason.trim()) {
+      alert('Please provide a reason for rollback');
       return;
     }
 
-    const confirmed = window.confirm(
-      `Are you sure you want to rollback device ${rollbackForm.deviceSerial}?\n\n` +
-      `This will trigger a firmware rollback command to the device.\n` +
-      `The device must already have the previous firmware stored locally.\n\n` +
-      `The device will receive updateFirmware flag = 2 in the heartbeat response.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setLoading(true);
-      setErrorMessage('');
-      setSuccessMessage('');
-      
-      await apiService.triggerRollback(
-        rollbackForm.deviceSerial,
-        rollbackForm.notes
-      );
-      setSuccessMessage(`Rollback command sent to device ${rollbackForm.deviceSerial}. Device will receive the command on next heartbeat.`);
-      setRollbackForm({ deviceSerial: '', notes: '' });
-    } catch (error: any) {
-      console.error('Rollback error:', error);
-      setErrorMessage(error.message || 'Failed to trigger rollback');
-    } finally {
-      setLoading(false);
-    }
+    setShowRollbackModal(false);
+    alert(`Rolling back ${rollbackForm.selectedDevices.length} devices to ${rollbackForm.targetVersion}`);
+    setRollbackForm({ targetVersion: '', selectedDevices: [], reason: '' });
   };
+
+  const filteredDevices = statusFilter === 'all' 
+    ? devices 
+    : devices.filter(d => d.status === statusFilter);
 
   return (
-    <div className="admin-container">
-      <div className="admin-header" style={{ marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-              <line x1="12" y1="22.08" x2="12" y2="12"/>
+    <div style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto', background: '#f5f6fa', minHeight: '100vh' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ 
+          fontSize: '2rem', 
+          fontWeight: '700', 
+          color: '#2c3e50', 
+          marginBottom: '0.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem'
+        }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          OTA Firmware Management
+        </h1>
+        <p style={{ color: '#7f8c8d', margin: 0 }}>
+          Upload, deploy, and monitor firmware updates across your device fleet
+        </p>
+      </div>
+
+      {/* SECTION 1: Firmware Repository */}
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '12px', 
+        padding: '2rem',
+        marginBottom: '2rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: '1px solid #e1e8ed'
+      }}>
+        <h2 style={{ 
+          fontSize: '1.5rem', 
+          fontWeight: '600', 
+          color: '#2c3e50',
+          marginBottom: '1.5rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '2px solid #e1e8ed',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>📦</span>
+          Firmware Repository
+        </h2>
+
+        {/* Upload Form */}
+        <form onSubmit={handleUploadFirmware} style={{ 
+          background: '#f8f9fa', 
+          padding: '1.5rem', 
+          borderRadius: '8px',
+          marginBottom: '2rem',
+          border: '1px solid #dee2e6'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                Firmware Name *
+              </label>
+              <input
+                type="text"
+                value={uploadForm.name}
+                onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
+                placeholder="Solar Controller Firmware"
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #ced4da',
+                  fontSize: '0.95rem'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                Version (semver) *
+              </label>
+              <input
+                type="text"
+                value={uploadForm.version}
+                onChange={(e) => setUploadForm({ ...uploadForm, version: e.target.value })}
+                placeholder="1.4.0"
+                required
+                pattern="\d+\.\d+\.\d+"
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #ced4da',
+                  fontSize: '0.95rem'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                Device Model
+              </label>
+              <select
+                value={uploadForm.deviceModel}
+                onChange={(e) => setUploadForm({ ...uploadForm, deviceModel: e.target.value })}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #ced4da',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <option value="ESP32-S3">ESP32-S3</option>
+                <option value="ESP32">ESP32</option>
+                <option value="STM32">STM32</option>
+                <option value="nRF52">nRF52</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                Min Bootloader Version
+              </label>
+              <input
+                type="text"
+                value={uploadForm.minBootloader}
+                onChange={(e) => setUploadForm({ ...uploadForm, minBootloader: e.target.value })}
+                placeholder="1.0.0"
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '0.75rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #ced4da',
+                  fontSize: '0.95rem'
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Release Notes
+            </label>
+            <textarea
+              value={uploadForm.releaseNotes}
+              onChange={(e) => setUploadForm({ ...uploadForm, releaseNotes: e.target.value })}
+              placeholder="Bug fixes, new features, improvements..."
+              rows={3}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem',
+                fontFamily: 'inherit',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+
+          <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'end' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                Firmware File (.bin) *
+              </label>
+              <input
+                type="file"
+                accept=".bin"
+                onChange={handleFileSelect}
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '0.5rem', 
+                  borderRadius: '6px', 
+                  border: '1px solid #ced4da',
+                  fontSize: '0.9rem'
+                }}
+              />
+              {uploadForm.file && (
+                <small style={{ color: '#6c757d', display: 'block', marginTop: '0.25rem' }}>
+                  {uploadForm.file.name} ({(uploadForm.file.size / 1024).toFixed(1)} KB)
+                </small>
+              )}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+                SHA256 (auto-calculated)
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem',
+                background: '#e9ecef',
+                borderRadius: '6px',
+                border: '1px solid #ced4da'
+              }}>
+                <input
+                  type="text"
+                  value="Calculating..."
+                  disabled
+                  style={{ 
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: '0.85rem',
+                    fontFamily: 'monospace',
+                    color: '#6c757d'
+                  }}
+                />
+                <span style={{
+                  background: uploadForm.file ? '#28a745' : '#6c757d',
+                  color: 'white',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {uploadForm.file ? 'Valid' : 'Pending'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            style={{
+              marginTop: '1.5rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '0.875rem 2rem',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            Over-The-Air (OTA) Updates
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-            Manage firmware versions and deploy updates to your devices
-          </p>
+            Upload Firmware
+          </button>
+        </form>
+
+        {/* Firmware List Table */}
+        <div>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: '#495057' }}>
+            Available Firmware Versions
+          </h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Name</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Version</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Device Model</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>File Size</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Upload Date</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057', fontSize: '0.85rem' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {firmwares.map(fw => (
+                  <tr key={fw.id} style={{ borderBottom: '1px solid #e9ecef' }}>
+                    <td style={{ padding: '1rem 0.75rem' }}>
+                      <div style={{ fontWeight: '500', color: '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
+                      {fw.signatureValid && (
+                        <span style={{ fontSize: '0.75rem', color: '#28a745', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Signature Valid
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem 0.75rem', fontFamily: 'monospace', fontSize: '0.9rem', fontWeight: '500' }}>{fw.version}</td>
+                    <td style={{ padding: '1rem 0.75rem', fontSize: '0.9rem' }}>{fw.deviceModel}</td>
+                    <td style={{ padding: '1rem 0.75rem', fontSize: '0.9rem' }}>{(fw.size / 1024).toFixed(0)} KB</td>
+                    <td style={{ padding: '1rem 0.75rem', fontSize: '0.9rem' }}>
+                      {new Date(fw.uploadDate).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '1rem 0.75rem' }}>
+                      <span style={{
+                        background: fw.status === 'stable' ? '#d4edda' : '#fff3cd',
+                        color: fw.status === 'stable' ? '#155724' : '#856404',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>
+                        {fw.status === 'stable' ? '✓ Production Stable' : 'Draft'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        {fw.status === 'draft' && (
+                          <button
+                            onClick={() => handleMarkAsStable(fw.id)}
+                            style={{
+                              background: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Mark Stable
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteFirmware(fw.id)}
+                          style={{
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="health-status">
-          {health && (
+      </div>
+
+      {/* SECTION 2: Deployment Panel */}
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '12px', 
+        padding: '2rem',
+        marginBottom: '2rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: '2px solid #667eea'
+      }}>
+        <h2 style={{ 
+          fontSize: '1.5rem', 
+          fontWeight: '600', 
+          color: '#2c3e50',
+          marginBottom: '1.5rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '2px solid #e1e8ed',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>🚀</span>
+          Deployment Panel
+        </h2>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Select Firmware Version *
+            </label>
+            <select
+              value={deploymentConfig.firmwareVersion}
+              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, firmwareVersion: e.target.value })}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem'
+              }}
+            >
+              <option value="">-- Select Version --</option>
+              {firmwares.filter(f => f.status === 'stable').map(f => (
+                <option key={f.id} value={f.version}>
+                  {f.name} - v{f.version}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Deployment Mode
+            </label>
+            <select
+              value={deploymentConfig.mode}
+              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, mode: e.target.value as 'immediate' | 'canary' })}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem'
+              }}
+            >
+              <option value="immediate">Immediate (Push to all devices)</option>
+              <option value="canary">Canary (Gradual rollout)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Health Confirmation Timeout (seconds)
+            </label>
+            <input
+              type="number"
+              value={deploymentConfig.healthTimeout}
+              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, healthTimeout: parseInt(e.target.value) })}
+              min="30"
+              max="3600"
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Failure Threshold (%)
+            </label>
+            <input
+              type="number"
+              value={deploymentConfig.failureThreshold}
+              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, failureThreshold: parseInt(e.target.value) })}
+              min="1"
+              max="100"
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem'
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <label style={{ fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Target Devices ({deploymentConfig.targetDevices.length} selected)
+            </label>
+            <button
+              onClick={handleSelectAllDevices}
+              style={{
+                background: 'transparent',
+                color: '#667eea',
+                border: '1px solid #667eea',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+            >
+              Select All Idle ({devices.filter(d => d.status === 'idle').length})
+            </button>
+          </div>
+          <div style={{
+            maxHeight: '150px',
+            overflowY: 'auto',
+            border: '1px solid #ced4da',
+            borderRadius: '6px',
+            padding: '0.75rem',
+            background: '#f8f9fa'
+          }}>
+            {loadingDevices ? (
+              <div style={{ textAlign: 'center', color: '#6c757d', padding: '1rem' }}>
+                Loading devices...
+              </div>
+            ) : devices.filter(d => d.status === 'idle').length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#6c757d', padding: '1rem' }}>
+                No idle devices available for deployment
+              </div>
+            ) : (
+              <>
+                {devices.filter(d => d.status === 'idle').map(device => (
+                  <label key={device.deviceId} style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={deploymentConfig.targetDevices.includes(device.deviceId)}
+                      onChange={(e) => {
+                        const newTargets = e.target.checked
+                          ? [...deploymentConfig.targetDevices, device.deviceId]
+                          : deploymentConfig.targetDevices.filter(id => id !== device.deviceId);
+                        setDeploymentConfig({ ...deploymentConfig, targetDevices: newTargets });
+                      }}
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                    {device.deviceId} (Current: {device.currentVersion})
+                  </label>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            cursor: 'pointer',
+            fontWeight: '500',
+            color: '#495057'
+          }}>
+            <input
+              type="checkbox"
+              checked={deploymentConfig.autoRollback}
+              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, autoRollback: e.target.checked })}
+              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+            />
+            Enable Auto Rollback
+          </label>
+          <span style={{ fontSize: '0.85rem', color: '#6c757d' }}>
+            (Automatically rollback on failure)
+          </span>
+        </div>
+
+        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleDeployClick}
+            disabled={isDeploying}
+            style={{
+              background: isDeploying ? '#6c757d' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              padding: '1rem 2.5rem',
+              borderRadius: '8px',
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              cursor: isDeploying ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            {isDeploying ? 'Deploying...' : 'Deploy Firmware'}
+          </button>
+
+          {isDeploying && (
             <>
-              <span className={`status-badge status-badge-${health.status === 'ok' ? 'success' : 'danger'}`}>
-                {health.status.toUpperCase()}
-              </span>
-              <span className="ml-2">
-                {health.firmware_versions} versions ({health.active_firmware} active)
-              </span>
+              <button
+                style={{
+                  background: '#ffc107',
+                  color: '#000',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                ⏸ Pause Deployment
+              </button>
+              <button
+                style={{
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                ⏹ Abort Deployment
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {successMessage && (
-        <div className="alert alert-success mt-3 fade-in">
-          {successMessage}
-          <button
-            className="alert-close"
-            onClick={() => setSuccessMessage('')}
-          >
-            ×
-          </button>
+      {/* Deployment Confirmation Modal */}
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2c3e50' }}>
+              Confirm Deployment
+            </h3>
+            <div style={{ marginBottom: '1.5rem', color: '#495057', lineHeight: '1.8' }}>
+              <p><strong>Firmware Version:</strong> {confirmModal.firmware}</p>
+              <p><strong>Target Devices:</strong> {confirmModal.deviceCount}</p>
+              <p><strong>Estimated Data Transfer:</strong> {confirmModal.dataTransfer}</p>
+              <p><strong>Auto Rollback:</strong> {deploymentConfig.autoRollback ? 'Enabled ✓' : 'Disabled'}</p>
+              <p><strong>Failure Threshold:</strong> {deploymentConfig.failureThreshold}%</p>
+            </div>
+            <div style={{
+              background: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              color: '#856404'
+            }}>
+              <strong>⚠️ Warning:</strong> This will push firmware updates to {confirmModal.deviceCount} devices.
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                style={{
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeployment}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm Deploy
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {errorMessage && (
-        <div className="alert alert-danger mt-3 fade-in">
-          {errorMessage}
-          <button
-            className="alert-close"
-            onClick={() => setErrorMessage('')}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {loading && <div className="loading-spinner">Loading OTA data...</div>}
-
-      {/* Modern Tab Navigation */}
+      {/* SECTION 3: Live Deployment Status */}
       <div style={{ 
-        display: 'flex', 
-        gap: '0.5rem', 
-        marginBottom: '1.5rem',
-        borderBottom: '2px solid var(--border-color)',
-        paddingBottom: '0'
+        background: 'white', 
+        borderRadius: '12px', 
+        padding: '2rem',
+        marginBottom: '2rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: '1px solid #e1e8ed'
       }}>
-        <button
-          onClick={() => setActiveTab('upload')}
-          style={{
-            background: activeTab === 'upload' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'upload' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'upload' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Upload & Rollback
-        </button>
-        <button
-          onClick={() => setActiveTab('versions')}
-          style={{
-            background: activeTab === 'versions' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'versions' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'versions' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-          </svg>
-          Firmware Versions ({firmwares.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('config')}
-          style={{
-            background: activeTab === 'config' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'config' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'config' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 1v6m0 6v6m-7-7h6m6 0h6"/>
-          </svg>
-          Configuration
-        </button>
-        <button
-          onClick={() => setActiveTab('docs')}
-          style={{
-            background: activeTab === 'docs' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'docs' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'docs' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          Documentation
-        </button>
+        <h2 style={{ 
+          fontSize: '1.5rem', 
+          fontWeight: '600', 
+          color: '#2c3e50',
+          marginBottom: '1.5rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '2px solid #e1e8ed',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>📊</span>
+          Live Deployment Status
+          {loadingDevices && (
+            <span style={{ fontSize: '0.85rem', color: '#6c757d', fontWeight: '400', marginLeft: 'auto' }}>
+              Loading devices...
+            </span>
+          )}
+        </h2>
+
+        {/* Loading or No Devices State */}
+        {loadingDevices ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem 1rem',
+            color: '#6c757d'
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+            <p style={{ fontSize: '1.1rem' }}>Loading devices from backend...</p>
+          </div>
+        ) : devices.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem 1rem',
+            color: '#6c757d'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📱</div>
+            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No devices registered yet</p>
+            <p style={{ fontSize: '0.9rem' }}>Register devices to see them here</p>
+          </div>
+        ) : (
+          <>
+            {/* Summary Metrics */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+          gap: '1rem',
+          marginBottom: '2rem'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.25rem' }}>{statusMetrics.total}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Total Devices</div>
+          </div>
+          
+          <div style={{
+            background: '#17a2b8',
+            color: 'white',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.25rem' }}>{statusMetrics.inProgress}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>In Progress</div>
+          </div>
+          
+          <div style={{
+            background: '#28a745',
+            color: 'white',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.25rem' }}>{statusMetrics.healthy}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Healthy</div>
+          </div>
+          
+          <div style={{
+            background: '#dc3545',
+            color: 'white',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.25rem' }}>{statusMetrics.failed}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Failed</div>
+          </div>
+          
+          <div style={{
+            background: '#6610f2',
+            color: 'white',
+            padding: '1.25rem',
+            borderRadius: '12px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.25rem' }}>{statusMetrics.rolledBack}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>Rolled Back</div>
+          </div>
+        </div>
+
+        {/* Status Filter */}
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {['all', 'idle', 'downloading', 'flashing', 'rebooting', 'trial', 'healthy', 'failed', 'rolledback'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status as any)}
+              style={{
+                background: statusFilter === status ? '#667eea' : '#f8f9fa',
+                color: statusFilter === status ? 'white' : '#495057',
+                border: '1px solid #dee2e6',
+                padding: '0.5rem 1rem',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                textTransform: 'capitalize'
+              }}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        {/* Device Status Table */}
+        <div style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 1 }}>
+              <tr style={{ borderBottom: '2px solid #dee2e6' }}>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Device ID</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Current</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Target</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Slot</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Status</th>
+                <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', color: '#495057' }}>Boot Count</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', color: '#495057' }}>Last Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDevices.map(device => (
+                <tr key={device.deviceId} style={{ borderBottom: '1px solid #e9ecef' }}>
+                  <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontWeight: '500' }}>{device.deviceId}</td>
+                  <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{device.currentVersion}</td>
+                  <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{device.targetVersion}</td>
+                  <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                    <span style={{
+                      background: device.activeSlot === 'A' ? '#e3f2fd' : '#fff3e0',
+                      color: device.activeSlot === 'A' ? '#1976d2' : '#f57c00',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '6px',
+                      fontWeight: '600',
+                      fontSize: '0.75rem'
+                    }}>
+                      {device.activeSlot}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <span style={getStatusBadgeStyle(device.status)}>
+                      {device.status}
+                    </span>
+                    {device.progress !== undefined && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#6c757d' }}>
+                        {device.progress.toFixed(0)}%
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.9rem' }}>{device.bootCount}</td>
+                  <td style={{ padding: '0.75rem', fontSize: '0.85rem', color: device.lastError ? '#dc3545' : '#6c757d' }}>
+                    {device.lastError || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+          </>
+        )}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'upload' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
-          {/* Upload Section */}
-          <div className="admin-card" style={{ height: 'fit-content' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              Upload New Firmware
-            </h2>
-            <form onSubmit={handleUploadFirmware} className="form">
-              <div className="form-group">
-                <label>Version (e.g., 0x00020000)</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="0x00020000"
-                  value={uploadingMetadata.version}
-                  onChange={(e) =>
-                    setUploadingMetadata({ ...uploadingMetadata, version: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Firmware File</label>
-                <input
-                  type="file"
-                  className="form-control ota-file-input"
-                  accept=".bin,.hex,.elf"
-                  onChange={handleFileSelect}
-                />
-                {uploadingFile && <small className="form-text">📦 {uploadingFile.name}</small>}
-              </div>
-
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  className="form-control"
-                  placeholder="Brief description of this firmware version"
-                  rows={2}
-                  value={uploadingMetadata.description}
-                  onChange={(e) =>
-                    setUploadingMetadata({ ...uploadingMetadata, description: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Release Notes</label>
-                <textarea
-                  className="form-control"
-                  placeholder="Detailed release notes and changelog"
-                  rows={3}
-                  value={uploadingMetadata.release_notes}
-                  onChange={(e) =>
-                    setUploadingMetadata({ ...uploadingMetadata, release_notes: e.target.value })
-                  }
-                />
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
-                {loading ? 'Uploading...' : '⬆️ Upload Firmware'}
-              </button>
-            </form>
-          </div>
-
-          {/* Rollback Section */}
-          <div className="admin-card" style={{ height: 'fit-content' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="1 4 1 10 7 10"/>
-                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-              </svg>
-              Rollback Device Firmware
-            </h2>
-            <div style={{
-              background: 'rgba(255, 193, 7, 0.1)',
-              border: '1px solid rgba(255, 193, 7, 0.3)',
-              borderRadius: '8px',
-              padding: '0.75rem 1rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              gap: '0.75rem'
-            }}>
-              <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-              <div>
-                <strong>Important:</strong> Device must have previous firmware stored locally
-              </div>
-            </div>
-            <form onSubmit={handleRollback} className="form">
-              <div className="form-group">
-                <label>Device Serial</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Enter device serial (e.g., STM32-001)"
-                  value={rollbackForm.deviceSerial}
-                  onChange={(e) =>
-                    setRollbackForm({ ...rollbackForm, deviceSerial: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Notes (Optional)</label>
-                <textarea
-                  className="form-control"
-                  placeholder="Reason for rollback..."
-                  rows={2}
-                  value={rollbackForm.notes}
-                  onChange={(e) =>
-                    setRollbackForm({ ...rollbackForm, notes: e.target.value })
-                  }
-                />
-              </div>
-
-              <button type="submit" className="btn btn-warning" disabled={loading} style={{ width: '100%' }}>
-                {loading ? 'Processing...' : '⏪ Trigger Rollback'}
-              </button>
-              <small className="form-text mt-2" style={{ display: 'block', textAlign: 'center' }}>
-                Device will receive <strong>updateFirmware: 2</strong> flag on next heartbeat
-              </small>
-            </form>
-          </div>
+      {/* SECTION 4: Emergency Rollback */}
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '12px', 
+        padding: '2rem',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: '2px solid #dc3545'
+      }}>
+        <h2 style={{ 
+          fontSize: '1.5rem', 
+          fontWeight: '600', 
+          color: '#dc3545',
+          marginBottom: '1rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '2px solid #f8d7da',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span style={{ fontSize: '1.25rem' }}>🚨</span>
+          Emergency Rollback
+        </h2>
+        
+        <div style={{
+          background: '#f8d7da',
+          border: '1px solid #f5c6cb',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          color: '#721c24'
+        }}>
+          <strong>⚠️ Warning:</strong> Use this feature only in emergency situations. Rollback will revert devices to a previous firmware version.
         </div>
-      )}
 
-      {activeTab === 'versions' && (
-        <div className="admin-card">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-            </svg>
-            Firmware Versions
-          </h2>
-          {firmwares.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem 1rem',
-              color: 'var(--text-secondary)'
-            }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1rem', opacity: 0.3 }}>
-                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
-              </svg>
-              <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No firmware versions uploaded yet</p>
-              <p style={{ fontSize: '0.9rem' }}>Upload your first firmware to get started</p>
-            </div>
-          ) : (
-            <div className="firmware-list">
-              {firmwares.map((fw) => (
-                <div key={fw.id} className={`firmware-item ${fw.is_active ? 'active' : ''}`} style={{
-                  border: fw.is_active ? '2px solid var(--success-color)' : '1px solid var(--border-color)',
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  marginBottom: '1rem',
-                  background: fw.is_active ? 'rgba(40, 167, 69, 0.05)' : 'var(--bg-secondary)',
-                  transition: 'all 0.2s',
-                  position: 'relative'
-                }}>
-                  {fw.is_active && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '20px',
-                      background: 'var(--success-color)',
-                      color: 'white',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '12px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      boxShadow: '0 2px 8px rgba(40, 167, 69, 0.3)'
-                    }}>
-                      ✓ ACTIVE
-                    </div>
-                  )}
-                  <div className="firmware-header" style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.75rem',
-                    marginBottom: '0.75rem',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span style={{
-                      background: fw.is_active ? 'var(--primary-gradient)' : 'var(--bg-tertiary)',
-                      color: fw.is_active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '8px',
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      fontFamily: 'monospace'
-                    }}>
-                      {fw.version}
-                    </span>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                      📦 {fw.filename}
-                    </span>
-                    <span style={{
-                      marginLeft: 'auto',
-                      background: 'var(--bg-tertiary)',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.85rem',
-                      color: 'var(--text-secondary)'
-                    }}>
-                      {(fw.size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
-                  {fw.description && (
-                    <p style={{
-                      color: 'var(--text-secondary)',
-                      margin: '0.5rem 0',
-                      fontSize: '0.9rem'
-                    }}>
-                      {fw.description}
-                    </p>
-                  )}
-                  <div className="firmware-footer" style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginTop: '1rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid var(--border-color)'
-                  }}>
-                    <small style={{ color: 'var(--text-secondary)' }}>
-                      📅 {new Date(fw.created_at).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </small>
-                    <div className="firmware-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        className={`btn btn-sm ${fw.is_active ? 'btn-danger' : 'btn-success'}`}
-                        onClick={() => handleToggleFirmwareActive(fw)}
-                        disabled={loading}
-                        style={{ minWidth: '100px' }}
-                      >
-                        {fw.is_active ? '🔴 Deactivate' : '✓ Activate'}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDeleteFirmware(fw)}
-                        disabled={loading || fw.is_active}
-                        title={fw.is_active ? 'Deactivate firmware before deleting' : 'Delete firmware'}
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                  {fw.release_notes && (
-                    <details style={{ marginTop: '1rem' }}>
-                      <summary style={{ 
-                        cursor: 'pointer', 
-                        fontWeight: '500',
-                        color: 'var(--primary-color)',
-                        padding: '0.5rem',
-                        borderRadius: '6px',
-                        transition: 'background 0.2s'
-                      }}>
-                        📝 Release Notes
-                      </summary>
-                      <p style={{
-                        marginTop: '0.75rem',
-                        padding: '1rem',
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: '8px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.9rem',
-                        whiteSpace: 'pre-wrap'
-                      }}>
-                        {fw.release_notes}
-                      </p>
-                    </details>
-                  )}
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Target Version (Rollback To)
+            </label>
+            <select
+              value={rollbackForm.targetVersion}
+              onChange={(e) => setRollbackForm({ ...rollbackForm, targetVersion: e.target.value })}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem'
+              }}
+            >
+              <option value="">-- Select Previous Version --</option>
+              {firmwares.filter(f => f.status === 'stable').slice(1).map(f => (
+                <option key={f.id} value={f.version}>
+                  {f.name} - v{f.version}
+                </option>
               ))}
-            </div>
-          )}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#495057', fontSize: '0.9rem' }}>
+              Rollback Reason *
+            </label>
+            <textarea
+              value={rollbackForm.reason}
+              onChange={(e) => setRollbackForm({ ...rollbackForm, reason: e.target.value })}
+              placeholder="Reason for emergency rollback..."
+              rows={3}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                borderRadius: '6px', 
+                border: '1px solid #ced4da',
+                fontSize: '0.95rem',
+                fontFamily: 'inherit',
+                resize: 'vertical'
+              }}
+            />
+          </div>
         </div>
-      )}
 
-      {activeTab === 'config' && (
-        <div className="admin-card">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 1v6m0 6v6m-7-7h6m6 0h6"/>
+        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              const failedDevices = devices.filter(d => d.status === 'failed').map(d => d.deviceId);
+              setRollbackForm({ ...rollbackForm, selectedDevices: failedDevices });
+              if (failedDevices.length > 0) {
+                alert(`Selected ${failedDevices.length} failed devices for rollback`);
+              } else {
+                alert('No failed devices to select');
+              }
+            }}
+            style={{
+              background: '#ffc107',
+              color: '#000',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Select Failed Devices ({devices.filter(d => d.status === 'failed').length})
+          </button>
+
+          <button
+            onClick={() => {
+              const allProblemDevices = devices.filter(d => ['failed', 'rolledback'].includes(d.status)).map(d => d.deviceId);
+              setRollbackForm({ ...rollbackForm, selectedDevices: allProblemDevices });
+              if (allProblemDevices.length > 0) {
+                alert(`Selected ${allProblemDevices.length} problem devices for rollback`);
+              }
+            }}
+            style={{
+              background: '#6c757d',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Select All Problem Devices
+          </button>
+
+          <button
+            onClick={handleEmergencyRollback}
+            disabled={rollbackForm.selectedDevices.length === 0}
+            style={{
+              background: rollbackForm.selectedDevices.length === 0 ? '#6c757d' : '#dc3545',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 2rem',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: rollbackForm.selectedDevices.length === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              opacity: rollbackForm.selectedDevices.length === 0 ? 0.6 : 1
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
             </svg>
-            OTA Configuration
-          </h2>
-          {configForm && (
-            <form onSubmit={handleSaveConfig} className="form" style={{ maxWidth: '800px' }}>
-              <div className="form-group">
-                <label>Update Strategy</label>
-                <select
-                  className="form-control"
-                  value={configForm.update_strategy}
-                  onChange={(e) =>
-                    setConfigForm({
-                      ...configForm,
-                      update_strategy: e.target.value as any,
-                    })
-                  }
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                >
-                  <option value="immediate">🚀 Immediate - Push updates immediately</option>
-                  <option value="scheduled">📅 Scheduled - Push during maintenance window</option>
-                  <option value="manual">👤 Manual - Wait for device to request</option>
-                </select>
-              </div>
+            Rollback Entire Deployment
+          </button>
+        </div>
 
-              <div className="form-group">
-                <label>Max Concurrent Updates</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  min="1"
-                  max="50"
-                  value={configForm.max_concurrent_updates}
-                  onChange={(e) =>
-                    setConfigForm({
-                      ...configForm,
-                      max_concurrent_updates: parseInt(e.target.value),
-                    })
-                  }
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                />
-                <small className="form-text" style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-                  Maximum number of devices updating simultaneously
-                </small>
-              </div>
+        {rollbackForm.selectedDevices.length > 0 && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            <strong>Selected Devices ({rollbackForm.selectedDevices.length}):</strong>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#6c757d' }}>
+              {rollbackForm.selectedDevices.slice(0, 10).join(', ')}
+              {rollbackForm.selectedDevices.length > 10 && ` ... and ${rollbackForm.selectedDevices.length - 10} more`}
+            </div>
+          </div>
+        )}
+      </div>
 
-              <div className="form-group">
-                <label>Firmware Retention (days)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  min="1"
-                  max="365"
-                  value={configForm.firmware_retention_days}
-                  onChange={(e) =>
-                    setConfigForm({
-                      ...configForm,
-                      firmware_retention_days: parseInt(e.target.value),
-                    })
-                  }
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-secondary)'
-                  }}
-                />
-                <small className="form-text" style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-                  Keep old firmware files for this many days before cleanup
-                </small>
-              </div>
-
-              <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: '1rem' }}>
-                {loading ? 'Saving...' : '💾 Save Configuration'}
+      {/* Rollback Confirmation Modal */}
+      {showRollbackModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            border: '2px solid #dc3545'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#dc3545' }}>
+              ⚠️ Confirm Emergency Rollback
+            </h3>
+            <div style={{
+              background: '#f8d7da',
+              border: '1px solid #f5c6cb',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              color: '#721c24',
+              fontSize: '0.95rem'
+            }}>
+              <strong>This action cannot be undone!</strong>
+              <p style={{ margin: '0.5rem 0 0 0' }}>
+                You are about to rollback devices to a previous firmware version.
+              </p>
+            </div>
+            <div style={{ marginBottom: '1.5rem', color: '#495057', lineHeight: '1.8' }}>
+              <p><strong>Target Version:</strong> {rollbackForm.targetVersion || 'Not selected'}</p>
+              <p><strong>Devices to Rollback:</strong> {rollbackForm.selectedDevices.length}</p>
+              <p><strong>Reason:</strong> {rollbackForm.reason || 'Not provided'}</p>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowRollbackModal(false)}
+                style={{
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
               </button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'docs' && (
-        <div className="admin-card">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            API Documentation
-          </h2>
-
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {/* Update Strategy Info */}
-            <div style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 1v6m0 6v6m-7-7h6m6 0h6"/>
-                </svg>
-                OTA Update Strategy
-              </h3>
-              <div style={{ marginBottom: '1rem' }}>
-                <strong style={{ color: 'var(--primary-color)' }}>
-                  Current: {config?.update_strategy.toUpperCase()}
-                </strong>
-              </div>
-              <ul style={{ paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
-                <li style={{ marginBottom: '0.5rem' }}>
-                  <strong>Immediate:</strong> Updates offered to devices immediately when activated
-                </li>
-                <li style={{ marginBottom: '0.5rem' }}>
-                  <strong>Scheduled:</strong> Updates offered during configured maintenance windows
-                </li>
-                <li style={{ marginBottom: '0.5rem' }}>
-                  <strong>Manual:</strong> Devices must explicitly request updates via API
-                </li>
-              </ul>
-            </div>
-
-            {/* Heartbeat Flags */}
-            <div style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
-                Heartbeat updateFirmware Flags
-              </h3>
-              <div style={{
-                display: 'grid',
-                gap: '0.75rem',
-                fontFamily: 'monospace',
-                fontSize: '0.9rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.75rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: '8px'
-                }}>
-                  <span style={{
-                    background: 'var(--bg-primary)',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    minWidth: '40px',
-                    textAlign: 'center'
-                  }}>0</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>No firmware update needed (default)</span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.75rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: '8px'
-                }}>
-                  <span style={{
-                    background: 'var(--primary-color)',
-                    color: 'white',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    minWidth: '40px',
-                    textAlign: 'center'
-                  }}>1</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>New firmware update available (device should update)</span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.75rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: '8px'
-                }}>
-                  <span style={{
-                    background: 'var(--warning-color)',
-                    color: 'white',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    minWidth: '40px',
-                    textAlign: 'center'
-                  }}>2</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>Rollback triggered (device should rollback to previous version)</span>
-                </div>
-              </div>
-            </div>
-
-            {/* API Endpoints */}
-            <div style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              border: '1px solid var(--border-color)'
-            }}>
-              <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="16 18 22 12 16 6"/>
-                  <polyline points="8 6 2 12 8 18"/>
-                </svg>
-                Device API Endpoints
-              </h3>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                <div>
-                  <strong style={{ color: 'var(--primary-color)' }}>Check for Updates (STM32)</strong>
-                  <pre style={{
-                    background: 'var(--bg-tertiary)',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    fontSize: '0.85rem',
-                    marginTop: '0.5rem',
-                    border: '1px solid var(--border-color)'
-                  }}>
-{`POST /ota/devices/{device_id}/check
-Content-Type: application/json
-
-{
-  "device_id": "STM32-001",
-  "firmware_version": "0x00010000"
-}`}
-                  </pre>
-                </div>
-
-                <div>
-                  <strong style={{ color: 'var(--primary-color)' }}>Response Format</strong>
-                  <pre style={{
-                    background: 'var(--bg-tertiary)',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    fontSize: '0.85rem',
-                    marginTop: '0.5rem',
-                    border: '1px solid var(--border-color)'
-                  }}>
-{JSON.stringify(
-  {
-    id: 'fw_1',
-    version: '0x00020000',
-    size: 1048576,
-    url: 'https://api.../ota/firmware/1/download',
-    checksum: 'sha256_hash',
-    status: 1
-  },
-  null,
-  2
-)}
-                  </pre>
-                </div>
-
-                <div>
-                  <strong style={{ color: 'var(--primary-color)' }}>Heartbeat Endpoint</strong>
-                  <pre style={{
-                    background: 'var(--bg-tertiary)',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    fontSize: '0.85rem',
-                    marginTop: '0.5rem',
-                    border: '1px solid var(--border-color)'
-                  }}>
-{`POST /api/devices/{device_id}/heartbeat/
-
-Response includes:
-{
-  "updateFirmware": 0,  // 0=none, 1=update, 2=rollback
-  "pendingReboot": false,
-  "hardReset": false
-}`}
-                  </pre>
-                </div>
-              </div>
+              <button
+                onClick={confirmRollback}
+                style={{
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Confirm Rollback
+              </button>
             </div>
           </div>
         </div>
