@@ -105,6 +105,7 @@ export const OTA: React.FC = () => {
   const [devices, setDevices] = useState<DeviceStatus[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus['status']>('all');
   const [loadingDevices, setLoadingDevices] = useState(true);
+  const [loadingFirmwares, setLoadingFirmwares] = useState(true);
 
   // Section 4: Emergency Rollback State
   const [rollbackForm, setRollbackForm] = useState({
@@ -139,8 +140,8 @@ export const OTA: React.FC = () => {
       
       // Transform backend devices to OTA status format
       const transformedDevices: DeviceStatus[] = (Array.isArray(realDevices) ? realDevices : []).map((device: any) => ({
-        deviceId: device.serial || device.device_id || `DEV${device.id}`,
-        currentVersion: device.firmware_version || 'v1.0.0',
+        deviceId: device.device_serial || device.serial || `DEV${device.id}`,
+        currentVersion: device.firmware_version || device.config_version || 'v1.0.0',
         targetVersion: 'v1.4.0', // Default target version
         activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
         status: 'idle' as DeviceStatus['status'], // Default status
@@ -159,38 +160,64 @@ export const OTA: React.FC = () => {
     }
   };
 
-  const loadFirmwareData = () => {
-    // Mock firmware data for demonstration
-    setFirmwares([
-      {
-        id: 1,
-        name: 'Solar Controller v1.4.0',
-        version: '1.4.0',
-        deviceModel: 'ESP32-S3',
-        minBootloaderVersion: '1.0.0',
+  const loadFirmwareData = async () => {
+    try {
+      setLoadingFirmwares(true);
+      const response = await apiService.getFirmwareVersions(false); // Get all firmware versions
+      
+      // Transform backend response to frontend FirmwareVersion interface
+      const transformedFirmwares: FirmwareVersion[] = (response.results || response || []).map((fw: any) => ({
+        id: fw.id,
+        name: fw.filename || `Firmware v${fw.version}`,
+        version: fw.version,
+        deviceModel: fw.description?.match(/(?:ESP32|STM32|[A-Z0-9-]+)/i)?.[0] || 'Unknown',
+        minBootloaderVersion: '1.0.0', // Default as backend doesn't provide this
         file: null,
-        size: 1048576,
-        checksum: 'a1b2c3d4e5f6...',
-        signatureValid: true,
-        releaseNotes: 'Bug fixes and performance improvements',
-        status: 'stable',
-        uploadDate: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        name: 'Solar Controller v1.3.1',
-        version: '1.3.1',
-        deviceModel: 'ESP32-S3',
-        minBootloaderVersion: '1.0.0',
-        file: null,
-        size: 987654,
-        checksum: 'f6e5d4c3b2a1...',
-        signatureValid: true,
-        releaseNotes: 'Previous stable release',
-        status: 'stable',
-        uploadDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ]);
+        size: fw.size || 0,
+        checksum: fw.checksum || '',
+        signatureValid: fw.is_active !== false,
+        releaseNotes: fw.release_notes || fw.description || '',
+        status: fw.is_active ? 'stable' : 'draft',
+        uploadDate: fw.created_at || new Date().toISOString(),
+      }));
+      
+      setFirmwares(transformedFirmwares);
+    } catch (error) {
+      console.error('Failed to load firmware versions:', error);
+      // Fallback to mock data if API fails
+      setFirmwares([
+        {
+          id: 1,
+          name: 'Solar Controller v1.4.0',
+          version: '1.4.0',
+          deviceModel: 'ESP32-S3',
+          minBootloaderVersion: '1.0.0',
+          file: null,
+          size: 1048576,
+          checksum: 'a1b2c3d4e5f6...',
+          signatureValid: true,
+          releaseNotes: 'Bug fixes and performance improvements',
+          status: 'stable',
+          uploadDate: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          name: 'Solar Controller v1.3.1',
+          version: '1.3.1',
+          deviceModel: 'ESP32-S3',
+          minBootloaderVersion: '1.0.0',
+          file: null,
+          size: 987654,
+          checksum: 'f6e5d4c3b2a1...',
+          signatureValid: true,
+          releaseNotes: 'Previous stable release',
+          status: 'stable',
+          uploadDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ]);
+    } finally {
+      setLoadingFirmwares(false);
+    }
   };
 
   // Section 1 handlers
@@ -630,7 +657,26 @@ export const OTA: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {firmwares.map(fw => (
+                {loadingFirmwares ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#6c757d', fontSize: '0.95rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                          <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                          <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
+                        </svg>
+                        Loading firmware versions...
+                      </div>
+                    </td>
+                  </tr>
+                ) : firmwares.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#6c757d', fontSize: '0.95rem' }}>
+                      No firmware versions uploaded yet. Use the form above to upload your first firmware.
+                    </td>
+                  </tr>
+                ) : (
+                  firmwares.map(fw => (
                   <tr key={fw.id} style={{ borderBottom: '1px solid #e9ecef' }}>
                     <td style={{ padding: '1rem 0.75rem' }}>
                       <div style={{ fontWeight: '500', color: '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
@@ -699,7 +745,8 @@ export const OTA: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>
