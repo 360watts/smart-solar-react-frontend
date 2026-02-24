@@ -393,12 +393,26 @@ export const OTA: React.FC = () => {
   const handleMarkAsStable = async (id: number) => {
     try {
       await apiService.updateFirmwareVersion(id, { is_active: true });
-      alert('Firmware marked as stable/active!');
+      alert('Firmware activated successfully!');
       // Reload firmware list from backend
       await loadFirmwareData();
     } catch (error: any) {
       console.error('Firmware update failed:', error);
       alert(`Update failed: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleDeactivateFirmware = async (id: number) => {
+    if (window.confirm('Deactivate this firmware? It will no longer be available for OTA updates.')) {
+      try {
+        await apiService.updateFirmwareVersion(id, { is_active: false });
+        alert('Firmware deactivated successfully!');
+        // Reload firmware list from backend
+        await loadFirmwareData();
+      } catch (error: any) {
+        console.error('Firmware deactivation failed:', error);
+        alert(`Deactivation failed: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -899,7 +913,7 @@ export const OTA: React.FC = () => {
                     </td>
                     <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                        {fw.status === 'draft' && (
+                        {fw.status === 'draft' ? (
                           <button
                             onClick={() => handleMarkAsStable(fw.id)}
                             style={{
@@ -913,7 +927,23 @@ export const OTA: React.FC = () => {
                               fontWeight: '500'
                             }}
                           >
-                            Mark Stable
+                            Activate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeactivateFirmware(fw.id)}
+                            style={{
+                              background: '#ffc107',
+                              color: '#000',
+                              border: 'none',
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            Deactivate
                           </button>
                         )}
                         <button
