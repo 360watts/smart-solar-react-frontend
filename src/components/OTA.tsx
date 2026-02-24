@@ -239,52 +239,72 @@ export const OTA: React.FC = () => {
     }
   };
 
-  const handleUploadFirmware = (e: React.FormEvent) => {
+  const handleUploadFirmware = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadForm.file) {
       alert('Please select a firmware file');
       return;
     }
 
-    const newFirmware: FirmwareVersion = {
-      id: firmwares.length + 1,
-      name: uploadForm.name,
-      version: uploadForm.version,
-      deviceModel: uploadForm.deviceModel,
-      minBootloaderVersion: uploadForm.minBootloader,
-      file: uploadForm.file,
-      size: uploadForm.file.size,
-      checksum: 'sha256_' + Math.random().toString(36).substring(2, 10),
-      signatureValid: true,
-      releaseNotes: uploadForm.releaseNotes,
-      status: 'draft',
-      uploadDate: new Date().toISOString(),
-    };
+    try {
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('file', uploadForm.file);
+      formData.append('version', uploadForm.version);
+      formData.append('description', uploadForm.name);
+      formData.append('release_notes', uploadForm.releaseNotes);
+      formData.append('is_active', 'false'); // Uploaded as draft by default
 
-    setFirmwares([newFirmware, ...firmwares]);
-    setUploadForm({
-      name: '',
-      version: '',
-      deviceModel: 'ESP32-S3',
-      minBootloader: '1.0.0',
-      releaseNotes: '',
-      file: null,
-    });
-    
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-  };
-
-  const handleDeleteFirmware = (id: number) => {
-    if (window.confirm('Delete this firmware version?')) {
-      setFirmwares(firmwares.filter(f => f.id !== id));
+      // Call backend API to upload to S3
+      const response = await apiService.uploadFirmwareVersion(formData);
+      
+      alert(`Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: S3\n\nFile URL: ${response.file || 'N/A'}`);
+      
+      // Reset form
+      setUploadForm({
+        name: '',
+        version: '',
+        deviceModel: 'ESP32-S3',
+        minBootloader: '1.0.0',
+        releaseNotes: '',
+        file: null,
+      });
+      
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
+      // Reload firmware list from backend
+      await loadFirmwareData();
+    } catch (error: any) {
+      console.error('Firmware upload failed:', error);
+      alert(`Upload failed: ${error.message || 'Unknown error'}\n\nPlease check:\n- File size is reasonable\n- S3 credentials are configured (USE_S3=True)\n- You have admin permissions`);
     }
   };
 
-  const handleMarkAsStable = (id: number) => {
-    setFirmwares(firmwares.map(f => 
-      f.id === id ? { ...f, status: 'stable' as const } : f
-    ));
+  const handleDeleteFirmware = async (id: number) => {
+    if (window.confirm('Delete this firmware version? This will remove it from S3.')) {
+      try {
+        await apiService.deleteFirmwareVersion(id);
+        alert('Firmware deleted successfully!');
+        // Reload firmware list from backend
+        await loadFirmwareData();
+      } catch (error: any) {
+        console.error('Firmware deletion failed:', error);
+        alert(`Deletion failed: ${error.message || 'Unknown error'}`);
+      }
+    }
+  };
+
+  const handleMarkAsStable = async (id: number) => {
+    try {
+      await apiService.updateFirmwareVersion(id, { is_active: true });
+      alert('Firmware marked as stable/active!');
+      // Reload firmware list from backend
+      await loadFirmwareData();
+    } catch (error: any) {
+      console.error('Firmware update failed:', error);
+      alert(`Update failed: ${error.message || 'Unknown error'}`);
+    }
   };
 
   // Section 2 handlers
