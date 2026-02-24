@@ -109,6 +109,8 @@ export const OTA: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus['status']>('all');
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [loadingFirmwares, setLoadingFirmwares] = useState(true);
+  const [deploymentCampaigns, setDeploymentCampaigns] = useState<any[]>([]);
+  const [activeDeployment, setActiveDeployment] = useState<any>(null);
 
   // Section 4: Emergency Rollback State
   const [rollbackForm, setRollbackForm] = useState({
@@ -125,16 +127,18 @@ export const OTA: React.FC = () => {
   useEffect(() => {
     loadFirmwareData();
     loadRealDevices();
+    loadDeployments();
     
-    // Real-time status updates simulation (for devices that are updating)
+    // Real-time status updates - poll for deployment status every 5 seconds
     const interval = setInterval(() => {
+      loadDeployments();
       setDevices(prev => prev.map(d => {
         if (d.status === 'downloading' && d.progress !== undefined && d.progress < 100) {
           return { ...d, progress: Math.min(100, d.progress + Math.random() * 10) };
         }
         return d;
       }));
-    }, 2000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -224,6 +228,97 @@ export const OTA: React.FC = () => {
       ]);
     } finally {
       setLoadingFirmwares(false);
+    }
+  };
+
+  const loadDeployments = async () => {
+    try {
+      const campaigns = await apiService.listTargetedUpdates();
+      setDeploymentCampaigns(campaigns);
+      
+      // Find the most recent in-progress deployment
+      const activeCampaign = campaigns.find((c: any) => 
+        c.status === 'in_progress' || c.status === 'pending'
+      );
+      setActiveDeployment(activeCampaign || null);
+      
+      // Update device statuses based on deployment campaigns and device update logs
+      if (campaigns.length > 0) {
+        await updateDeviceStatusesFromDeployments();
+      }
+    } catch (error) {
+      console.error('Failed to load deployments:', error);
+    }
+  };
+
+  const updateDeviceStatusesFromDeployments = async () => {
+    try {
+      // Fetch all devices
+      const response = await apiService.getDevices('', 1, 1000);
+      const realDevices = response.results || response;
+      
+      // For each device, fetch its update logs to get real status
+      const devicePromises = (Array.isArray(realDevices) ? realDevices : []).map(async (device: any) => {
+        const deviceSerial = device.device_serial || device.serial;
+        try {
+          const logs = await apiService.getDeviceUpdateLogs(deviceSerial);
+          const latestLog = logs && logs.length > 0 ? logs[0] : null;
+          
+          // Map backend status to frontend status
+          let status: DeviceStatus['status'] = 'idle';
+          if (latestLog) {
+            const backendStatus = latestLog.status?.toLowerCase();
+            switch (backendStatus) {
+              case 'pending':
+              case 'checking':
+                status = 'idle';
+                break;
+              case 'available':
+                status = 'idle'; // Update is available but not started
+                break;
+              case 'downloading':
+                status = 'downloading';
+                break;
+              case 'completed':
+                status = 'healthy';
+                break;
+              case 'failed':
+                status = 'failed';
+                break;
+              default:
+                status = 'idle';
+            }
+          }
+          
+          return {
+            deviceId: deviceSerial,
+            currentVersion: device.firmware_version || device.config_version ||latestLog?.firmware_version?.version || 'v1.0.0',
+            targetVersion: latestLog?.firmware_version?.version || 'N/A',
+            activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
+            status,
+            bootCount: device.boot_count || latestLog?.attempt_count || 0,
+            lastError: latestLog?.status === 'failed' ? 'Update failed' : '',
+            progress: status === 'downloading' ? 50 : undefined,
+          };
+        } catch (error) {
+          console.error(`Failed to get logs for device ${deviceSerial}:`, error);
+          return {
+            deviceId: deviceSerial,
+            currentVersion: device.firmware_version || device.config_version || 'v1.0.0',
+            targetVersion: 'N/A',
+            activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
+            status: 'idle' as DeviceStatus['status'],
+            bootCount: device.boot_count || 0,
+            lastError: '',
+            progress: undefined,
+          };
+        }
+      });
+      
+      const updatedDevices = await Promise.all(devicePromises);
+      setDevices(updatedDevices);
+    } catch (error) {
+      console.error('Failed to update device statuses:', error);
     }
   };
 
@@ -353,7 +448,8 @@ export const OTA: React.FC = () => {
       setIsDeploying(false);
       alert(`Deployment initiated successfully!\n\nTargeted Update ID: ${response.id || 'N/A'}\nDevices: ${response.devices_total || deploymentConfig.targetDevices.length}\nFirmware: ${firmware.version}\n\nDevices will receive the update on their next check-in.`);
       
-      // Refresh device status after deployment
+      // Refresh device status and deployments after deployment
+      await loadDeployments();
       await loadRealDevices();
     } catch (error: any) {
       setIsDeploying(false);
@@ -1241,6 +1337,63 @@ export const OTA: React.FC = () => {
           </div>
         ) : (
           <>
+            {/* Active Deployment Banner */}
+            {activeDeployment && (
+              <div style={{
+                background: activeDeployment.status === 'in_progress' 
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                  : isDark ? '#2a4a2a' : '#d4edda',
+                color: activeDeployment.status === 'in_progress' ? 'white' : isDark ? '#90ee90' : '#155724',
+                padding: '1.5rem',
+                borderRadius: '12px',
+                marginBottom: '2rem',
+                border: activeDeployment.status === 'in_progress' 
+                  ? 'none' 
+                  : isDark ? '1px solid #4a6a4a' : '1px solid #c3e6cb'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
+                    {activeDeployment.status === 'in_progress' ? '🚀 Active Deployment' : '✅ Deployment Completed'}
+                  </h3>
+                  <span style={{ 
+                    fontSize: '0.85rem', 
+                    padding: '0.25rem 0.75rem', 
+                    background: 'rgba(255,255,255,0.2)', 
+                    borderRadius: '20px' 
+                  }}>
+                    ID: {activeDeployment.id}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.9rem' }}>
+                  <div>
+                    <strong>Firmware:</strong> {activeDeployment.target_firmware?.version || 'N/A'}
+                  </div>
+                  <div>
+                    <strong>Total Devices:</strong> {activeDeployment.devices_total || 0}
+                  </div>
+                  <div>
+                    <strong>Updated:</strong> {activeDeployment.devices_updated || 0}
+                  </div>
+                  <div>
+                    <strong>Failed:</strong> {activeDeployment.devices_failed || 0}
+                  </div>
+                  <div>
+                    <strong>Progress:</strong> {activeDeployment.devices_total > 0 
+                      ? `${Math.round((activeDeployment.devices_updated / activeDeployment.devices_total) * 100)}%`
+                      : '0%'}
+                  </div>
+                  <div>
+                    <strong>Started:</strong> {new Date(activeDeployment.created_at).toLocaleString()}
+                  </div>
+                </div>
+                {activeDeployment.notes && (
+                  <div style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.9 }}>
+                    <strong>Notes:</strong> {activeDeployment.notes}
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Summary Metrics */}
         <div style={{ 
           display: 'grid', 

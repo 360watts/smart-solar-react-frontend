@@ -575,6 +575,14 @@ class ApiService {
       }),
     });
   }
+
+  async listTargetedUpdates(): Promise<any> {
+    return this.request(`/ota/updates/`);
+  }
+
+  async getTargetedUpdate(updateId: number): Promise<any> {
+    return this.request(`/ota/updates/${updateId}/`);
+  }
 }
 
 export const apiService = new ApiService();
