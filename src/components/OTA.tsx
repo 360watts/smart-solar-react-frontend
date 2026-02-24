@@ -45,34 +45,6 @@ interface DeploymentConfirmModal {
   dataTransfer: string;
 }
 
-// Generate 100 mock devices with realistic statuses
-const generateMockDevices = (): DeviceStatus[] => {
-  const versions = ['v1.2.0', 'v1.2.1', 'v1.3.0', 'v1.3.1', 'v1.4.0'];
-  const errors = ['', '', '', '', 'Checksum failed', 'Network timeout', 'Flash write error', 'Insufficient space'];
-  
-  return Array.from({ length: 100 }, (_, i) => {
-    let status: DeviceStatus['status'];
-    if (i < 70) status = 'healthy';
-    else if (i < 75) status = 'trial';
-    else if (i < 80) status = 'downloading';
-    else if (i < 85) status = 'failed';
-    else if (i < 90) status = 'idle';
-    else if (i < 95) status = 'flashing';
-    else status = 'rolledback';
-
-    return {
-      deviceId: `DEV${String(i + 1).padStart(4, '0')}`,
-      currentVersion: versions[Math.floor(Math.random() * (versions.length - 1))],
-      targetVersion: versions[versions.length - 1],
-      activeSlot: Math.random() > 0.5 ? 'A' : 'B',
-      status,
-      bootCount: Math.floor(Math.random() * 5) + 1,
-      lastError: status === 'failed' ? errors[Math.floor(Math.random() * errors.length)] || 'Unknown error' : '',
-      progress: status === 'downloading' ? Math.floor(Math.random() * 100) : undefined,
-    };
-  });
-};
-
 export const OTA: React.FC = () => {
   const { isDark } = useTheme();
   
@@ -164,8 +136,8 @@ export const OTA: React.FC = () => {
       setDevices(transformedDevices);
     } catch (error) {
       console.error('Failed to load devices:', error);
-      // Fallback to mock data if API fails
-      setDevices(generateMockDevices());
+      // Set to empty on error - UI will show empty state
+      setDevices([]);
     } finally {
       setLoadingDevices(false);
     }
@@ -195,37 +167,8 @@ export const OTA: React.FC = () => {
       setFirmwares(transformedFirmwares);
     } catch (error) {
       console.error('Failed to load firmware versions:', error);
-      // Fallback to mock data if API fails
-      setFirmwares([
-        {
-          id: 1,
-          name: 'Solar Controller v1.4.0',
-          version: '1.4.0',
-          deviceModel: 'ESP32-S3',
-          minBootloaderVersion: '1.0.0',
-          file: null,
-          size: 1048576,
-          checksum: 'a1b2c3d4e5f6...',
-          signatureValid: true,
-          releaseNotes: 'Bug fixes and performance improvements',
-          status: 'stable',
-          uploadDate: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          name: 'Solar Controller v1.3.1',
-          version: '1.3.1',
-          deviceModel: 'ESP32-S3',
-          minBootloaderVersion: '1.0.0',
-          file: null,
-          size: 987654,
-          checksum: 'f6e5d4c3b2a1...',
-          signatureValid: true,
-          releaseNotes: 'Previous stable release',
-          status: 'stable',
-          uploadDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ]);
+      // Set to empty on error - UI will show empty state
+      setFirmwares([]);
     } finally {
       setLoadingFirmwares(false);
     }
@@ -322,14 +265,26 @@ export const OTA: React.FC = () => {
   };
 
   // Section 1 handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const calculateSHA256 = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
       setUploadForm({ ...uploadForm, file });
-      setTimeout(() => {
-        const mockChecksum = 'sha256_' + Math.random().toString(36).substring(2);
-        console.log('Calculated checksum:', mockChecksum);
-      }, 500);
+      
+      // Calculate real SHA256 checksum
+      try {
+        const checksum = await calculateSHA256(file);
+        console.log('Calculated SHA-256 checksum:', checksum);
+      } catch (error) {
+        console.error('Failed to calculate checksum:', error);
+      }
     }
   };
 
