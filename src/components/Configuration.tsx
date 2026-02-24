@@ -561,18 +561,6 @@ const Configuration: React.FC = () => {
                           <option value={0x10}>0x10 - Write Multiple Registers</option>
                         </select>
                       </div>
-                      <div className="form-group">
-                        <label>Register Type</label>
-                        <select
-                          value={registerForm.register_type || 3}
-                          onChange={(e) => setRegisterForm({...registerForm, register_type: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Coil (0x - R/W Discrete)</option>
-                          <option value={1}>Discrete Input (1x - RO Discrete)</option>
-                          <option value={2}>Input Register (3x - RO Analog)</option>
-                          <option value={3}>Holding Register (4x - R/W Analog)</option>
-                        </select>
-                      </div>
                       
                       {/* Row 2: Data Type & Format */}
                       <div className="form-group">
@@ -671,16 +659,17 @@ const Configuration: React.FC = () => {
                       <div className="form-group">
                         <label>Category</label>
                         <select
-                          value={registerForm.category || 'Electrical'}
+                          value={registerForm.category || 'Grid'}
                           onChange={(e) => setRegisterForm({...registerForm, category: e.target.value})}
                         >
-                          <option value="Electrical">Electrical</option>
-                          <option value="Temperature">Temperature</option>
+                          <option value="Grid">Grid</option>
+                          <option value="BMS">BMS</option>
                           <option value="Status">Status</option>
-                          <option value="Control">Control</option>
                           <option value="Energy">Energy</option>
-                          <option value="Power">Power</option>
-                          <option value="Other">Other</option>
+                          <option value="Temperature">Temperature</option>
+                          <option value="Battery">Battery</option>
+                          <option value="Load">Load</option>
+                          <option value="PV">PV</option>
                         </select>
                       </div>
                       
