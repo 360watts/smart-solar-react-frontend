@@ -95,16 +95,17 @@ export const OTA: React.FC = () => {
     deviceModel: 'all',
   });
 
+  // Initial load - runs once on mount
   useEffect(() => {
     loadFirmwareData();
+    loadDevices();
     loadDeployments();
-    updateDeviceStatusesFromDeployments(); // Load devices with current deployment statuses
     
-    // Real-time status updates - poll for deployment status every 5 seconds
+    // Set up polling for deployment status updates
     const interval = setInterval(() => {
-      loadDeployments();
-      updateDeviceStatusesFromDeployments(); // Refresh device statuses
-    }, 5000);
+      loadDeployments(); // This will update activeDeployment and trigger status updates if needed
+    }, 10000);
+    
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -140,6 +141,33 @@ export const OTA: React.FC = () => {
     }
   };
 
+  const loadDevices = async () => {
+    try {
+      setLoadingDevices(true);
+      const response = await apiService.getDevices('', 1, 1000);
+      const realDevices = response.results || response;
+      
+      // Transform to simple device list - all start as 'idle'
+      const transformedDevices: DeviceStatus[] = (Array.isArray(realDevices) ? realDevices : []).map((device: any) => ({
+        deviceId: device.device_serial || device.serial || `DEV${device.id}`,
+        currentVersion: device.firmware_version || device.config_version || 'v1.0.0',
+        targetVersion: 'N/A',
+        activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
+        status: 'idle' as DeviceStatus['status'],
+        bootCount: device.boot_count || 0,
+        lastError: '',
+        progress: undefined,
+      }));
+      
+      setDevices(transformedDevices);
+    } catch (error) {
+      console.error('Failed to load devices:', error);
+      setDevices([]);
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
   const loadDeployments = async () => {
     try {
       const campaigns = await apiService.listTargetedUpdates();
@@ -150,89 +178,89 @@ export const OTA: React.FC = () => {
       );
       setActiveDeployment(activeCampaign || null);
       
-      // Update device statuses based on deployment campaigns and device update logs
-      if (campaigns.length > 0) {
-        await updateDeviceStatusesFromDeployments();
+      // If we have an active deployment, update status for those devices
+      if (activeCampaign) {
+        await updateDeployedDeviceStatuses(activeCampaign);
       }
     } catch (error) {
       console.error('Failed to load deployments:', error);
     }
   };
 
-  const updateDeviceStatusesFromDeployments = async () => {
+  const updateDeployedDeviceStatuses = async (deployment?: any) => {
     try {
-      setLoadingDevices(true);
-      // Fetch all devices
-      const response = await apiService.getDevices('', 1, 1000);
-      const realDevices = response.results || response;
+      const activeDeploymentToUse = deployment || activeDeployment;
+      if (!activeDeploymentToUse) return;
       
-      // For each device, fetch its update logs to get real status
-      const devicePromises = (Array.isArray(realDevices) ? realDevices : []).map(async (device: any) => {
-        const deviceSerial = device.device_serial || device.serial;
+      // Only fetch logs for devices in the active deployment
+      const targetedDevices = activeDeploymentToUse.device_targets || [];
+      const targetedDeviceIds = targetedDevices.map((dt: any) => dt.device?.device_serial).filter(Boolean);
+      
+      if (targetedDeviceIds.length === 0) return;
+      
+      // Fetch logs for all targeted devices in parallel
+      const logPromises = targetedDeviceIds.map(async (deviceId: string) => {
         try {
-          const logs = await apiService.getDeviceUpdateLogs(deviceSerial);
+          const logs = await apiService.getDeviceUpdateLogs(deviceId);
           const latestLog = logs && logs.length > 0 ? logs[0] : null;
           
-          // Map backend status to frontend status
+          if (!latestLog) return { deviceId, status: 'idle' as DeviceStatus['status'] };
+          
+          const backendStatus = latestLog.status?.toLowerCase();
           let status: DeviceStatus['status'] = 'idle';
-          if (latestLog) {
-            const backendStatus = latestLog.status?.toLowerCase();
-            switch (backendStatus) {
-              case 'pending':
-                status = 'trial'; // Deployment created, waiting for device to check in
-                break;
-              case 'checking':
-                status = 'trial'; // Device is checking for updates
-                break;
-              case 'available':
-                status = 'trial'; // Update available, waiting for device to download
-                break;
-              case 'downloading':
-                status = 'downloading';
-                break;
-              case 'completed':
-                status = 'healthy';
-                break;
-              case 'failed':
-                status = 'failed';
-                break;
-              default:
-                status = 'idle';
-            }
+          
+          switch (backendStatus) {
+            case 'pending':
+            case 'checking':
+            case 'available':
+              status = 'trial';
+              break;
+            case 'downloading':
+              status = 'downloading';
+              break;
+            case 'completed':
+              status = 'healthy';
+              break;
+            case 'failed':
+              status = 'failed';
+              break;
           }
           
           return {
-            deviceId: deviceSerial,
-            currentVersion: device.firmware_version || device.config_version ||latestLog?.firmware_version?.version || 'v1.0.0',
-            targetVersion: latestLog?.firmware_version?.version || 'N/A',
-            activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
+            deviceId,
             status,
-            bootCount: device.boot_count || latestLog?.attempt_count || 0,
-            lastError: latestLog?.status === 'failed' ? 'Update failed' : '',
-            progress: status === 'downloading' ? 50 : undefined,
+            currentVersion: latestLog.current_firmware,
+            targetVersion: latestLog.firmware_version?.version,
+            lastError: status === 'failed' ? 'Update failed' : '',
           };
         } catch (error) {
-          console.error(`Failed to get logs for device ${deviceSerial}:`, error);
-          return {
-            deviceId: deviceSerial,
-            currentVersion: device.firmware_version || device.config_version || 'v1.0.0',
-            targetVersion: 'N/A',
-            activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
-            status: 'idle' as DeviceStatus['status'],
-            bootCount: device.boot_count || 0,
-            lastError: '',
-            progress: undefined,
-          };
+          console.error(`Failed to get logs for ${deviceId}:`, error);
+          return { deviceId, status: 'idle' as DeviceStatus['status'] };
         }
       });
       
-      const updatedDevices = await Promise.all(devicePromises);
-      setDevices(updatedDevices);
+      const deviceUpdates = await Promise.all(logPromises);
+      
+      // Create a map of device updates
+      const updateMap = new Map(deviceUpdates.map(u => [u.deviceId, u]));
+      
+      // Update devices state once with all changes
+      setDevices(prevDevices => 
+        prevDevices.map(device => {
+          const update = updateMap.get(device.deviceId);
+          if (!update) return device;
+          
+          return {
+            ...device,
+            status: update.status,
+            currentVersion: update.currentVersion || device.currentVersion,
+            targetVersion: update.targetVersion || device.targetVersion,
+            lastError: update.lastError || device.lastError,
+          };
+        })
+      );
     } catch (error) {
-      console.error('Failed to update device statuses:', error);
-      setDevices([]);
-    } finally {
-      setLoadingDevices(false);
+      console.error('Failed to update deployed device statuses:', error);
     }
   };
 
@@ -390,7 +418,6 @@ export const OTA: React.FC = () => {
       
       // Refresh device status and deployments after deployment
       await loadDeployments();
-      await updateDeviceStatusesFromDeployments();
     } catch (error: any) {
       setIsDeploying(false);
       console.error('Deployment failed:', error);
