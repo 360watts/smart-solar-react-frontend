@@ -554,6 +554,16 @@ class ApiService {
   async getOTAHealth(): Promise<any> {
     return this.request(`/ota/health/`);
   }
+
+  async triggerRollback(deviceSerial: string, notes?: string): Promise<any> {
+    return this.request(`/ota/updates/rollback/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        device_serial: deviceSerial,
+        notes: notes || ''
+      }),
+    });
+  }
 }
 
 export const apiService = new ApiService();
