@@ -113,6 +113,7 @@ const Dashboard: React.FC = () => {
   const [userDevices, setUserDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'activity' | 'health'>('overview');
   useEffect(() => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 30000);
@@ -222,7 +223,8 @@ const Dashboard: React.FC = () => {
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.6rem', fontFamily: 'Urbanist, Poppins, sans-serif', fontWeight: 800, letterSpacing: '-0.02em', color: '#0a0a0a' }}>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', fontFamily: 'Urbanist, Poppins, sans-serif', fontWeight: 800, letterSpacing: '-0.02em', color: '#0a0a0a', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <IconSun />
             Solar Dashboard
           </h1>
           <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
@@ -235,11 +237,107 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════
-          ROW 1 — Hero energy card (8 col) + Alert panel (4 col)
-          ══════════════════════════════════════════════════════════ */}
-      <div className="bento-grid">
+      {/* Modern Tab Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '0.5rem', 
+        marginBottom: '1.5rem',
+        borderBottom: '2px solid var(--border-color)',
+        paddingBottom: '0'
+      }}>
+        <button
+          onClick={() => setActiveTab('overview')}
+          style={{
+            background: activeTab === 'overview' ? 'var(--primary-gradient)' : 'transparent',
+            color: activeTab === 'overview' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'overview' ? '600' : '500',
+            borderRadius: '8px 8px 0 0',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          style={{
+            background: activeTab === 'analytics' ? 'var(--primary-gradient)' : 'transparent',
+            color: activeTab === 'analytics' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'analytics' ? '600' : '500',
+            borderRadius: '8px 8px 0 0',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <IconTrend />
+          Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('activity')}
+          style={{
+            background: activeTab === 'activity' ? 'var(--primary-gradient)' : 'transparent',
+            color: activeTab === 'activity' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'activity' ? '600' : '500',
+            borderRadius: '8px 8px 0 0',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <IconBolt />
+          Activity
+        </button>
+        <button
+          onClick={() => setActiveTab('health')}
+          style={{
+            background: activeTab === 'health' ? 'var(--primary-gradient)' : 'transparent',
+            color: activeTab === 'health' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: activeTab === 'health' ? '600' : '500',
+            borderRadius: '8px 8px 0 0',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <IconDevices />
+          System Health
+        </button>
+      </div>
 
+      {/* ══════════════════════════════════════════════════════════
+          OVERVIEW TAB — Hero card + KPIs + Live Readings
+          ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'overview' && (
+        <>
+        <div className="bento-grid">
         {/* ── HERO: Energy Generated ── */}
         <div className="card bento-hero" style={{
           padding: '1.5rem',
@@ -452,176 +550,187 @@ const Dashboard: React.FC = () => {
           </div>
         </>
       )}
+        </>
+      )}
 
       {/* ══════════════════════════════════════════════════════════
-          ROW 3 — Trends chart (8 col) + Device status (4 col)
+          ANALYTICS TAB — Charts and trends
           ══════════════════════════════════════════════════════════ */}
-      <p className="dash-section-label">Analytics</p>
-      <div className="bento-grid">
-
-        <div className="card bento-hero" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <span style={{ color: '#00a63e' }}><IconTrend /></span>
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Real-time Trends</h3>
-          </div>
-          <div style={{ height: 220 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
-                <XAxis dataKey="time" stroke="#9ca3af" fontSize={11} />
-                <YAxis stroke="#9ca3af" fontSize={11} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                {latestValues.map((item, i) => (
-                  <Line key={item.data_type} type="monotone" dataKey={item.data_type}
-                    stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card bento-side" style={{ padding: '1.25rem' }}>
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Device Status</h3>
-          <div style={{ height: 170 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={deviceStatusData} cx="50%" cy="50%" outerRadius={72} innerRadius={38}
-                  dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                  {deviceStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          {systemHealth && (
-            <div style={{ marginTop: '0.5rem', padding: '0.6rem 0.75rem', background: 'rgba(0,166,62,0.05)', borderRadius: 8, border: '1px solid rgba(0,166,62,0.1)' }}>
-              <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>Overall Health</p>
-              <div style={{ marginTop: '0.3rem' }}><StatusPill status={systemHealth.overall_health === 'healthy' ? 'online' : 'warning'} label={systemHealth.overall_health} pulse /></div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════
-          ROW 4 — Alert distribution + System health
-          ══════════════════════════════════════════════════════════ */}
-      {(alerts.length > 0 || systemHealth) && (
-        <div className="bento-grid">
-          {alerts.length > 0 && (
-            <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Alert Distribution</h3>
-              <div style={{ height: 160 }}>
+      {activeTab === 'analytics' && (
+        <>
+          <div className="bento-grid">
+            <div className="card bento-hero" style={{ padding: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <span style={{ color: '#00a63e' }}><IconTrend /></span>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Real-time Trends</h3>
+              </div>
+              <div style={{ height: 220 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={alertSeverityData} barSize={36}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.07)" vertical={false} />
-                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
+                    <XAxis dataKey="time" stroke="#9ca3af" fontSize={11} />
                     <YAxis stroke="#9ca3af" fontSize={11} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} />
-                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                      {alertSeverityData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Bar>
-                  </BarChart>
+                    {latestValues.map((item, i) => (
+                      <Line key={item.data_type} type="monotone" dataKey={item.data_type}
+                        stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    ))}
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
-          )}
 
-          {systemHealth && (
-            <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>System Health</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                {[
-                  { label: 'Database',    value: systemHealth.database_status,                        isStatus: true  },
-                  { label: 'MQTT',        value: systemHealth.mqtt_status,                            isStatus: true  },
-                  { label: 'Uptime',      value: formatUptime(systemHealth.uptime_seconds),           isStatus: false },
-                  { label: 'Data Points', value: systemHealth.total_telemetry_points.toLocaleString(), isStatus: false },
-                ].map(item => (
-                  <div key={item.label} style={{ padding: '0.75rem', background: 'rgba(0,166,62,0.04)', borderRadius: 10, border: '1px solid rgba(0,166,62,0.08)' }}>
-                    <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{item.label}</p>
-                    {item.isStatus
-                      ? <div style={{ marginTop: '0.35rem' }}><StatusPill status={item.value === 'connected' || item.value === 'healthy' ? 'online' : 'warning'} label={item.value} /></div>
-                      : <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#0a0a0a', fontFamily: 'JetBrains Mono, monospace' }}>{item.value}</p>
-                    }
-                  </div>
-                ))}
+            <div className="card bento-side" style={{ padding: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Device Status</h3>
+              <div style={{ height: 170 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={deviceStatusData} cx="50%" cy="50%" outerRadius={72} innerRadius={38}
+                      dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                      {deviceStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+              {systemHealth && (
+                <div style={{ marginTop: '0.5rem', padding: '0.6rem 0.75rem', background: 'rgba(0,166,62,0.05)', borderRadius: 8, border: '1px solid rgba(0,166,62,0.1)' }}>
+                  <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>Overall Health</p>
+                  <div style={{ marginTop: '0.3rem' }}><StatusPill status={systemHealth.overall_health === 'healthy' ? 'online' : 'warning'} label={systemHealth.overall_health} pulse /></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(alerts.length > 0 || systemHealth) && (
+            <div className="bento-grid">
+              {alerts.length > 0 && (
+                <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
+                  <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Alert Distribution</h3>
+                  <div style={{ height: 160 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={alertSeverityData} barSize={36}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.07)" vertical={false} />
+                        <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} />
+                        <YAxis stroke="#9ca3af" fontSize={11} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {alertSeverityData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
             </div>
           )}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          ACTIVITY TAB — Recent telemetry and alerts
+          ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'activity' && (
+        <div className="bento-grid">
+          <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Recent Telemetry</h3>
+            <div className="activity-list">
+              {telemetryData.length === 0
+                ? <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', padding: '1rem 0' }}>No telemetry yet</p>
+                : telemetryData.slice(0, 6).map((item, i) => (
+                  <div key={i} className="activity-item" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
+                    <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,166,62,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#00a63e' }}>
+                      <IconBolt />
+                    </span>
+                    <span className="activity-text" style={{ flex: 1, fontSize: '0.82rem', color: '#4a5565' }}>
+                      <strong style={{ color: '#0a0a0a' }}>{item.data_type}</strong> &mdash; {item.value.toFixed(2)} {item.unit}
+                    </span>
+                    <span className="activity-time" style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+
+          <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
+            <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Recent Alerts</h3>
+            <div className="activity-list">
+              {alerts.length === 0
+                ? <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', padding: '1rem 0' }}>No alerts — all clear</p>
+                : alerts.slice(0, 6).map((alert, i) => (
+                  <div key={i} className="activity-item" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
+                    <span style={{
+                      width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: alert.severity === 'critical' ? 'rgba(239,68,68,0.1)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)',
+                      color: alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6',
+                    }}>
+                      <IconAlert />
+                    </span>
+                    <span className="activity-text" style={{ flex: 1, fontSize: '0.82rem', color: '#4a5565' }}>
+                      {alert.message.length > 48 ? alert.message.slice(0, 48) + '…' : alert.message}
+                    </span>
+                    <StatusPill status={alert.severity} />
+                  </div>
+                ))
+              }
+            </div>
+          </div>
         </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════
-          ROW 5 — Activity feeds
+          HEALTH TAB — System health and devices
           ══════════════════════════════════════════════════════════ */}
-      <p className="dash-section-label" style={{ marginTop: '1rem' }}>Recent Activity</p>
-      <div className="bento-grid">
-        <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Recent Telemetry</h3>
-          <div className="activity-list">
-            {telemetryData.length === 0
-              ? <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', padding: '1rem 0' }}>No telemetry yet</p>
-              : telemetryData.slice(0, 6).map((item, i) => (
-                <div key={i} className="activity-item" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
-                  <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,166,62,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#00a63e' }}>
-                    <IconBolt />
-                  </span>
-                  <span className="activity-text" style={{ flex: 1, fontSize: '0.82rem', color: '#4a5565' }}>
-                    <strong style={{ color: '#0a0a0a' }}>{item.data_type}</strong> &mdash; {item.value.toFixed(2)} {item.unit}
-                  </span>
-                  <span className="activity-time" style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
-                    {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-
-        <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
-          <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>Recent Alerts</h3>
-          <div className="activity-list">
-            {alerts.length === 0
-              ? <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', padding: '1rem 0' }}>No alerts — all clear</p>
-              : alerts.slice(0, 6).map((alert, i) => (
-                <div key={i} className="activity-item" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
-                  <span style={{
-                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: alert.severity === 'critical' ? 'rgba(239,68,68,0.1)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)',
-                    color: alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6',
-                  }}>
-                    <IconAlert />
-                  </span>
-                  <span className="activity-text" style={{ flex: 1, fontSize: '0.82rem', color: '#4a5565' }}>
-                    {alert.message.length > 48 ? alert.message.slice(0, 48) + '…' : alert.message}
-                  </span>
-                  <StatusPill status={alert.severity} />
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      </div>
-
-      {/* My Devices (non-staff) */}
-      {user && !user.is_staff && userDevices.length > 0 && (
+      {activeTab === 'health' && (
         <>
-          <p className="dash-section-label" style={{ marginTop: '1rem' }}>My Devices</p>
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <table className="table" style={{ width: '100%' }}>
-              <thead>
-                <tr><th>Device Serial</th><th>Config Version</th><th>Provisioned</th></tr>
-              </thead>
-              <tbody>
-                {userDevices.map(device => (
-                  <tr key={device.id}>
-                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
-                    <td>{device.config_version || '—'}</td>
-                    <td>{device.provisioned_at ? new Date(device.provisioned_at).toLocaleDateString() : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {systemHealth && (
+            <div className="bento-grid">
+              <div className="card bento-2x1" style={{ padding: '1.25rem' }}>
+                <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>System Health</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  {[
+                    { label: 'Database',    value: systemHealth.database_status,                        isStatus: true  },
+                    { label: 'MQTT',        value: systemHealth.mqtt_status,                            isStatus: true  },
+                    { label: 'Uptime',      value: formatUptime(systemHealth.uptime_seconds),           isStatus: false },
+                    { label: 'Data Points', value: systemHealth.total_telemetry_points.toLocaleString(), isStatus: false },
+                  ].map(item => (
+                    <div key={item.label} style={{ padding: '0.75rem', background: 'rgba(0,166,62,0.04)', borderRadius: 10, border: '1px solid rgba(0,166,62,0.08)' }}>
+                      <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{item.label}</p>
+                      {item.isStatus
+                        ? <div style={{ marginTop: '0.35rem' }}><StatusPill status={item.value === 'connected' || item.value === 'healthy' ? 'online' : 'warning'} label={item.value} /></div>
+                        : <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', fontWeight: 600, color: '#0a0a0a', fontFamily: 'JetBrains Mono, monospace' }}>{item.value}</p>
+                      }
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* My Devices (non-staff) */}
+          {user && !user.is_staff && userDevices.length > 0 && (
+            <>
+              <p className="dash-section-label" style={{ marginTop: '1rem' }}>My Devices</p>
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <table className="table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr><th>Device Serial</th><th>Config Version</th><th>Provisioned</th></tr>
+                  </thead>
+                  <tbody>
+                    {userDevices.map(device => (
+                      <tr key={device.id}>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                        <td>{device.config_version || '—'}</td>
+                        <td>{device.provisioned_at ? new Date(device.provisioned_at).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </>
       )}
 
