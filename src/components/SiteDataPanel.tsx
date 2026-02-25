@@ -896,8 +896,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   {/* Band toggles */}
                   {forecastView === 'chart' && (
                     <div style={{ display: 'flex', background: toggleBg, padding: 3, borderRadius: 8 }}>
-                      {[{ label: 'P10', color: '#f59e0b' }, { label: 'P50', color: '#00a63e' }, { label: 'P90', color: '#3b82f6' }].map(b => (
-                        <button key={b.label} onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ border: 'none', background: showBands[b.label] ? toggleActive : 'transparent', color: showBands[b.label] ? b.color : 'var(--text-muted)', boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {[{ label: 'P10', color: '#f59e0b', desc: 'Conservative' }, { label: 'P50', color: '#00a63e', desc: 'Median' }, { label: 'P90', color: '#3b82f6', desc: 'Optimistic' }].map(b => (
+                        <button key={b.label} onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ border: 'none', background: showBands[b.label] ? toggleActive : 'transparent', color: showBands[b.label] ? b.color : 'var(--text-muted)', boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }} title={b.desc}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: showBands[b.label] ? b.color : isDark ? '#475569' : '#d1d5db' }} />
                           {b.label}
                         </button>

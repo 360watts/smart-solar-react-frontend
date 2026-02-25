@@ -7541,8 +7541,15 @@ body.dark-mode .sidebar-nav li.active .sidebar-icon {
 /* ── Select dropdown panel color-scheme in dark mode ── */
 body.dark-mode .form-group select {
   color-scheme: dark !important;
+  background: rgba(30,41,59,0.92) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(148,163,184,0.25) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
 }
-/* ── Option elements in dark mode ── */
+body.dark-mode .form-group select:focus {
+  border-color: #6366f1 !important;
+  outline: none !important;
+}
 body.dark-mode .form-group select option {
   background: #1e293b !important;
   color: #f1f5f9 !important;
