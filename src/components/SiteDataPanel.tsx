@@ -33,9 +33,10 @@ function fmt(ts: string, range: string): string {
   } catch { return ts; }
 }
 
-function fmtForecast(ts: string): string {
+function fmtForecast(ts: string, forecastFor?: string): string {
+  // Use forecast_for if available, otherwise parse from timestamp
   // "FORECAST#2026-02-23T14:30:00Z" → "14:30"
-  const cleanTs = ts.replace('FORECAST#', '');
+  const cleanTs = forecastFor || ts.replace('FORECAST#', '');
   try {
     return new Date(cleanTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch { return cleanTs; }
@@ -182,43 +183,79 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   // Date range controls
+
+  // Interactive forecast band toggles
+  const [showBands, setShowBands] = useState<{ [key: string]: boolean }>({
+    P10: true,
+    P50: true,
+    P90: true,
+  });
   const [dateRange, setDateRange] = useState<string>('24h'); // '24h' | '7d' | '30d' | 'custom'
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
 
   const fetchAll = useCallback(async () => {
     try {
-      // Calculate date range parameters
+      // Calculate date range parameters for telemetry
       let telemetryParams: any = {};
-      let forecastParams: any = {};
       
       if (dateRange === 'custom' && customStartDate && customEndDate) {
         telemetryParams = {
           start_date: new Date(customStartDate).toISOString(),
           end_date: new Date(customEndDate).toISOString(),
         };
+      } else if (dateRange === '7d') {
+        telemetryParams = { days: 7 };
+      } else if (dateRange === '30d') {
+        telemetryParams = { days: 30 };
+      } else {
+        // Default 24h
+        telemetryParams = {};
+      }
+      
+      // Fetch forecast for the correct date range
+      let forecastParams: any = {};
+      if (dateRange === 'custom' && customStartDate && customEndDate) {
         forecastParams = {
           start_date: new Date(customStartDate).toISOString(),
           end_date: new Date(customEndDate).toISOString(),
         };
       } else if (dateRange === '7d') {
-        telemetryParams = { days: 7 };
-        // For forecast, get today's forecast
-        forecastParams = {};
+        // Last 7 days: start_date = 6 days ago, end_date = today
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 6);
+        forecastParams = {
+          start_date: start.toISOString().split('T')[0] + 'T00:00:00Z',
+          end_date: end.toISOString().split('T')[0] + 'T23:59:59Z',
+        };
       } else if (dateRange === '30d') {
-        telemetryParams = { days: 30 };
-        forecastParams = {};
+        // Last 30 days: start_date = 29 days ago, end_date = today
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 29);
+        forecastParams = {
+          start_date: start.toISOString().split('T')[0] + 'T00:00:00Z',
+          end_date: end.toISOString().split('T')[0] + 'T23:59:59Z',
+        };
       } else {
-        // Default 24h
-        telemetryParams = {};
+        // Default: today only
         forecastParams = {};
       }
-      
+
       const [tel, fcst, wth] = await Promise.all([
         apiService.getSiteTelemetry(siteId, telemetryParams),
         apiService.getSiteForecast(siteId, forecastParams),
         apiService.getSiteWeather(siteId),
       ]);
+      
+      // Debug logging
+      console.log('[SiteDataPanel] Forecast API response:', fcst);
+      console.log('[SiteDataPanel] Forecast count:', Array.isArray(fcst) ? fcst.length : 'not array');
+      if (Array.isArray(fcst) && fcst.length > 0) {
+        console.log('[SiteDataPanel] First forecast item:', fcst[0]);
+      }
+      
       setTelemetry(Array.isArray(tel) ? tel : []);
       setForecast(Array.isArray(fcst) ? fcst : []);
       setWeather(wth || null);
@@ -258,12 +295,58 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   }));
 
   // Forecast chart
-  const forecastData = forecast.map(row => ({
-    time: fmtForecast(row.timestamp),
-    p50: row.p50_kw != null ? +row.p50_kw.toFixed(3) : null,
-    p10: row.p10_kw != null ? +row.p10_kw.toFixed(3) : null,
-    p90: row.p90_kw != null ? +row.p90_kw.toFixed(3) : null,
-  }));
+  const forecastData = forecast.map(row => {
+    // For multi-day, show date + time; for 1 day, just time
+    let label = '';
+    if (dateRange === '7d' || dateRange === '30d' || dateRange === 'custom') {
+      const cleanTs = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+      const d = new Date(cleanTs);
+      label = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      label = fmtForecast(row.timestamp, row.forecast_for);
+    }
+    return {
+      time: label,
+      p50: row.p50_kw != null ? +row.p50_kw.toFixed(3) : null,
+      p10: row.p10_kw != null ? +row.p10_kw.toFixed(3) : null,
+      p90: row.p90_kw != null ? +row.p90_kw.toFixed(3) : null,
+    };
+  });
+
+  // Calculate total forecasted energy for the day using trapezoidal integration
+  let forecastEnergyP10 = 0, forecastEnergyP50 = 0, forecastEnergyP90 = 0;
+  let forecastGeneratedAt: Date | null = null;
+  
+  if (forecast.length > 1) {
+    // Extract forecast generation time from first record (if available)
+    const firstForecast = forecast[0];
+    if (firstForecast.generated_at) {
+      forecastGeneratedAt = new Date(firstForecast.generated_at);
+    } else if (firstForecast.timestamp) {
+      // Use first timestamp as approximation
+      const ts = firstForecast.timestamp.replace('FORECAST#', '');
+      // Forecast is typically generated at midnight or early morning for the day
+      forecastGeneratedAt = new Date(ts.split('T')[0] + 'T00:00:00Z');
+    }
+    
+    // Use trapezoidal rule: energy = Σ[(power[i] + power[i+1]) / 2 × Δt]
+    for (let i = 0; i < forecast.length - 1; i++) {
+      const t1 = new Date(forecast[i].timestamp.replace('FORECAST#', '')).getTime();
+      const t2 = new Date(forecast[i + 1].timestamp.replace('FORECAST#', '')).getTime();
+      const intervalHours = Math.abs(t2 - t1) / (1000 * 60 * 60);
+      
+      // Trapezoidal integration: average of two consecutive power values × time interval
+      if (forecast[i].p10_kw != null && forecast[i + 1].p10_kw != null) {
+        forecastEnergyP10 += (forecast[i].p10_kw + forecast[i + 1].p10_kw) / 2 * intervalHours;
+      }
+      if (forecast[i].p50_kw != null && forecast[i + 1].p50_kw != null) {
+        forecastEnergyP50 += (forecast[i].p50_kw + forecast[i + 1].p50_kw) / 2 * intervalHours;
+      }
+      if (forecast[i].p90_kw != null && forecast[i + 1].p90_kw != null) {
+        forecastEnergyP90 += (forecast[i].p90_kw + forecast[i + 1].p90_kw) / 2 * intervalHours;
+      }
+    }
+  }
 
   // ── render ──────────────────────────────────────────────────────────────────
 
@@ -289,6 +372,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     );
   }
 
+  // Check if we have any meaningful data (including forecast)
   const noData = telemetry.length === 0 && forecast.length === 0 && !weather;
 
   return (
@@ -314,7 +398,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 fontWeight: 600,
               }}
             >
-              <option value="24h">Last 24 hours</option>
+              <option value="24h">Today</option>
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
               <option value="custom">Custom range</option>
@@ -373,7 +457,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
       {noData ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', background: 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
-          No DynamoDB data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the last 24 h.<br />
+          No DynamoDB data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the {
+            dateRange === '24h' ? 'today' :
+            dateRange === '7d' ? 'last 7 days' :
+            dateRange === '30d' ? 'last 30 days' : 'selected date range'
+          }.<br />
           <span style={{ fontSize: '0.78rem' }}>Data is written by the ML forecast scheduler when the device is actively posting telemetry.</span>
         </div>
       ) : (
@@ -414,7 +502,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               <div style={{ marginBottom: '1rem' }}>
                 <h3 style={{ margin: '0 0 0.25rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>
                   Power History — {
-                    dateRange === '24h' ? 'Last 24 hours' :
+                    dateRange === '24h' ? 'Today' :
                     dateRange === '7d' ? 'Last 7 days' :
                     dateRange === '30d' ? 'Last 30 days' :
                     dateRange === 'custom' && customStartDate && customEndDate ? 
@@ -463,22 +551,42 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           )}
 
           {/* ── Forecast chart ── */}
+          {/* DEBUG: Force render to test */}
+          <div style={{ padding: '0.5rem', background: '#ffe', border: '1px solid #cc0', marginBottom: '0.5rem', fontSize: '12px' }}>
+            DEBUG: forecast.length={forecast.length}, forecastData.length={forecastData.length}, 
+            telemetry.length={telemetry.length}, noData={String(telemetry.length === 0 && forecast.length === 0 && !weather)}
+          </div>
           {forecastData.length > 0 && (
-            <div className="card" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>
-                  Today's Solar Forecast
-                </h3>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  {[{ label: 'P10 pessimistic', color: '#fbbf24' }, { label: 'P50 median', color: '#00a63e' }, { label: 'P90 optimistic', color: '#4ade80' }].map(b => (
-                    <span key={b.label} style={{ fontSize: '0.67rem', fontWeight: 600, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'Poppins, sans-serif' }}>
+            <div className="card" style={{ padding: '1.25rem', boxShadow: '0 4px 24px rgba(0,166,62,0.07)', border: '1px solid #e0f2ef', borderRadius: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: '#00a63e', letterSpacing: '0.01em', fontWeight: 800 }}>
+                    <span style={{ verticalAlign: 'middle', marginRight: 6, fontSize: '1.2em' }}>🔆</span> Solar Forecast
+                  </h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.7rem', alignItems: 'center' }}>
+                    {forecastEnergyP50 > 0 && (
+                      <span style={{ fontSize: '0.8rem', color: '#00a63e', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, background: '#e0f7e9', borderRadius: 8, padding: '0.18em 0.7em' }}>
+                        {forecastEnergyP10.toFixed(2)} – {forecastEnergyP50.toFixed(2)} – {forecastEnergyP90.toFixed(2)} kWh
+                      </span>
+                    )}
+                    {forecastGeneratedAt && (
+                      <span style={{ fontSize: '0.7rem', color: '#b0b0b0', fontFamily: 'Poppins, sans-serif' }}>
+                        Generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {[{ label: 'P10', color: '#fbbf24' }, { label: 'P50', color: '#00a63e' }, { label: 'P90', color: '#4ade80' }].map(b => (
+                    <label key={b.label} style={{ fontSize: '0.7rem', fontWeight: 600, color: b.color, display: 'flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'Poppins, sans-serif', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={showBands[b.label]} onChange={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ accentColor: b.color, marginRight: 3 }} />
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.color, display: 'inline-block' }} />
                       {b.label}
-                    </span>
+                    </label>
                   ))}
                 </div>
               </div>
-              <div style={{ height: 200 }}>
+              <div style={{ height: 240 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={forecastData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                     <defs>
@@ -488,13 +596,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
-                    <XAxis dataKey="time" stroke="#9ca3af" fontSize={10} interval="preserveStartEnd" />
+                    <XAxis 
+                      dataKey="time" 
+                      stroke="#9ca3af" 
+                      fontSize={10} 
+                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(forecastData.length / 10)}
+                      angle={dateRange === '7d' || dateRange === '30d' || dateRange === 'custom' ? -15 : 0}
+                      textAnchor={dateRange === '7d' || dateRange === '30d' || dateRange === 'custom' ? 'end' : 'middle'}
+                    />
                     <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={v => `${v}kW`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v} kW`]} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v} kW`]} animationDuration={350} />
                     {/* Confidence band: p90 filled down to p10 */}
-                    <Area type="monotone" dataKey="p90" stroke="#4ade80" strokeWidth={1} strokeDasharray="4 3" fill="rgba(74,222,128,0.08)" dot={false} />
-                    <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2} fill="url(#p50Grad)" dot={false} />
-                    <Area type="monotone" dataKey="p10" stroke="#fbbf24" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} />
+                    {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#4ade80" strokeWidth={1} strokeDasharray="4 3" fill="rgba(74,222,128,0.08)" dot={false} isAnimationActive={true} />}
+                    {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2} fill="url(#p50Grad)" dot={false} isAnimationActive={true} />}
+                    {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#fbbf24" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} isAnimationActive={true} />}
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
