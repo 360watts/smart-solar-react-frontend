@@ -185,18 +185,24 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
       <p style={{ margin: '0 0 0.65rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
         24 h Weather Outlook
       </p>
-      <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
+      <div style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
         <div style={{ display: 'flex', gap: '0.45rem', minWidth: 'max-content' }}>
           {hourly.map((h, i) => {
             const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } })();
-            const cloud  = h.cloud_cover_pct ?? 0;
-            const ghi    = h.ghi_wm2 ?? 0;
-            const temp   = Number(h.temperature_c ?? 0);
-            const wind   = Number(h.wind_speed_ms ?? 0);
-            const ghiPct = Math.min(100, (ghi / 900) * 100);
-            const isNow  = i === 0;
-            const wi     = icon(cloud, ghi);
+            const cloud    = h.cloud_cover_pct ?? 0;
+            const ghi      = h.ghi_wm2 ?? 0;
+            const temp     = Number(h.temperature_c ?? 0);
+            const wind     = Number(h.wind_speed_ms ?? 0);
+            const humidity = h.humidity_pct != null ? Number(h.humidity_pct) : null;
+            const ghiPct   = Math.min(100, (ghi / 900) * 100);
+            const humPct   = humidity != null ? Math.min(100, humidity) : null;
+            const isNow    = i === 0;
+            const wi       = icon(cloud, ghi);
             const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : '#d1d5db';
+            const humColor = humidity == null ? '#d1d5db'
+              : humidity > 80 ? '#3b82f6'
+              : humidity > 50 ? '#60a5fa'
+              : '#93c5fd';
             return (
               <div key={i} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -216,6 +222,15 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                   <div style={{ width: `${ghiPct}%`, height: '100%', background: ghiColor, borderRadius: 2 }} />
                 </div>
                 <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
+                {/* Humidity bar */}
+                {humPct != null && (
+                  <>
+                    <div title={`Humidity ${Math.round(humPct)}%`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
+                      <div style={{ width: `${humPct}%`, height: '100%', background: humColor, borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>💧{Math.round(humPct)}%</span>
+                  </>
+                )}
                 <span style={{ fontSize: '0.6rem', color: '#b0bec5', fontFamily: 'Poppins, sans-serif' }}>{wind.toFixed(1)} m/s</span>
               </div>
             );
@@ -255,6 +270,82 @@ const EnergyBreakdownRow = ({ latest }: { latest: any }) => {
           <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#0a0a0a' }}>{Number(e.value).toFixed(2)}</span>
           <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>kWh</span>
         </span>
+      ))}
+    </div>
+  );
+};
+
+// ── Solar Insights Row ─────────────────────────────────────────────────────────
+
+const InsightsRow = ({ latest }: { latest: any }) => {
+  if (!latest) return null;
+
+  const pvKwh    = Number(latest.pv_today_kwh      ?? 0);
+  const loadKwh  = Number(latest.load_today_kwh    ?? 0);
+  const gridBuy  = Number(latest.grid_buy_today_kwh ?? 0);
+
+  // Only render if we have at least PV data
+  if (pvKwh === 0 && loadKwh === 0) return null;
+
+  const co2Kg       = pvKwh * 0.82;  // India grid factor ~0.82 kg CO₂/kWh
+  // Self-sufficiency = portion of load met by solar+battery (not from grid)
+  const selfSufPct2 = loadKwh > 0
+    ? Math.max(0, Math.min(100, Math.round(((loadKwh - gridBuy) / loadKwh) * 100)))
+    : null;
+  const gridDepPct  = loadKwh > 0
+    ? Math.max(0, Math.min(100, Math.round((gridBuy / loadKwh) * 100)))
+    : null;
+
+  const items: { icon: string; label: string; value: string; sub?: string; color: string; bg: string }[] = [];
+
+  if (pvKwh > 0) {
+    items.push({
+      icon: '🌿', label: 'CO₂ Avoided',
+      value: co2Kg >= 1 ? `${co2Kg.toFixed(2)} kg` : `${(co2Kg * 1000).toFixed(0)} g`,
+      sub: 'vs grid (0.82 kg/kWh)',
+      color: '#10b981', bg: '#10b98110',
+    });
+  }
+  if (selfSufPct2 != null) {
+    const color = selfSufPct2 >= 70 ? '#00a63e' : selfSufPct2 >= 40 ? '#f59e0b' : '#ef4444';
+    items.push({
+      icon: '⚡', label: 'Self-Sufficiency',
+      value: `${selfSufPct2}%`,
+      sub: 'load met by solar+battery',
+      color, bg: `${color}10`,
+    });
+  }
+  if (gridDepPct != null) {
+    const color = gridDepPct <= 20 ? '#10b981' : gridDepPct <= 50 ? '#f59e0b' : '#ef4444';
+    items.push({
+      icon: '🔌', label: 'Grid Dependency',
+      value: `${gridDepPct}%`,
+      sub: 'portion from grid',
+      color, bg: `${color}10`,
+    });
+  }
+
+  if (!items.length) return null;
+
+  return (
+    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>
+        Insights
+      </span>
+      {items.map(item => (
+        <div key={item.label} style={{
+          display: 'flex', alignItems: 'center', gap: '0.55rem',
+          padding: '0.35rem 0.85rem', borderRadius: 10,
+          background: item.bg, border: `1px solid ${item.color}28`,
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: '1rem', lineHeight: 1 }}>{item.icon}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: '0.62rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: item.color, fontSize: '0.88rem', lineHeight: 1 }}>{item.value}</span>
+            {item.sub && <span style={{ fontSize: '0.58rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{item.sub}</span>}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -598,6 +689,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
         {/* ── Daily energy breakdown ── */}
         <EnergyBreakdownRow latest={latest} />
+        <InsightsRow latest={latest} />
 
         {/* ── Current weather pills ── */}
         {weather?.current && (
@@ -661,13 +753,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
                   <XAxis
                     dataKey="time" stroke="#9ca3af"
-                    fontSize={dateRange === '30d' ? 9 : 10}
                     interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(historyData.length / 10)}
                     angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
                     textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
+                    tick={{ fontSize: dateRange === '30d' ? 9 : 10, fill: '#9ca3af' }}
                   />
-                  <YAxis yAxisId="power" stroke="#9ca3af" fontSize={10} tickFormatter={(v: number) => `${v}kW`} />
-                  <YAxis yAxisId="soc" orientation="right" stroke="#9ca3af" fontSize={10} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} />
+                  <YAxis yAxisId="power" stroke="#9ca3af" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <YAxis yAxisId="soc" orientation="right" stroke="#9ca3af" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 10, fill: '#9ca3af' }} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, name: any) => [`${v} ${String(name).includes('%') ? '%' : 'kW'}`, name]} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif' }} />
                   <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} />
@@ -777,9 +869,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                       <XAxis
-                        dataKey="time" stroke="#9ca3af" fontSize={11} fontFamily="Inter, sans-serif"
+                        dataKey="time" stroke="#9ca3af"
                         tickLine={false} axisLine={false} minTickGap={30} tickMargin={12}
-                        tick={{ fill: '#6b7280', fontSize: 11 }} textAnchor="middle"
+                        tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'Inter, sans-serif' }} textAnchor="middle"
                         allowDataOverflow type="category"
                         tickFormatter={(val: string) => {
                           if (dateRange === '24h') return val;
@@ -788,8 +880,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         }}
                       />
                       <YAxis
-                        stroke="#9ca3af" fontSize={11} fontFamily="Inter, sans-serif"
+                        stroke="#9ca3af"
                         tickLine={false} axisLine={false} width={40} allowDataOverflow
+                        tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: '#9ca3af' }}
                         label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 10 }}
                       />
                       <Tooltip content={<ForecastTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
@@ -803,7 +896,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       <ReferenceLine
                         x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         stroke="#ef4444" strokeDasharray="3 3"
-                        label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 10, fontWeight: 700 }}
+                        label={<span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>NOW</span>}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
