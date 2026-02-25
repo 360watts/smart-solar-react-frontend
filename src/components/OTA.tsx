@@ -95,6 +95,12 @@ export const OTA: React.FC = () => {
     deviceModel: 'all',
   });
 
+  // Modern modal states
+  const [deleteFirmwareModal, setDeleteFirmwareModal] = useState<{ show: boolean; firmware: FirmwareVersion | null }>({ show: false, firmware: null });
+  const [deactivateFirmwareModal, setDeactivateFirmwareModal] = useState<{ show: boolean; firmware: FirmwareVersion | null }>({ show: false, firmware: null });
+  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+
   // Initial load - runs once on mount
   useEffect(() => {
     loadFirmwareData();
@@ -291,7 +297,7 @@ export const OTA: React.FC = () => {
   const handleUploadFirmware = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadForm.file) {
-      alert('Please select a firmware file');
+      setErrorModal({ show: true, message: 'Please select a firmware file before uploading.' });
       return;
     }
 
@@ -307,7 +313,10 @@ export const OTA: React.FC = () => {
       // Call backend API to upload to S3
       const response = await apiService.uploadFirmwareVersion(formData);
       
-      alert(`Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: S3\n\nFile URL: ${response.file || 'N/A'}`);
+      setSuccessModal({ 
+        show: true, 
+        message: `Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: S3` 
+      });
       
       // Reset form
       setUploadForm({
@@ -326,58 +335,73 @@ export const OTA: React.FC = () => {
       await loadFirmwareData();
     } catch (error: any) {
       console.error('Firmware upload failed:', error);
-      alert(`Upload failed: ${error.message || 'Unknown error'}\n\nPlease check:\n- File size is reasonable\n- S3 credentials are configured (USE_S3=True)\n- You have admin permissions`);
+      setErrorModal({ 
+        show: true, 
+        message: `Upload failed: ${error.message || 'Unknown error'}\n\nPlease check:\n- File size is reasonable\n- S3 credentials are configured (USE_S3=True)\n- You have admin permissions` 
+      });
     }
   };
 
-  const handleDeleteFirmware = async (id: number) => {
-    if (window.confirm('Delete this firmware version? This will remove it from S3.')) {
-      try {
-        await apiService.deleteFirmwareVersion(id);
-        alert('Firmware deleted successfully!');
-        // Reload firmware list from backend
-        await loadFirmwareData();
-      } catch (error: any) {
-        console.error('Firmware deletion failed:', error);
-        alert(`Deletion failed: ${error.message || 'Unknown error'}`);
-      }
+  const handleDeleteFirmware = async (firmware: FirmwareVersion) => {
+    setDeleteFirmwareModal({ show: true, firmware });
+  };
+
+  const confirmDeleteFirmware = async () => {
+    if (!deleteFirmwareModal.firmware) return;
+    
+    try {
+      await apiService.deleteFirmwareVersion(deleteFirmwareModal.firmware.id);
+      setDeleteFirmwareModal({ show: false, firmware: null });
+      setSuccessModal({ show: true, message: 'Firmware deleted successfully!' });
+      // Reload firmware list from backend
+      await loadFirmwareData();
+    } catch (error: any) {
+      console.error('Firmware deletion failed:', error);
+      setDeleteFirmwareModal({ show: false, firmware: null });
+      setErrorModal({ show: true, message: `Deletion failed: ${error.message || 'Unknown error'}` });
     }
   };
 
   const handleMarkAsStable = async (id: number) => {
     try {
       await apiService.updateFirmwareVersion(id, { is_active: true });
-      alert('Firmware activated successfully!');
+      setSuccessModal({ show: true, message: 'Firmware activated successfully!' });
       // Reload firmware list from backend
       await loadFirmwareData();
     } catch (error: any) {
       console.error('Firmware update failed:', error);
-      alert(`Update failed: ${error.message || 'Unknown error'}`);
+      setErrorModal({ show: true, message: `Activation failed: ${error.message || 'Unknown error'}` });
     }
   };
 
-  const handleDeactivateFirmware = async (id: number) => {
-    if (window.confirm('Deactivate this firmware? It will no longer be available for OTA updates.')) {
-      try {
-        await apiService.updateFirmwareVersion(id, { is_active: false });
-        alert('Firmware deactivated successfully!');
-        // Reload firmware list from backend
-        await loadFirmwareData();
-      } catch (error: any) {
-        console.error('Firmware deactivation failed:', error);
-        alert(`Deactivation failed: ${error.message || 'Unknown error'}`);
-      }
+  const handleDeactivateFirmware = async (firmware: FirmwareVersion) => {
+    setDeactivateFirmwareModal({ show: true, firmware });
+  };
+
+  const confirmDeactivateFirmware = async () => {
+    if (!deactivateFirmwareModal.firmware) return;
+    
+    try {
+      await apiService.updateFirmwareVersion(deactivateFirmwareModal.firmware.id, { is_active: false });
+      setDeactivateFirmwareModal({ show: false, firmware: null });
+      setSuccessModal({ show: true, message: 'Firmware deactivated successfully!' });
+      // Reload firmware list from backend
+      await loadFirmwareData();
+    } catch (error: any) {
+      console.error('Firmware deactivation failed:', error);
+      setDeactivateFirmwareModal({ show: false, firmware: null });
+      setErrorModal({ show: true, message: `Deactivation failed: ${error.message || 'Unknown error'}` });
     }
   };
 
   // Section 2 handlers
   const handleDeployClick = () => {
     if (!deploymentConfig.firmwareVersion) {
-      alert('Please select a firmware version');
+      setErrorModal({ show: true, message: 'Please select a firmware version before deploying.' });
       return;
     }
     if (deploymentConfig.targetDevices.length === 0) {
-      alert('Please select at least one device');
+      setErrorModal({ show: true, message: 'Please select at least one device to deploy to.' });
       return;
     }
 
@@ -884,7 +908,7 @@ export const OTA: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleDeactivateFirmware(fw.id)}
+                            onClick={() => handleDeactivateFirmware(fw)}
                             style={{
                               background: '#ffc107',
                               color: '#000',
@@ -900,7 +924,7 @@ export const OTA: React.FC = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDeleteFirmware(fw.id)}
+                          onClick={() => handleDeleteFirmware(fw)}
                           style={{
                             background: '#dc3545',
                             color: 'white',
@@ -1944,6 +1968,358 @@ export const OTA: React.FC = () => {
                 }}
               >
                 Confirm Rollback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Delete Firmware Confirmation Modal */}
+      {deleteFirmwareModal.show && deleteFirmwareModal.firmware && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                🗑️
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+                Delete Firmware
+              </h3>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to delete firmware version <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteFirmwareModal.firmware.version}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                color: isDark ? '#fca5a5' : '#991b1b'
+              }}>
+                <strong>⚠️ Warning:</strong> This will permanently remove the firmware file from S3. This action cannot be undone.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteFirmwareModal({ show: false, firmware: null })}
+                style={{
+                  background: isDark ? '#3a3a3a' : '#e0e0e0',
+                  color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteFirmware}
+                style={{
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Deactivate Firmware Confirmation Modal */}
+      {deactivateFirmwareModal.show && deactivateFirmwareModal.firmware && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #ffc107' : '2px solid #ffc107',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                ⏸️
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#ff9800' }}>
+                Deactivate Firmware
+              </h3>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to deactivate firmware version <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deactivateFirmwareModal.firmware.version}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(255, 193, 7, 0.1)' : '#fff3cd',
+                border: isDark ? '1px solid rgba(255, 193, 7, 0.3)' : '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                color: isDark ? '#ffcc00' : '#856404'
+              }}>
+                <strong>ℹ️ Note:</strong> This firmware will no longer be available for OTA updates. You can reactivate it later.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeactivateFirmwareModal({ show: false, firmware: null })}
+                style={{
+                  background: isDark ? '#3a3a3a' : '#e0e0e0',
+                  color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeactivateFirmware}
+                style={{
+                  background: 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)',
+                  color: '#000',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(255, 193, 7, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Yes, Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Success Notification Modal */}
+      {successModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(2px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem',
+                margin: '0 auto 1rem',
+                animation: 'scaleIn 0.3s ease-out'
+              }}>
+                ✓
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+                Success
+              </h3>
+              
+              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
+                {successModal.message}
+              </p>
+              
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Error Notification Modal */}
+      {errorModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(2px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem',
+                margin: '0 auto 1rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                ⚠️
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#dc3545' }}>
+                Error
+              </h3>
+              
+              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
+                {errorModal.message}
+              </p>
+              
+              <button
+                onClick={() => setErrorModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Dismiss
               </button>
             </div>
           </div>

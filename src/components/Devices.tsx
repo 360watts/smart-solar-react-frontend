@@ -162,6 +162,7 @@ const Devices: React.FC = () => {
   // Modern modal states
   const [rebootModal, setRebootModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
@@ -398,18 +399,9 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleDelete = async (device: any) => {
-    if (window.confirm(`Are you sure you want to delete device ${device.device_serial}?`)) {
-      try {
-        await apiService.deleteDevice(device.id);
-        const updatedDevices = devices.filter(d => d.id !== device.id);
-        setDevices(updatedDevices);
-        setFilteredDevices(updatedDevices);
-      } catch (err) {
-        console.error('Delete error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to delete device');
-      }
-    }
+  const handleDelete = (device: any) => {
+    console.log('🗑️ handleDelete called with device:', device.device_serial);
+    setDeleteModal({ show: true, device });
   };
 
   const handleReboot = async (device: any) => {
@@ -456,17 +448,27 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleDeleteDevice = async (device: any) => {
-    if (window.confirm(`⚠️ WARNING: This will permanently delete device ${device.device_serial} and all its data.\n\nAre you sure you want to delete this device?`)) {
-      try {
-        await apiService.deleteDevice(device.id);
-        alert(`Device ${device.device_serial} deleted successfully.`);
-        setSelectedDevice(null);
-        fetchDevices(); // Refresh device list
-      } catch (err) {
-        console.error('Delete device error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to delete device');
-      }
+  const handleDeleteDevice = (device: any) => {
+    console.log('🗑️ handleDeleteDevice called with device:', device.device_serial);
+    setDeleteModal({ show: true, device });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.device) return;
+    
+    try {
+      await apiService.deleteDevice(deleteModal.device.id);
+      setDeleteModal({ show: false, device: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `Device ${deleteModal.device.device_serial} has been permanently deleted.` 
+      });
+      setSelectedDevice(null);
+      fetchDevices(); // Refresh device list
+    } catch (err) {
+      console.error('Delete device error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete device');
+      setDeleteModal({ show: false, device: null });
     }
   };
 
@@ -1506,6 +1508,119 @@ const Devices: React.FC = () => {
           </div>
         )}
 
+        {/* Modern Delete Confirmation Modal */}
+        {deleteModal.show && deleteModal.device && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{
+              background: isDark ? '#2d2d2d' : 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+              border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+              animation: 'slideIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  🗑️
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+                  Delete Device Permanently
+                </h3>
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+                <div style={{
+                  background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+                  border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem',
+                  color: isDark ? '#fca5a5' : '#991b1b'
+                }}>
+                  <strong style={{ fontSize: '1.05rem' }}>⚠️ PERMANENT DELETION</strong>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                    This action <strong>cannot be undone</strong>. All device data will be permanently deleted.
+                  </p>
+                </div>
+                
+                <p style={{ marginBottom: '0.75rem' }}>
+                  Device to delete: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteModal.device.device_serial}</strong>
+                </p>
+                
+                <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
+                  <li>All telemetry data will be lost</li>
+                  <li>All command history will be deleted</li>
+                  <li>Device must be re-provisioned to use again</li>
+                </ul>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setDeleteModal({ show: false, device: null })}
+                  style={{
+                    background: isDark ? '#3a3a3a' : '#e0e0e0',
+                    color: isDark ? '#e0e0e0' : '#495057',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                  onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  style={{
+                    background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Yes, Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modern Success Notification Modal */}
         {successModal.show && (
           <div style={{
@@ -2228,6 +2343,119 @@ const Devices: React.FC = () => {
               onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
             >
               Yes, Hard Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modern Delete Confirmation Modal */}
+    {deleteModal.show && deleteModal.device && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          background: isDark ? '#2d2d2d' : 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          maxWidth: '500px',
+          width: '90%',
+          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+          border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+          animation: 'slideIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              animation: 'pulse 2s infinite'
+            }}>
+              🗑️
+            </div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+              Delete Device Permanently
+            </h3>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+            <div style={{
+              background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+              border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1rem',
+              color: isDark ? '#fca5a5' : '#991b1b'
+            }}>
+              <strong style={{ fontSize: '1.05rem' }}>⚠️ PERMANENT DELETION</strong>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                This action <strong>cannot be undone</strong>. All device data will be permanently deleted.
+              </p>
+            </div>
+            
+            <p style={{ marginBottom: '0.75rem' }}>
+              Device to delete: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteModal.device.device_serial}</strong>
+            </p>
+            
+            <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
+              <li>All telemetry data will be lost</li>
+              <li>All command history will be deleted</li>
+              <li>Device must be re-provisioned to use again</li>
+            </ul>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setDeleteModal({ show: false, device: null })}
+              style={{
+                background: isDark ? '#3a3a3a' : '#e0e0e0',
+                color: isDark ? '#e0e0e0' : '#495057',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+              onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              style={{
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Yes, Delete Permanently
             </button>
           </div>
         </div>

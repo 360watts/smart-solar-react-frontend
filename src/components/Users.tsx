@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface User {
   id: number;
@@ -26,6 +27,7 @@ interface Device {
 
 const Users: React.FC = () => {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,10 @@ const Users: React.FC = () => {
     mobile_number: '',
     address: '',
   });
+
+  // Modern modal states
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; user: User | null }>({ show: false, user: null });
+  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   useEffect(() => {
     fetchUsers();
@@ -130,19 +136,30 @@ const Users: React.FC = () => {
     }
   };
 
-  const handleDelete = async (user: any) => {
-    if (window.confirm(`Are you sure you want to delete user ${user.username}?`)) {
-      try {
-        await apiService.deleteUser(user.id);
-        setUsers(users.filter(u => u.id !== user.id));
-        setFilteredUsers(filteredUsers.filter(u => u.id !== user.id));
-        if (selectedUser?.id === user.id) {
-          setSelectedUser(null);
-          setUserDevices([]);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete user');
+  const handleDelete = (user: any) => {
+    console.log('🗑️ handleDelete called with user:', user.username);
+    setDeleteModal({ show: true, user });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.user) return;
+    
+    try {
+      await apiService.deleteUser(deleteModal.user.id);
+      setUsers(users.filter(u => u.id !== deleteModal.user!.id));
+      setFilteredUsers(filteredUsers.filter(u => u.id !== deleteModal.user!.id));
+      if (selectedUser?.id === deleteModal.user.id) {
+        setSelectedUser(null);
+        setUserDevices([]);
       }
+      setDeleteModal({ show: false, user: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `User "${deleteModal.user.username}" has been deleted successfully.` 
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+      setDeleteModal({ show: false, user: null });
     }
   };
 
@@ -559,6 +576,182 @@ const Users: React.FC = () => {
                 <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Delete User Confirmation Modal */}
+      {deleteModal.show && deleteModal.user && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                🗑️
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+                Delete User
+              </h3>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to delete user <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteModal.user.username}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                color: isDark ? '#fca5a5' : '#991b1b'
+              }}>
+                <strong>⚠️ Warning:</strong> This will permanently delete the user account. Any devices associated with this user will become unassigned.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteModal({ show: false, user: null })}
+                style={{
+                  background: isDark ? '#3a3a3a' : '#e0e0e0',
+                  color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Success Notification Modal */}
+      {successModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(2px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem',
+                margin: '0 auto 1rem',
+                animation: 'scaleIn 0.3s ease-out'
+              }}>
+                ✓
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+                Success
+              </h3>
+              
+              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                {successModal.message}
+              </p>
+              
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Got it!
+              </button>
+            </div>
           </div>
         </div>
       )}

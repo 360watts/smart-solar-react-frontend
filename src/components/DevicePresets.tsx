@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Preset {
   id: number;
@@ -56,6 +57,7 @@ interface RegisterMapping {
 }
 
 const DevicePresets: React.FC = () => {
+  const { isDark } = useTheme();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [filteredPresets, setFilteredPresets] = useState<Preset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +120,11 @@ const DevicePresets: React.FC = () => {
     description: '',
     enabled: true,
   });
+
+  // Modern modal states
+  const [deletePresetModal, setDeletePresetModal] = useState<{ show: boolean; preset: Preset | null }>({ show: false, preset: null });
+  const [deleteSlaveModal, setDeleteSlaveModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
+  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   useEffect(() => {
     fetchPresets();
@@ -302,23 +309,34 @@ const DevicePresets: React.FC = () => {
     }
   };
 
-  const handleDelete = async (preset: any) => {
-    if (window.confirm(`Are you sure you want to delete preset ${preset.name}?`)) {
-      try {
-        await apiService.deletePreset(preset.id);
-        const updatedPresets = presets.filter(p => p.id !== preset.id);
-        setPresets(updatedPresets);
-        // Also update filtered presets to remove the deleted preset immediately
-        const searchLower = searchTerm.toLowerCase();
-        const updatedFiltered = updatedPresets.filter((preset: Preset) =>
-          preset.name.toLowerCase().includes(searchLower) ||
-          preset.config_id.toLowerCase().includes(searchLower) ||
-          preset.description.toLowerCase().includes(searchLower)
-        );
-        setFilteredPresets(updatedFiltered);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete preset');
-      }
+  const handleDelete = (preset: any) => {
+    console.log('🗑️ handleDelete called with preset:', preset.name);
+    setDeletePresetModal({ show: true, preset });
+  };
+
+  const confirmDeletePreset = async () => {
+    if (!deletePresetModal.preset) return;
+    
+    try {
+      await apiService.deletePreset(deletePresetModal.preset.id);
+      const updatedPresets = presets.filter(p => p.id !== deletePresetModal.preset!.id);
+      setPresets(updatedPresets);
+      // Also update filtered presets to remove the deleted preset immediately
+      const searchLower = searchTerm.toLowerCase();
+      const updatedFiltered = updatedPresets.filter((preset: Preset) =>
+        preset.name.toLowerCase().includes(searchLower) ||
+        preset.config_id.toLowerCase().includes(searchLower) ||
+        preset.description.toLowerCase().includes(searchLower)
+      );
+      setFilteredPresets(updatedFiltered);
+      setDeletePresetModal({ show: false, preset: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `Preset "${deletePresetModal.preset.name}" has been deleted successfully.` 
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete preset');
+      setDeletePresetModal({ show: false, preset: null });
     }
   };
 
@@ -575,19 +593,29 @@ const DevicePresets: React.FC = () => {
     }
   };
 
-  const handleDeleteSlave = async (slave: SlaveDevice) => {
+  const handleDeleteSlave = (slave: SlaveDevice) => {
     if (!configuringSlaves) return;
+    console.log('🗑️ handleDeleteSlave called with slave:', slave.deviceName);
+    setDeleteSlaveModal({ show: true, slave });
+  };
 
-    if (window.confirm(`Are you sure you want to delete slave ${slave.deviceName}?`)) {
-      try {
-        await apiService.deleteSlave(configuringSlaves.config_id, slave.slaveId);
-        const updatedSlaves = slaves.filter(s => s.id !== slave.id);
-        setSlaves(updatedSlaves);
-        // Update preset count
-        updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete slave');
-      }
+  const confirmDeleteSlave = async () => {
+    if (!deleteSlaveModal.slave || !configuringSlaves) return;
+    
+    try {
+      await apiService.deleteSlave(configuringSlaves.config_id, deleteSlaveModal.slave.slaveId);
+      const updatedSlaves = slaves.filter(s => s.id !== deleteSlaveModal.slave!.id);
+      setSlaves(updatedSlaves);
+      // Update preset count
+      updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
+      setDeleteSlaveModal({ show: false, slave: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `Slave device "${deleteSlaveModal.slave.deviceName}" has been removed.` 
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete slave');
+      setDeleteSlaveModal({ show: false, slave: null });
     }
   };
 
@@ -1549,6 +1577,285 @@ const DevicePresets: React.FC = () => {
               </button>
               <button type="button" onClick={() => { setCreatingSlave(false); setEditingSlave(null); }} className="btn btn-secondary">
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Delete Preset Confirmation Modal */}
+      {deletePresetModal.show && deletePresetModal.preset && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                🗑️
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+                Delete Preset
+              </h3>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to delete preset <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deletePresetModal.preset.name}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                color: isDark ? '#fca5a5' : '#991b1b'
+              }}>
+                <strong>⚠️ Warning:</strong> This will permanently delete the preset configuration. Devices using this preset will need to be reconfigured.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeletePresetModal({ show: false, preset: null })}
+                style={{
+                  background: isDark ? '#3a3a3a' : '#e0e0e0',
+                  color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePreset}
+                style={{
+                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Delete Slave Confirmation Modal */}
+      {deleteSlaveModal.show && deleteSlaveModal.slave && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                animation: 'pulse 2s infinite'
+              }}>
+                ⚠️
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
+                Remove Slave Device
+              </h3>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Are you sure you want to remove slave device <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteSlaveModal.slave.deviceName}</strong> (ID: {deleteSlaveModal.slave.slaveId})?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
+                border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                color: isDark ? '#ff9999' : '#721c24'
+              }}>
+                <strong>⚠️ Warning:</strong> This will remove the slave device configuration and all its register mappings.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteSlaveModal({ show: false, slave: null })}
+                style={{
+                  background: isDark ? '#3a3a3a' : '#e0e0e0',
+                  color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteSlave}
+                style={{
+                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Success Notification Modal */}
+      {successModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(2px)'
+        }}>
+          <div style={{
+            background: isDark ? '#2d2d2d' : 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
+            animation: 'slideIn 0.2s ease-out'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem',
+                margin: '0 auto 1rem',
+                animation: 'scaleIn 0.3s ease-out'
+              }}>
+                ✓
+              </div>
+              
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+                Success
+              </h3>
+              
+              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                {successModal.message}
+              </p>
+              
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 2rem',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Got it!
               </button>
             </div>
           </div>
