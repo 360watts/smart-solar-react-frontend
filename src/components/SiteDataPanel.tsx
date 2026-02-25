@@ -9,9 +9,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   AreaChart, Area, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush, ReferenceLine
 } from 'recharts';
+import html2canvas from 'html2canvas';
 import { apiService } from '../services/api';
+// Custom tooltip for forecast chart
+const ForecastTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid #00a63e22', borderRadius: 10, padding: '0.7em 1.1em', boxShadow: '0 4px 16px #00a63e11', fontSize: 13, minWidth: 120 }}>
+        <div style={{ fontWeight: 700, color: '#00a63e', marginBottom: 2 }}>{label}</div>
+        {payload.map((entry: any) => (
+          <div key={entry.dataKey} style={{ color: entry.color, fontWeight: 600, margin: '2px 0' }}>
+            {entry.name}: <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{entry.value} kW</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -557,7 +574,24 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             telemetry.length={telemetry.length}, noData={String(telemetry.length === 0 && forecast.length === 0 && !weather)}
           </div>
           {forecastData.length > 0 && (
-            <div className="card" style={{ padding: '1.25rem', boxShadow: '0 4px 24px rgba(0,166,62,0.07)', border: '1px solid #e0f2ef', borderRadius: 16 }}>
+            <div className="card" style={{ padding: '1.25rem', boxShadow: '0 4px 24px rgba(0,166,62,0.07)', border: '1px solid #e0f2ef', borderRadius: 16, background: 'linear-gradient(120deg, #f0fdfa 0%, #e0f7e9 100%)', position: 'relative' }}>
+                            {/* Download button */}
+                            <button
+                              onClick={async () => {
+                                const chartDiv = document.getElementById('forecast-chart-img');
+                                if (chartDiv) {
+                                  const canvas = await html2canvas(chartDiv, { background: 'transparent' });
+                                  const link = document.createElement('a');
+                                  link.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
+                                  link.href = canvas.toDataURL();
+                                  link.click();
+                                }
+                              }}
+                              style={{ position: 'absolute', top: 12, right: 16, background: '#00a63e', color: '#fff', border: 'none', borderRadius: 6, padding: '0.3em 0.9em', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px #00a63e22', zIndex: 2 }}
+                              title="Download chart as image"
+                            >
+                              ⬇ Export
+                            </button>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <h3 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: '#00a63e', letterSpacing: '0.01em', fontWeight: 800 }}>
@@ -586,15 +620,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   ))}
                 </div>
               </div>
-              <div style={{ height: 240 }}>
+              <div id="forecast-chart-img" style={{ height: 260, borderRadius: 12, overflow: 'hidden', background: 'linear-gradient(120deg, #f0fdfa 0%, #e0f7e9 100%)' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecastData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <AreaChart data={forecastData} margin={{ top: 4, right: 8, left: 0, bottom: 24 }}>
                     <defs>
                       <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.25}/>
                         <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
                       </linearGradient>
+                      <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#e0f7e9" stopOpacity={0.7}/>
+                        <stop offset="100%" stopColor="#f0fdfa" stopOpacity={0.7}/>
+                      </linearGradient>
                     </defs>
+                    <rect x={0} y={0} width="100%" height="100%" fill="url(#bgGrad)" />
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
                     <XAxis 
                       dataKey="time" 
@@ -605,11 +644,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       textAnchor={dateRange === '7d' || dateRange === '30d' || dateRange === 'custom' ? 'end' : 'middle'}
                     />
                     <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={v => `${v}kW`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v} kW`]} animationDuration={350} />
+                    <Tooltip content={<ForecastTooltip />} animationDuration={350} cursor={{ stroke: '#00a63e', strokeWidth: 2, opacity: 0.18 }} />
+                    <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12, fontFamily: 'Poppins, sans-serif', bottom: 0, left: 0, padding: 0 }} verticalAlign="top" height={32} />
                     {/* Confidence band: p90 filled down to p10 */}
-                    {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#4ade80" strokeWidth={1} strokeDasharray="4 3" fill="rgba(74,222,128,0.08)" dot={false} isAnimationActive={true} />}
-                    {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2} fill="url(#p50Grad)" dot={false} isAnimationActive={true} />}
-                    {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#fbbf24" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} isAnimationActive={true} />}
+                    {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#4ade80" strokeWidth={1} strokeDasharray="4 3" fill="rgba(74,222,128,0.08)" dot={false} isAnimationActive={true} name="P90" />}
+                    {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2} fill="url(#p50Grad)" dot={false} isAnimationActive={true} name="P50" />}
+                    {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#fbbf24" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} isAnimationActive={true} name="P10" />}
+                    {/* Reference line for now */}
+                    <ReferenceLine x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Now', position: 'top', fill: '#ef4444', fontSize: 11, fontWeight: 700 }} ifOverflow="extendDomain" />
+                    {/* Interactive brush for zoom/pan */}
+                    <Brush dataKey="time" height={18} stroke="#00a63e" fill="#e0f7e9" travellerWidth={12} startIndex={0} endIndex={Math.min(23, forecastData.length-1)} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
