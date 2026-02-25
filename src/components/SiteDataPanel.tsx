@@ -8,7 +8,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AreaChart, Area, Line, ReferenceArea,
+  AreaChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
 import html2canvas from 'html2canvas';
@@ -45,7 +45,7 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
                 <span style={{ fontWeight: 600 }}>{entry.name.split(' ')[0]}</span>
               </div>
               <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: '#111827' }}>
-                {Number(entry.value).toFixed(2)} kW
+                {Number(entry.value).toFixed(2)} {entry.name.includes('Temp') ? '°C' : entry.name.includes('GHI') ? 'W/m²' : 'kW'}
               </span>
             </div>
           ))}
@@ -220,6 +220,8 @@ const ForecastTable = ({ data }: { data: any[] }) => (
           <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: '1px solid #e5e7eb' }}>P10 (Low)</th>
           <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: '1px solid #e5e7eb' }}>P50 (Median)</th>
           <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: '1px solid #e5e7eb' }}>P90 (High)</th>
+          
+          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: '1px solid #e5e7eb' }}>GHI (W/m²)</th>
         </tr>
       </thead>
       <tbody>
@@ -229,6 +231,8 @@ const ForecastTable = ({ data }: { data: any[] }) => (
             <td style={{ padding: '0.6rem 1rem', textAlign: 'right', color: '#4b5563' }}>{row.p10?.toFixed(2) ?? '-'}</td>
             <td style={{ padding: '0.6rem 1rem', textAlign: 'right', fontWeight: 600, color: '#111827' }}>{row.p50?.toFixed(2) ?? '-'}</td>
             <td style={{ padding: '0.6rem 1rem', textAlign: 'right', color: '#4b5563' }}>{row.p90?.toFixed(2) ?? '-'}</td>
+            
+            <td style={{ padding: '0.6rem 1rem', textAlign: 'right', color: '#4b5563' }}>{row.ghi?.toFixed(0) ?? '-'}</td>
           </tr>
         ))}
       </tbody>
@@ -264,44 +268,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
-  const [zoomLeft, setZoomLeft] = useState<string | number>('dataMin');
-  const [zoomRight, setZoomRight] = useState<string | number>('dataMax');
-  const [refAreaLeft, setRefAreaLeft] = useState('');
-  const [refAreaRight, setRefAreaRight] = useState('');
+  // Zoom feature removed
 
-  const zoom = () => {
-    let left = refAreaLeft;
-    let right = refAreaRight;
-
-    if (left === right || right === '') {
-      setRefAreaLeft('');
-      setRefAreaRight('');
-      return;
-    }
-
-    // Ensure left is actually smaller than right (chronologically)
-    // Since XAxis dataKey="time" is string, we rely on index order in data
-    // But Recharts passes the categorical value. 
-    // Simplified: Just check if left != right. 
-    // Limitation: String comparison might fail if time format rolls over (e.g. 23:00 -> 00:00)
-    // For this implementation, we will trust the user selection order or swap if needed.
-    
-    // Actually, Recharts onMouseDown gives the activeLabel.
-    
-    if (left > right) [left, right] = [right, left];
-
-    setZoomLeft(left);
-    setZoomRight(right);
-    setRefAreaLeft('');
-    setRefAreaRight('');
-  };
-
-  const zoomOut = () => {
-    setZoomLeft('dataMin');
-    setZoomRight('dataMax');
-    setRefAreaLeft('');
-    setRefAreaRight('');
-  };
+  // Zoom feature removed
 
   const fetchAll = useCallback(async () => {
     try {
@@ -419,6 +388,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       p50: row.p50_kw != null ? +row.p50_kw.toFixed(3) : null,
       p10: row.p10_kw != null ? +row.p10_kw.toFixed(3) : null,
       p90: row.p90_kw != null ? +row.p90_kw.toFixed(3) : null,
+      // Only use weather fields from forecast record
+      temp: row.temperature_c != null ? +row.temperature_c : null,
+      ghi: row.ghi_input_wm2 != null ? +row.ghi_input_wm2 : null,
     };
   });
 
@@ -734,12 +706,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         ))}
                       </div>
 
-                      {/* Zoom Controls */}
-                      <div style={{ display: 'flex', background: '#f3f4f6', padding: 3, borderRadius: 8 }}>
-                         <button onClick={zoomOut} disabled={zoomLeft === 'dataMin' && zoomRight === 'dataMax'} style={{ border: 'none', background: 'transparent', padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '1rem', color: '#4b5563', opacity: zoomLeft === 'dataMin' ? 0.4 : 1 }} title="Reset Zoom">
-                           ↺
-                         </button>
-                      </div>
+                      {/* Zoom feature removed: controls deleted */}
                     </>
                   )}
 
@@ -776,9 +743,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     <AreaChart 
                       data={forecastData} 
                       margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
-                      onMouseDown={(e: any) => e && setRefAreaLeft(e.activeLabel)}
-                      onMouseMove={(e: any) => refAreaLeft && e && setRefAreaRight(e.activeLabel)}
-                      onMouseUp={zoom}
                     >
                       <defs>
                         <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
@@ -808,19 +772,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         angle={0}
                         textAnchor="middle"
                         allowDataOverflow
-                        domain={[zoomLeft, zoomRight]}
                         type="category"
                         tickFormatter={(val, index) => {
                           // Clean formatted ticks based on range
                           if (dateRange === '24h') return val; // Already HH:MM
-                          // For longer ranges, maybe just show date if it changes, or time?
-                          // The 'val' is currently "MMM D HH:MM" from the map function. 
-                          // Let's shorten it for axis ticks.
-                          const parts = val.split(' ');
+                          
+                          // Custom ticker to remove repeated dates:
+                          const parts = val.split(' '); // ["Feb", "25", "14:00"]
                           if (parts.length >= 3) {
-                             // "Feb 25 14:00" -> Show "Feb 25" if distinct, else time?
-                             // Simplest professional approach: show limited ticks
-                             return parts[0] + ' ' + parts[1]; 
+                             // "Feb 25 14:00"
+                             // Simplest approach: show simplified date string
+                             return `${parts[0]} ${parts[1]}`;
                           }
                           return val;
                         }}
@@ -851,10 +813,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       
                       <ReferenceLine x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 10, fontWeight: 700 }} />
                       
-                      {/* Zoom Selection Area */}
-                      {refAreaLeft && refAreaRight ? (
-                        <ReferenceArea x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} fill="#00a63e" fillOpacity={0.1} />
-                      ) : null}
+                      {/* Zoom feature removed: ReferenceArea deleted */}
 
                       {/* Minimalist Brush (optional, user asked to remove slider bar but keep functionality, we keep minimal brush or rely on drag zoom. User said 'do all 3', so we keep brush but cleaner) 
                       <Brush 
