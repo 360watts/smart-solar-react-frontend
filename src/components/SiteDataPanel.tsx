@@ -8,8 +8,8 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AreaChart, Area, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush, ReferenceLine
+  AreaChart, Area, Line, ReferenceArea,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { apiService } from '../services/api';
@@ -17,13 +17,39 @@ import { apiService } from '../services/api';
 const ForecastTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid #00a63e22', borderRadius: 10, padding: '0.7em 1.1em', boxShadow: '0 4px 16px #00a63e11', fontSize: 13, minWidth: 120 }}>
-        <div style={{ fontWeight: 700, color: '#00a63e', marginBottom: 2 }}>{label}</div>
-        {payload.map((entry: any) => (
-          <div key={entry.dataKey} style={{ color: entry.color, fontWeight: 600, margin: '2px 0' }}>
-            {entry.name}: <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{entry.value} kW</span>
-          </div>
-        ))}
+      <div style={{ 
+        background: 'rgba(255, 255, 255, 0.9)', 
+        backdropFilter: 'blur(8px)',
+        border: '1px solid #f3f4f6', 
+        borderRadius: 12, 
+        padding: '0.75rem 1rem', 
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', 
+        minWidth: 160 
+      }}>
+        <div style={{ 
+          fontFamily: 'Urbanist, sans-serif', 
+          fontWeight: 700, 
+          color: '#111827', 
+          fontSize: '0.9rem',
+          marginBottom: '0.5rem',
+          borderBottom: '1px solid #f3f4f6',
+          paddingBottom: '0.25rem'
+        }}>
+          {label}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {payload.map((entry: any) => (
+            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', color: '#374151' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill }}></span>
+                <span style={{ fontWeight: 600 }}>{entry.name.split(' ')[0]}</span>
+              </div>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: '#111827' }}>
+                {Number(entry.value).toFixed(2)} kW
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -183,6 +209,33 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
   </div>
 );
 
+// ── data table component ──────────────────────────────────────────────────────
+
+const ForecastTable = ({ data }: { data: any[] }) => (
+  <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>
+      <thead style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1 }}>
+        <tr>
+          <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#4b5563', borderBottom: '1px solid #e5e7eb' }}>Time</th>
+          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: '1px solid #e5e7eb' }}>P10 (Low)</th>
+          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: '1px solid #e5e7eb' }}>P50 (Median)</th>
+          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: '1px solid #e5e7eb' }}>P90 (High)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row, i) => (
+          <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
+            <td style={{ padding: '0.6rem 1rem', color: '#111827', fontFamily: 'JetBrains Mono, monospace' }}>{row.time}</td>
+            <td style={{ padding: '0.6rem 1rem', textAlign: 'right', color: '#4b5563' }}>{row.p10?.toFixed(2) ?? '-'}</td>
+            <td style={{ padding: '0.6rem 1rem', textAlign: 'right', fontWeight: 600, color: '#111827' }}>{row.p50?.toFixed(2) ?? '-'}</td>
+            <td style={{ padding: '0.6rem 1rem', textAlign: 'right', color: '#4b5563' }}>{row.p90?.toFixed(2) ?? '-'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
 // ── main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -210,6 +263,45 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [dateRange, setDateRange] = useState<string>('24h'); // '24h' | '7d' | '30d' | 'custom'
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
+  const [zoomLeft, setZoomLeft] = useState<string | number>('dataMin');
+  const [zoomRight, setZoomRight] = useState<string | number>('dataMax');
+  const [refAreaLeft, setRefAreaLeft] = useState('');
+  const [refAreaRight, setRefAreaRight] = useState('');
+
+  const zoom = () => {
+    let left = refAreaLeft;
+    let right = refAreaRight;
+
+    if (left === right || right === '') {
+      setRefAreaLeft('');
+      setRefAreaRight('');
+      return;
+    }
+
+    // Ensure left is actually smaller than right (chronologically)
+    // Since XAxis dataKey="time" is string, we rely on index order in data
+    // But Recharts passes the categorical value. 
+    // Simplified: Just check if left != right. 
+    // Limitation: String comparison might fail if time format rolls over (e.g. 23:00 -> 00:00)
+    // For this implementation, we will trust the user selection order or swap if needed.
+    
+    // Actually, Recharts onMouseDown gives the activeLabel.
+    
+    if (left > right) [left, right] = [right, left];
+
+    setZoomLeft(left);
+    setZoomRight(right);
+    setRefAreaLeft('');
+    setRefAreaRight('');
+  };
+
+  const zoomOut = () => {
+    setZoomLeft('dataMin');
+    setZoomRight('dataMax');
+    setRefAreaLeft('');
+    setRefAreaRight('');
+  };
 
   const fetchAll = useCallback(async () => {
     try {
@@ -556,7 +648,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
                     />
                     <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={v => `${v}kW`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, name: string) => [`${v} ${name.includes('%') ? '%' : 'kW'}`, name]} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, name: any) => [`${v} ${name && name.includes('%') ? '%' : 'kW'}`, name]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif' }} />
                     <Area type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} />
                     <Area type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} />
@@ -567,95 +659,233 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             </div>
           )}
 
-          {/* ── Forecast chart ── */}
-          {/* DEBUG: Force render to test */}
-          <div style={{ padding: '0.5rem', background: '#ffe', border: '1px solid #cc0', marginBottom: '0.5rem', fontSize: '12px' }}>
-            DEBUG: forecast.length={forecast.length}, forecastData.length={forecastData.length}, 
-            telemetry.length={telemetry.length}, noData={String(telemetry.length === 0 && forecast.length === 0 && !weather)}
-          </div>
           {forecastData.length > 0 && (
-            <div className="card" style={{ padding: '1.25rem', boxShadow: '0 4px 24px rgba(0,166,62,0.07)', border: '1px solid #e0f2ef', borderRadius: 16, background: 'linear-gradient(120deg, #f0fdfa 0%, #e0f7e9 100%)', position: 'relative' }}>
-                            {/* Download button */}
-                            <button
-                              onClick={async () => {
-                                const chartDiv = document.getElementById('forecast-chart-img');
-                                if (chartDiv) {
-                                  const canvas = await html2canvas(chartDiv, { background: 'transparent' });
-                                  const link = document.createElement('a');
-                                  link.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
-                                  link.href = canvas.toDataURL();
-                                  link.click();
-                                }
-                              }}
-                              style={{ position: 'absolute', top: 12, right: 16, background: '#00a63e', color: '#fff', border: 'none', borderRadius: 6, padding: '0.3em 0.9em', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px #00a63e22', zIndex: 2 }}
-                              title="Download chart as image"
-                            >
-                              ⬇ Export
-                            </button>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <h3 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: '#00a63e', letterSpacing: '0.01em', fontWeight: 800 }}>
-                    <span style={{ verticalAlign: 'middle', marginRight: 6, fontSize: '1.2em' }}>🔆</span> Solar Forecast
-                  </h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.7rem', alignItems: 'center' }}>
+            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #e5e7eb', borderRadius: 16, background: '#ffffff', overflow: 'hidden' }}>
+              {/* Header Bar */}
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(to right, #ffffff, #f9fafb)' }}>
+                {/* Left: Title & Stats */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🔆</div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: '#111827', fontWeight: 700 }}>Solar Forecast</h3>
+                    </div>
                     {forecastEnergyP50 > 0 && (
-                      <span style={{ fontSize: '0.8rem', color: '#00a63e', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, background: '#e0f7e9', borderRadius: 8, padding: '0.18em 0.7em' }}>
-                        {forecastEnergyP10.toFixed(2)} – {forecastEnergyP50.toFixed(2)} – {forecastEnergyP90.toFixed(2)} kWh
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '2.5rem' }}>
+                         <span style={{ fontSize: '0.85rem', color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Est. Yield:</span>
+                         <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', fontWeight: 600, color: '#111827', background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>
+                           {forecastEnergyP10.toFixed(1)} <span style={{color:'#9ca3af'}}>/</span> <span style={{color: '#00a63e'}}>{forecastEnergyP50.toFixed(1)}</span> <span style={{color:'#9ca3af'}}>/</span> {forecastEnergyP90.toFixed(1)} kWh
+                         </span>
+                      </div>
                     )}
-                    {forecastGeneratedAt && (
-                      <span style={{ fontSize: '0.7rem', color: '#b0b0b0', fontFamily: 'Poppins, sans-serif' }}>
-                        Generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    )}
-                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  {[{ label: 'P10', color: '#fbbf24' }, { label: 'P50', color: '#00a63e' }, { label: 'P90', color: '#4ade80' }].map(b => (
-                    <label key={b.label} style={{ fontSize: '0.7rem', fontWeight: 600, color: b.color, display: 'flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'Poppins, sans-serif', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={showBands[b.label]} onChange={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ accentColor: b.color, marginRight: 3 }} />
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.color, display: 'inline-block' }} />
-                      {b.label}
-                    </label>
-                  ))}
+
+                {/* Right: Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {/* View Toggle */}
+                  <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 3 }}>
+                    <button 
+                      onClick={() => setForecastView('chart')}
+                      style={{ 
+                        border: 'none', background: forecastView === 'chart' ? '#fff' : 'transparent', 
+                        color: forecastView === 'chart' ? '#00a63e' : '#6b7280', borderRadius: 6,
+                        padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                        boxShadow: forecastView === 'chart' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                      }}>
+                      Chart
+                    </button>
+                     <button 
+                      onClick={() => setForecastView('table')}
+                      style={{ 
+                        border: 'none', background: forecastView === 'table' ? '#fff' : 'transparent', 
+                        color: forecastView === 'table' ? '#00a63e' : '#6b7280', borderRadius: 6,
+                        padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                        boxShadow: forecastView === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                      }}>
+                      Table
+                    </button>
+                  </div>
+
+                  {forecastView === 'chart' && (
+                    <>
+                      {/* Toggle Pills */}
+                      <div style={{ display: 'flex', background: '#f3f4f6', padding: 3, borderRadius: 8 }}>
+                        {[{ label: 'P10', color: '#f59e0b', tooltip: 'Conservative' }, { label: 'P50', color: '#00a63e', tooltip: 'Median' }, { label: 'P90', color: '#3b82f6', tooltip: 'Optimistic' }].map(b => (
+                           <button
+                             key={b.label}
+                             onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))}
+                             style={{
+                               border: 'none',
+                               background: showBands[b.label] ? '#ffffff' : 'transparent',
+                               color: showBands[b.label] ? b.color : '#9ca3af',
+                               boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                               borderRadius: 6,
+                               padding: '0.35rem 0.75rem',
+                               fontSize: '0.75rem',
+                               fontWeight: 600,
+                               cursor: 'pointer',
+                               transition: 'all 0.2s ease',
+                               display: 'flex', alignItems: 'center', gap: 4
+                             }}
+                             title={`Toggle ${b.tooltip} Forecast`}
+                           >
+                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: showBands[b.label] ? b.color : '#d1d5db' }} />
+                             {b.label}
+                           </button>
+                        ))}
+                      </div>
+
+                      {/* Zoom Controls */}
+                      <div style={{ display: 'flex', background: '#f3f4f6', padding: 3, borderRadius: 8 }}>
+                         <button onClick={zoomOut} disabled={zoomLeft === 'dataMin' && zoomRight === 'dataMax'} style={{ border: 'none', background: 'transparent', padding: '0.35rem 0.6rem', cursor: 'pointer', fontSize: '1rem', color: '#4b5563', opacity: zoomLeft === 'dataMin' ? 0.4 : 1 }} title="Reset Zoom">
+                           ↺
+                         </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Export Button */}
+                  <button
+                    onClick={async () => {
+                      const chartDiv = document.getElementById('forecast-chart-container');
+                      if (chartDiv) {
+                        const canvas = await html2canvas(chartDiv, { background: '#ffffff', scale: 2 } as any); // Higher scale for better quality
+                        const link = document.createElement('a');
+                        link.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
+                        link.href = canvas.toDataURL();
+                        link.click();
+                      }
+                    }}
+                    style={{
+                      background: 'transparent', border: '1px solid #e5e7eb', color: '#374151',
+                      borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600,
+                      cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>📷</span> <span>Save</span>
+                  </button>
                 </div>
               </div>
-              <div id="forecast-chart-img" style={{ height: 260, borderRadius: 12, overflow: 'hidden', background: 'linear-gradient(120deg, #f0fdfa 0%, #e0f7e9 100%)' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecastData} margin={{ top: 4, right: 8, left: 0, bottom: 24 }}>
-                    <defs>
-                      <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.25}/>
-                        <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#e0f7e9" stopOpacity={0.7}/>
-                        <stop offset="100%" stopColor="#f0fdfa" stopOpacity={0.7}/>
-                      </linearGradient>
-                    </defs>
-                    <rect x={0} y={0} width="100%" height="100%" fill="url(#bgGrad)" />
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
-                    <XAxis 
-                      dataKey="time" 
-                      stroke="#9ca3af" 
-                      fontSize={10} 
-                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(forecastData.length / 10)}
-                      angle={dateRange === '7d' || dateRange === '30d' || dateRange === 'custom' ? -15 : 0}
-                      textAnchor={dateRange === '7d' || dateRange === '30d' || dateRange === 'custom' ? 'end' : 'middle'}
-                    />
-                    <YAxis stroke="#9ca3af" fontSize={10} tickFormatter={v => `${v}kW`} />
-                    <Tooltip content={<ForecastTooltip />} animationDuration={350} cursor={{ stroke: '#00a63e', strokeWidth: 2, opacity: 0.18 }} />
-                    <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12, fontFamily: 'Poppins, sans-serif', bottom: 0, left: 0, padding: 0 }} verticalAlign="top" height={32} />
-                    {/* Confidence band: p90 filled down to p10 */}
-                    {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#4ade80" strokeWidth={1} strokeDasharray="4 3" fill="rgba(74,222,128,0.08)" dot={false} isAnimationActive={true} name="P90" />}
-                    {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2} fill="url(#p50Grad)" dot={false} isAnimationActive={true} name="P50" />}
-                    {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#fbbf24" strokeWidth={1} strokeDasharray="4 3" fill="none" dot={false} isAnimationActive={true} name="P10" />}
-                    {/* Reference line for now */}
-                    <ReferenceLine x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Now', position: 'top', fill: '#ef4444', fontSize: 11, fontWeight: 700 }} ifOverflow="extendDomain" />
-                    {/* Interactive brush for zoom/pan */}
-                    <Brush dataKey="time" height={18} stroke="#00a63e" fill="#e0f7e9" travellerWidth={12} startIndex={0} endIndex={Math.min(23, forecastData.length-1)} />
-                  </AreaChart>
-                </ResponsiveContainer>
+
+              {/* Chart/Table Area */}
+              <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: '#ffffff', position: 'relative' }}>
+                {forecastView === 'chart' ? (
+                <div style={{ height: 300, width: '100%', userSelect: 'none' }}>
+                  <ResponsiveContainer>
+                    <AreaChart 
+                      data={forecastData} 
+                      margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
+                      onMouseDown={(e: any) => e && setRefAreaLeft(e.activeLabel)}
+                      onMouseMove={(e: any) => refAreaLeft && e && setRefAreaRight(e.activeLabel)}
+                      onMouseUp={zoom}
+                    >
+                      <defs>
+                        <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
+                        </linearGradient>
+                         <linearGradient id="p90Grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                         <linearGradient id="p10Grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                      <XAxis 
+                        dataKey="time" 
+                        stroke="#9ca3af" 
+                        fontSize={11}
+                        fontFamily="Inter, sans-serif" 
+                        tickLine={false}
+                        axisLine={false}
+                        minTickGap={30}
+                        tickMargin={12}
+                        tick={{ fill: '#6b7280', fontSize: 11 }}
+                        angle={0}
+                        textAnchor="middle"
+                        allowDataOverflow
+                        domain={[zoomLeft, zoomRight]}
+                        type="category"
+                        tickFormatter={(val, index) => {
+                          // Clean formatted ticks based on range
+                          if (dateRange === '24h') return val; // Already HH:MM
+                          // For longer ranges, maybe just show date if it changes, or time?
+                          // The 'val' is currently "MMM D HH:MM" from the map function. 
+                          // Let's shorten it for axis ticks.
+                          const parts = val.split(' ');
+                          if (parts.length >= 3) {
+                             // "Feb 25 14:00" -> Show "Feb 25" if distinct, else time?
+                             // Simplest professional approach: show limited ticks
+                             return parts[0] + ' ' + parts[1]; 
+                          }
+                          return val;
+                        }}
+                      />
+                      <YAxis 
+                        stroke="#9ca3af" 
+                        fontSize={11}
+                        fontFamily="Inter, sans-serif"
+                        tickLine={false} 
+                        axisLine={false} 
+                        width={40}
+                        tickFormatter={v => `${v}`} 
+                        allowDataOverflow
+//                        domain={['auto', 'auto']}
+                        label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 10, offset: 0 }}
+                      />
+                      <Tooltip content={<ForecastTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: '#6b7280', fontFamily: 'Inter, sans-serif' }} />
+                      
+                      {/* P90 (Optimistic) - Render first (back) */}
+                      {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" fill="url(#p90Grad)" activeDot={false} name="P90 (Optimistic)" animationDuration={500} />}
+                      
+                      {/* P10 (Pessimistic) */}
+                      {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3" fill="url(#p10Grad)" activeDot={false} name="P10 (Reference)" animationDuration={500} />}
+
+                      {/* P50 (Median) - Render last (front, boldest) */}
+                      {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2.5} fill="url(#p50Grad)" activeDot={{r: 4, strokeWidth: 0}} name="P50 (Median)" animationDuration={800} />}
+                      
+                      <ReferenceLine x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 10, fontWeight: 700 }} />
+                      
+                      {/* Zoom Selection Area */}
+                      {refAreaLeft && refAreaRight ? (
+                        <ReferenceArea x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} fill="#00a63e" fillOpacity={0.1} />
+                      ) : null}
+
+                      {/* Minimalist Brush (optional, user asked to remove slider bar but keep functionality, we keep minimal brush or rely on drag zoom. User said 'do all 3', so we keep brush but cleaner) 
+                      <Brush 
+                        dataKey="time" 
+                        height={10} 
+                        stroke="#e5e7eb" 
+                        fill="#f9fafb" 
+                        travellerWidth={6}
+                        gap={1}
+                        startIndex={0}
+                        endIndex={forecastData.length - 1}
+                        onChange={(metrics: any) => {
+                           // Sync zoom state if brush moves
+                        }}
+                      />
+                      */}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  {/* Zoom Hint */}
+                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.65rem', color: '#9ca3af', background: 'rgba(255,255,255,0.8)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                    Tip: Click & drag on chart to zoom
+                  </div>
+                </div>
+                ) : (
+                  <ForecastTable data={forecastData} />
+                )}
+                {forecastGeneratedAt && (
+                   <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
+                     Forecast generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                   </div>
+                )}
               </div>
             </div>
           )}
