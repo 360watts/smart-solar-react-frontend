@@ -556,14 +556,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           </div>
 
           {/* ── Weather pill row ── */}
-          {weather && (
+          {weather?.current && (
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               {[
-                { label: 'Temp', value: weather.temperature_c != null ? `${weather.temperature_c.toFixed(1)} °C` : null },
-                { label: 'Humidity', value: weather.humidity_pct != null ? `${weather.humidity_pct} %` : null },
-                { label: 'Cloud', value: weather.cloud_cover_pct != null ? `${weather.cloud_cover_pct} %` : null, icon: <IconCloud /> },
-                { label: 'Wind', value: weather.wind_speed_ms != null ? `${weather.wind_speed_ms.toFixed(1)} m/s` : null },
-                { label: 'GHI', value: weather.ghi_wm2 != null ? `${Math.round(weather.ghi_wm2)} W/m²` : null },
+                { label: 'Temp', value: weather.current.temperature_c != null ? `${Number(weather.current.temperature_c).toFixed(1)} °C` : null },
+                { label: 'Humidity', value: weather.current.humidity_pct != null ? `${weather.current.humidity_pct} %` : null },
+                { label: 'Cloud', value: weather.current.cloud_cover_pct != null ? `${weather.current.cloud_cover_pct} %` : null, icon: <IconCloud /> },
+                { label: 'Wind', value: weather.current.wind_speed_ms != null ? `${Number(weather.current.wind_speed_ms).toFixed(1)} m/s` : null },
+                { label: 'GHI', value: weather.current.ghi_wm2 != null ? `${Math.round(weather.current.ghi_wm2)} W/m²` : null },
               ].filter(p => p.value != null).map(p => (
                 <span key={p.label} style={{
                   fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',

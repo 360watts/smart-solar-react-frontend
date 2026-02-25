@@ -237,7 +237,18 @@ class ApiService {
     return this.request(url);
   }
 
-  async getSiteWeather(siteId: string): Promise<any> {
+  /**
+   * Returns { current: WeatherObs | null, hourly_forecast: WeatherFcst[] }
+   *   current.obs_timestamp    — ISO UTC of the observation
+   *   current.ghi_wm2          — global horizontal irradiance (W/m²)
+   *   current.temperature_c    — air temperature (°C)
+   *   current.humidity_pct     — relative humidity (%)
+   *   current.wind_speed_ms    — wind speed (m/s)
+   *   current.cloud_cover_pct  — cloud cover (%)
+   *   hourly_forecast[n].forecast_for — ISO UTC of the forecast slot
+   *   hourly_forecast[n].ghi_wm2 …   — same fields as current
+   */
+  async getSiteWeather(siteId: string): Promise<{ current: any | null; hourly_forecast: any[] } | null> {
     return this.request(`/sites/${siteId}/weather/`);
   }
 
