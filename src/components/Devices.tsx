@@ -158,6 +158,11 @@ const Devices: React.FC = () => {
   const [siteSaving, setSiteSaving] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
   const [devicePreset, setDevicePreset] = useState<Preset | null>(null);
+  
+  // Modern modal states
+  const [rebootModal, setRebootModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
+  const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
+  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
     try {
@@ -408,26 +413,46 @@ const Devices: React.FC = () => {
   };
 
   const handleReboot = async (device: any) => {
-    if (window.confirm(`Are you sure you want to reboot device ${device.device_serial}? The device will restart on its next heartbeat.`)) {
-      try {
-        await apiService.rebootDevice(device.id);
-        alert(`Reboot command queued for ${device.device_serial}. Device will reboot on next heartbeat.`);
-      } catch (err) {
-        console.error('Reboot error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to queue reboot command');
-      }
+    console.log('🔄 handleReboot called with device:', device);
+    console.log('🔄 Setting rebootModal to:', { show: true, device });
+    setRebootModal({ show: true, device });
+  };
+  
+  const confirmReboot = async () => {
+    if (!rebootModal.device) return;
+    
+    try {
+      await apiService.rebootDevice(rebootModal.device.id);
+      setRebootModal({ show: false, device: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `Reboot command queued for ${rebootModal.device.device_serial}. Device will reboot on next heartbeat.` 
+      });
+    } catch (err) {
+      console.error('Reboot error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to queue reboot command');
+      setRebootModal({ show: false, device: null });
     }
   };
 
   const handleHardReset = async (device: any) => {
-    if (window.confirm(`⚠️ WARNING: Hard reset will erase device configuration and restart it.\n\nAre you sure you want to hard reset device ${device.device_serial}?`)) {
-      try {
-        await apiService.hardResetDevice(device.id);
-        alert(`Hard reset command queued for ${device.device_serial}. Device will reset on next heartbeat.`);
-      } catch (err) {
-        console.error('Hard reset error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to queue hard reset command');
-      }
+    setHardResetModal({ show: true, device });
+  };
+  
+  const confirmHardReset = async () => {
+    if (!hardResetModal.device) return;
+    
+    try {
+      await apiService.hardResetDevice(hardResetModal.device.id);
+      setHardResetModal({ show: false, device: null });
+      setSuccessModal({ 
+        show: true, 
+        message: `Hard reset command queued for ${hardResetModal.device.device_serial}. Device will reset on next heartbeat.` 
+      });
+    } catch (err) {
+      console.error('Hard reset error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to queue hard reset command');
+      setHardResetModal({ show: false, device: null });
     }
   };
 
@@ -1265,6 +1290,294 @@ const Devices: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Modern Reboot Confirmation Modal */}
+        {rebootModal.show && rebootModal.device && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{
+              background: isDark ? '#2d2d2d' : 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+              border: isDark ? '1px solid #404040' : 'none',
+              animation: 'slideIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem'
+                }}>
+                  🔄
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+                  Confirm Reboot
+                </h3>
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+                <p style={{ marginBottom: '1rem' }}>
+                  Are you sure you want to reboot device <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{rebootModal.device.device_serial}</strong>?
+                </p>
+                <div style={{
+                  background: isDark ? 'rgba(102,126,234,0.1)' : '#e7f3ff',
+                  border: isDark ? '1px solid rgba(102,126,234,0.3)' : '1px solid #b3d9ff',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.9rem',
+                  color: isDark ? '#88a6ff' : '#004085'
+                }}>
+                  <strong>ℹ️ Note:</strong> The device will restart on its next heartbeat. Any unsaved data may be lost.
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setRebootModal({ show: false, device: null })}
+                  style={{
+                    background: isDark ? '#3a3a3a' : '#e0e0e0',
+                    color: isDark ? '#e0e0e0' : '#495057',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                  onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReboot}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Confirm Reboot
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modern Hard Reset Confirmation Modal */}
+        {hardResetModal.show && hardResetModal.device && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)'
+          }}>
+            <div style={{
+              background: isDark ? '#2d2d2d' : 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+              border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
+              animation: 'slideIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  ⚠️
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
+                  Hard Reset Warning
+                </h3>
+              </div>
+              
+              <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+                <div style={{
+                  background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
+                  border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem',
+                  color: isDark ? '#ff9999' : '#721c24'
+                }}>
+                  <strong style={{ fontSize: '1.05rem' }}>⚠️ CRITICAL WARNING</strong>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                    This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
+                  </p>
+                </div>
+                
+                <p style={{ marginBottom: '0.75rem' }}>
+                  Device to reset: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{hardResetModal.device.device_serial}</strong>
+                </p>
+                
+                <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
+                  <li>All configuration will be lost</li>
+                  <li>Device will return to factory defaults</li>
+                  <li>Re-provisioning will be required</li>
+                </ul>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setHardResetModal({ show: false, device: null })}
+                  style={{
+                    background: isDark ? '#3a3a3a' : '#e0e0e0',
+                    color: isDark ? '#e0e0e0' : '#495057',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+                  onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmHardReset}
+                  style={{
+                    background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Yes, Hard Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modern Success Notification Modal */}
+        {successModal.show && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(2px)'
+          }}>
+            <div style={{
+              background: isDark ? '#2d2d2d' : 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '450px',
+              width: '90%',
+              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+              border: isDark ? '1px solid #28a745' : '2px solid #28a745',
+              animation: 'slideIn 0.2s ease-out'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2rem',
+                  margin: '0 auto 1rem',
+                  animation: 'scaleIn 0.3s ease-out'
+                }}>
+                  ✓
+                </div>
+                
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+                  Command Queued
+                </h3>
+                
+                <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                  {successModal.message}
+                </p>
+                
+                <button
+                  onClick={() => setSuccessModal({ show: false, message: '' })}
+                  style={{
+                    background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 2rem',
+                    borderRadius: '8px',
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1702,6 +2015,294 @@ const Devices: React.FC = () => {
                 <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
               </div>
             </form>
+        </div>
+      </div>
+    )}
+
+    {/* Modern Reboot Confirmation Modal */}
+    {rebootModal.show && rebootModal.device && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          background: isDark ? '#2d2d2d' : 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          maxWidth: '500px',
+          width: '90%',
+          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+          border: isDark ? '1px solid #404040' : 'none',
+          animation: 'slideIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem'
+            }}>
+              🔄
+            </div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+              Confirm Reboot
+            </h3>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+            <p style={{ marginBottom: '1rem' }}>
+              Are you sure you want to reboot device <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{rebootModal.device.device_serial}</strong>?
+            </p>
+            <div style={{
+              background: isDark ? 'rgba(102,126,234,0.1)' : '#e7f3ff',
+              border: isDark ? '1px solid rgba(102,126,234,0.3)' : '1px solid #b3d9ff',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              fontSize: '0.9rem',
+              color: isDark ? '#88a6ff' : '#004085'
+            }}>
+              <strong>ℹ️ Note:</strong> The device will restart on its next heartbeat. Any unsaved data may be lost.
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setRebootModal({ show: false, device: null })}
+              style={{
+                background: isDark ? '#3a3a3a' : '#e0e0e0',
+                color: isDark ? '#e0e0e0' : '#495057',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+              onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmReboot}
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Confirm Reboot
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modern Hard Reset Confirmation Modal */}
+    {hardResetModal.show && hardResetModal.device && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          background: isDark ? '#2d2d2d' : 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          maxWidth: '500px',
+          width: '90%',
+          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+          border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
+          animation: 'slideIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              animation: 'pulse 2s infinite'
+            }}>
+              ⚠️
+            </div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
+              Hard Reset Warning
+            </h3>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+            <div style={{
+              background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
+              border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1rem',
+              color: isDark ? '#ff9999' : '#721c24'
+            }}>
+              <strong style={{ fontSize: '1.05rem' }}>⚠️ CRITICAL WARNING</strong>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
+              </p>
+            </div>
+            
+            <p style={{ marginBottom: '0.75rem' }}>
+              Device to reset: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{hardResetModal.device.device_serial}</strong>
+            </p>
+            
+            <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
+              <li>All configuration will be lost</li>
+              <li>Device will return to factory defaults</li>
+              <li>Re-provisioning will be required</li>
+            </ul>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setHardResetModal({ show: false, device: null })}
+              style={{
+                background: isDark ? '#3a3a3a' : '#e0e0e0',
+                color: isDark ? '#e0e0e0' : '#495057',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
+              onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmHardReset}
+              style={{
+                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Yes, Hard Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modern Success Notification Modal */}
+    {successModal.show && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        backdropFilter: 'blur(2px)'
+      }}>
+        <div style={{
+          background: isDark ? '#2d2d2d' : 'white',
+          borderRadius: '16px',
+          padding: '2rem',
+          maxWidth: '450px',
+          width: '90%',
+          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+          border: isDark ? '1px solid #28a745' : '2px solid #28a745',
+          animation: 'slideIn 0.2s ease-out'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2rem',
+              margin: '0 auto 1rem',
+              animation: 'scaleIn 0.3s ease-out'
+            }}>
+              ✓
+            </div>
+            
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
+              Command Queued
+            </h3>
+            
+            <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+              {successModal.message}
+            </p>
+            
+            <button
+              onClick={() => setSuccessModal({ show: false, message: '' })}
+              style={{
+                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 2rem',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Got it!
+            </button>
+          </div>
         </div>
       </div>
     )}
