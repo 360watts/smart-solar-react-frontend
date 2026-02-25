@@ -922,6 +922,35 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   >
                     <span>📷</span><span>Save</span>
                   </button>
+
+                  {/* CSV Export */}
+                  <button
+                    onClick={() => {
+                      if (!forecastData || forecastData.length === 0) return;
+                      // Get all keys from the first row
+                      const keys = Object.keys(forecastData[0]);
+                      // Build CSV header
+                      const header = keys.join(',');
+                      // Build CSV rows
+                      const rows = forecastData.map(row => keys.map(k => JSON.stringify((row as Record<string, any>)[k] ?? '')).join(','));
+                      const csv = [header, ...rows].join('\n');
+                      // Download
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                    style={{ background: 'transparent', border: `1px solid ${borderClr}`, color: '#00a63e', borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
+                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(148,163,184,0.07)' : '#f9fafb'}
+                    onMouseOut={e  => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>💾</span><span>CSV</span>
+                  </button>
                 </div>
               </div>
 
