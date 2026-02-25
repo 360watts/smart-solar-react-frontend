@@ -50,6 +50,7 @@
     "@types/bonjour": "^3.5.13",
     "@types/history": "^4.7.11",
     "@types/react-router-dom": "^5.3.3",
+    "@types/recharts": "^1.8.29",
     "@types/serve-static": "^2.2.0",
     "@types/stack-utils": "^2.0.3",
     "ajv": "^8.17.1",

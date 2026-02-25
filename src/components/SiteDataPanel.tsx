@@ -1,14 +1,11 @@
 /**
  * SiteDataPanel — solar site intelligence panel
  *
- * Sections:
- *  - 6 live KPI cards: PV power, Battery (SOC + charge state), Load,
- *    Energy Today, Grid (import/export), Inverter Temperature
- *  - Daily energy breakdown: PV yield, grid buy/sell, battery in/out, consumption
- *  - Current weather pills
- *  - 24 h weather outlook (hourly scrollable strip)
- *  - Power history area chart with Battery SOC on secondary axis
- *  - Solar forecast card: P10/P50/P90 + physics baseline, regime tags, % achieved
+ * Tabs:
+ *  - Overview: 6 live KPI cards + energy breakdown + insights
+ *  - Weather:  current conditions + 24 h hourly outlook strip
+ *  - History:  power area chart with Battery SOC on secondary axis
+ *  - Forecast: P10/P50/P90 + physics baseline, regime tags, % achieved
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -17,32 +14,46 @@ import {
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { apiService } from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
+
+// ── Tabs ───────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'overview',  label: 'Overview',  icon: '🏠' },
+  { id: 'weather',   label: 'Weather',   icon: '🌤' },
+  { id: 'history',   label: 'History',   icon: '📈' },
+  { id: 'forecast',  label: 'Forecast',  icon: '🔆' },
+] as const;
+type TabId = typeof TABS[number]['id'];
 
 // ── Custom forecast tooltip ────────────────────────────────────────────────────
 
 const ForecastTooltip = ({ active, payload, label }: any) => {
+  const { isDark } = useTheme();
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(8px)',
-      border: '1px solid #f3f4f6', borderRadius: 12,
+      background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+      backdropFilter: 'blur(8px)',
+      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`,
+      borderRadius: 12,
       padding: '0.75rem 1rem',
       boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
       minWidth: 175,
     }}>
-      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: '1px solid #f3f4f6', paddingBottom: '0.25rem' }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, paddingBottom: '0.25rem' }}>
         {label}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
         {payload.map((entry: any) => {
           const unit = entry.name?.includes('Temp') ? '°C' : entry.name?.includes('GHI') ? 'W/m²' : 'kW';
           return (
-            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif', color: '#374151' }}>
+            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>{entry.name?.split(' ')[0]}</span>
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: '#111827' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
                 {Number(entry.value).toFixed(3)} {unit}
               </span>
             </div>
@@ -101,14 +112,6 @@ function aggregateByPeriod(data: any[], range: string): any[] {
   });
 }
 
-const TOOLTIP_STYLE = {
-  background: 'rgba(255,255,255,0.97)',
-  border: '1px solid rgba(0,166,62,0.15)',
-  borderRadius: 10, color: '#0a0a0a',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-  fontSize: 12,
-};
-
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 const IconSun = () => (
@@ -162,13 +165,13 @@ interface KpiCardProps {
 const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge }) => (
   <div className="card" style={{ padding: '1.1rem', flex: 1, minWidth: 140 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-      <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{label}</span>
+      <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{label}</span>
       <span style={{ width: 28, height: 28, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, flexShrink: 0 }}>{icon}</span>
     </div>
-    <p style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '1.5rem', fontWeight: 800, color: '#0a0a0a', lineHeight: 1 }}>
-      {value}{unit && <span style={{ fontSize: '0.78rem', fontWeight: 500, color: '#9ca3af', marginLeft: 4 }}>{unit}</span>}
+    <p style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+      {value}{unit && <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: 4 }}>{unit}</span>}
     </p>
-    {sub   && <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{sub}</p>}
+    {sub   && <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{sub}</p>}
     {badge && <div style={{ marginTop: '0.3rem' }}>{badge}</div>}
   </div>
 );
@@ -182,7 +185,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
 
   return (
     <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
-      <p style={{ margin: '0 0 0.65rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
+      <p style={{ margin: '0 0 0.65rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
         24 h Weather Outlook
       </p>
       <div style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
@@ -214,14 +217,14 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                 {isNow && (
                   <span style={{ position: 'absolute', top: -9, fontSize: '0.55rem', fontWeight: 700, background: '#00a63e', color: '#fff', padding: '1px 5px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>NOW</span>
                 )}
-                <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>{time}</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>{time}</span>
                 <span style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>{wi}</span>
-                <span style={{ fontSize: '0.8rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#111827' }}>{temp.toFixed(1)}°</span>
+                <span style={{ fontSize: '0.8rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{temp.toFixed(1)}°</span>
                 {/* GHI mini-bar */}
                 <div title={`GHI ${Math.round(ghi)} W/m²`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
                   <div style={{ width: `${ghiPct}%`, height: '100%', background: ghiColor, borderRadius: 2 }} />
                 </div>
-                <span style={{ fontSize: '0.6rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
                 {/* Humidity bar */}
                 {humPct != null && (
                   <>
@@ -231,7 +234,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                     <span style={{ fontSize: '0.6rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>💧{Math.round(humPct)}%</span>
                   </>
                 )}
-                <span style={{ fontSize: '0.6rem', color: '#b0bec5', fontFamily: 'Poppins, sans-serif' }}>{wind.toFixed(1)} m/s</span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{wind.toFixed(1)} m/s</span>
               </div>
             );
           })}
@@ -257,7 +260,7 @@ const EnergyBreakdownRow = ({ latest }: { latest: any }) => {
 
   return (
     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>Today</span>
+      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>Today</span>
       {items.map(e => (
         <span key={e.label} style={{
           fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
@@ -267,8 +270,8 @@ const EnergyBreakdownRow = ({ latest }: { latest: any }) => {
         }}>
           <span style={{ opacity: 0.85 }}>{e.icon}</span>
           {e.label}:&nbsp;
-          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#0a0a0a' }}>{Number(e.value).toFixed(2)}</span>
-          <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>kWh</span>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{Number(e.value).toFixed(2)}</span>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>kWh</span>
         </span>
       ))}
     </div>
@@ -289,7 +292,7 @@ const InsightsRow = ({ latest }: { latest: any }) => {
 
   const co2Kg       = pvKwh * 0.82;  // India grid factor ~0.82 kg CO₂/kWh
   // Self-sufficiency = portion of load met by solar+battery (not from grid)
-  const selfSufPct2 = loadKwh > 0
+  const selfSufPct = loadKwh > 0
     ? Math.max(0, Math.min(100, Math.round(((loadKwh - gridBuy) / loadKwh) * 100)))
     : null;
   const gridDepPct  = loadKwh > 0
@@ -306,11 +309,11 @@ const InsightsRow = ({ latest }: { latest: any }) => {
       color: '#10b981', bg: '#10b98110',
     });
   }
-  if (selfSufPct2 != null) {
-    const color = selfSufPct2 >= 70 ? '#00a63e' : selfSufPct2 >= 40 ? '#f59e0b' : '#ef4444';
+  if (selfSufPct != null) {
+    const color = selfSufPct >= 70 ? '#00a63e' : selfSufPct >= 40 ? '#f59e0b' : '#ef4444';
     items.push({
       icon: '⚡', label: 'Self-Sufficiency',
-      value: `${selfSufPct2}%`,
+      value: `${selfSufPct}%`,
       sub: 'load met by solar+battery',
       color, bg: `${color}10`,
     });
@@ -329,7 +332,7 @@ const InsightsRow = ({ latest }: { latest: any }) => {
 
   return (
     <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>
+      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>
         Insights
       </span>
       {items.map(item => (
@@ -341,9 +344,9 @@ const InsightsRow = ({ latest }: { latest: any }) => {
         }}>
           <span style={{ fontSize: '1rem', lineHeight: 1 }}>{item.icon}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: '0.62rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</span>
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: item.color, fontSize: '0.88rem', lineHeight: 1 }}>{item.value}</span>
-            {item.sub && <span style={{ fontSize: '0.58rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>{item.sub}</span>}
+            {item.sub && <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{item.sub}</span>}
           </div>
         </div>
       ))}
@@ -359,45 +362,50 @@ const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
   midday: { bg: '#F0752218', color: '#c2410c' },
 };
 
-const ForecastTable = ({ data }: { data: any[] }) => (
-  <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>
-      <thead style={{ position: 'sticky', top: 0, background: '#f9fafb', zIndex: 1 }}>
-        <tr>
-          <th style={{ padding: '0.7rem 1rem', textAlign: 'left',   fontWeight: 600, color: '#4b5563',  borderBottom: '1px solid #e5e7eb' }}>Time</th>
-          <th style={{ padding: '0.7rem 0.6rem', textAlign: 'center', fontWeight: 600, color: '#6b7280',  borderBottom: '1px solid #e5e7eb' }}>Regime</th>
-          <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#f59e0b',  borderBottom: '1px solid #e5e7eb' }}>P10 ↓</th>
-          <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e',  borderBottom: '1px solid #e5e7eb' }}>P50</th>
-          <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6',  borderBottom: '1px solid #e5e7eb' }}>P90 ↑</th>
-          <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#9ca3af',  borderBottom: '1px solid #e5e7eb' }}>Physics</th>
-          <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#eab308',  borderBottom: '1px solid #e5e7eb' }}>GHI W/m²</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, i) => {
-          const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: '#6b7280' }) : null;
-          return (
-            <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '0.55rem 1rem', color: '#111827', fontFamily: 'JetBrains Mono, monospace' }}>{row.time}</td>
-              <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>
-                {row.regime && rc && (
-                  <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: rc.bg, color: rc.color, padding: '2px 6px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>
-                    {row.regime}
-                  </span>
-                )}
-              </td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: '#4b5563' }}>{row.p10?.toFixed(3) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#111827' }}>{row.p50?.toFixed(3) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: '#4b5563' }}>{row.p90?.toFixed(3) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: '#9ca3af', fontStyle: 'italic' }}>{row.physics?.toFixed(3) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: '#4b5563' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+const ForecastTable = ({ data }: { data: any[] }) => {
+  const { isDark } = useTheme();
+  const theadBg  = isDark ? 'rgba(15,23,42,0.9)'  : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  return (
+    <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>
+        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
+          <tr>
+            <th style={{ padding: '0.7rem 1rem', textAlign: 'left',   fontWeight: 600, color: 'var(--text-secondary)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '0.7rem 0.6rem', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Regime</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#f59e0b',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P10 ↓</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P50</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P90 ↑</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Physics</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#eab308',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>GHI W/m²</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => {
+            const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: 'var(--text-muted)' }) : null;
+            return (
+              <tr key={i} style={{ borderBottom: rowBorder }}>
+                <td style={{ padding: '0.55rem 1rem', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>{row.time}</td>
+                <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>
+                  {row.regime && rc && (
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: rc.bg, color: rc.color, padding: '2px 6px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>
+                      {row.regime}
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -407,6 +415,8 @@ interface Props {
 }
 
 const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
+  const { isDark } = useTheme();
+
   const [telemetry,  setTelemetry]  = useState<any[]>([]);
   const [forecast,   setForecast]   = useState<any[]>([]);
   const [weather,    setWeather]    = useState<any>(null);
@@ -414,11 +424,22 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [error,      setError]      = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  const [activeTab,       setActiveTab]       = useState<TabId>('overview');
   const [showBands,       setShowBands]       = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true });
   const [dateRange,       setDateRange]       = useState('24h');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate,   setCustomEndDate]   = useState('');
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
+
+  // Dark-mode-aware tooltip style for recharts
+  const tooltipStyle = {
+    background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+    border: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,166,62,0.15)'}`,
+    borderRadius: 10,
+    color: isDark ? '#f1f5f9' : '#0a0a0a',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+    fontSize: 12,
+  };
 
   const fetchAll = useCallback(async () => {
     try {
@@ -552,6 +573,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     ? Math.min(999, Math.round((todayKwh / fcastP50) * 100))
     : null;
 
+  // ── Derived dark-mode colours ────────────────────────────────────────────────
+  const cardBg     = isDark ? 'rgba(30,41,59,0.85)'   : '#ffffff';
+  const headerGrad = isDark ? 'rgba(30,41,59,0.6)'    : 'linear-gradient(to right,#ffffff,#f9fafb)';
+  const toggleBg   = isDark ? 'rgba(15,23,42,0.6)'    : '#f3f4f6';
+  const toggleActive = isDark ? 'rgba(30,41,59,0.95)' : '#fff';
+  const borderClr  = isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb';
+
   // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -603,7 +631,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             <select
               value={dateRange}
               onChange={e => setDateRange(e.target.value)}
-              style={{ background: 'var(--card-bg,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-color,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
+              style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
             >
               <option value="24h">Today</option>
               <option value="7d">Last 7 days</option>
@@ -612,14 +640,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             </select>
             {dateRange === 'custom' && (<>
               <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)}
-                style={{ background: 'var(--card-bg,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-color,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
-              <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>to</span>
+                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>to</span>
               <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)}
-                style={{ background: 'var(--card-bg,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-color,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
+                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
             </>)}
           </div>
           {lastUpdated && (
-            <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
@@ -631,7 +659,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       </div>
 
       {noData ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', background: 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
           No DynamoDB data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the {
             dateRange === '24h' ? 'today' : dateRange === '7d' ? 'last 7 days' : dateRange === '30d' ? 'last 30 days' : 'selected date range'
           }.<br />
@@ -639,281 +667,336 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         </div>
       ) : (<>
 
-        {/* ── 6-card KPI strip ── */}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-          <KpiCard
-            label="PV Power" value={pvKw != null ? pvKw.toFixed(2) : '—'} unit="kW"
-            sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
-              ? `S1: ${(latest.pv1_power_w/1000).toFixed(2)} · S2: ${(latest.pv2_power_w/1000).toFixed(2)} kW`
-              : 'Current generation'}
-            accent="#F07522" icon={<IconSun />}
-          />
-          <KpiCard
-            label="Battery" value={batSoc != null ? batSoc.toFixed(1) : '—'} unit="%"
-            sub={batVoltage != null ? `${batVoltage.toFixed(1)} V` : 'State of charge'}
-            accent="#00a63e" icon={<IconBattery />}
-            badge={batPowerKw != null && Math.abs(batPowerKw) > 0.01 ? (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: batCharging ? '#00a63e' : '#ec4899', fontFamily: 'Poppins, sans-serif' }}>
-                {batCharging ? '⚡ Charging' : '⬇ Discharging'} {Math.abs(batPowerKw).toFixed(2)} kW
-              </span>
-            ) : <span style={{ fontSize: '0.65rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>Idle</span>}
-          />
-          <KpiCard
-            label="Load" value={loadKw != null ? loadKw.toFixed(2) : '—'} unit="kW"
-            sub="Current consumption" accent="#8b5cf6" icon={<IconLoad />}
-          />
-          <KpiCard
-            label="Energy Today" value={todayKwh != null ? todayKwh.toFixed(2) : '—'} unit="kWh"
-            sub="Solar yield today" accent="#10b981" icon={<IconEnergy />}
-          />
-          <KpiCard
-            label="Grid" value={gridKw != null ? Math.abs(gridKw).toFixed(2) : '—'} unit="kW"
-            sub={latest?.grid_voltage_v != null
-              ? `${Number(latest.grid_voltage_v).toFixed(0)} V · ${Number(latest.grid_frequency_hz ?? 0).toFixed(1)} Hz`
-              : 'Grid power'}
-            accent="#3b82f6" icon={<IconGrid />}
-            badge={gridKw != null ? (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: gridImporting ? '#3b82f6' : gridExporting ? '#10b981' : '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
-                {gridImporting ? '⬇ Importing' : gridExporting ? '⬆ Exporting' : '↔ Standby'}
-              </span>
-            ) : undefined}
-          />
-          <KpiCard
-            label="Inv. Temp" value={invTemp != null ? invTemp.toFixed(1) : '—'} unit="°C"
-            sub={invTemp != null
-              ? invTemp > 60 ? '🔴 Hot — check cooling' : invTemp > 45 ? '🟡 Warm' : '🟢 Normal'
-              : 'No data'}
-            accent={invTempColor} icon={<IconThermometer />}
-          />
+        {/* ── Tab Bar ── */}
+        <div style={{ display: 'flex', borderBottom: `2px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, marginBottom: '1rem', gap: 0 }}>
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  border: 'none', background: 'transparent', cursor: 'pointer',
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.78rem', fontWeight: isActive ? 700 : 600,
+                  fontFamily: 'Poppins, sans-serif',
+                  color: isActive ? '#00a63e' : 'var(--text-muted)',
+                  borderBottom: `2px solid ${isActive ? '#00a63e' : 'transparent'}`,
+                  marginBottom: -2,
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  transition: 'color 0.15s',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── Daily energy breakdown ── */}
-        <EnergyBreakdownRow latest={latest} />
-        <InsightsRow latest={latest} />
+        {/* ══ OVERVIEW TAB ══ */}
+        {activeTab === 'overview' && (<>
 
-        {/* ── Current weather pills ── */}
-        {weather?.current && (
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>Now</span>
-            {[
-              { label: 'Temp',     value: weather.current.temperature_c  != null ? `${Number(weather.current.temperature_c).toFixed(1)} °C`  : null },
-              { label: 'Humidity', value: weather.current.humidity_pct   != null ? `${weather.current.humidity_pct} %`                        : null },
-              { label: 'Cloud',    value: weather.current.cloud_cover_pct != null ? `${weather.current.cloud_cover_pct} %`                    : null, icon: <IconCloud /> },
-              { label: 'Wind',     value: weather.current.wind_speed_ms  != null ? `${Number(weather.current.wind_speed_ms).toFixed(1)} m/s`  : null },
-              { label: 'GHI',      value: weather.current.ghi_wm2        != null ? `${Math.round(weather.current.ghi_wm2)} W/m²`              : null },
-            ].filter(p => p.value).map(p => (
-              <span key={p.label} style={{
-                fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
-                padding: '0.2rem 0.65rem', borderRadius: 99,
-                background: 'rgba(0,166,62,0.07)', border: '1px solid rgba(0,166,62,0.12)',
-                color: '#007a55', display: 'flex', alignItems: 'center', gap: '0.3rem',
-              }}>
-                {(p as any).icon}{p.label}: <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#0a0a0a' }}>{p.value}</span>
-              </span>
-            ))}
+          {/* 6-card KPI strip */}
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+            <KpiCard
+              label="PV Power" value={pvKw != null ? pvKw.toFixed(2) : '—'} unit="kW"
+              sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
+                ? `S1: ${(latest.pv1_power_w/1000).toFixed(2)} · S2: ${(latest.pv2_power_w/1000).toFixed(2)} kW`
+                : 'Current generation'}
+              accent="#F07522" icon={<IconSun />}
+            />
+            <KpiCard
+              label="Battery" value={batSoc != null ? batSoc.toFixed(1) : '—'} unit="%"
+              sub={batVoltage != null ? `${batVoltage.toFixed(1)} V` : 'State of charge'}
+              accent="#00a63e" icon={<IconBattery />}
+              badge={batPowerKw != null && Math.abs(batPowerKw) > 0.01 ? (
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: batCharging ? '#00a63e' : '#ec4899', fontFamily: 'Poppins, sans-serif' }}>
+                  {batCharging ? '⚡ Charging' : '⬇ Discharging'} {Math.abs(batPowerKw).toFixed(2)} kW
+                </span>
+              ) : <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>Idle</span>}
+            />
+            <KpiCard
+              label="Load" value={loadKw != null ? loadKw.toFixed(2) : '—'} unit="kW"
+              sub="Current consumption" accent="#8b5cf6" icon={<IconLoad />}
+            />
+            <KpiCard
+              label="Energy Today" value={todayKwh != null ? todayKwh.toFixed(2) : '—'} unit="kWh"
+              sub="Solar yield today" accent="#10b981" icon={<IconEnergy />}
+            />
+            <KpiCard
+              label="Grid" value={gridKw != null ? Math.abs(gridKw).toFixed(2) : '—'} unit="kW"
+              sub={latest?.grid_voltage_v != null
+                ? `${Number(latest.grid_voltage_v).toFixed(0)} V · ${Number(latest.grid_frequency_hz ?? 0).toFixed(1)} Hz`
+                : 'Grid power'}
+              accent="#3b82f6" icon={<IconGrid />}
+              badge={gridKw != null ? (
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: gridImporting ? '#3b82f6' : gridExporting ? '#10b981' : 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                  {gridImporting ? '⬇ Importing' : gridExporting ? '⬆ Exporting' : '↔ Standby'}
+                </span>
+              ) : undefined}
+            />
+            <KpiCard
+              label="Inv. Temp" value={invTemp != null ? invTemp.toFixed(1) : '—'} unit="°C"
+              sub={invTemp != null
+                ? invTemp > 60 ? '🔴 Hot — check cooling' : invTemp > 45 ? '🟡 Warm' : '🟢 Normal'
+                : 'No data'}
+              accent={invTempColor} icon={<IconThermometer />}
+            />
           </div>
-        )}
 
-        {/* ── 24 h weather outlook ── */}
-        {weather?.hourly_forecast && weather.hourly_forecast.length > 0 && (
-          <WeatherHourlyStrip hourly={weather.hourly_forecast} />
-        )}
+          {/* Daily energy breakdown */}
+          <EnergyBreakdownRow latest={latest} />
+          <InsightsRow latest={latest} />
 
-        {/* ── Power history chart ── */}
-        {historyData.length > 0 && (
-          <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
-            <div style={{ marginBottom: '0.75rem' }}>
-              <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: '#0a0a0a' }}>
-                Power History — {
-                  dateRange === '24h'   ? 'Today' :
-                  dateRange === '7d'    ? 'Last 7 days' :
-                  dateRange === '30d'   ? 'Last 30 days' :
-                  customStartDate && customEndDate
-                    ? `${new Date(customStartDate).toLocaleDateString()} – ${new Date(customEndDate).toLocaleDateString()}`
-                    : 'Custom range'
-                }
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.68rem', color: '#9ca3af', fontFamily: 'Poppins, sans-serif' }}>
-                {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
-              </p>
+        </>)}
+
+        {/* ══ WEATHER TAB ══ */}
+        {activeTab === 'weather' && (<>
+
+          {/* Current weather pills */}
+          {weather?.current ? (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>Now</span>
+              {[
+                { label: 'Temp',     value: weather.current.temperature_c  != null ? `${Number(weather.current.temperature_c).toFixed(1)} °C`  : null },
+                { label: 'Humidity', value: weather.current.humidity_pct   != null ? `${weather.current.humidity_pct} %`                        : null },
+                { label: 'Cloud',    value: weather.current.cloud_cover_pct != null ? `${weather.current.cloud_cover_pct} %`                    : null, icon: <IconCloud /> },
+                { label: 'Wind',     value: weather.current.wind_speed_ms  != null ? `${Number(weather.current.wind_speed_ms).toFixed(1)} m/s`  : null },
+                { label: 'GHI',      value: weather.current.ghi_wm2        != null ? `${Math.round(weather.current.ghi_wm2)} W/m²`              : null },
+              ].filter(p => p.value).map(p => (
+                <span key={p.label} style={{
+                  fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
+                  padding: '0.2rem 0.65rem', borderRadius: 99,
+                  background: 'rgba(0,166,62,0.07)', border: '1px solid rgba(0,166,62,0.12)',
+                  color: '#007a55', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}>
+                  {(p as any).icon}{p.label}: <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{p.value}</span>
+                </span>
+              ))}
             </div>
-            <div style={{ height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={historyData} margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}>
-                  <defs>
-                    <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
-                      <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,166,62,0.08)" />
-                  <XAxis
-                    dataKey="time" stroke="#9ca3af"
-                    interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(historyData.length / 10)}
-                    angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
-                    textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
-                    tick={{ fontSize: dateRange === '30d' ? 9 : 10, fill: '#9ca3af' }}
-                  />
-                  <YAxis yAxisId="power" stroke="#9ca3af" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <YAxis yAxisId="soc" orientation="right" stroke="#9ca3af" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, name: any) => [`${v} ${String(name).includes('%') ? '%' : 'kW'}`, name]} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif' }} />
-                  <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} />
-                  <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} />
-                  <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
-                  <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" />
-                </AreaChart>
-              </ResponsiveContainer>
+          ) : (
+            <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)', marginBottom: '1rem' }}>
+              No current weather data available.
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Solar Forecast ── */}
-        {forecastData.length > 0 && (
-          <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', borderRadius: 16, background: '#ffffff', overflow: 'hidden' }}>
+          {/* 24 h weather outlook */}
+          {weather?.hourly_forecast && weather.hourly_forecast.length > 0
+            ? <WeatherHourlyStrip hourly={weather.hourly_forecast} />
+            : !weather?.current && null
+          }
 
-            {/* Header */}
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f3f4f6', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(to right,#ffffff,#f9fafb)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🔆</div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: '#111827', fontWeight: 700 }}>Solar Forecast</h3>
-                </div>
-                {fcastP50 > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '2.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.82rem', color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Est. Yield:</span>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 600, color: '#111827', background: '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>
-                      {fcastP10.toFixed(1)} <span style={{ color: '#9ca3af' }}>/</span> <span style={{ color: '#00a63e' }}>{fcastP50.toFixed(1)}</span> <span style={{ color: '#9ca3af' }}>/</span> {fcastP90.toFixed(1)} kWh
-                    </span>
-                    {achievedPct != null && (
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
-                        padding: '2px 8px', borderRadius: 99,
-                        background: achievedPct >= 80 ? '#10b98118' : achievedPct >= 40 ? '#f59e0b18' : '#e5e7eb',
-                        color:      achievedPct >= 80 ? '#059669'  : achievedPct >= 40 ? '#d97706'  : '#9ca3af',
-                        border:     `1px solid ${achievedPct >= 80 ? '#10b98128' : achievedPct >= 40 ? '#f59e0b28' : '#d1d5db'}`,
-                      }}>
-                        {achievedPct}% achieved
-                      </span>
-                    )}
-                  </div>
-                )}
+        </>)}
+
+        {/* ══ HISTORY TAB ══ */}
+        {activeTab === 'history' && (
+          historyData.length > 0 ? (
+            <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)' }}>
+                  Power History — {
+                    dateRange === '24h'   ? 'Today' :
+                    dateRange === '7d'    ? 'Last 7 days' :
+                    dateRange === '30d'   ? 'Last 30 days' :
+                    customStartDate && customEndDate
+                      ? `${new Date(customStartDate).toLocaleDateString()} – ${new Date(customEndDate).toLocaleDateString()}`
+                      : 'Custom range'
+                  }
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                  {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
+                </p>
               </div>
+              <div style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={historyData} margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}>
+                    <defs>
+                      <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
+                        <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
+                    <XAxis
+                      dataKey="time" stroke="var(--text-muted)"
+                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(historyData.length / 10)}
+                      angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
+                      textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
+                      tick={{ fontSize: dateRange === '30d' ? 9 : 10, fill: 'var(--text-muted)' }}
+                    />
+                    <YAxis yAxisId="power" stroke="var(--text-muted)" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <YAxis yAxisId="soc" orientation="right" stroke="var(--text-muted)" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [`${v} ${String(name).includes('%') ? '%' : 'kW'}`, name]} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif', color: 'var(--text-secondary)' }} />
+                    <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} />
+                    <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} />
+                    <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+                    <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
+              No telemetry history data available for the selected range.
+            </div>
+          )
+        )}
 
-              {/* Controls */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                {/* Chart / Table toggle */}
-                <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 3 }}>
-                  {(['chart', 'table'] as const).map(v => (
-                    <button key={v} onClick={() => setForecastView(v)} style={{ border: 'none', background: forecastView === v ? '#fff' : 'transparent', color: forecastView === v ? '#00a63e' : '#6b7280', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: forecastView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-                      {v}
-                    </button>
-                  ))}
+        {/* ══ FORECAST TAB ══ */}
+        {activeTab === 'forecast' && (
+          forecastData.length > 0 ? (
+            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden' }}>
+
+              {/* Header */}
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🔆</div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>Solar Forecast</h3>
+                  </div>
+                  {fcastP50 > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '2.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>Est. Yield:</span>
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', background: isDark ? 'rgba(148,163,184,0.1)' : '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>
+                        {fcastP10.toFixed(1)} <span style={{ color: 'var(--text-muted)' }}>/</span> <span style={{ color: '#00a63e' }}>{fcastP50.toFixed(1)}</span> <span style={{ color: 'var(--text-muted)' }}>/</span> {fcastP90.toFixed(1)} kWh
+                      </span>
+                      {achievedPct != null && (
+                        <span style={{
+                          fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+                          padding: '2px 8px', borderRadius: 99,
+                          background: achievedPct >= 80 ? '#10b98118' : achievedPct >= 40 ? '#f59e0b18' : isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb',
+                          color:      achievedPct >= 80 ? '#059669'  : achievedPct >= 40 ? '#d97706'  : 'var(--text-muted)',
+                          border:     `1px solid ${achievedPct >= 80 ? '#10b98128' : achievedPct >= 40 ? '#f59e0b28' : borderClr}`,
+                        }}>
+                          {achievedPct}% achieved
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Band toggles */}
-                {forecastView === 'chart' && (
-                  <div style={{ display: 'flex', background: '#f3f4f6', padding: 3, borderRadius: 8 }}>
-                    {[{ label: 'P10', color: '#f59e0b' }, { label: 'P50', color: '#00a63e' }, { label: 'P90', color: '#3b82f6' }].map(b => (
-                      <button key={b.label} onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ border: 'none', background: showBands[b.label] ? '#ffffff' : 'transparent', color: showBands[b.label] ? b.color : '#9ca3af', boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: showBands[b.label] ? b.color : '#d1d5db' }} />
-                        {b.label}
+                {/* Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {/* Chart / Table toggle */}
+                  <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
+                    {(['chart', 'table'] as const).map(v => (
+                      <button key={v} onClick={() => setForecastView(v)} style={{ border: 'none', background: forecastView === v ? toggleActive : 'transparent', color: forecastView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: forecastView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
+                        {v}
                       </button>
                     ))}
                   </div>
-                )}
 
-                {/* Export */}
-                <button
-                  onClick={async () => {
-                    const el = document.getElementById('forecast-chart-container');
-                    if (el) {
-                      const canvas = await html2canvas(el, { background: '#ffffff', scale: 2 } as any);
-                      const a = document.createElement('a');
-                      a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
-                      a.href = canvas.toDataURL(); a.click();
-                    }
-                  }}
-                  style={{ background: 'transparent', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
-                  onMouseOver={e => e.currentTarget.style.background = '#f9fafb'}
-                  onMouseOut={e  => e.currentTarget.style.background = 'transparent'}
-                >
-                  <span>📷</span><span>Save</span>
-                </button>
+                  {/* Band toggles */}
+                  {forecastView === 'chart' && (
+                    <div style={{ display: 'flex', background: toggleBg, padding: 3, borderRadius: 8 }}>
+                      {[{ label: 'P10', color: '#f59e0b' }, { label: 'P50', color: '#00a63e' }, { label: 'P90', color: '#3b82f6' }].map(b => (
+                        <button key={b.label} onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ border: 'none', background: showBands[b.label] ? toggleActive : 'transparent', color: showBands[b.label] ? b.color : 'var(--text-muted)', boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: showBands[b.label] ? b.color : isDark ? '#475569' : '#d1d5db' }} />
+                          {b.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Export */}
+                  <button
+                    onClick={async () => {
+                      const el = document.getElementById('forecast-chart-container');
+                      if (el) {
+                        const canvas = await html2canvas(el, { background: '#ffffff', scale: 2 } as any);
+                        const a = document.createElement('a');
+                        a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
+                        a.href = canvas.toDataURL(); a.click();
+                      }
+                    }}
+                    style={{ background: 'transparent', border: `1px solid ${borderClr}`, color: 'var(--text-secondary)', borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
+                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(148,163,184,0.07)' : '#f9fafb'}
+                    onMouseOut={e  => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>📷</span><span>Save</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chart / Table area */}
+              <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
+                {forecastView === 'chart' ? (
+                  <div style={{ height: 300, width: '100%', userSelect: 'none' }}>
+                    <ResponsiveContainer>
+                      <AreaChart data={forecastData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="p90Grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.14}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="p10Grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.14}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
+                        <XAxis
+                          dataKey="time" stroke="var(--text-muted)"
+                          tickLine={false} axisLine={false} minTickGap={30} tickMargin={12}
+                          tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'Inter, sans-serif' }} textAnchor="middle"
+                          allowDataOverflow type="category"
+                          tickFormatter={(val: string) => {
+                            if (dateRange === '24h') return val;
+                            const p = val.split(' ');
+                            return p.length >= 3 ? `${p[0]} ${p[1]}` : val;
+                          }}
+                        />
+                        <YAxis
+                          stroke="var(--text-muted)"
+                          tickLine={false} axisLine={false} width={40} allowDataOverflow
+                          tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }}
+                          label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }}
+                        />
+                        <Tooltip content={<ForecastTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
+                        <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
+
+                        {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" fill="url(#p90Grad)" activeDot={false} name="P90 (Optimistic)" animationDuration={500} />}
+                        {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3" fill="url(#p10Grad)" activeDot={false} name="P10 (Conservative)" animationDuration={500} />}
+                        {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2.5} fill="url(#p50Grad)" activeDot={{ r: 4, strokeWidth: 0 }} name="P50 (Median)" animationDuration={800} />}
+                        <Line type="monotone" dataKey="physics" stroke={isDark ? '#475569' : '#d1d5db'} strokeWidth={1.5} strokeDasharray="5 3" dot={false} name="Physics Baseline" activeDot={false} />
+
+                        <ReferenceLine
+                          x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          stroke="#ef4444" strokeDasharray="3 3"
+                          label={<span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>NOW</span>}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                    <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                      Dashed grey = physics baseline (ideal clear-sky output)
+                    </div>
+                  </div>
+                ) : (
+                  <ForecastTable data={forecastData} />
+                )}
+                {forecastGeneratedAt && (
+                  <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
+                    Forecast generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Chart / Table area */}
-            <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: '#ffffff', position: 'relative' }}>
-              {forecastView === 'chart' ? (
-                <div style={{ height: 300, width: '100%', userSelect: 'none' }}>
-                  <ResponsiveContainer>
-                    <AreaChart data={forecastData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="p90Grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.14}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="p10Grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.14}/>
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                      <XAxis
-                        dataKey="time" stroke="#9ca3af"
-                        tickLine={false} axisLine={false} minTickGap={30} tickMargin={12}
-                        tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'Inter, sans-serif' }} textAnchor="middle"
-                        allowDataOverflow type="category"
-                        tickFormatter={(val: string) => {
-                          if (dateRange === '24h') return val;
-                          const p = val.split(' ');
-                          return p.length >= 3 ? `${p[0]} ${p[1]}` : val;
-                        }}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        tickLine={false} axisLine={false} width={40} allowDataOverflow
-                        tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: '#9ca3af' }}
-                        label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: '#9ca3af', fontSize: 10 }}
-                      />
-                      <Tooltip content={<ForecastTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: '#6b7280', fontFamily: 'Inter, sans-serif' }} />
-
-                      {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" fill="url(#p90Grad)" activeDot={false} name="P90 (Optimistic)" animationDuration={500} />}
-                      {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3" fill="url(#p10Grad)" activeDot={false} name="P10 (Conservative)" animationDuration={500} />}
-                      {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2.5} fill="url(#p50Grad)" activeDot={{ r: 4, strokeWidth: 0 }} name="P50 (Median)" animationDuration={800} />}
-                      <Line type="monotone" dataKey="physics" stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 3" dot={false} name="Physics Baseline" activeDot={false} />
-
-                      <ReferenceLine
-                        x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        stroke="#ef4444" strokeDasharray="3 3"
-                        label={<span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>NOW</span>}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: '#9ca3af', background: 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                    Dashed grey = physics baseline (ideal clear-sky output)
-                  </div>
-                </div>
-              ) : (
-                <ForecastTable data={forecastData} />
-              )}
-              {forecastGeneratedAt && (
-                <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
-                  Forecast generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              )}
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
+              No forecast data available for the selected range.
             </div>
-          </div>
+          )
         )}
 
       </>)}
