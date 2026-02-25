@@ -391,7 +391,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const gridImporting  = gridKw     != null && gridKw     > 0.01;
   const gridExporting  = gridKw     != null && gridKw     < -0.01;
   const batCharging    = batPowerKw != null && batPowerKw > 0.01;
-  const batDischarging = batPowerKw != null && batPowerKw < -0.01;
 
   const runStateBadge = runState != null ? (
     runState === 0 ? { label: 'Standby', color: '#9ca3af' } :
