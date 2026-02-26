@@ -394,32 +394,24 @@ const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
   midday: { bg: '#F0752218', color: '#c2410c' },
 };
 
-// Stock-chart style XAxis tick:
-//   - time always shown on the first line
-//   - date shown only at the first visible tick of each day (below the time)
-const ForecastXAxisTick = ({ x, y, payload, visibleData, forecastWindow: fw }: any) => {
+// XAxis tick for the forecast chart.
+// 'today' view: single line showing the time.
+// '3d'/'7d' view: each tick is the first slot of an IST calendar day,
+//   showing the date on line 1 and "12:00 AM" on line 2.
+const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   const val: string = payload?.value ?? '';
   if (!val) return null;
-  // visibleData is the filtered tick-object array (forecastTickObjects)
-  const idx = (visibleData as any[]).findIndex((d: any) => d.time === val);
   const timeLabel = fw === 'today' ? val : (val.split('||')[1] ?? val);
   const dateLabel = fw === 'today' ? '' : (val.split('||')[0] ?? '');
 
-  // First tick of a new day among the VISIBLE ticks (not all 672 raw data points)
-  const isFirstOfDay = fw !== 'today' && (
-    idx <= 0 || (visibleData as any[])[idx]?.rawDate !== (visibleData as any[])[idx - 1]?.rawDate
-  );
-
   return (
     <g transform={`translate(${x},${y})`}>
-      {/* Time — always */}
-      <text x={0} y={0} dy={13} textAnchor="middle" fill="var(--text-muted)" fontSize={10} fontFamily="Inter, sans-serif">
-        {timeLabel}
+      <text x={0} y={0} dy={13} textAnchor="middle" fill={fw !== 'today' ? '#00a63e' : 'var(--text-muted)'} fontSize={10} fontWeight={fw !== 'today' ? 700 : 400} fontFamily="Inter, sans-serif">
+        {fw !== 'today' ? dateLabel : timeLabel}
       </text>
-      {/* Date — once per day, below the time */}
-      {isFirstOfDay && dateLabel && (
-        <text x={0} y={0} dy={26} textAnchor="middle" fill="#00a63e" fontSize={10} fontWeight={700} fontFamily="Inter, sans-serif">
-          {dateLabel}
+      {fw !== 'today' && (
+        <text x={0} y={0} dy={25} textAnchor="middle" fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">
+          {timeLabel}
         </text>
       )}
     </g>
@@ -639,8 +631,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       // Next 3 IST calendar days: tomorrow, day+2, day+3 (today excluded)
       return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
     }
-    // 7d: today through today+6 = 7 IST calendar days
-    return forecastIST >= istDateOffset(0) && forecastIST <= istDateOffset(6);
+    // 7d: next 7 IST calendar days (today excluded), tomorrow through day+7
+    return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(7);
   });
 
   const forecastData = forecastFiltered.map(row => {
@@ -651,10 +643,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
       : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
     const rawDate    = istDate(d); // YYYY-MM-DD in IST — used for day-boundary detection in tick logic
+    const rawTs      = d.getTime(); // UTC ms — used to find the noon slot per day
     // Unique key for the XAxis: just use time for today view, date+time otherwise
     const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
     return {
-      time, dateLabel, timeLabel, rawDate,
+      time, dateLabel, timeLabel, rawDate, rawTs,
       p50:     row.p50_kw            != null ? +Number(row.p50_kw).toFixed(3)            : null,
       p10:     row.p10_kw            != null ? +Number(row.p10_kw).toFixed(3)            : null,
       p90:     row.p90_kw            != null ? +Number(row.p90_kw).toFixed(3)            : null,
@@ -676,16 +669,23 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forecastData, zoomStart, zoomEnd]);
 
-  // Pre-computed tick list for XAxis: always include day boundaries + regular interval
-  // This ensures day-start ticks are never skipped by minTickGap
+  // Pre-computed tick list for XAxis.
+  // For 3d/7d: one tick per IST calendar day, placed at 12:00 PM IST (06:30 UTC).
+  // Falls back to the first slot of that day if the noon slot isn't in the data.
+  // 3 or 7 ticks total — always readable, recharts never skips them.
   const forecastTickObjects = useMemo(() => {
     if (forecastWindow === 'today') return undefined;
-    const N = 8; // every 2h (8 × 15-min slots) for both 3d and 7d
-    return zoomedForecastData.filter((d, i) => {
-      if (i === 0) return true;
-      if (d.rawDate !== zoomedForecastData[i - 1].rawDate) return true; // day boundary
-      return i % N === 0;
-    });
+    // Build a map: rawDate → best tick (noon preferred, else first of day)
+    const dayMap = new Map<string, (typeof zoomedForecastData)[0]>();
+    for (const d of zoomedForecastData) {
+      if (!dayMap.has(d.rawDate)) dayMap.set(d.rawDate, d); // first = fallback
+      // 12:00 PM IST = 06:30 UTC
+      const t = new Date(d.rawTs);
+      if (t.getUTCHours() === 6 && t.getUTCMinutes() === 30) {
+        dayMap.set(d.rawDate, d); // overwrite with noon slot
+      }
+    }
+    return Array.from(dayMap.values());
   }, [zoomedForecastData, forecastWindow]);
   const forecastTickValues = forecastTickObjects?.map(d => d.time);
 
@@ -1186,10 +1186,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                           height={forecastWindow === 'today' ? 22 : 42}
                           allowDataOverflow type="category"
                           ticks={forecastTickValues}
+                          minTickGap={-1}
                           tick={(props: any) => (
                             <ForecastXAxisTick
                               {...props}
-                              visibleData={forecastTickObjects ?? zoomedForecastData}
                               forecastWindow={forecastWindow}
                             />
                           )}
@@ -1216,7 +1216,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                             const dateL = forecastWindow === '3d'
                               ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
                               : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
-                            return `${dateL}||${t}`;
+                            return `${dateL} || ${t}`;
                           })()}
                           stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3"
                           label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 9, fontWeight: 700 }}
