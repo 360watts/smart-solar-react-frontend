@@ -691,13 +691,21 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
   // Trapezoidal energy integration over the selected forecast window (filtered)
   let fcastP10 = 0, fcastP50 = 0, fcastP90 = 0;
+
+  // "Last updated" = most recent generated_at across ALL fetched records.
+  // forecast[0] is the EARLIEST slot (midnight UTC) — written by the first scheduler run
+  // of the day and never overwritten, because subsequent runs only write FUTURE slots.
+  // The most recently executed scheduler run sets generated_at on the latest-future records.
   let forecastGeneratedAt: Date | null = null;
   if (forecast.length > 0) {
-    const first = forecast[0];
-    if (first.generated_at) {
-      forecastGeneratedAt = new Date(first.generated_at);
-    } else if (first.timestamp) {
-      forecastGeneratedAt = new Date(first.timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
+    let maxGenAt = '';
+    for (const row of forecast) {
+      if (row.generated_at && row.generated_at > maxGenAt) maxGenAt = row.generated_at;
+    }
+    if (maxGenAt) {
+      forecastGeneratedAt = new Date(maxGenAt);
+    } else if (forecast[0].timestamp) {
+      forecastGeneratedAt = new Date(forecast[0].timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
     }
   }
   if (forecastFiltered.length > 1) {
@@ -1245,7 +1253,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 )}
                 {forecastGeneratedAt && (
                   <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
-                    Forecast generated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
+                    Forecast last updated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
                   </div>
                 )}
               </div>
