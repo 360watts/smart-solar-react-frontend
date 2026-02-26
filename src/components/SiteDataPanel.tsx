@@ -365,11 +365,11 @@ const ForecastXAxisTick = ({ x, y, payload, visibleData, forecastWindow: fw }: a
   if (!val) return null;
   // visibleData is the filtered tick-object array (forecastTickObjects)
   const idx = (visibleData as any[]).findIndex((d: any) => d.time === val);
-  const timeLabel = fw === '1d' ? val : (val.split('||')[1] ?? val);
-  const dateLabel = fw === '1d' ? '' : (val.split('||')[0] ?? '');
+  const timeLabel = fw === 'today' ? val : (val.split('||')[1] ?? val);
+  const dateLabel = fw === 'today' ? '' : (val.split('||')[0] ?? '');
 
   // First tick of a new day among the VISIBLE ticks (not all 672 raw data points)
-  const isFirstOfDay = fw !== '1d' && (
+  const isFirstOfDay = fw !== 'today' && (
     idx <= 0 || (visibleData as any[])[idx]?.rawDate !== (visibleData as any[])[idx - 1]?.rawDate
   );
 
@@ -460,7 +460,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate,   setCustomEndDate]   = useState('');
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
-  const [forecastWindow,  setForecastWindow]  = useState<'1d' | '3d' | '7d'>('7d');
+  const [forecastWindow,  setForecastWindow]  = useState<'today' | '3d' | '7d'>('7d');
 
   // Drag-to-zoom state (stock-chart style)
   const [refAreaLeft,  setRefAreaLeft]  = useState('');
@@ -592,12 +592,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     'Batt SOC (%)': row.battery_soc_percent ?? null,
   }));
 
-  // Filter forecast by the selected forecast window (1d / 3d / 7d) for display
-  const forecastWindowDays = forecastWindow === '1d' ? 1 : forecastWindow === '3d' ? 3 : 7;
-  const forecastCutoff = new Date(Date.now() + forecastWindowDays * 24 * 3600 * 1000);
+  // Filter forecast by the selected forecast window (today / 3d / 7d) for display
   const forecastFiltered = forecast.filter(row => {
     const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-    return new Date(clean) <= forecastCutoff;
+    const ts = new Date(clean);
+    if (forecastWindow === 'today') {
+      // Show only points whose date (local) matches today
+      const today = new Date();
+      return ts.getFullYear() === today.getFullYear() &&
+             ts.getMonth()    === today.getMonth()    &&
+             ts.getDate()     === today.getDate();
+    }
+    const days = forecastWindow === '3d' ? 3 : 7;
+    return ts <= new Date(Date.now() + days * 24 * 3600 * 1000);
   });
 
   const forecastData = forecastFiltered.map(row => {
@@ -608,8 +615,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
       : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
     const rawDate    = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    // Unique key for the XAxis: just use time for 1d, date+time otherwise
-    const time = forecastWindow === '1d' ? timeLabel : `${dateLabel}||${timeLabel}`;
+    // Unique key for the XAxis: just use time for today view, date+time otherwise
+    const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
     return {
       time, dateLabel, timeLabel, rawDate,
       p50:     row.p50_kw            != null ? +Number(row.p50_kw).toFixed(3)            : null,
@@ -636,7 +643,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   // Pre-computed tick list for XAxis: always include day boundaries + regular interval
   // This ensures day-start ticks are never skipped by minTickGap
   const forecastTickObjects = useMemo(() => {
-    if (forecastWindow === '1d') return undefined;
+    if (forecastWindow === 'today') return undefined;
     const N = forecastWindow === '7d' ? 8 : 4; // every 2h for 7d, every 1h for 3d
     return zoomedForecastData.filter((d, i) => {
       if (i === 0) return true;
@@ -770,10 +777,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             {activeTab === 'forecast' && (
               <select
                 value={forecastWindow}
-                onChange={e => setForecastWindow(e.target.value as '1d' | '3d' | '7d')}
+                onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '7d')}
                 style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
               >
-                <option value="1d">Next 24 hours</option>
+                <option value="today">Today</option>
                 <option value="3d">Next 3 days</option>
                 <option value="7d">Next 7 days</option>
               </select>
@@ -997,7 +1004,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   {fcastP50 > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '2.5rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>
-                      {forecastWindow === '1d' ? '24h' : forecastWindow === '3d' ? '3-day' : '7-day'} Est. Yield:
+                      {forecastWindow === 'today' ? 'Today' : forecastWindow === '3d' ? '3-day' : '7-day'} Est. Yield:
                     </span>
                       <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', background: isDark ? 'rgba(148,163,184,0.1)' : '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>
                         {fcastP10.toFixed(1)} <span style={{ color: 'var(--text-muted)' }}>/</span> <span style={{ color: '#00a63e' }}>{fcastP50.toFixed(1)}</span> <span style={{ color: 'var(--text-muted)' }}>/</span> {fcastP90.toFixed(1)} kWh
@@ -1096,7 +1103,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     <ResponsiveContainer>
                       <AreaChart
                         data={zoomedForecastData}
-                        margin={{ top: 20, right: 10, left: 0, bottom: forecastWindow !== '1d' ? 10 : 0 }}
+                        margin={{ top: 20, right: 10, left: 0, bottom: forecastWindow !== 'today' ? 10 : 0 }}
                         onMouseDown={(e: any) => {
                           if (e?.activeLabel) { setRefAreaLeft(e.activeLabel); setIsSelecting(true); }
                         }}
@@ -1131,7 +1138,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         <XAxis
                           dataKey="time" stroke="var(--text-muted)"
                           tickLine={false} axisLine={false}
-                          height={forecastWindow === '1d' ? 22 : 42}
+                          height={forecastWindow === 'today' ? 22 : 42}
                           allowDataOverflow type="category"
                           ticks={forecastTickValues}
                           tick={(props: any) => (
@@ -1160,7 +1167,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                           x={(() => {
                             const n = new Date();
                             const t = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            if (forecastWindow === '1d') return t;
+                            if (forecastWindow === 'today') return t;
                             const dateL = forecastWindow === '3d'
                               ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
                               : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
