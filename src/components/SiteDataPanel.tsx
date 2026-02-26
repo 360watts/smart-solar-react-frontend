@@ -66,12 +66,32 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+// All time displays use IST (Asia/Kolkata, UTC+5:30) — the site is in India.
+const IST = 'Asia/Kolkata';
+
+/** Returns the ISO date string (YYYY-MM-DD) for a Date in IST, e.g. "2026-02-26" */
+function istDate(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: IST }); // en-CA locale → YYYY-MM-DD
+}
+
+/**
+ * Returns the YYYY-MM-DD string in IST that is N calendar days after today IST.
+ * n=0 → today IST, n=1 → tomorrow IST, n=3 → 3 days from today IST.
+ * Uses IST midnight as the reference so the result is always a clean calendar day.
+ */
+function istDateOffset(n: number): string {
+  const IST_MS = 5.5 * 60 * 60 * 1000;               // UTC+5:30 in ms
+  const nowIST = Date.now() + IST_MS;
+  const istMidnightMS = Math.floor(nowIST / 86400000) * 86400000;  // floor to IST midnight
+  return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS)); // back to UTC Date
+}
+
 function fmt(ts: string, range: string): string {
   try {
     const d = new Date(ts);
-    if (range === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (range === '7d')  return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (range === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
+    if (range === '7d')  return d.toLocaleDateString([], { weekday: 'short', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: IST });
   } catch { return ts; }
 }
 
@@ -189,7 +209,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
       <div style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
         <div style={{ display: 'flex', gap: '0.45rem', minWidth: 'max-content' }}>
           {hourly.map((h, i) => {
-            const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; } })();
+            const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }); } catch { return ''; } })();
             const cloud    = h.cloud_cover_pct ?? 0;
             const ghi      = h.ghi_wm2 ?? 0;
             const temp     = Number(h.temperature_c ?? 0);
@@ -608,29 +628,29 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     'Batt SOC (%)': row.battery_soc_percent ?? null,
   }));
 
-  // Filter forecast by the selected forecast window (today / 3d / 7d) for display
+  // Filter forecast by the selected forecast window using IST calendar days
   const forecastFiltered = forecast.filter(row => {
     const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-    const ts = new Date(clean);
+    const forecastIST = istDate(new Date(clean));
     if (forecastWindow === 'today') {
-      // Show only points whose date (local) matches today
-      const today = new Date();
-      return ts.getFullYear() === today.getFullYear() &&
-             ts.getMonth()    === today.getMonth()    &&
-             ts.getDate()     === today.getDate();
+      return forecastIST === istDate(new Date());
     }
-    const days = forecastWindow === '3d' ? 3 : 7;
-    return ts <= new Date(Date.now() + days * 24 * 3600 * 1000);
+    if (forecastWindow === '3d') {
+      // Next 3 IST calendar days: tomorrow, day+2, day+3 (today excluded)
+      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
+    }
+    // 7d: today through today+6 = 7 IST calendar days
+    return forecastIST >= istDateOffset(0) && forecastIST <= istDateOffset(6);
   });
 
   const forecastData = forecastFiltered.map(row => {
     const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
     const d = new Date(clean);
-    const timeLabel  = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeLabel  = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
     const dateLabel  = forecastWindow === '3d'
-      ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
-      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-    const rawDate    = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
+      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
+    const rawDate    = istDate(d); // YYYY-MM-DD in IST — used for day-boundary detection in tick logic
     // Unique key for the XAxis: just use time for today view, date+time otherwise
     const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
     return {
@@ -660,7 +680,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   // This ensures day-start ticks are never skipped by minTickGap
   const forecastTickObjects = useMemo(() => {
     if (forecastWindow === 'today') return undefined;
-    const N = forecastWindow === '7d' ? 8 : 4; // every 2h for 7d, every 1h for 3d
+    const N = 8; // every 2h (8 × 15-min slots) for both 3d and 7d
     return zoomedForecastData.filter((d, i) => {
       if (i === 0) return true;
       if (d.rawDate !== zoomedForecastData[i - 1].rawDate) return true; // day boundary
@@ -693,10 +713,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   }
 
   // achievedPct: today's actual kWh vs today's P50 forecast only
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Use IST date so "today" matches the inverter's daily counter (which resets at IST midnight)
+  const todayISTStr = istDate(new Date());
   const todayForecast = forecast.filter(row => {
-    const clean = (row.forecast_for || row.timestamp.replace('FORECAST#', '')).substring(0, 10);
-    return clean === todayStr;
+    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+    return istDate(new Date(clean)) === todayISTStr;
   });
   let todayFcastP50 = 0;
   if (todayForecast.length > 1) {
@@ -804,7 +825,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           </div>
           {lastUpdated && (
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })} IST
             </span>
           )}
           <button
@@ -957,7 +978,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     dateRange === '7d'    ? 'Last 7 days' :
                     dateRange === '30d'   ? 'Last 30 days' :
                     customStartDate && customEndDate
-                      ? `${new Date(customStartDate).toLocaleDateString()} – ${new Date(customEndDate).toLocaleDateString()}`
+                      ? `${new Date(customStartDate).toLocaleDateString([], { timeZone: IST })} – ${new Date(customEndDate).toLocaleDateString([], { timeZone: IST })}`
                       : 'Custom range'
                   }
                 </h3>
@@ -1182,11 +1203,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         <ReferenceLine
                           x={(() => {
                             const n = new Date();
-                            const t = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const t = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
                             if (forecastWindow === 'today') return t;
                             const dateL = forecastWindow === '3d'
-                              ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
-                              : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                              ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
+                              : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
                             return `${dateL}||${t}`;
                           })()}
                           stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3"
@@ -1224,7 +1245,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 )}
                 {forecastGeneratedAt && (
                   <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
-                    Forecast generated: {forecastGeneratedAt.toLocaleDateString()} {forecastGeneratedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    Forecast generated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
                   </div>
                 )}
               </div>
