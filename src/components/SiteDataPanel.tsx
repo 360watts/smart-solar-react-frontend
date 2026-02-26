@@ -7,10 +7,10 @@
  *  - History:  power area chart with Battery SOC on secondary axis
  *  - Forecast: P10/P50/P90 + physics baseline, regime tags, % achieved
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   AreaChart, Area, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { apiService } from '../services/api';
@@ -75,11 +75,6 @@ function fmt(ts: string, range: string): string {
   } catch { return ts; }
 }
 
-function fmtForecast(ts: string, forecastFor?: string): string {
-  const clean = forecastFor || ts.replace('FORECAST#', '');
-  try { return new Date(clean).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  catch { return clean; }
-}
 
 function aggregateByPeriod(data: any[], range: string): any[] {
   if (!data.length) return [];
@@ -362,6 +357,38 @@ const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
   midday: { bg: '#F0752218', color: '#c2410c' },
 };
 
+// Stock-chart style XAxis tick:
+//   - time always shown on the first line
+//   - date shown only at the first visible tick of each day (below the time)
+const ForecastXAxisTick = ({ x, y, payload, visibleData, forecastWindow: fw }: any) => {
+  const val: string = payload?.value ?? '';
+  if (!val) return null;
+  // visibleData is the filtered tick-object array (forecastTickObjects)
+  const idx = (visibleData as any[]).findIndex((d: any) => d.time === val);
+  const timeLabel = fw === '1d' ? val : (val.split('||')[1] ?? val);
+  const dateLabel = fw === '1d' ? '' : (val.split('||')[0] ?? '');
+
+  // First tick of a new day among the VISIBLE ticks (not all 672 raw data points)
+  const isFirstOfDay = fw !== '1d' && (
+    idx <= 0 || (visibleData as any[])[idx]?.rawDate !== (visibleData as any[])[idx - 1]?.rawDate
+  );
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* Time — always */}
+      <text x={0} y={0} dy={13} textAnchor="middle" fill="var(--text-muted)" fontSize={10} fontFamily="Inter, sans-serif">
+        {timeLabel}
+      </text>
+      {/* Date — once per day, below the time */}
+      {isFirstOfDay && dateLabel && (
+        <text x={0} y={0} dy={26} textAnchor="middle" fill="#00a63e" fontSize={10} fontWeight={700} fontFamily="Inter, sans-serif">
+          {dateLabel}
+        </text>
+      )}
+    </g>
+  );
+};
+
 const ForecastTable = ({ data }: { data: any[] }) => {
   const { isDark } = useTheme();
   const theadBg  = isDark ? 'rgba(15,23,42,0.9)'  : '#f9fafb';
@@ -385,7 +412,10 @@ const ForecastTable = ({ data }: { data: any[] }) => {
             const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: 'var(--text-muted)' }) : null;
             return (
               <tr key={i} style={{ borderBottom: rowBorder }}>
-                <td style={{ padding: '0.55rem 1rem', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>{row.time}</td>
+                <td style={{ padding: '0.55rem 1rem', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  {row.dateLabel ? <span style={{ marginRight: '0.5rem', color: '#00a63e', fontWeight: 700 }}>{row.dateLabel}</span> : null}
+                  {row.timeLabel ?? row.time}
+                </td>
                 <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>
                   {row.regime && rc && (
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: rc.bg, color: rc.color, padding: '2px 6px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>
@@ -430,6 +460,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate,   setCustomEndDate]   = useState('');
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
+  const [forecastWindow,  setForecastWindow]  = useState<'1d' | '3d' | '7d'>('7d');
+
+  // Drag-to-zoom state (stock-chart style)
+  const [refAreaLeft,  setRefAreaLeft]  = useState('');
+  const [refAreaRight, setRefAreaRight] = useState('');
+  const [isSelecting,  setIsSelecting]  = useState(false);
+  const [zoomStart,    setZoomStart]    = useState<string | null>(null);
+  const [zoomEnd,      setZoomEnd]      = useState<string | null>(null);
 
   // Dark-mode-aware tooltip style for recharts
   const tooltipStyle = {
@@ -443,31 +481,52 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
   const fetchAll = useCallback(async () => {
     try {
+      // Forecast: always next 7 days from today (independent of history dateRange)
+      const now = new Date();
+      const forecastStart = now.toISOString().split('T')[0] + 'T00:00:00Z';
+      const forecastEndDt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+      const forecastEnd   = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
+
+      // Telemetry from DynamoDB based on selected date range
       let telemetryParams: any = {};
       if      (dateRange === 'custom' && customStartDate && customEndDate) telemetryParams = { start_date: new Date(customStartDate).toISOString(), end_date: new Date(customEndDate).toISOString() };
       else if (dateRange === '7d')  telemetryParams = { days: 7 };
       else if (dateRange === '30d') telemetryParams = { days: 30 };
 
-      let forecastParams: any = {};
-      if (dateRange === 'custom' && customStartDate && customEndDate) {
-        forecastParams = { start_date: new Date(customStartDate).toISOString(), end_date: new Date(customEndDate).toISOString() };
-      } else if (dateRange === '7d' || dateRange === '30d') {
-        const days = dateRange === '7d' ? 6 : 29;
-        const end = new Date(), start = new Date();
-        start.setDate(end.getDate() - days);
-        forecastParams = {
-          start_date: start.toISOString().split('T')[0] + 'T00:00:00Z',
-          end_date:   end.toISOString().split('T')[0]   + 'T23:59:59Z',
-        };
+      // For ranges > 7 days, also fetch older history from S3
+      let historyParams: { start_date: string; end_date: string } | null = null;
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+      if (dateRange === '30d') {
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+        historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: sevenDaysAgo.toISOString() };
+      } else if (dateRange === 'custom' && customStartDate && customEndDate) {
+        const customStart = new Date(customStartDate);
+        const customEnd   = new Date(customEndDate);
+        if (customStart < sevenDaysAgo) {
+          historyParams = {
+            start_date: customStart.toISOString(),
+            end_date:   (customEnd < sevenDaysAgo ? customEnd : sevenDaysAgo).toISOString(),
+          };
+        }
       }
 
-      const [tel, fcst, wth] = await Promise.all([
+      const results = await Promise.all([
         apiService.getSiteTelemetry(siteId, telemetryParams),
-        apiService.getSiteForecast(siteId, forecastParams),
+        apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
         apiService.getSiteWeather(siteId),
-      ]);
+        historyParams ? apiService.getSiteHistory(siteId, historyParams) : Promise.resolve(null),
+      ] as Promise<any>[]);
+      const [tel, fcst, wth, hist] = results;
 
-      setTelemetry(Array.isArray(tel) ? tel : []);
+      // Merge DynamoDB telemetry + S3 history, deduplicate by timestamp
+      let merged: any[] = Array.isArray(tel) ? tel : [];
+      if (Array.isArray(hist) && hist.length > 0) {
+        const tsSet = new Set(merged.map((r: any) => r.timestamp));
+        const older = (hist as any[]).filter(r => !tsSet.has(r.timestamp));
+        merged = [...older, ...merged].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
+      }
+
+      setTelemetry(merged);
       setForecast(Array.isArray(fcst) ? fcst : []);
       setWeather(wth || null);
       setLastUpdated(new Date());
@@ -486,6 +545,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     const id = setInterval(fetchAll, 60_000);
     return () => clearInterval(id);
   }, [fetchAll, autoRefresh]);
+
+  // Reset zoom when forecast window changes
+  useEffect(() => {
+    setZoomStart(null);
+    setZoomEnd(null);
+  }, [forecastWindow]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
@@ -527,17 +592,26 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     'Batt SOC (%)': row.battery_soc_percent ?? null,
   }));
 
-  const forecastData = forecast.map(row => {
-    let label = '';
-    if (dateRange !== '24h') {
-      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-      const d = new Date(clean);
-      label = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else {
-      label = fmtForecast(row.timestamp, row.forecast_for);
-    }
+  // Filter forecast by the selected forecast window (1d / 3d / 7d) for display
+  const forecastWindowDays = forecastWindow === '1d' ? 1 : forecastWindow === '3d' ? 3 : 7;
+  const forecastCutoff = new Date(Date.now() + forecastWindowDays * 24 * 3600 * 1000);
+  const forecastFiltered = forecast.filter(row => {
+    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+    return new Date(clean) <= forecastCutoff;
+  });
+
+  const forecastData = forecastFiltered.map(row => {
+    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+    const d = new Date(clean);
+    const timeLabel  = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateLabel  = forecastWindow === '3d'
+      ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
+      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    const rawDate    = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    // Unique key for the XAxis: just use time for 1d, date+time otherwise
+    const time = forecastWindow === '1d' ? timeLabel : `${dateLabel}||${timeLabel}`;
     return {
-      time:    label,
+      time, dateLabel, timeLabel, rawDate,
       p50:     row.p50_kw            != null ? +Number(row.p50_kw).toFixed(3)            : null,
       p10:     row.p10_kw            != null ? +Number(row.p10_kw).toFixed(3)            : null,
       p90:     row.p90_kw            != null ? +Number(row.p90_kw).toFixed(3)            : null,
@@ -548,29 +622,73 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     };
   });
 
-  // Trapezoidal energy integration
+  // Zoom-sliced data for the chart (stock-market drag-to-zoom)
+  const zoomedForecastData = useMemo(() => {
+    if (!zoomStart || !zoomEnd) return forecastData;
+    const li = forecastData.findIndex(d => d.time === zoomStart);
+    const ri = forecastData.findIndex(d => d.time === zoomEnd);
+    if (li === -1 || ri === -1 || li === ri) return forecastData;
+    const [s, e] = li < ri ? [li, ri] : [ri, li];
+    return forecastData.slice(s, e + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forecastData, zoomStart, zoomEnd]);
+
+  // Pre-computed tick list for XAxis: always include day boundaries + regular interval
+  // This ensures day-start ticks are never skipped by minTickGap
+  const forecastTickObjects = useMemo(() => {
+    if (forecastWindow === '1d') return undefined;
+    const N = forecastWindow === '7d' ? 8 : 4; // every 2h for 7d, every 1h for 3d
+    return zoomedForecastData.filter((d, i) => {
+      if (i === 0) return true;
+      if (d.rawDate !== zoomedForecastData[i - 1].rawDate) return true; // day boundary
+      return i % N === 0;
+    });
+  }, [zoomedForecastData, forecastWindow]);
+  const forecastTickValues = forecastTickObjects?.map(d => d.time);
+
+  // Trapezoidal energy integration over the selected forecast window (filtered)
   let fcastP10 = 0, fcastP50 = 0, fcastP90 = 0;
   let forecastGeneratedAt: Date | null = null;
-  if (forecast.length > 1) {
+  if (forecast.length > 0) {
     const first = forecast[0];
     if (first.generated_at) {
       forecastGeneratedAt = new Date(first.generated_at);
     } else if (first.timestamp) {
       forecastGeneratedAt = new Date(first.timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
     }
-    for (let i = 0; i < forecast.length - 1; i++) {
+  }
+  if (forecastFiltered.length > 1) {
+    for (let i = 0; i < forecastFiltered.length - 1; i++) {
       const h = Math.abs(
-        new Date(forecast[i+1].timestamp.replace('FORECAST#', '')).getTime() -
-        new Date(forecast[i].timestamp.replace('FORECAST#', '')).getTime()
+        new Date(forecastFiltered[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+        new Date(forecastFiltered[i].timestamp.replace('FORECAST#', '')).getTime()
       ) / 3_600_000;
-      if (forecast[i].p10_kw != null && forecast[i+1].p10_kw != null) fcastP10 += (forecast[i].p10_kw + forecast[i+1].p10_kw) / 2 * h;
-      if (forecast[i].p50_kw != null && forecast[i+1].p50_kw != null) fcastP50 += (forecast[i].p50_kw + forecast[i+1].p50_kw) / 2 * h;
-      if (forecast[i].p90_kw != null && forecast[i+1].p90_kw != null) fcastP90 += (forecast[i].p90_kw + forecast[i+1].p90_kw) / 2 * h;
+      if (forecastFiltered[i].p10_kw != null && forecastFiltered[i+1].p10_kw != null) fcastP10 += (forecastFiltered[i].p10_kw + forecastFiltered[i+1].p10_kw) / 2 * h;
+      if (forecastFiltered[i].p50_kw != null && forecastFiltered[i+1].p50_kw != null) fcastP50 += (forecastFiltered[i].p50_kw + forecastFiltered[i+1].p50_kw) / 2 * h;
+      if (forecastFiltered[i].p90_kw != null && forecastFiltered[i+1].p90_kw != null) fcastP90 += (forecastFiltered[i].p90_kw + forecastFiltered[i+1].p90_kw) / 2 * h;
     }
   }
 
-  const achievedPct = todayKwh != null && fcastP50 > 0
-    ? Math.min(999, Math.round((todayKwh / fcastP50) * 100))
+  // achievedPct: today's actual kWh vs today's P50 forecast only
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayForecast = forecast.filter(row => {
+    const clean = (row.forecast_for || row.timestamp.replace('FORECAST#', '')).substring(0, 10);
+    return clean === todayStr;
+  });
+  let todayFcastP50 = 0;
+  if (todayForecast.length > 1) {
+    for (let i = 0; i < todayForecast.length - 1; i++) {
+      const h = Math.abs(
+        new Date(todayForecast[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+        new Date(todayForecast[i].timestamp.replace('FORECAST#', '')).getTime()
+      ) / 3_600_000;
+      if (todayForecast[i].p50_kw != null && todayForecast[i+1].p50_kw != null) {
+        todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i+1].p50_kw) / 2 * h;
+      }
+    }
+  }
+  const achievedPct = todayKwh != null && todayFcastP50 > 0
+    ? Math.min(999, Math.round((todayKwh / todayFcastP50) * 100))
     : null;
 
   // ── Derived dark-mode colours ────────────────────────────────────────────────
@@ -628,23 +746,38 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <select
-              value={dateRange}
-              onChange={e => setDateRange(e.target.value)}
-              style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
-            >
-              <option value="24h">Today</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="custom">Custom range</option>
-            </select>
-            {dateRange === 'custom' && (<>
-              <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)}
-                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>to</span>
-              <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)}
-                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
+            {/* History range — shown on Overview and History tabs */}
+            {(activeTab === 'overview' || activeTab === 'history') && (<>
+              <select
+                value={dateRange}
+                onChange={e => setDateRange(e.target.value)}
+                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
+              >
+                <option value="24h">Today</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="custom">Custom range</option>
+              </select>
+              {dateRange === 'custom' && (<>
+                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)}
+                  style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>to</span>
+                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)}
+                  style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
+              </>)}
             </>)}
+            {/* Forecast window — shown on Forecast tab */}
+            {activeTab === 'forecast' && (
+              <select
+                value={forecastWindow}
+                onChange={e => setForecastWindow(e.target.value as '1d' | '3d' | '7d')}
+                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
+              >
+                <option value="1d">Next 24 hours</option>
+                <option value="3d">Next 3 days</option>
+                <option value="7d">Next 7 days</option>
+              </select>
+            )}
           </div>
           {lastUpdated && (
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
@@ -863,7 +996,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   </div>
                   {fcastP50 > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '2.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>Est. Yield:</span>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>
+                      {forecastWindow === '1d' ? '24h' : forecastWindow === '3d' ? '3-day' : '7-day'} Est. Yield:
+                    </span>
                       <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', background: isDark ? 'rgba(148,163,184,0.1)' : '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>
                         {fcastP10.toFixed(1)} <span style={{ color: 'var(--text-muted)' }}>/</span> <span style={{ color: '#00a63e' }}>{fcastP50.toFixed(1)}</span> <span style={{ color: 'var(--text-muted)' }}>/</span> {fcastP90.toFixed(1)} kWh
                       </span>
@@ -957,9 +1092,27 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               {/* Chart / Table area */}
               <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
                 {forecastView === 'chart' ? (
-                  <div style={{ height: 300, width: '100%', userSelect: 'none' }}>
+                  <div style={{ height: forecastWindow === '7d' ? 360 : 300, width: '100%', userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
                     <ResponsiveContainer>
-                      <AreaChart data={forecastData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+                      <AreaChart
+                        data={zoomedForecastData}
+                        margin={{ top: 20, right: 10, left: 0, bottom: forecastWindow !== '1d' ? 10 : 0 }}
+                        onMouseDown={(e: any) => {
+                          if (e?.activeLabel) { setRefAreaLeft(e.activeLabel); setIsSelecting(true); }
+                        }}
+                        onMouseMove={(e: any) => {
+                          if (isSelecting && e?.activeLabel) setRefAreaRight(e.activeLabel);
+                        }}
+                        onMouseUp={() => {
+                          if (refAreaLeft && refAreaRight && refAreaLeft !== refAreaRight) {
+                            setZoomStart(refAreaLeft);
+                            setZoomEnd(refAreaRight);
+                          }
+                          setIsSelecting(false);
+                          setRefAreaLeft('');
+                          setRefAreaRight('');
+                        }}
+                      >
                         <defs>
                           <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.2}/>
@@ -977,14 +1130,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
                         <XAxis
                           dataKey="time" stroke="var(--text-muted)"
-                          tickLine={false} axisLine={false} minTickGap={30} tickMargin={12}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'Inter, sans-serif' }} textAnchor="middle"
+                          tickLine={false} axisLine={false}
+                          height={forecastWindow === '1d' ? 22 : 42}
                           allowDataOverflow type="category"
-                          tickFormatter={(val: string) => {
-                            if (dateRange === '24h') return val;
-                            const p = val.split(' ');
-                            return p.length >= 3 ? `${p[0]} ${p[1]}` : val;
-                          }}
+                          ticks={forecastTickValues}
+                          tick={(props: any) => (
+                            <ForecastXAxisTick
+                              {...props}
+                              visibleData={forecastTickObjects ?? zoomedForecastData}
+                              forecastWindow={forecastWindow}
+                            />
+                          )}
                         />
                         <YAxis
                           stroke="var(--text-muted)"
@@ -1001,18 +1157,47 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         <Line type="monotone" dataKey="physics" stroke={isDark ? '#475569' : '#d1d5db'} strokeWidth={1.5} strokeDasharray="5 3" dot={false} name="Physics Baseline" activeDot={false} />
 
                         <ReferenceLine
-                          x={new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          stroke="#ef4444" strokeDasharray="3 3"
-                          label={<span style={{ color: '#ef4444', fontSize: 10, fontWeight: 700 }}>NOW</span>}
+                          x={(() => {
+                            const n = new Date();
+                            const t = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            if (forecastWindow === '1d') return t;
+                            const dateL = forecastWindow === '3d'
+                              ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric' })
+                              : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+                            return `${dateL}||${t}`;
+                          })()}
+                          stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3"
+                          label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 9, fontWeight: 700 }}
                         />
+
+                        {/* Drag-selection highlight */}
+                        {isSelecting && refAreaLeft && refAreaRight && (
+                          <ReferenceArea x1={refAreaLeft} x2={refAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
+                        )}
                       </AreaChart>
                     </ResponsiveContainer>
+                    {/* Reset zoom button */}
+                    {(zoomStart || zoomEnd) && (
+                      <button
+                        onClick={() => { setZoomStart(null); setZoomEnd(null); }}
+                        style={{
+                          position: 'absolute', top: 10, right: 10,
+                          background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
+                          border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
+                          borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
+                          color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                          backdropFilter: 'blur(4px)',
+                        }}
+                      >
+                        ↺ Reset Zoom
+                      </button>
+                    )}
                     <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                      Dashed grey = physics baseline (ideal clear-sky output)
+                      {zoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
                     </div>
                   </div>
                 ) : (
-                  <ForecastTable data={forecastData} />
+                  <ForecastTable data={zoomedForecastData} />
                 )}
                 {forecastGeneratedAt && (
                   <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>

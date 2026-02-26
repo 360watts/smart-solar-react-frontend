@@ -228,6 +228,16 @@ class ApiService {
     return this.request(url);
   }
 
+  /**
+   * Historical telemetry from S3 (older than DynamoDB's 7-day TTL window).
+   * S3 path: telemetry_csv/{site_id}/{YYYY}/{MM}/{DD}/{HH}/data.csv
+   * Returns same shape as getSiteTelemetry.
+   */
+  async getSiteHistory(siteId: string, params: { start_date: string; end_date: string }): Promise<any[]> {
+    const query = new URLSearchParams({ start_date: params.start_date, end_date: params.end_date });
+    return this.request(`/sites/${siteId}/history/?${query.toString()}`);
+  }
+
   async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
     const query = new URLSearchParams();
     if (params?.date) query.append('date', params.date);
