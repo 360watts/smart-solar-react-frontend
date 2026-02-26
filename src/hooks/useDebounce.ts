@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UseDebouncedValueOptions {
   delay?: number;
@@ -27,38 +27,39 @@ export function useDebouncedValue<T>(
 }
 
 /**
- * Custom hook to debounce a callback function
- * Useful for search, filtering, and other expensive operations
+ * Custom hook to debounce a callback function.
+ * Uses a ref for the timeout ID so the returned function is stable
+ * (does not re-create on every invocation, which would defeat debouncing).
  */
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef<T>(callback);
 
+  // Keep callbackRef current so the latest callback is always used
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  // Stable debounced function — never recreated
   const debouncedCallback = useCallback(
     (...args: Parameters<T>) => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-
-      const newTimeoutId = setTimeout(() => {
-        callback(...args);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current(...args);
       }, delay);
-
-      setTimeoutId(newTimeoutId);
     },
-    [callback, delay, timeoutId]
+    [delay] // only delay changes recreate the wrapper
   );
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [timeoutId]);
+  }, []);
 
   return debouncedCallback;
 }

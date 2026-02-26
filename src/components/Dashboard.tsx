@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
@@ -114,13 +114,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'activity' | 'health'>('overview');
-  useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const promises: Promise<any>[] = [
         apiService.getTelemetry(),
@@ -140,18 +134,24 @@ const Dashboard: React.FC = () => {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const latestValues = (() => {
+  useEffect(() => {
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
+
+  const latestValues = useMemo(() => {
     const map: { [k: string]: TelemetryData } = {};
     telemetryData.forEach(item => {
       if (!map[item.data_type] || new Date(item.timestamp) > new Date(map[item.data_type].timestamp))
         map[item.data_type] = item;
     });
     return Object.values(map);
-  })();
+  }, [telemetryData]);
 
-  const chartData = (() => {
+  const chartData = useMemo(() => {
     const map: { [k: string]: any } = {};
     telemetryData.forEach(item => {
       const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -159,34 +159,29 @@ const Dashboard: React.FC = () => {
       map[time][item.data_type] = item.value;
     });
     return Object.values(map).slice(-20);
-  })();
+  }, [telemetryData]);
 
-  // Sparkline data for hero card (energy values over time)
-  const sparklineData = (() => {
+  const sparklineData = useMemo(() => {
     const energyPoints = telemetryData
       .filter(d => d.data_type.toLowerCase().includes('energy') || d.data_type.toLowerCase().includes('power'))
       .slice(-12)
       .map((d, i) => ({ i, v: d.value }));
-    if (energyPoints.length === 0) {
-      // fallback placeholder
-      return Array.from({ length: 8 }, (_, i) => ({ i, v: 0 }));
-    }
-    return energyPoints;
-  })();
+    return energyPoints.length === 0 ? Array.from({ length: 8 }, (_, i) => ({ i, v: 0 })) : energyPoints;
+  }, [telemetryData]);
 
-  const deviceStatusData = systemHealth ? [
-    { name: 'Active',   value: systemHealth.active_devices,                                     color: '#00a63e' },
+  const deviceStatusData = useMemo(() => systemHealth ? [
+    { name: 'Active',   value: systemHealth.active_devices,                              color: '#00a63e' },
     { name: 'Inactive', value: systemHealth.total_devices - systemHealth.active_devices, color: '#e5e7eb' },
-  ] : [];
+  ] : [], [systemHealth]);
 
-  const alertSeverityData = [
+  const alertSeverityData = useMemo(() => [
     { name: 'Critical', value: alerts.filter(a => a.severity === 'critical').length, color: '#ef4444' },
     { name: 'Warning',  value: alerts.filter(a => a.severity === 'warning').length,  color: '#f59e0b' },
     { name: 'Info',     value: alerts.filter(a => a.severity === 'info').length,     color: '#3b82f6' },
-  ];
+  ], [alerts]);
 
-  const unresolvedAlerts = alerts.filter(a => !a.resolved);
-  const hasCritical = unresolvedAlerts.some(a => a.severity === 'critical');
+  const unresolvedAlerts = useMemo(() => alerts.filter(a => !a.resolved), [alerts]);
+  const hasCritical = useMemo(() => unresolvedAlerts.some(a => a.severity === 'critical'), [unresolvedAlerts]);
 
   if (loading) {
     return (

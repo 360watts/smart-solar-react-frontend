@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
 
@@ -69,25 +69,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
         setTokens(data.tokens);
-
-        // Store in localStorage
         localStorage.setItem('authTokens', JSON.stringify(data.tokens));
         localStorage.setItem('authUser', JSON.stringify(data.user));
-
         return true;
       } else {
         const errorData = await response.json();
@@ -97,40 +91,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Login error:', error);
       return false;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       if (tokens?.refresh) {
         await fetch(`${API_BASE_URL}/auth/logout/`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tokens.access}`,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokens.access}` },
           body: JSON.stringify({ refresh_token: tokens.refresh }),
         });
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear local state and storage regardless of API call success
       setUser(null);
       setTokens(null);
       localStorage.removeItem('authTokens');
       localStorage.removeItem('authUser');
     }
-  };
+  }, [tokens]);
 
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem('authUser', JSON.stringify(updatedUser));
-    }
-  };
+  const updateUser = useCallback((userData: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...userData };
+      localStorage.setItem('authUser', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
-  const value: AuthContextType = {
+  const value = useMemo<AuthContextType>(() => ({
     user,
     tokens,
     login,
@@ -139,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user && !!tokens,
     isAdmin: !!(user && user.is_superuser),
     loading,
-  };
+  }), [user, tokens, login, logout, updateUser, loading]);
 
   return (
     <AuthContext.Provider value={value}>

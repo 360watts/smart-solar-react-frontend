@@ -163,9 +163,8 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(userData),
     });
-    // Invalidate users cache
+    // Invalidate only the users cache (not unrelated site/forecast/weather caches)
     cacheService.clear('users_all');
-    cacheService.clearAll(); // Clear all cache for safety
     return result;
   }
 
@@ -225,7 +224,14 @@ class ApiService {
     if (params?.end_date) query.append('end_date', params.end_date);
     if (params?.days) query.append('days', params.days.toString());
     const url = `/sites/${siteId}/telemetry/${query.toString() ? '?' + query.toString() : ''}`;
-    return this.request(url);
+    // 60-second TTL: live data changes frequently but a 1-min cache avoids duplicate fetches
+    // on tab switches and rapid re-renders without showing stale data
+    const cacheKey = `telemetry_${siteId}_${query.toString()}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(url);
+    cacheService.set(cacheKey, data, 60 * 1000);
+    return data;
   }
 
   /**
@@ -235,7 +241,13 @@ class ApiService {
    */
   async getSiteHistory(siteId: string, params: { start_date: string; end_date: string }): Promise<any[]> {
     const query = new URLSearchParams({ start_date: params.start_date, end_date: params.end_date });
-    return this.request(`/sites/${siteId}/history/?${query.toString()}`);
+    // 5-minute TTL: S3 history is immutable for past data, very safe to cache
+    const cacheKey = `history_${siteId}_${query.toString()}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${siteId}/history/?${query.toString()}`);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
+    return data;
   }
 
   async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
@@ -244,7 +256,13 @@ class ApiService {
     if (params?.start_date) query.append('start_date', params.start_date);
     if (params?.end_date) query.append('end_date', params.end_date);
     const url = `/sites/${siteId}/forecast/${query.toString() ? '?' + query.toString() : ''}`;
-    return this.request(url);
+    // 15-minute TTL: scheduler refreshes forecast every 15 min, so this is the ideal cache window
+    const cacheKey = `forecast_${siteId}_${query.toString()}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(url);
+    cacheService.set(cacheKey, data, 15 * 60 * 1000);
+    return data;
   }
 
   /**
@@ -259,7 +277,13 @@ class ApiService {
    *   hourly_forecast[n].ghi_wm2 …   — same fields as current
    */
   async getSiteWeather(siteId: string): Promise<{ current: any | null; hourly_forecast: any[] } | null> {
-    return this.request(`/sites/${siteId}/weather/`);
+    // 15-minute TTL: weather data refreshes at the same cadence as the forecast scheduler
+    const cacheKey = `weather_${siteId}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${siteId}/weather/`);
+    cacheService.set(cacheKey, data, 15 * 60 * 1000);
+    return data;
   }
 
   async updateUser(userId: number, data: any): Promise<any> {

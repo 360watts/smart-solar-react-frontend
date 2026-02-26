@@ -12,7 +12,6 @@ import {
   AreaChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
 } from 'recharts';
-import html2canvas from 'html2canvas';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -395,23 +394,23 @@ const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
 };
 
 // XAxis tick for the forecast chart.
-// 'today' view: single line showing the time.
-// '3d'/'7d' view: each tick is the first slot of an IST calendar day,
-//   showing the date on line 1 and "12:00 AM" on line 2.
+// 'today' view: time on line 1 (green bold), no line 2.
+// '3d'/'7d' view: date on line 1 (green bold), time on line 2 (muted).
 const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   const val: string = payload?.value ?? '';
   if (!val) return null;
-  const timeLabel = fw === 'today' ? val : (val.split('||')[1] ?? val);
-  const dateLabel = fw === 'today' ? '' : (val.split('||')[0] ?? '');
+  const isToday = fw === 'today';
+  const line1 = isToday ? val : (val.split('||')[0] ?? val);
+  const line2 = isToday ? '' : (val.split('||')[1] ?? '');
 
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={13} textAnchor="middle" fill={fw !== 'today' ? '#00a63e' : 'var(--text-muted)'} fontSize={10} fontWeight={fw !== 'today' ? 700 : 400} fontFamily="Inter, sans-serif">
-        {fw !== 'today' ? dateLabel : timeLabel}
+      <text x={0} y={0} dy={13} textAnchor="middle" fill="#00a63e" fontSize={10} fontWeight={700} fontFamily="Inter, sans-serif">
+        {line1}
       </text>
-      {fw !== 'today' && (
+      {!isToday && line2 && (
         <text x={0} y={0} dy={25} textAnchor="middle" fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">
-          {timeLabel}
+          {line2}
         </text>
       )}
     </g>
@@ -488,6 +487,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [dateRange,       setDateRange]       = useState('24h');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate,   setCustomEndDate]   = useState('');
+  // Debounced versions used as fetchAll deps — avoids a fetch on every keystroke
+  const [debouncedStart,  setDebouncedStart]  = useState('');
+  const [debouncedEnd,    setDebouncedEnd]    = useState('');
+  useEffect(() => { const t = setTimeout(() => setDebouncedStart(customStartDate), 600); return () => clearTimeout(t); }, [customStartDate]);
+  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate),     600); return () => clearTimeout(t); }, [customEndDate]);
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
   const [forecastWindow,  setForecastWindow]  = useState<'today' | '3d' | '7d'>('7d');
 
@@ -498,15 +502,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [zoomStart,    setZoomStart]    = useState<string | null>(null);
   const [zoomEnd,      setZoomEnd]      = useState<string | null>(null);
 
-  // Dark-mode-aware tooltip style for recharts
-  const tooltipStyle = {
+  // Dark-mode-aware tooltip style for recharts — memoized so recharts never gets a new object ref
+  const tooltipStyle = useMemo(() => ({
     background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
     border: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,166,62,0.15)'}`,
     borderRadius: 10,
     color: isDark ? '#f1f5f9' : '#0a0a0a',
     boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
     fontSize: 12,
-  };
+  }), [isDark]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -518,7 +522,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
       // Telemetry from DynamoDB based on selected date range
       let telemetryParams: any = {};
-      if      (dateRange === 'custom' && customStartDate && customEndDate) telemetryParams = { start_date: new Date(customStartDate).toISOString(), end_date: new Date(customEndDate).toISOString() };
+      if      (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
       else if (dateRange === '7d')  telemetryParams = { days: 7 };
       else if (dateRange === '30d') telemetryParams = { days: 30 };
 
@@ -531,9 +535,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         historyParams = { start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString() };
       } else if (dateRange === '30d') {
         historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: now.toISOString() };
-      } else if (dateRange === 'custom' && customStartDate && customEndDate) {
-        const customStart = new Date(customStartDate);
-        const customEnd   = new Date(customEndDate);
+      } else if (dateRange === 'custom' && debouncedStart && debouncedEnd) {
+        const customStart = new Date(debouncedStart);
+        const customEnd   = new Date(debouncedEnd);
         // Always fetch S3 for the full custom range; DynamoDB + dedup handles the recent overlap
         historyParams = { start_date: customStart.toISOString(), end_date: customEnd.toISOString() };
       }
@@ -564,7 +568,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     } finally {
       setLoading(false);
     }
-  }, [siteId, dateRange, customStartDate, customEndDate]);
+  }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
   useEffect(() => {
     setLoading(true);
@@ -611,52 +615,51 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     : '#10b981';
 
   // ── Chart data ──────────────────────────────────────────────────────────────
-  const aggregated  = aggregateByPeriod(telemetry, dateRange);
-  const historyData = aggregated.map(row => ({
-    time:           fmt(row.timestamp, dateRange),
-    'PV (kW)':      +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
-    'Load (kW)':    +((row.load_power_w ?? 0) / 1000).toFixed(2),
-    'Grid (kW)':    +((row.grid_power_w ?? 0) / 1000).toFixed(2),
-    'Batt SOC (%)': row.battery_soc_percent ?? null,
-  }));
+  const historyData = useMemo(() => {
+    const aggregated = aggregateByPeriod(telemetry, dateRange);
+    return aggregated.map(row => ({
+      time:           fmt(row.timestamp, dateRange),
+      'PV (kW)':      +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
+      'Load (kW)':    +((row.load_power_w ?? 0) / 1000).toFixed(2),
+      'Grid (kW)':    +((row.grid_power_w ?? 0) / 1000).toFixed(2),
+      'Batt SOC (%)': row.battery_soc_percent ?? null,
+    }));
+  }, [telemetry, dateRange]);
 
-  // Filter forecast by the selected forecast window using IST calendar days
-  const forecastFiltered = forecast.filter(row => {
-    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-    const forecastIST = istDate(new Date(clean));
-    if (forecastWindow === 'today') {
-      return forecastIST === istDate(new Date());
-    }
-    if (forecastWindow === '3d') {
-      // Next 3 IST calendar days: tomorrow, day+2, day+3 (today excluded)
-      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
-    }
-    // 7d: next 7 IST calendar days (today excluded), tomorrow through day+7
-    return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(7);
-  });
-
-  const forecastData = forecastFiltered.map(row => {
-    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-    const d = new Date(clean);
-    const timeLabel  = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-    const dateLabel  = forecastWindow === '3d'
-      ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
-      : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
-    const rawDate    = istDate(d); // YYYY-MM-DD in IST — used for day-boundary detection in tick logic
-    const rawTs      = d.getTime(); // UTC ms — used to find the noon slot per day
-    // Unique key for the XAxis: just use time for today view, date+time otherwise
-    const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
-    return {
-      time, dateLabel, timeLabel, rawDate, rawTs,
-      p50:     row.p50_kw            != null ? +Number(row.p50_kw).toFixed(3)            : null,
-      p10:     row.p10_kw            != null ? +Number(row.p10_kw).toFixed(3)            : null,
-      p90:     row.p90_kw            != null ? +Number(row.p90_kw).toFixed(3)            : null,
-      physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(3) : null,
-      ghi:     row.ghi_input_wm2     != null ? +row.ghi_input_wm2                       : null,
-      temp:    row.temperature_c     != null ? +row.temperature_c                        : null,
-      regime:  row.regime            ?? null,
-    };
-  });
+  // Filter + map forecast — memoized on forecast array and window selection
+  const { forecastFiltered, forecastData } = useMemo(() => {
+    const todayIST = istDate(new Date());
+    const filtered = forecast.filter(row => {
+      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+      const forecastIST = istDate(new Date(clean));
+      if (forecastWindow === 'today') return forecastIST === todayIST;
+      if (forecastWindow === '3d')    return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
+      // 7d: next 7 IST calendar days (today excluded)
+      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(7);
+    });
+    const mapped = filtered.map(row => {
+      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+      const d = new Date(clean);
+      const timeLabel = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
+      const dateLabel = forecastWindow === '3d'
+        ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
+        : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
+      const rawDate = istDate(d);
+      const rawTs   = d.getTime();
+      const time    = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
+      return {
+        time, dateLabel, timeLabel, rawDate, rawTs,
+        p50:     row.p50_kw             != null ? +Number(row.p50_kw).toFixed(3)             : null,
+        p10:     row.p10_kw             != null ? +Number(row.p10_kw).toFixed(3)             : null,
+        p90:     row.p90_kw             != null ? +Number(row.p90_kw).toFixed(3)             : null,
+        physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(3) : null,
+        ghi:     row.ghi_input_wm2      != null ? +row.ghi_input_wm2                        : null,
+        temp:    row.temperature_c      != null ? +row.temperature_c                         : null,
+        regime:  row.regime             ?? null,
+      };
+    });
+    return { forecastFiltered: filtered, forecastData: mapped };
+  }, [forecast, forecastWindow]);
 
   // Zoom-sliced data for the chart (stock-market drag-to-zoom)
   const zoomedForecastData = useMemo(() => {
@@ -670,11 +673,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   }, [forecastData, zoomStart, zoomEnd]);
 
   // Pre-computed tick list for XAxis.
+  // For today: one tick per even IST hour (every 2h = UTC minutes=30, UTC hours even).
   // For 3d/7d: one tick per IST calendar day, placed at 12:00 PM IST (06:30 UTC).
   // Falls back to the first slot of that day if the noon slot isn't in the data.
-  // 3 or 7 ticks total — always readable, recharts never skips them.
   const forecastTickObjects = useMemo(() => {
-    if (forecastWindow === 'today') return undefined;
+    if (forecastWindow === 'today') {
+      // Pick slots at even IST hours (00:00, 02:00, 04:00, ... 22:00 IST)
+      // Even IST hours → UTC minutes=30 and UTC hours even
+      return zoomedForecastData.filter(d => {
+        const t = new Date(d.rawTs);
+        return t.getUTCMinutes() === 30 && t.getUTCHours() % 2 === 0;
+      });
+    }
     // Build a map: rawDate → best tick (noon preferred, else first of day)
     const dayMap = new Map<string, (typeof zoomedForecastData)[0]>();
     for (const d of zoomedForecastData) {
@@ -689,59 +699,59 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   }, [zoomedForecastData, forecastWindow]);
   const forecastTickValues = forecastTickObjects?.map(d => d.time);
 
-  // Trapezoidal energy integration over the selected forecast window (filtered)
-  let fcastP10 = 0, fcastP50 = 0, fcastP90 = 0;
-
-  // "Last updated" = most recent generated_at across ALL fetched records.
-  // forecast[0] is the EARLIEST slot (midnight UTC) — written by the first scheduler run
-  // of the day and never overwritten, because subsequent runs only write FUTURE slots.
-  // The most recently executed scheduler run sets generated_at on the latest-future records.
-  let forecastGeneratedAt: Date | null = null;
-  if (forecast.length > 0) {
+  // "Last updated" = most recent generated_at across ALL fetched records — memoized on forecast array
+  const forecastGeneratedAt = useMemo<Date | null>(() => {
+    if (forecast.length === 0) return null;
     let maxGenAt = '';
     for (const row of forecast) {
       if (row.generated_at && row.generated_at > maxGenAt) maxGenAt = row.generated_at;
     }
-    if (maxGenAt) {
-      forecastGeneratedAt = new Date(maxGenAt);
-    } else if (forecast[0].timestamp) {
-      forecastGeneratedAt = new Date(forecast[0].timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
+    if (maxGenAt) return new Date(maxGenAt);
+    if (forecast[0].timestamp) {
+      return new Date(forecast[0].timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
     }
-  }
-  if (forecastFiltered.length > 1) {
-    for (let i = 0; i < forecastFiltered.length - 1; i++) {
-      const h = Math.abs(
-        new Date(forecastFiltered[i+1].timestamp.replace('FORECAST#', '')).getTime() -
-        new Date(forecastFiltered[i].timestamp.replace('FORECAST#', '')).getTime()
-      ) / 3_600_000;
-      if (forecastFiltered[i].p10_kw != null && forecastFiltered[i+1].p10_kw != null) fcastP10 += (forecastFiltered[i].p10_kw + forecastFiltered[i+1].p10_kw) / 2 * h;
-      if (forecastFiltered[i].p50_kw != null && forecastFiltered[i+1].p50_kw != null) fcastP50 += (forecastFiltered[i].p50_kw + forecastFiltered[i+1].p50_kw) / 2 * h;
-      if (forecastFiltered[i].p90_kw != null && forecastFiltered[i+1].p90_kw != null) fcastP90 += (forecastFiltered[i].p90_kw + forecastFiltered[i+1].p90_kw) / 2 * h;
-    }
-  }
+    return null;
+  }, [forecast]);
 
-  // achievedPct: today's actual kWh vs today's P50 forecast only
-  // Use IST date so "today" matches the inverter's daily counter (which resets at IST midnight)
-  const todayISTStr = istDate(new Date());
-  const todayForecast = forecast.filter(row => {
-    const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-    return istDate(new Date(clean)) === todayISTStr;
-  });
-  let todayFcastP50 = 0;
-  if (todayForecast.length > 1) {
-    for (let i = 0; i < todayForecast.length - 1; i++) {
-      const h = Math.abs(
-        new Date(todayForecast[i+1].timestamp.replace('FORECAST#', '')).getTime() -
-        new Date(todayForecast[i].timestamp.replace('FORECAST#', '')).getTime()
-      ) / 3_600_000;
-      if (todayForecast[i].p50_kw != null && todayForecast[i+1].p50_kw != null) {
-        todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i+1].p50_kw) / 2 * h;
+  // Trapezoidal energy integration over the selected forecast window — memoized on filtered data
+  const { fcastP10, fcastP50, fcastP90 } = useMemo(() => {
+    let p10 = 0, p50 = 0, p90 = 0;
+    if (forecastFiltered.length > 1) {
+      for (let i = 0; i < forecastFiltered.length - 1; i++) {
+        const h = Math.abs(
+          new Date(forecastFiltered[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+          new Date(forecastFiltered[i].timestamp.replace('FORECAST#', '')).getTime()
+        ) / 3_600_000;
+        if (forecastFiltered[i].p10_kw != null && forecastFiltered[i+1].p10_kw != null) p10 += (forecastFiltered[i].p10_kw + forecastFiltered[i+1].p10_kw) / 2 * h;
+        if (forecastFiltered[i].p50_kw != null && forecastFiltered[i+1].p50_kw != null) p50 += (forecastFiltered[i].p50_kw + forecastFiltered[i+1].p50_kw) / 2 * h;
+        if (forecastFiltered[i].p90_kw != null && forecastFiltered[i+1].p90_kw != null) p90 += (forecastFiltered[i].p90_kw + forecastFiltered[i+1].p90_kw) / 2 * h;
       }
     }
-  }
-  const achievedPct = todayKwh != null && todayFcastP50 > 0
-    ? Math.min(999, Math.round((todayKwh / todayFcastP50) * 100))
-    : null;
+    return { fcastP10: p10, fcastP50: p50, fcastP90: p90 };
+  }, [forecastFiltered]);
+
+  // achievedPct: today's actual kWh vs today's P50 forecast — memoized on forecast + todayKwh
+  const achievedPct = useMemo(() => {
+    const todayISTStr = istDate(new Date());
+    const todayForecast = forecast.filter(row => {
+      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+      return istDate(new Date(clean)) === todayISTStr;
+    });
+    let todayFcastP50 = 0;
+    if (todayForecast.length > 1) {
+      for (let i = 0; i < todayForecast.length - 1; i++) {
+        const h = Math.abs(
+          new Date(todayForecast[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+          new Date(todayForecast[i].timestamp.replace('FORECAST#', '')).getTime()
+        ) / 3_600_000;
+        if (todayForecast[i].p50_kw != null && todayForecast[i+1].p50_kw != null)
+          todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i+1].p50_kw) / 2 * h;
+      }
+    }
+    return todayKwh != null && todayFcastP50 > 0
+      ? Math.min(999, Math.round((todayKwh / todayFcastP50) * 100))
+      : null;
+  }, [forecast, todayKwh]);
 
   // ── Derived dark-mode colours ────────────────────────────────────────────────
   const cardBg     = isDark ? 'rgba(30,41,59,0.85)'   : '#ffffff';
@@ -1097,6 +1107,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     onClick={async () => {
                       const el = document.getElementById('forecast-chart-container');
                       if (el) {
+                        const { default: html2canvas } = await import('html2canvas');
                         const canvas = await html2canvas(el, { background: '#ffffff', scale: 2 } as any);
                         const a = document.createElement('a');
                         a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
@@ -1183,7 +1194,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         <XAxis
                           dataKey="time" stroke="var(--text-muted)"
                           tickLine={false} axisLine={false}
-                          height={forecastWindow === 'today' ? 22 : 42}
+                          height={42}
                           allowDataOverflow type="category"
                           ticks={forecastTickValues}
                           minTickGap={-1}
@@ -1253,7 +1264,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 )}
                 {forecastGeneratedAt && (
                   <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
-                    Forecast last updated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
+                    last updated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
                   </div>
                 )}
               </div>
