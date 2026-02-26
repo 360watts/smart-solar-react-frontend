@@ -175,8 +175,11 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
 
 const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
   if (!hourly || hourly.length === 0) return null;
-  const icon = (cloud: number, ghi: number) =>
-    ghi < 10 ? '🌙' : cloud > 75 ? '☁️' : cloud > 40 ? '⛅' : '☀️';
+  const icon = (cloud: number, ghi: number, precip: number | null) =>
+    ghi < 10  ? '🌙' :
+    precip != null && precip > 60 ? '🌧' :
+    precip != null && precip > 30 ? (cloud > 40 ? '🌦' : '⛅') :
+    cloud > 75 ? '☁️' : cloud > 40 ? '⛅' : '☀️';
 
   return (
     <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
@@ -192,14 +195,19 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
             const temp     = Number(h.temperature_c ?? 0);
             const wind     = Number(h.wind_speed_ms ?? 0);
             const humidity = h.humidity_pct != null ? Number(h.humidity_pct) : null;
+            const precip   = h.precip_prob_pct != null ? Number(h.precip_prob_pct) : null;
             const ghiPct   = Math.min(100, (ghi / 900) * 100);
             const humPct   = humidity != null ? Math.min(100, humidity) : null;
             const isNow    = i === 0;
-            const wi       = icon(cloud, ghi);
+            const wi       = icon(cloud, ghi, precip);
             const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : '#d1d5db';
             const humColor = humidity == null ? '#d1d5db'
               : humidity > 80 ? '#3b82f6'
               : humidity > 50 ? '#60a5fa'
+              : '#93c5fd';
+            const precipColor = precip == null ? '#d1d5db'
+              : precip > 60 ? '#1d4ed8'
+              : precip > 30 ? '#3b82f6'
               : '#93c5fd';
             return (
               <div key={i} style={{
@@ -227,6 +235,15 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                       <div style={{ width: `${humPct}%`, height: '100%', background: humColor, borderRadius: 2 }} />
                     </div>
                     <span style={{ fontSize: '0.6rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>💧{Math.round(humPct)}%</span>
+                  </>
+                )}
+                {/* Precipitation probability bar */}
+                {precip != null && (
+                  <>
+                    <div title={`Rain ${Math.round(precip)}%`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
+                      <div style={{ width: `${precip}%`, height: '100%', background: precipColor, borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: precipColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>🌧{Math.round(precip)}%</span>
                   </>
                 )}
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{wind.toFixed(1)} m/s</span>
@@ -493,21 +510,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       else if (dateRange === '7d')  telemetryParams = { days: 7 };
       else if (dateRange === '30d') telemetryParams = { days: 30 };
 
-      // For ranges > 7 days, also fetch older history from S3
+      // DynamoDB telemetry TTL is 24 h — fetch S3 history for any range > 24 h
+      // so there is no gap between DynamoDB's recent 24 h and older S3 records.
       let historyParams: { start_date: string; end_date: string } | null = null;
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
-      if (dateRange === '30d') {
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-        historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: sevenDaysAgo.toISOString() };
+      const sevenDaysAgo   = new Date(now.getTime() -  7 * 24 * 3600 * 1000);
+      const thirtyDaysAgo  = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+      if (dateRange === '7d') {
+        historyParams = { start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString() };
+      } else if (dateRange === '30d') {
+        historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: now.toISOString() };
       } else if (dateRange === 'custom' && customStartDate && customEndDate) {
         const customStart = new Date(customStartDate);
         const customEnd   = new Date(customEndDate);
-        if (customStart < sevenDaysAgo) {
-          historyParams = {
-            start_date: customStart.toISOString(),
-            end_date:   (customEnd < sevenDaysAgo ? customEnd : sevenDaysAgo).toISOString(),
-          };
-        }
+        // Always fetch S3 for the full custom range; DynamoDB + dedup handles the recent overlap
+        historyParams = { start_date: customStart.toISOString(), end_date: customEnd.toISOString() };
       }
 
       const results = await Promise.all([
