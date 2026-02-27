@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { CHART_COLORS } from '../constants';
 import { AnimatedNumber } from './AnimatedNumber';
 import { StatusPill } from './StatusPill';
 interface TelemetryData {
@@ -93,7 +94,7 @@ function formatUptime(seconds: number): string {
   return d > 0 ? `${d}d ${h}h` : `${h}h`;
 }
 
-const CHART_COLORS = ['#00a63e', '#F07522', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
+// CHART_COLORS imported from constants.ts
 
 const TOOLTIP_STYLE = {
   background: 'rgba(255,255,255,0.97)',

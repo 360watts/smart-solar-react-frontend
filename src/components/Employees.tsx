@@ -24,6 +24,7 @@ const Employees: React.FC = () => {
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; employee: Employee | null }>({ show: false, employee: null });
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingEmployee, setCreatingEmployee] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,15 +126,20 @@ const Employees: React.FC = () => {
     }
   };
 
-  const handleDelete = async (employee: Employee) => {
-    if (window.confirm(`Are you sure you want to delete employee ${employee.username}?`)) {
-      try {
-        await apiService.deleteUser(employee.id);
-        setEmployees(employees.filter(e => e.id !== employee.id));
-        setFilteredEmployees(filteredEmployees.filter(e => e.id !== employee.id));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete employee');
-      }
+  const handleDelete = (employee: Employee) => {
+    setDeleteConfirmModal({ show: true, employee });
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!deleteConfirmModal.employee) return;
+    try {
+      await apiService.deleteUser(deleteConfirmModal.employee.id);
+      setEmployees(employees.filter(e => e.id !== deleteConfirmModal.employee!.id));
+      setFilteredEmployees(filteredEmployees.filter(e => e.id !== deleteConfirmModal.employee!.id));
+      setDeleteConfirmModal({ show: false, employee: null });
+    } catch (err) {
+      setDeleteConfirmModal({ show: false, employee: null });
+      setError(err instanceof Error ? err.message : 'Failed to delete employee');
     }
   };
 
@@ -340,6 +346,37 @@ const Employees: React.FC = () => {
                 <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmModal.show && deleteConfirmModal.employee && (
+        <div className="modal">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <h3 style={{ color: '#dc3545', marginBottom: '1rem' }}>⚠️ Delete Employee</h3>
+            <p>
+              Are you sure you want to permanently delete{' '}
+              <strong>{deleteConfirmModal.employee.username}</strong>?
+            </p>
+            <p style={{ fontSize: '0.9rem', color: '#6c757d', marginTop: '0.5rem' }}>
+              This action cannot be undone.
+            </p>
+            <div className="form-actions" style={{ marginTop: '1.5rem' }}>
+              <button
+                onClick={confirmDeleteEmployee}
+                className="btn"
+                style={{ background: '#dc3545', borderColor: '#dc3545' }}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmModal({ show: false, employee: null })}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

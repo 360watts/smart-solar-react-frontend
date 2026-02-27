@@ -1,4 +1,5 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
 
@@ -413,7 +414,7 @@ class ApiService {
     });
   }
 
-  async getDevices(search?: string, page: number = 1, pageSize: number = 25): Promise<any> {
+  async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     params.append('page', page.toString());

@@ -5,6 +5,7 @@ import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from './SiteDataPanel';
+import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../constants';
 
 interface User {
   id: number;
@@ -123,7 +124,7 @@ const Devices: React.FC = () => {
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -153,7 +154,7 @@ const Devices: React.FC = () => {
   const [siteForm, setSiteForm] = useState<SolarSiteForm>({
     site_id: '', display_name: '', latitude: '', longitude: '',
     capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
-    timezone: 'Asia/Kolkata', is_active: true,
+    timezone: IST_TIMEZONE, is_active: true,
   });
   const [siteSaving, setSiteSaving] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
@@ -163,6 +164,7 @@ const Devices: React.FC = () => {
   const [rebootModal, setRebootModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
+  const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
@@ -502,7 +504,7 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedDevices.size === 0) {
       setError('No devices selected for deletion');
       return;
@@ -510,27 +512,29 @@ const Devices: React.FC = () => {
 
     const deviceList = Array.from(selectedDevices)
       .map(id => devices.find(d => d.id === id))
-      .filter(Boolean);
+      .filter(Boolean) as Device[];
 
-    const confirmMessage = `Are you sure you want to delete ${selectedDevices.size} device(s)?\n\n${deviceList.map(d => d?.device_serial).join(', ')}`;
+    setBulkDeleteModal({ show: true, deviceList });
+  };
 
-    if (window.confirm(confirmMessage)) {
-      try {
-        setBulkDeleteLoading(true);
-        await apiService.deleteDevicesBulk(Array.from(selectedDevices));
-        
-        const updatedDevices = devices.filter(d => !selectedDevices.has(d.id));
-        setDevices(updatedDevices);
-        setFilteredDevices(updatedDevices.filter(d => 
-          d.device_serial.toLowerCase().includes(searchTerm.toLowerCase())
-        ));
-        setSelectedDevices(new Set());
-        setBulkDeleteLoading(false);
-      } catch (err) {
-        setBulkDeleteLoading(false);
-        console.error('Bulk delete error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to delete devices');
-      }
+  const confirmBulkDelete = async () => {
+    try {
+      setBulkDeleteLoading(true);
+      await apiService.deleteDevicesBulk(Array.from(selectedDevices));
+
+      const updatedDevices = devices.filter(d => !selectedDevices.has(d.id));
+      setDevices(updatedDevices);
+      setFilteredDevices(updatedDevices.filter(d =>
+        d.device_serial.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+      setSelectedDevices(new Set());
+      setBulkDeleteModal({ show: false, deviceList: [] });
+      setBulkDeleteLoading(false);
+    } catch (err) {
+      setBulkDeleteLoading(false);
+      setBulkDeleteModal({ show: false, deviceList: [] });
+      console.error('Bulk delete error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete devices');
     }
   };
 
@@ -854,7 +858,7 @@ const Devices: React.FC = () => {
                     is_active: siteDetails.is_active,
                   });
                 } else {
-                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: 'Asia/Kolkata', is_active: true });
+                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true });
                 }
                 setSiteError(null);
                 setEditingSite(true);
@@ -2530,6 +2534,76 @@ const Devices: React.FC = () => {
             >
               Got it!
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Bulk Delete Confirmation Modal */}
+    {bulkDeleteModal.show && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+      }}>
+        <div style={{
+          background: isDark ? '#2d2d2d' : 'white', borderRadius: '16px',
+          padding: '2rem', maxWidth: '520px', width: '90%',
+          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
+          border: '2px solid #7f1d1d', animation: 'slideIn 0.2s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{
+              width: '48px', height: '48px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.5rem', animation: 'pulse 2s infinite'
+            }}>🗑️</div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
+              Delete {bulkDeleteModal.deviceList.length} Device{bulkDeleteModal.deviceList.length !== 1 ? 's' : ''} Permanently
+            </h3>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+            <div style={{
+              background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
+              border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
+              borderRadius: '8px', padding: '1rem', marginBottom: '1rem',
+              color: isDark ? '#fca5a5' : '#991b1b'
+            }}>
+              <strong style={{ fontSize: '1.05rem' }}>⚠️ PERMANENT DELETION</strong>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                This action <strong>cannot be undone</strong>. All data for these devices will be permanently deleted.
+              </p>
+            </div>
+            <p style={{ marginBottom: '0.5rem' }}>Devices to delete:</p>
+            <ul style={{ margin: '0', paddingLeft: '1.5rem', fontSize: '0.9rem', maxHeight: '120px', overflowY: 'auto' }}>
+              {bulkDeleteModal.deviceList.map(d => (
+                <li key={d.id} style={{ color: isDark ? '#e0e0e0' : '#2c3e50', fontWeight: '600' }}>{d.device_serial}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setBulkDeleteModal({ show: false, deviceList: [] })}
+              style={{
+                background: isDark ? '#3a3a3a' : '#e0e0e0', color: isDark ? '#e0e0e0' : '#495057',
+                border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
+                fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
+              }}
+            >Cancel</button>
+            <button
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteLoading}
+              style={{
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', color: 'white',
+                border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
+                fontSize: '0.95rem', fontWeight: '600', cursor: bulkDeleteLoading ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)', transition: 'all 0.2s',
+                opacity: bulkDeleteLoading ? 0.7 : 1
+              }}
+            >{bulkDeleteLoading ? 'Deleting…' : 'Yes, Delete All'}</button>
           </div>
         </div>
       </div>

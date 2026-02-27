@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { IST_TIMEZONE } from '../constants';
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 // All time displays use IST (Asia/Kolkata, UTC+5:30) — the site is in India.
-const IST = 'Asia/Kolkata';
+const IST = IST_TIMEZONE;
 
 /** Returns the ISO date string (YYYY-MM-DD) for a Date in IST, e.g. "2026-02-26" */
 function istDate(d: Date): string {

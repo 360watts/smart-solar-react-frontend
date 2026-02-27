@@ -27,6 +27,7 @@ interface DeviceStatus {
   bootCount: number;
   lastError: string;
   progress?: number;
+  lastCheckedAt?: string;
 }
 
 interface DeploymentConfig {
@@ -95,9 +96,18 @@ export const OTA: React.FC = () => {
     deviceModel: 'all',
   });
 
-  // Modern modal states
-  const [deleteFirmwareModal, setDeleteFirmwareModal] = useState<{ show: boolean; firmware: FirmwareVersion | null }>({ show: false, firmware: null });
-  const [deactivateFirmwareModal, setDeactivateFirmwareModal] = useState<{ show: boolean; firmware: FirmwareVersion | null }>({ show: false, firmware: null });
+  // Generic destructive-action confirmation modal (replaces deleteFirmwareModal + deactivateFirmwareModal)
+  const [confirmActionModal, setConfirmActionModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    warningText: string;
+    confirmLabel: string;
+    accentColor: string;
+    icon: string;
+    onConfirm: () => Promise<void>;
+  }>({ show: false, title: '', message: '', warningText: '', confirmLabel: 'Confirm', accentColor: '#dc3545', icon: '⚠️', onConfirm: async () => {} });
+
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
@@ -177,16 +187,18 @@ export const OTA: React.FC = () => {
   const loadDeployments = async () => {
     try {
       const campaigns = await apiService.listTargetedUpdates();
-      
-      // Find the most recent in-progress deployment
-      const activeCampaign = campaigns.find((c: any) => 
+
+      // Active campaign: the most recent in_progress or pending one
+      const activeCampaign = campaigns.find((c: any) =>
         c.status === 'in_progress' || c.status === 'pending'
       );
-      setActiveDeployment(activeCampaign || null);
-      
-      // If we have an active deployment, update status for those devices
-      if (activeCampaign) {
-        await updateDeployedDeviceStatuses(activeCampaign);
+      // Fall back to the most recent completed/failed campaign so the banner
+      // still shows useful status after a campaign finishes.
+      const displayCampaign = activeCampaign || campaigns[0] || null;
+      setActiveDeployment(displayCampaign);
+
+      if (displayCampaign) {
+        await updateDeployedDeviceStatuses(displayCampaign);
       }
     } catch (error) {
       console.error('Failed to load deployments:', error);
@@ -197,72 +209,54 @@ export const OTA: React.FC = () => {
     try {
       const activeDeploymentToUse = deployment || activeDeployment;
       if (!activeDeploymentToUse) return;
-      
-      // Only fetch logs for devices in the active deployment
-      const targetedDevices = activeDeploymentToUse.device_targets || [];
-      const targetedDeviceIds = targetedDevices.map((dt: any) => dt.device?.device_serial).filter(Boolean);
-      
-      if (targetedDeviceIds.length === 0) return;
-      
-      // Fetch logs for all targeted devices in parallel
-      const logPromises = targetedDeviceIds.map(async (deviceId: string) => {
-        try {
-          const logs = await apiService.getDeviceUpdateLogs(deviceId);
-          const latestLog = logs && logs.length > 0 ? logs[0] : null;
-          
-          if (!latestLog) return { deviceId, status: 'idle' as DeviceStatus['status'] };
-          
-          const backendStatus = latestLog.status?.toLowerCase();
-          let status: DeviceStatus['status'] = 'idle';
-          
-          switch (backendStatus) {
-            case 'pending':
-            case 'checking':
-            case 'available':
-              status = 'trial';
-              break;
-            case 'downloading':
-              status = 'downloading';
-              break;
-            case 'completed':
-              status = 'healthy';
-              break;
-            case 'failed':
-              status = 'failed';
-              break;
-          }
-          
-          return {
-            deviceId,
-            status,
-            currentVersion: latestLog.current_firmware,
-            targetVersion: latestLog.firmware_version?.version,
-            lastError: status === 'failed' ? 'Update failed' : '',
-          };
-        } catch (error) {
-          console.error(`Failed to get logs for ${deviceId}:`, error);
-          return { deviceId, status: 'idle' as DeviceStatus['status'] };
+
+      // Fetch enriched campaign detail — includes per-device log_status, log_error,
+      // log_last_checked_at, log_bytes_downloaded from a single API call.
+      const campaignDetail = await apiService.getTargetedUpdate(activeDeploymentToUse.id);
+      const targetedDevices: any[] = campaignDetail.device_targets || [];
+      if (targetedDevices.length === 0) return;
+
+      const firmwareSize: number = campaignDetail.target_firmware?.size || 0;
+      const targetVersion: string = campaignDetail.target_firmware?.version || '';
+
+      const mapBackendStatus = (backendStatus: string | null): DeviceStatus['status'] => {
+        switch (backendStatus?.toLowerCase()) {
+          case 'pending':   return 'idle';      // Queued — device hasn't checked in yet
+          case 'checking':  return 'trial';     // Device is actively checking
+          case 'available': return 'trial';     // Device notified, download imminent
+          case 'downloading': return 'downloading';
+          case 'completed': return 'healthy';
+          case 'failed':    return 'failed';
+          case 'skipped':   return 'idle';
+          default:          return 'idle';
         }
-      });
-      
-      const deviceUpdates = await Promise.all(logPromises);
-      
-      // Create a map of device updates
-      const updateMap = new Map(deviceUpdates.map(u => [u.deviceId, u]));
-      
-      // Update devices state once with all changes
-      setDevices(prevDevices => 
+      };
+
+      const updateMap = new Map<string, Partial<DeviceStatus>>(
+        targetedDevices
+          .map((dt: any) => {
+            const deviceSerial: string = dt.device?.device_serial;
+            if (!deviceSerial) return null;
+            const mappedStatus = mapBackendStatus(dt.log_status);
+            const bytesDownloaded: number = dt.log_bytes_downloaded || 0;
+            const progress = mappedStatus === 'downloading' && firmwareSize > 0
+              ? Math.round((bytesDownloaded / firmwareSize) * 100)
+              : undefined;
+            return [deviceSerial, {
+              status: mappedStatus,
+              targetVersion,
+              lastError: mappedStatus === 'failed' ? (dt.log_error || 'Update failed') : '',
+              progress,
+              lastCheckedAt: dt.log_last_checked_at,
+            }] as [string, Partial<DeviceStatus>];
+          })
+          .filter((entry): entry is [string, Partial<DeviceStatus>] => entry !== null)
+      );
+
+      setDevices(prevDevices =>
         prevDevices.map(device => {
           const update = updateMap.get(device.deviceId);
-          if (!update) return device;
-          
-          return {
-            ...device,
-            status: update.status,
-            currentVersion: update.currentVersion || device.currentVersion,
-            targetVersion: update.targetVersion || device.targetVersion,
-            lastError: update.lastError || device.lastError,
-          };
+          return update ? { ...device, ...update } : device;
         })
       );
     } catch (error) {
@@ -342,31 +336,27 @@ export const OTA: React.FC = () => {
     }
   };
 
-  const handleDeleteFirmware = async (firmware: FirmwareVersion) => {
-    setDeleteFirmwareModal({ show: true, firmware });
-  };
-
-  const confirmDeleteFirmware = async () => {
-    if (!deleteFirmwareModal.firmware) return;
-    
-    try {
-      await apiService.deleteFirmwareVersion(deleteFirmwareModal.firmware.id);
-      setDeleteFirmwareModal({ show: false, firmware: null });
-      setSuccessModal({ show: true, message: 'Firmware deleted successfully!' });
-      // Reload firmware list from backend
-      await loadFirmwareData();
-    } catch (error: any) {
-      console.error('Firmware deletion failed:', error);
-      setDeleteFirmwareModal({ show: false, firmware: null });
-      setErrorModal({ show: true, message: `Deletion failed: ${error.message || 'Unknown error'}` });
-    }
+  const handleDeleteFirmware = (firmware: FirmwareVersion) => {
+    setConfirmActionModal({
+      show: true,
+      title: 'Delete Firmware',
+      message: `Are you sure you want to delete firmware version ${firmware.version}?`,
+      warningText: '⚠️ Warning: This will permanently remove the firmware file from S3. This action cannot be undone.',
+      confirmLabel: 'Yes, Delete',
+      accentColor: '#7f1d1d',
+      icon: '🗑️',
+      onConfirm: async () => {
+        await apiService.deleteFirmwareVersion(firmware.id);
+        setSuccessModal({ show: true, message: 'Firmware deleted successfully!' });
+        await loadFirmwareData();
+      },
+    });
   };
 
   const handleMarkAsStable = async (id: number) => {
     try {
       await apiService.updateFirmwareVersion(id, { is_active: true });
       setSuccessModal({ show: true, message: 'Firmware activated successfully!' });
-      // Reload firmware list from backend
       await loadFirmwareData();
     } catch (error: any) {
       console.error('Firmware update failed:', error);
@@ -374,24 +364,21 @@ export const OTA: React.FC = () => {
     }
   };
 
-  const handleDeactivateFirmware = async (firmware: FirmwareVersion) => {
-    setDeactivateFirmwareModal({ show: true, firmware });
-  };
-
-  const confirmDeactivateFirmware = async () => {
-    if (!deactivateFirmwareModal.firmware) return;
-    
-    try {
-      await apiService.updateFirmwareVersion(deactivateFirmwareModal.firmware.id, { is_active: false });
-      setDeactivateFirmwareModal({ show: false, firmware: null });
-      setSuccessModal({ show: true, message: 'Firmware deactivated successfully!' });
-      // Reload firmware list from backend
-      await loadFirmwareData();
-    } catch (error: any) {
-      console.error('Firmware deactivation failed:', error);
-      setDeactivateFirmwareModal({ show: false, firmware: null });
-      setErrorModal({ show: true, message: `Deactivation failed: ${error.message || 'Unknown error'}` });
-    }
+  const handleDeactivateFirmware = (firmware: FirmwareVersion) => {
+    setConfirmActionModal({
+      show: true,
+      title: 'Deactivate Firmware',
+      message: `Are you sure you want to deactivate firmware version ${firmware.version}?`,
+      warningText: 'ℹ️ Note: This firmware will no longer be offered for OTA updates. You can reactivate it later.',
+      confirmLabel: 'Yes, Deactivate',
+      accentColor: '#ff9800',
+      icon: '⏸️',
+      onConfirm: async () => {
+        await apiService.updateFirmwareVersion(firmware.id, { is_active: false });
+        setSuccessModal({ show: true, message: 'Firmware deactivated successfully!' });
+        await loadFirmwareData();
+      },
+    });
   };
 
   // Section 2 handlers
@@ -438,14 +425,15 @@ export const OTA: React.FC = () => {
       );
       
       setIsDeploying(false);
-      alert(`Deployment initiated successfully!\n\nTargeted Update ID: ${response.id || 'N/A'}\nDevices: ${response.devices_total || deploymentConfig.targetDevices.length}\nFirmware: ${firmware.version}\n\nDevices will receive the update on their next check-in.`);
-      
-      // Refresh device status and deployments after deployment
+      setSuccessModal({
+        show: true,
+        message: `Deployment initiated!\n\nID: ${response.id || 'N/A'} · Devices: ${response.devices_total || deploymentConfig.targetDevices.length} · Firmware: ${firmware.version}\n\nDevices will receive the update on their next check-in.`,
+      });
       await loadDeployments();
     } catch (error: any) {
       setIsDeploying(false);
       console.error('Deployment failed:', error);
-      alert(`Deployment failed: ${error.message || 'Unknown error'}\n\nPlease check the console for details.`);
+      setErrorModal({ show: true, message: `Deployment failed: ${error.message || 'Unknown error'}` });
     }
   };
 
@@ -460,9 +448,11 @@ export const OTA: React.FC = () => {
   // Section 3 helpers
   const statusMetrics = {
     total: devices.length,
-    inProgress: devices.filter(d => ['downloading', 'flashing', 'rebooting'].includes(d.status)).length,
+    // 'trial' = checking/available, 'downloading' = actively downloading
+    inProgress: devices.filter(d => ['downloading', 'flashing', 'rebooting', 'trial'].includes(d.status)).length,
     healthy: devices.filter(d => d.status === 'healthy').length,
-    failed: devices.filter(d => d.status === 'failed').length,
+    // Prefer the authoritative campaign counter when available
+    failed: activeDeployment?.devices_failed ?? devices.filter(d => d.status === 'failed').length,
     rolledBack: devices.filter(d => d.status === 'rolledback').length,
   };
 
@@ -494,22 +484,33 @@ export const OTA: React.FC = () => {
     setShowRollbackModal(true);
   };
 
-  const confirmRollback = () => {
+  const confirmRollback = async () => {
     if (rollbackForm.selectedDevices.length === 0) {
-      alert('Please select devices to rollback');
+      setErrorModal({ show: true, message: 'Please select at least one device to rollback.' });
       return;
     }
     if (!rollbackForm.reason.trim()) {
-      alert('Please provide a reason for rollback');
+      setErrorModal({ show: true, message: 'Please provide a reason for rollback.' });
       return;
     }
 
-    // TODO: Send updateConfig command with value 2 to trigger rollback on selected devices
-    // This will instruct devices to rollback to their previous firmware version
-    
-    setShowRollbackModal(false);
-    alert(`Sending rollback command (updateConfig=2) to ${rollbackForm.selectedDevices.length} device(s)`);
-    setRollbackForm({ selectedDevices: [], reason: '' });
+    try {
+      // Queue rollback command for each selected device.
+      // Device will receive updateFirmware: 2 on its next heartbeat.
+      await Promise.all(
+        rollbackForm.selectedDevices.map(serial =>
+          apiService.triggerRollback(serial, rollbackForm.reason)
+        )
+      );
+      setShowRollbackModal(false);
+      setSuccessModal({
+        show: true,
+        message: `Rollback queued for ${rollbackForm.selectedDevices.length} device(s). They will revert on their next heartbeat.`,
+      });
+      setRollbackForm({ selectedDevices: [], reason: '' });
+    } catch (error: any) {
+      setErrorModal({ show: true, message: `Rollback failed: ${error.message || 'Unknown error'}` });
+    }
   };
 
   const toggleRollbackDevice = (deviceId: string) => {
@@ -1521,11 +1522,19 @@ export const OTA: React.FC = () => {
                   </td>
                   <td style={{ padding: '0.75rem' }}>
                     <span style={getStatusBadgeStyle(device.status)}>
-                      {device.status}
+                      {device.status === 'trial' ? 'Notified' : device.status}
                     </span>
-                    {device.progress !== undefined && (
-                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: isDark ? '#a0a0a0' : '#6c757d' }}>
-                        {device.progress.toFixed(0)}%
+                    {device.status === 'downloading' && device.progress !== undefined && (
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <div style={{ background: isDark ? '#404040' : '#e9ecef', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                          <div style={{ width: `${device.progress}%`, background: '#17a2b8', height: '100%', transition: 'width 0.3s ease' }} />
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: isDark ? '#a0a0a0' : '#6c757d' }}>{device.progress}%</span>
+                      </div>
+                    )}
+                    {device.lastCheckedAt && (
+                      <div style={{ fontSize: '0.7rem', color: isDark ? '#888' : '#999', marginTop: 2 }}>
+                        {new Date(device.lastCheckedAt).toLocaleTimeString()}
                       </div>
                     )}
                   </td>
@@ -1974,182 +1983,53 @@ export const OTA: React.FC = () => {
         </div>
       )}
 
-      {/* Modern Delete Firmware Confirmation Modal */}
-      {deleteFirmwareModal.show && deleteFirmwareModal.firmware && (
+      {/* Generic Confirm-Action Modal — used for delete, deactivate, and any future destructive action */}
+      {confirmActionModal.show && (
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
+            background: isDark ? '#2d2d2d' : 'white', borderRadius: '16px', padding: '2rem',
+            maxWidth: '500px', width: '90%',
             boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
+            border: `2px solid ${confirmActionModal.accentColor}`,
             animation: 'slideIn 0.2s ease-out'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
               <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
+                width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
+                background: `linear-gradient(135deg, ${confirmActionModal.accentColor} 0%, ${confirmActionModal.accentColor}cc 100%)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.5rem', animation: 'pulse 2s infinite'
               }}>
-                🗑️
+                {confirmActionModal.icon}
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
-                Delete Firmware
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: confirmActionModal.accentColor }}>
+                {confirmActionModal.title}
               </h3>
             </div>
-            
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to delete firmware version <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteFirmwareModal.firmware.version}</strong>?
-              </p>
-              <div style={{
-                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
-                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#fca5a5' : '#991b1b'
-              }}>
-                <strong>⚠️ Warning:</strong> This will permanently remove the firmware file from S3. This action cannot be undone.
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteFirmwareModal({ show: false, firmware: null })}
-                style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteFirmware}
-                style={{
-                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Modern Deactivate Firmware Confirmation Modal */}
-      {deactivateFirmwareModal.show && deactivateFirmwareModal.firmware && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #ffc107' : '2px solid #ffc107',
-            animation: 'slideIn 0.2s ease-out'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                ⏸️
-              </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#ff9800' }}>
-                Deactivate Firmware
-              </h3>
-            </div>
-            
             <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to deactivate firmware version <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deactivateFirmwareModal.firmware.version}</strong>?
-              </p>
+              <p style={{ marginBottom: '1rem' }}>{confirmActionModal.message}</p>
               <div style={{
-                background: isDark ? 'rgba(255, 193, 7, 0.1)' : '#fff3cd',
-                border: isDark ? '1px solid rgba(255, 193, 7, 0.3)' : '1px solid #ffc107',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#ffcc00' : '#856404'
+                background: isDark ? 'rgba(128,128,128,0.12)' : '#f8f9fa',
+                border: `1px solid ${confirmActionModal.accentColor}55`,
+                borderRadius: '8px', padding: '0.75rem 1rem',
+                fontSize: '0.9rem', color: isDark ? '#ccc' : '#555'
               }}>
-                <strong>ℹ️ Note:</strong> This firmware will no longer be available for OTA updates. You can reactivate it later.
+                {confirmActionModal.warningText}
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setDeactivateFirmwareModal({ show: false, firmware: null })}
+                onClick={() => setConfirmActionModal(m => ({ ...m, show: false }))}
                 style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  background: isDark ? '#3a3a3a' : '#e0e0e0', color: isDark ? '#e0e0e0' : '#495057',
+                  border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
+                  fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
                 }}
                 onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
                 onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
@@ -2157,23 +2037,22 @@ export const OTA: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={confirmDeactivateFirmware}
+                onClick={async () => {
+                  const action = confirmActionModal.onConfirm;
+                  setConfirmActionModal(m => ({ ...m, show: false }));
+                  try { await action(); }
+                  catch (err: any) { setErrorModal({ show: true, message: err.message || 'Operation failed' }); }
+                }}
                 style={{
-                  background: 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)',
-                  color: '#000',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(255, 193, 7, 0.3)',
-                  transition: 'all 0.2s'
+                  background: `linear-gradient(135deg, ${confirmActionModal.accentColor} 0%, ${confirmActionModal.accentColor}cc 100%)`,
+                  color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
+                  fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer',
+                  boxShadow: `0 4px 12px ${confirmActionModal.accentColor}44`, transition: 'all 0.2s'
                 }}
                 onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                 onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                Yes, Deactivate
+                {confirmActionModal.confirmLabel}
               </button>
             </div>
           </div>
