@@ -209,12 +209,27 @@ class ApiService {
     return result;
   }
 
+  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
+    const cacheKey = `employees_${search || 'all'}_${page}_${pageSize}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    params.set('page', String(page));
+    params.set('page_size', String(pageSize));
+    const data = await this.request(`/employees/?${params.toString()}`);
+    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
+  }
+
   async createEmployee(employeeData: any): Promise<any> {
     const result = await this.request('/users/create/', {
       method: 'POST',
       body: JSON.stringify({ ...employeeData, is_staff: true }),
     });
     cacheService.clearPattern(/^users_/);
+    cacheService.clearPattern(/^employees_/);
     return result;
   }
 

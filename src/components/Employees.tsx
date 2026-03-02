@@ -65,9 +65,8 @@ const Employees: React.FC = () => {
 
   const fetchEmployees = async (search?: string) => {
     try {
-      const data = await apiService.getUsers(search);
-      // Filter only staff users (employees) but exclude superusers/admins
-      const staffData = data.filter((user: any) => user.is_staff && !user.is_superuser);
+      const response = await apiService.getEmployees(search);
+      const staffData = response.results ?? [];
       setEmployees(staffData);
       setFilteredEmployees(staffData);
       setLoading(false);
