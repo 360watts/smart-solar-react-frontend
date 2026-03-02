@@ -86,8 +86,7 @@ const Users: React.FC = () => {
     try {
       const response = await apiService.getUsers(search, page, size);
       const list = response.results || [];
-      const filteredData = list.filter((user: any) => !user.is_staff);
-      setFilteredUsers(filteredData);
+      setFilteredUsers(list);
       setTotalCount(response.count ?? 0);
       setTotalPages(response.total_pages ?? 0);
       setLoading(false);
