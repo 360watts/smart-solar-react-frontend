@@ -201,10 +201,8 @@ const Devices: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const data: User[] = await apiService.getUsers();
-      // Filter out staff and superusers, only showing regular customers
-      const customers = data.filter(user => !user.is_staff && !user.is_superuser);
-      setUsers(customers);
+      const response = await apiService.getUsers();
+      setUsers(response.results ?? []);
     } catch (err) {
       console.error('Failed to fetch users:', err);
       setError('Failed to load users for device assignment');
