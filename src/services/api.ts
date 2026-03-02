@@ -22,6 +22,19 @@ class ApiService {
     };
   }
 
+  /** Normalize backend error: supports { error }, { detail }, or raw text. */
+  private async parseErrorResponse(response: Response): Promise<string> {
+    const text = await response.text();
+    try {
+      const body = JSON.parse(text);
+      if (body?.error) return body.error;
+      if (body?.detail) return typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+    } catch {
+      // ignore
+    }
+    return text || `API request failed: ${response.status} ${response.statusText}`;
+  }
+
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
@@ -59,8 +72,8 @@ class ApiService {
     }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      const message = await this.parseErrorResponse(response);
+      throw new Error(message);
     }
 
     if (response.status === 204) return null;
@@ -96,8 +109,33 @@ class ApiService {
     return false;
   }
 
+  /**
+   * Fetches gateway configuration. Returns null when none exists (404),
+   * so the UI can treat it as "no config" / global mode.
+   */
   async getConfiguration(): Promise<any> {
-    return this.request('/config/');
+    const url = `${API_BASE_URL}/config/`;
+    const headers = this.getAuthHeaders();
+    let response = await fetch(url, { headers });
+
+    if (response.status === 401) {
+      const refreshSuccess = await this.refreshToken();
+      if (refreshSuccess) {
+        response = await fetch(url, { headers: this.getAuthHeaders() });
+      }
+    }
+    if (response.status === 401) {
+      localStorage.removeItem('authTokens');
+      localStorage.removeItem('authUser');
+      window.location.href = '/login';
+      throw new Error('Authentication required');
+    }
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      const message = await this.parseErrorResponse(response);
+      throw new Error(message);
+    }
+    return response.json();
   }
 
   async getTelemetry(): Promise<any[]> {
@@ -148,13 +186,16 @@ class ApiService {
     return data;
   }
 
-  async getUsers(search?: string): Promise<any[]> {
-    const cacheKey = `users_${search || 'all'}`;
+  async getUsers(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
+    const cacheKey = `users_${search || 'all'}_${page}_${pageSize}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    const data = await this.request(`/users/${params}`);
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    params.set('page', String(page));
+    params.set('page_size', String(pageSize));
+    const data = await this.request(`/users/?${params.toString()}`);
     cacheService.set(cacheKey, data, DEFAULT_TTL);
     return data;
   }
@@ -164,8 +205,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(userData),
     });
-    // Invalidate only the users cache (not unrelated site/forecast/weather caches)
-    cacheService.clear('users_all');
+    cacheService.clearPattern(/^users_/);
     return result;
   }
 
@@ -174,7 +214,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ ...employeeData, is_staff: true }),
     });
-    cacheService.clear('users_all');
+    cacheService.clearPattern(/^users_/);
     return result;
   }
 
@@ -292,7 +332,7 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(data),
     });
-    cacheService.clear('users_all');
+    cacheService.clearPattern(/^users_/);
     return result;
   }
 
@@ -300,7 +340,7 @@ class ApiService {
     const result = await this.request(`/users/${userId}/delete/`, {
       method: 'DELETE',
     });
-    cacheService.clear('users_all');
+    cacheService.clearPattern(/^users_/);
     return result;
   }
 

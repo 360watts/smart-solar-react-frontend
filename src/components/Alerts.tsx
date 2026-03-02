@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
+import { EmptyState } from './EmptyState';
+import { SkeletonLoader } from './SkeletonLoader';
 
 interface Alert {
   id: string;
@@ -66,7 +68,14 @@ const Alerts: React.FC = () => {
   const unresolvedAlerts = alerts.filter(alert => !alert.resolved);
 
   if (loading) {
-    return <div className="loading">Loading alerts...</div>;
+    return (
+      <div className="admin-container">
+        <div className="admin-header" style={{ marginBottom: '2rem' }}>
+          <h1>System Alerts</h1>
+        </div>
+        <SkeletonLoader rows={8} height="24px" />
+      </div>
+    );
   }
 
   if (error) {
@@ -259,19 +268,10 @@ const Alerts: React.FC = () => {
             Active Alerts ({filteredAlerts.length})
           </h2>
           {filteredAlerts.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem 1rem',
-              color: 'var(--text-secondary)'
-            }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1rem', opacity: 0.3 }}>
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No alerts found</p>
-              <p style={{ fontSize: '0.9rem' }}>All systems are running smoothly</p>
-            </div>
+            <EmptyState
+              title="No alerts"
+              description="All systems are running smoothly."
+            />
           ) : (
             <div className="alerts-list">
               {filteredAlerts.map((alert) => (

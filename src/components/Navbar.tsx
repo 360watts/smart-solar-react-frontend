@@ -131,7 +131,7 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <nav className="sidebar">
+    <nav className="sidebar" role="navigation" aria-label="Main navigation">
       {/* Header */}
       <div className="sidebar-header">
         <div className="logo-container">

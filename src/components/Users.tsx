@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { EmptyState } from './EmptyState';
+import { SkeletonTableRow } from './SkeletonLoader';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 interface User {
   id: number;
@@ -28,7 +31,6 @@ interface Device {
 const Users: React.FC = () => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,11 @@ const Users: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userDevices, setUserDevices] = useState<Device[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [editForm, setEditForm] = useState({
     first_name: '',
@@ -60,29 +67,29 @@ const Users: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; user: User | null }>({ show: false, user: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchUsers(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchUsers(debouncedSearchTerm, currentPage, pageSize);
+  }, [debouncedSearchTerm, currentPage, pageSize]);
 
-  const fetchUsers = async (search?: string) => {
+  const fetchUsers = async (search?: string, page = 1, size = DEFAULT_PAGE_SIZE) => {
+    setLoading(true);
     try {
-      const data = await apiService.getUsers(search);
-      const filteredData = data.filter((user: any) => !user.is_staff);
-      setUsers(filteredData);
+      const response = await apiService.getUsers(search, page, size);
+      const list = response.results || [];
+      const filteredData = list.filter((user: any) => !user.is_staff);
       setFilteredUsers(filteredData);
+      setTotalCount(response.count ?? 0);
+      setTotalPages(response.total_pages ?? 0);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -111,7 +118,7 @@ const Users: React.FC = () => {
     try {
       await apiService.updateUser(editingUser.id, editForm);
       setEditingUser(null);
-      await fetchUsers(searchTerm);
+      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
     }
@@ -130,7 +137,7 @@ const Users: React.FC = () => {
         mobile_number: '',
         address: '',
       });
-      await fetchUsers(searchTerm);
+      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     }
@@ -146,13 +153,12 @@ const Users: React.FC = () => {
     
     try {
       await apiService.deleteUser(deleteModal.user.id);
-      setUsers(users.filter(u => u.id !== deleteModal.user!.id));
-      setFilteredUsers(filteredUsers.filter(u => u.id !== deleteModal.user!.id));
       if (selectedUser?.id === deleteModal.user.id) {
         setSelectedUser(null);
         setUserDevices([]);
       }
       setDeleteModal({ show: false, user: null });
+      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
       setSuccessModal({ 
         show: true, 
         message: `User "${deleteModal.user.username}" has been deleted successfully.` 
@@ -189,7 +195,22 @@ const Users: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="loading">Loading users...</div>;
+    return (
+      <div className="admin-container">
+        <h1>User Management</h1>
+        <div className="card">
+          <div className="card-header"><h2>Users</h2></div>
+          <table className="table">
+            <thead><tr><th>Username</th><th>Email</th><th>Name</th><th>Actions</th></tr></thead>
+            <tbody>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <SkeletonTableRow key={i} columns={4} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -393,7 +414,7 @@ const Users: React.FC = () => {
 
       <div className="card">
         <div className="card-header">
-          <h2>Users ({filteredUsers.length})</h2>
+          <h2>Users ({totalCount})</h2>
           <div className="card-actions">
             <input
               type="text"
@@ -419,7 +440,17 @@ const Users: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                  <EmptyState
+                    title={searchTerm ? 'No users match your search' : 'No users yet'}
+                    description={searchTerm ? 'Try a different search term.' : 'Create a user to get started.'}
+                    action={!searchTerm ? { label: 'Create User', onClick: () => setCreatingUser(true) } : undefined}
+                  />
+                </td>
+              </tr>
+            ) : filteredUsers.map((user) => (
               <tr
                 key={user.id}
                 onClick={() => handleViewUser(user)}
@@ -457,6 +488,108 @@ const Users: React.FC = () => {
             ))}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        {totalCount > 0 && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px',
+            borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+            gap: '16px'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+              Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} users
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                  borderRadius: '6px',
+                  background: currentPage === 1 ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
+                  color: 'var(--text-primary, #f8fafc)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentPage === 1 ? '0.5' : '1'
+                }}
+              >
+                ← Previous
+              </button>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                {(() => {
+                  const pages = [];
+                  for (let i = 1; i <= totalPages; i++) {
+                    const showPage = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
+                    if (showPage) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i)}
+                          style={{
+                            padding: '6px 10px',
+                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                            borderRadius: '4px',
+                            background: i === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                            color: 'var(--text-primary, #f8fafc)',
+                            cursor: 'pointer',
+                            fontWeight: i === currentPage ? 'bold' : 'normal',
+                            minWidth: '32px'
+                          }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    } else if (pages[pages.length - 1]?.key !== 'ellipsis-' + Math.floor(i / 10)) {
+                      pages.push(
+                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--text-secondary, #94a3b8)' }}>...</span>
+                      );
+                    }
+                  }
+                  return pages;
+                })()}
+              </div>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                  borderRadius: '6px',
+                  background: currentPage === totalPages ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
+                  color: 'var(--text-primary, #f8fafc)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  opacity: currentPage === totalPages ? '0.5' : '1'
+                }}
+              >
+                Next →
+              </button>
+            </div>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(parseInt(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px',
+                border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
+                borderRadius: '6px',
+                background: isDark ? '#1a1a1a' : '#0f172a',
+                color: isDark ? '#e0e0e0' : '#f8fafc',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {(editingUser || creatingUser) && (

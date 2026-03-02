@@ -7332,6 +7332,69 @@ input[type="checkbox"]:checked {
   background: #818cf8;
 }
 
+/* Modal body content (delete/reboot confirmation) */
+.modal-delete-content,
+.modal-reboot-content {
+  margin-top: 0.5rem;
+}
+.modal-warning-box {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+.modal-warning-box strong { color: var(--danger-color); }
+.modal-reboot-note {
+  background: var(--info-bg);
+  border-color: var(--info-color);
+}
+.modal-reboot-note strong { color: var(--info-color); }
+.modal-reboot-message { margin-bottom: 1rem; color: var(--text-secondary); }
+.modal-consequences-list {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ====================================================================
    DARK MODE — body.dark-mode overrides
    ==================================================================== */
@@ -7413,6 +7476,23 @@ body.dark-mode .modal-content {
   background: linear-gradient(135deg, rgba(30,41,59,0.98), rgba(15,23,42,0.99)) !important;
   border: 1px solid rgba(148,163,184,0.12) !important;
   color: #f1f5f9 !important;
+}
+body.dark-mode .modal-warning-box {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+}
+body.dark-mode .modal-reboot-note {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #a5b4fc !important;
+}
+body.dark-mode .modal-reboot-message { color: #cbd5e1 !important; }
+body.dark-mode .modal-consequences-list { color: #94a3b8 !important; }
+body.dark-mode .btn-secondary {
+  background: rgba(51, 51, 51, 0.9) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
 }
 body.dark-mode .modal-content h3 {
   color: #f1f5f9 !important;
