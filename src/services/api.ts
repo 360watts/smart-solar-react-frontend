@@ -176,13 +176,13 @@ class ApiService {
     return data;
   }
 
-  async getKPIs(): Promise<any> {
-    const cacheKey = 'kpis';
+  async getTelemetryBufferStats(): Promise<any> {
+    const cacheKey = 'telemetry_buffer_stats';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.request('/kpis/');
-    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    const data = await this.request('/telemetry-buffer/stats/');
+    cacheService.set(cacheKey, data, 30 * 1000); // 30s TTL
     return data;
   }
 

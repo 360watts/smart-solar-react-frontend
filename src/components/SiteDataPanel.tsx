@@ -627,6 +627,29 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     }));
   }, [telemetry, dateRange]);
 
+  // ── History analytics summary (load / grid / battery) ──────────────────────
+  const historyStats = useMemo(() => {
+    if (!historyData.length) return null;
+    const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24; // hours per sample
+
+    const loads = historyData.map(d => d['Load (kW)'] as number).filter(v => v != null);
+    const grids = historyData.map(d => d['Grid (kW)'] as number).filter(v => v != null);
+    const socs  = historyData.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
+
+    const loadTotal   = loads.reduce((s, v) => s + v, 0) * intervalH;
+    const loadPeak    = loads.length ? Math.max(...loads) : 0;
+    const loadAvg     = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
+
+    const gridImport  = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
+    const gridExport  = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
+
+    const socMin      = socs.length ? Math.min(...socs) : null;
+    const socMax      = socs.length ? Math.max(...socs) : null;
+    const socAvg      = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
+
+    return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
+  }, [historyData, dateRange]);
+
   // Filter + map forecast — memoized on forecast array and window selection
   const { forecastFiltered, forecastData } = useMemo(() => {
     const todayIST = istDate(new Date());
@@ -988,7 +1011,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
         {/* ══ HISTORY TAB ══ */}
         {activeTab === 'history' && (
-          historyData.length > 0 ? (
+          historyData.length > 0 ? (<>
             <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
               <div style={{ marginBottom: '0.75rem' }}>
                 <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)' }}>
@@ -1038,7 +1061,74 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 </ResponsiveContainer>
               </div>
             </div>
-          ) : (
+
+            {/* ── History analytics summary ── */}
+            {historyStats && (
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+
+                {/* Load */}
+                <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#8b5cf6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <IconLoad /> Household Load
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
+                    {[
+                      { label: 'Consumption', value: `${historyStats.loadTotal.toFixed(2)} kWh` },
+                      { label: 'Peak',        value: `${historyStats.loadPeak.toFixed(2)} kW`  },
+                      { label: 'Avg',         value: `${historyStats.loadAvg.toFixed(2)} kW`   },
+                    ].map(r => (
+                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
+                        <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Grid */}
+                <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#3b82f6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <IconGrid /> Grid Import / Export
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
+                    {[
+                      { label: 'Imported',  value: `${historyStats.gridImport.toFixed(2)} kWh`, color: '#3b82f6' },
+                      { label: 'Exported',  value: `${historyStats.gridExport.toFixed(2)} kWh`, color: '#10b981' },
+                      { label: 'Net',       value: `${(historyStats.gridImport - historyStats.gridExport).toFixed(2)} kWh`, color: (historyStats.gridImport - historyStats.gridExport) > 0 ? '#3b82f6' : '#10b981' },
+                    ].map(r => (
+                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
+                        <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: r.color ?? 'var(--text-primary)' }}>{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Battery */}
+                {historyStats.socAvg != null && (
+                  <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00a63e', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <IconBattery /> Battery SOC
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
+                      {[
+                        { label: 'Avg SOC', value: `${historyStats.socAvg.toFixed(1)} %` },
+                        { label: 'Min SOC', value: `${historyStats.socMin!.toFixed(1)} %`, color: historyStats.socMin! < 20 ? '#ef4444' : historyStats.socMin! < 40 ? '#f59e0b' : undefined },
+                        { label: 'Max SOC', value: `${historyStats.socMax!.toFixed(1)} %` },
+                      ].map(r => (
+                        <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
+                          <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: (r as any).color ?? 'var(--text-primary)' }}>{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+          </>) : (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
               No telemetry history data available for the selected range.
             </div>

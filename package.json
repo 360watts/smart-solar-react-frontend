@@ -45,6 +45,7 @@
       "last 1 safari version"
     ]
   },
+  "proxy": "https://smart-solar-django-backend.vercel.app",
   "devDependencies": {
     "@types/bonjour": "^3.5.13",
     "@types/history": "^4.7.11",

@@ -18,9 +18,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 // Lazy load components for better initial load performance
 const Devices = lazy(() => import('./components/Devices'));
 const Configuration = lazy(() => import('./components/Configuration'));
-const Telemetry = lazy(() => import('./components/Telemetry'));
 const Alerts = lazy(() => import('./components/Alerts'));
-const SystemHealth = lazy(() => import('./components/SystemHealth'));
 const Users = lazy(() => import('./components/Users'));
 const Employees = lazy(() => import('./components/Employees'));
 const DevicePresets = lazy(() => import('./components/DevicePresets'));
@@ -85,31 +83,11 @@ function App() {
                             }
                           />
                           <Route
-                            path="/telemetry"
-                            element={
-                              <ProtectedRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Telemetry />
-                                </Suspense>
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
                             path="/alerts"
                             element={
                               <ProtectedRoute>
                                 <Suspense fallback={<SkeletonDashboard />}>
                                   <Alerts />
-                                </Suspense>
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/health"
-                            element={
-                              <ProtectedRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <SystemHealth />
                                 </Suspense>
                               </ProtectedRoute>
                             }

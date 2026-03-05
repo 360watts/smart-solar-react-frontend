@@ -82,6 +82,18 @@ interface TelemetrySummary {
   latestTimestamp: string | null;
 }
 
+interface TelemetryBufferStats {
+  total: number;
+  pending_dynamo: number;
+  pending_s3: number;
+  failed_both: number;
+  success_rate: number;
+  oldest_pending_age_seconds: number;
+  status: string;
+  avg_ingestion_latency_s: number | null;
+  max_ingestion_latency_s: number | null;
+}
+
 interface SolarSite {
   id: number;
   device_id: number;
@@ -134,6 +146,7 @@ const Devices: React.FC = () => {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
@@ -222,12 +235,14 @@ const Devices: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [healthData, telemetryData] = await Promise.all([
+      const [healthData, telemetryData, bufferData] = await Promise.all([
         apiService.getSystemHealth(),
         apiService.getTelemetry(),
+        apiService.getTelemetryBufferStats().catch(() => null),
       ]);
 
       setHealth(healthData || null);
+      setBufferStats(bufferData);
 
       const telemetryArray = Array.isArray(telemetryData) ? telemetryData : [];
       setTelemetryData(telemetryArray);
@@ -835,6 +850,34 @@ const Devices: React.FC = () => {
               </div>
             )}
           </div>
+
+          {bufferStats && (
+            <div className="card" style={{ gridColumn: '1 / -1' }}>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Telemetry Buffer
+                <span style={{
+                  fontSize: '0.75rem',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  background: bufferStats.status === 'healthy' ? '#dcfce7' : bufferStats.status === 'warning' ? '#fef3c7' : '#fee2e2',
+                  color: bufferStats.status === 'healthy' ? '#166534' : bufferStats.status === 'warning' ? '#92400e' : '#991b1b',
+                }}>
+                  {bufferStats.status.toUpperCase()}
+                </span>
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <p><strong>Total Records:</strong> {bufferStats.total.toLocaleString()}</p>
+                <p><strong>Pending DynamoDB:</strong> {bufferStats.pending_dynamo}</p>
+                <p><strong>Pending S3:</strong> {bufferStats.pending_s3}</p>
+                <p><strong>Failed Both:</strong> {bufferStats.failed_both}</p>
+                <p><strong>Success Rate:</strong> {bufferStats.success_rate}%</p>
+                <p><strong>Oldest Pending:</strong> {bufferStats.oldest_pending_age_seconds === 0 ? 'None' : bufferStats.oldest_pending_age_seconds < 3600 ? `${Math.floor(bufferStats.oldest_pending_age_seconds / 60)}m` : `${Math.floor(bufferStats.oldest_pending_age_seconds / 3600)}h ${Math.floor((bufferStats.oldest_pending_age_seconds % 3600) / 60)}m`}</p>
+                <p><strong>Avg Latency (24h):</strong> {bufferStats.avg_ingestion_latency_s === null ? '—' : bufferStats.avg_ingestion_latency_s < 60 ? `${bufferStats.avg_ingestion_latency_s}s` : `${Math.floor(bufferStats.avg_ingestion_latency_s / 60)}m ${Math.round(bufferStats.avg_ingestion_latency_s % 60)}s`}</p>
+                <p><strong>Max Latency (24h):</strong> {bufferStats.max_ingestion_latency_s === null ? '—' : bufferStats.max_ingestion_latency_s < 60 ? `${bufferStats.max_ingestion_latency_s}s` : `${Math.floor(bufferStats.max_ingestion_latency_s / 60)}m ${Math.round(bufferStats.max_ingestion_latency_s % 60)}s`}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Site Configuration ── */}
