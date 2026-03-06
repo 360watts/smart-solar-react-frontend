@@ -650,6 +650,43 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
   }, [historyData, dateRange]);
 
+  // ── Prediction vs Actual ────────────────────────────────────────────────────
+  // Joins today's forecast P50 slots with nearest actual telemetry reading.
+  // Uses a ±15 min window; slot is left blank if no telemetry falls within it.
+  const vsActualData = useMemo(() => {
+    const todayISTStr = istDate(new Date());
+    const todayForecast = forecast.filter(row => {
+      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+      return istDate(new Date(clean)) === todayISTStr && row.p50_kw != null;
+    });
+    if (!todayForecast.length || !telemetry.length) return [];
+
+    const WINDOW_MS = 15 * 60 * 1000; // ±15 min
+    return todayForecast.map(frow => {
+      const clean = frow.forecast_for || frow.timestamp.replace('FORECAST#', '');
+      const fTs   = new Date(clean).getTime();
+      const label = new Date(clean).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
+
+      // find nearest actual reading within ±15 min
+      let nearest: any = null;
+      let minDiff = Infinity;
+      for (const t of telemetry) {
+        const diff = Math.abs(new Date(t.timestamp).getTime() - fTs);
+        if (diff < minDiff && diff <= WINDOW_MS) { minDiff = diff; nearest = t; }
+      }
+
+      const actualKw = nearest
+        ? +((( nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0)) / 1000).toFixed(3)
+        : null;
+      const p50 = +Number(frow.p50_kw).toFixed(3);
+      const diffPct = actualKw != null && p50 > 0
+        ? Math.round(((actualKw - p50) / p50) * 100)
+        : null;
+
+      return { label, fTs, p50, actual: actualKw, diffPct };
+    });
+  }, [forecast, telemetry]);
+
   // Filter + map forecast — memoized on forecast array and window selection
   const { forecastFiltered, forecastData } = useMemo(() => {
     const todayIST = istDate(new Date());
@@ -1365,6 +1402,76 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               No forecast data available for the selected range.
             </div>
           )
+        )}
+
+        {/* ══ PREDICTION VS ACTUAL (Forecast tab, today only) ══ */}
+        {activeTab === 'forecast' && (
+          vsActualData.length > 0 ? (
+            <div className="card" style={{ padding: '1.25rem', marginTop: '1rem' }}>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)' }}>
+                  Prediction vs Actual — Today
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                  P50 forecast vs measured PV generation · nearest reading within ±15 min
+                </p>
+              </div>
+
+              {/* Chart */}
+              <div style={{ height: 200, marginBottom: '0.75rem' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={vsActualData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#F07522" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
+                    <XAxis dataKey="label" stroke="var(--text-muted)" interval={Math.ceil(vsActualData.length / 8)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <YAxis stroke="var(--text-muted)" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [`${v} kW`, name]} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif', color: 'var(--text-secondary)' }} />
+                    <Area type="monotone" dataKey="actual" name="Actual PV" stroke="#F07522" strokeWidth={2} fill="url(#actualGrad)" dot={false} connectNulls={false} />
+                    <Line type="monotone" dataKey="p50"    name="P50 Forecast" stroke="#00a63e" strokeWidth={2} dot={false} strokeDasharray="5 3" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Per-slot deviation summary */}
+              {(() => {
+                const paired = vsActualData.filter(d => d.actual != null && d.diffPct != null);
+                if (!paired.length) return (
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                    No matched actual readings yet — chart will populate as telemetry arrives.
+                  </p>
+                );
+                const mae = paired.reduce((s, d) => s + Math.abs(d.actual! - d.p50), 0) / paired.length;
+                const overCount  = paired.filter(d => d.diffPct! > 10).length;
+                const underCount = paired.filter(d => d.diffPct! < -10).length;
+                const onCount    = paired.length - overCount - underCount;
+                return (
+                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'MAE', value: `${mae.toFixed(3)} kW`, color: 'var(--text-primary)', bg: isDark ? 'rgba(148,163,184,0.08)' : '#f3f4f6' },
+                      { label: 'On target (±10%)', value: `${onCount}/${paired.length}`, color: '#00a63e', bg: '#00a63e10' },
+                      { label: 'Over-forecast',    value: `${underCount}/${paired.length}`, color: '#3b82f6', bg: '#3b82f610' },
+                      { label: 'Under-forecast',   value: `${overCount}/${paired.length}`,  color: '#f59e0b', bg: '#f59e0b10' },
+                    ].map(s => (
+                      <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.75rem', borderRadius: 8, background: s.bg, border: `1px solid ${s.color}20` }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{s.label}</span>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '0.88rem', color: s.color }}>{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : activeTab === 'forecast' && forecast.length > 0 && telemetry.length === 0 ? (
+            <div style={{ marginTop: '1rem', padding: '1rem 1.25rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)', fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+              Prediction vs Actual chart will appear once the device starts sending telemetry today.
+            </div>
+          ) : null
         )}
 
       </>)}
