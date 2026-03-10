@@ -12,17 +12,19 @@ import {
   AreaChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
 } from 'recharts';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Zap, Activity, Thermometer } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../constants';
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
+const tabIconSize = 16;
 const TABS = [
-  { id: 'overview',  label: 'Overview',  icon: '🏠' },
-  { id: 'weather',   label: 'Weather',   icon: '🌤' },
-  { id: 'history',   label: 'History',   icon: '📈' },
-  { id: 'forecast',  label: 'Forecast',  icon: '🔆' },
+  { id: 'overview',  label: 'Overview',  icon: <Home size={tabIconSize} /> },
+  { id: 'weather',   label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
+  { id: 'history',   label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
+  { id: 'forecast',  label: 'Forecast',  icon: <Sun size={tabIconSize} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -127,49 +129,17 @@ function aggregateByPeriod(data: any[], range: string): any[] {
   });
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
+// ── Icons (Lucide) ─────────────────────────────────────────────────────────────
 
-const IconSun = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F07522" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5" fill="#FFD600" stroke="#F07522" strokeWidth="1.5"/>
-    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-  </svg>
-);
-const IconBattery = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="6" width="18" height="12" rx="2"/>
-    <line x1="23" y1="13" x2="23" y2="11"/>
-    <rect x="3" y="8" width="10" height="8" fill="currentColor" rx="1"/>
-  </svg>
-);
-const IconLoad = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-    <polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-);
-const IconEnergy = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-  </svg>
-);
-const IconCloud = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>
-  </svg>
-);
-const IconGrid = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-);
-const IconThermometer = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
-  </svg>
-);
+const iconSize = 16;
+const iconSizeSm = 14;
+const IconSunKpi = () => <Sun size={iconSize} className="site-data-panel-icon-solar" />;
+const IconBattery = () => <Battery size={iconSize} />;
+const IconLoad = () => <Home size={iconSize} />;
+const IconEnergy = () => <Zap size={iconSize} />;
+const IconCloud = () => <Cloud size={iconSizeSm} />;
+const IconGrid = () => <Activity size={iconSize} />;
+const IconThermometer = () => <Thermometer size={iconSize} />;
 
 // ── KPI Card ───────────────────────────────────────────────────────────────────
 
@@ -178,7 +148,7 @@ interface KpiCardProps {
   accent: string; icon: React.ReactNode; badge?: React.ReactNode;
 }
 const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge }) => (
-  <div className="card" style={{ padding: '1.1rem', flex: 1, minWidth: 140 }}>
+  <div className="card card-3d" style={{ padding: '1.1rem', flex: 1, minWidth: 140 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
       <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{label}</span>
       <span style={{ width: 28, height: 28, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, flexShrink: 0 }}>{icon}</span>
@@ -193,13 +163,17 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
 
 // ── Weather Hourly Forecast Strip ──────────────────────────────────────────────
 
+const weatherIconSize = 20;
 const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
   if (!hourly || hourly.length === 0) return null;
-  const icon = (cloud: number, ghi: number, precip: number | null) =>
-    ghi < 10  ? '🌙' :
-    precip != null && precip > 60 ? '🌧' :
-    precip != null && precip > 30 ? (cloud > 40 ? '🌦' : '⛅') :
-    cloud > 75 ? '☁️' : cloud > 40 ? '⛅' : '☀️';
+  const getWeatherIcon = (cloud: number, ghi: number, precip: number | null) => {
+    if (ghi < 10) return <Moon size={weatherIconSize} />;
+    if (precip != null && precip > 60) return <CloudRain size={weatherIconSize} />;
+    if (precip != null && precip > 30) return cloud > 40 ? <CloudRain size={weatherIconSize} /> : <CloudSun size={weatherIconSize} />;
+    if (cloud > 75) return <Cloud size={weatherIconSize} />;
+    if (cloud > 40) return <CloudSun size={weatherIconSize} />;
+    return <Sun size={weatherIconSize} />;
+  };
 
   return (
     <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
@@ -219,7 +193,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
             const ghiPct   = Math.min(100, (ghi / 900) * 100);
             const humPct   = humidity != null ? Math.min(100, humidity) : null;
             const isNow    = i === 0;
-            const wi       = icon(cloud, ghi, precip);
+            const wi       = getWeatherIcon(cloud, ghi, precip);
             const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : '#d1d5db';
             const humColor = humidity == null ? '#d1d5db'
               : humidity > 80 ? '#3b82f6'
@@ -961,7 +935,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
                 ? `S1: ${(latest.pv1_power_w/1000).toFixed(2)} · S2: ${(latest.pv2_power_w/1000).toFixed(2)} kW`
                 : 'Current generation'}
-              accent="#F07522" icon={<IconSun />}
+              accent="#F07522" icon={<IconSunKpi />}
             />
             <KpiCard
               label="Battery" value={batSoc != null ? batSoc.toFixed(1) : '—'} unit="%"
@@ -1065,8 +1039,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
                 </p>
               </div>
-              <div style={{ height: 240 }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: 240, minHeight: 240, width: '100%', minWidth: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" minHeight={240}>
                   <AreaChart data={historyData} margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}>
                     <defs>
                       <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
@@ -1181,7 +1155,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>🔆</div>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sun size={20} strokeWidth={2} /></div>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>Solar Forecast</h3>
                   </div>
                   {fcastP50 > 0 && (
@@ -1283,8 +1257,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               {/* Chart / Table area */}
               <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
                 {forecastView === 'chart' ? (
-                  <div style={{ height: forecastWindow === '7d' ? 360 : 300, width: '100%', userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
-                    <ResponsiveContainer>
+                  <div style={{ height: forecastWindow === '7d' ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
+                    <ResponsiveContainer width="100%" height="100%" minHeight={280}>
                       <AreaChart
                         data={zoomedForecastData}
                         margin={{ top: 20, right: 10, left: 0, bottom: forecastWindow !== 'today' ? 10 : 0 }}
@@ -1418,8 +1392,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               </div>
 
               {/* Chart */}
-              <div style={{ height: 200, marginBottom: '0.75rem' }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: 200, minHeight: 200, width: '100%', minWidth: 0, marginBottom: '0.75rem' }}>
+                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                   <AreaChart data={vsActualData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">

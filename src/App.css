@@ -7760,3 +7760,107 @@ body.dark-mode .config-arrow {
     opacity: 0.8;
   }
 }
+
+/* ============================================
+   UI IMPROVEMENTS: Reduced motion, card-3d, stagger
+   ============================================ */
+
+/* Respect prefers-reduced-motion for full animation surface */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition,
+  .page-transition.transitioning,
+  .main-content > *,
+  .card,
+  .navigation-progress,
+  .navigation-progress.complete,
+  .solar-loader,
+  .solar-icon-animated,
+  .loading-text,
+  .auth-container::before,
+  .auth-container::after,
+  .auth-particles,
+  .particle,
+  .card-3d,
+  .stagger-children > *,
+  .skeleton-line {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card-3d:hover {
+    transform: none;
+  }
+  .btn-primary:active,
+  .auth-button:active {
+    transform: none;
+  }
+}
+
+/* Opt-in 3D hover effect for cards (do not apply to global .card) */
+.card-3d {
+  perspective: 1000px;
+  transition: transform 0.25s ease;
+}
+.card-3d:hover {
+  transform: rotateX(2deg) rotateY(2deg);
+}
+
+/* Staggered list entrance — use .stagger-children on wrapper */
+.stagger-children > * {
+  animation: fadeInUp 0.35s ease both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(n+9) { animation-delay: 400ms; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* SiteDataPanel solar KPI icon — brand accent */
+.site-data-panel-icon-solar {
+  color: var(--solar-orange);
+}
+
+/* Lucide sidebar/theme icons inherit text color */
+.sidebar-icon-svg,
+.theme-toggle-icon {
+  color: currentColor;
+}
+
+/* 3D scene behind login card */
+.auth-container {
+  position: relative;
+}
+.auth-container .auth-card {
+  position: relative;
+  z-index: 1;
+}
+
+/* Micro-interactions: button active press (disabled under prefers-reduced-motion above) */
+.btn-primary:active:not(:disabled),
+.auth-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Skeleton: gentle opacity pulse (same API; disabled in reduced-motion block) */
+.skeleton-line {
+  animation: shimmerLoading 2s infinite, skeleton-pulse 2.5s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
+}

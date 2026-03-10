@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -89,6 +91,23 @@ const Configuration: React.FC = () => {
     description: '',
     enabled: true
   });
+
+  // Bulk upload state
+  interface BulkUploadRow {
+    rowIndex: number;
+    register: RegisterMapping;
+  }
+  interface BulkUploadError {
+    rowIndex: number;
+    message: string;
+  }
+  interface BulkUploadResult {
+    valid: BulkUploadRow[];
+    errors: BulkUploadError[];
+  }
+  const [bulkResult, setBulkResult] = useState<BulkUploadResult | null>(null);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const bulkFileRef = useRef<HTMLInputElement>(null);
 
   // Modern modal states
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
@@ -319,6 +338,125 @@ const Configuration: React.FC = () => {
     });
   };
 
+  const TEMPLATE_HEADERS = 'label,address,num_registers,function_code,register_type,data_type,byte_order,word_order,access_mode,scale_factor,offset,unit,decimal_places,category,high_alarm_threshold,low_alarm_threshold,description,enabled';
+
+  const downloadTemplate = () => {
+    const blob = new Blob([TEMPLATE_HEADERS + '\n'], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'register_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const coerceEnabled = (val: any): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'number') return val !== 0;
+    if (typeof val === 'string') {
+      const s = val.trim().toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    }
+    return true;
+  };
+
+  const parseRegisterFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        const valid: BulkUploadRow[] = [];
+        const errors: BulkUploadError[] = [];
+
+        rows.forEach((row: any, i: number) => {
+          const rowNum = i + 2; // 1-based, row 1 is header
+          const errs: string[] = [];
+
+          const label = String(row.label ?? '').trim();
+          if (!label) errs.push('label is required');
+
+          const address = Number(row.address);
+          if (!row.address && row.address !== 0 || isNaN(address)) errs.push('address must be a number');
+
+          const functionCode = row.function_code !== '' ? Number(row.function_code) : 3;
+          if (isNaN(functionCode)) errs.push('function_code must be a number');
+
+          const dataType = row.data_type !== '' ? Number(row.data_type) : 0;
+          if (isNaN(dataType)) errs.push('data_type must be a number');
+
+          const numRegisters = row.num_registers !== '' ? Number(row.num_registers) : 1;
+          if (isNaN(numRegisters) || numRegisters < 1 || numRegisters > 125) errs.push('num_registers must be 1–125');
+
+          const decimalPlaces = row.decimal_places !== '' ? Number(row.decimal_places) : 2;
+          if (isNaN(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 6) errs.push('decimal_places must be 0–6');
+
+          if (errs.length > 0) {
+            errors.push({ rowIndex: rowNum, message: `Row ${rowNum}: ${errs.join('; ')}` });
+            return;
+          }
+
+          const hiAlarm = row.high_alarm_threshold !== '' ? parseFloat(row.high_alarm_threshold) : null;
+          const loAlarm = row.low_alarm_threshold !== '' ? parseFloat(row.low_alarm_threshold) : null;
+
+          const register: RegisterMapping = {
+            id: Date.now() + i,
+            label,
+            address,
+            numRegisters,
+            functionCode,
+            registerType: row.register_type !== '' ? Number(row.register_type) : 3,
+            dataType,
+            byteOrder: row.byte_order !== '' ? Number(row.byte_order) : 0,
+            wordOrder: row.word_order !== '' ? Number(row.word_order) : 0,
+            accessMode: row.access_mode !== '' ? Number(row.access_mode) : 0,
+            scaleFactor: row.scale_factor !== '' ? parseFloat(row.scale_factor) : 1,
+            offset: row.offset !== '' ? parseFloat(row.offset) : 0,
+            unit: String(row.unit ?? ''),
+            decimalPlaces,
+            category: String(row.category ?? 'Electrical'),
+            highAlarmThreshold: isNaN(hiAlarm as number) ? null : hiAlarm,
+            lowAlarmThreshold: isNaN(loAlarm as number) ? null : loAlarm,
+            description: String(row.description ?? ''),
+            enabled: coerceEnabled(row.enabled),
+          };
+
+          valid.push({ rowIndex: rowNum, register });
+        });
+
+        setBulkResult({ valid, errors });
+      } catch (err) {
+        setBulkResult({ valid: [], errors: [{ rowIndex: 0, message: `Failed to parse file: ${err instanceof Error ? err.message : 'unknown error'}` }] });
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBulkResult(null);
+    const file = e.target.files?.[0];
+    if (file) parseRegisterFile(file);
+  };
+
+  const addBulkRegisters = () => {
+    if (!bulkResult || bulkResult.valid.length === 0) return;
+    let toAdd = bulkResult.valid.map(r => r.register);
+
+    if (skipDuplicates) {
+      const existing = new Set(
+        slaveForm.registers.map(r => `${r.address}:${r.functionCode}`)
+      );
+      toAdd = toAdd.filter(r => !existing.has(`${r.address}:${r.functionCode}`));
+    }
+
+    setSlaveForm({ ...slaveForm, registers: [...slaveForm.registers, ...toAdd] });
+    setBulkResult(null);
+    if (bulkFileRef.current) bulkFileRef.current.value = '';
+  };
+
   if (loading) {
     return <div className="loading">Loading configuration...</div>;
   }
@@ -382,18 +520,10 @@ const Configuration: React.FC = () => {
                   <td style={{ textAlign: 'center' }}>{slave.registers.length}</td>
                   <td style={{ textAlign: 'center' }}>
                     <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', margin: '0 6px', color: '#6366f1' }} title="Edit">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                      </svg>
+                      <Pencil size={16} strokeWidth={2} />
                     </button>
                     <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3,6 5,6 21,6"></polyline>
-                        <path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                      </svg>
+                      <Trash2 size={16} strokeWidth={2} />
                     </button>
                   </td>
                 </tr>
@@ -741,6 +871,58 @@ const Configuration: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Bulk Upload */}
+                  <div className="form-subsection" style={{ marginTop: '16px' }}>
+                    <h5 className="form-subsection-title">Bulk Upload Registers</h5>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      <button type="button" onClick={downloadTemplate} className="btn btn-sm btn-secondary">
+                        Download Template (CSV)
+                      </button>
+                      <input
+                        ref={bulkFileRef}
+                        type="file"
+                        accept=".xlsx,.csv"
+                        onChange={handleBulkFileChange}
+                        style={{ fontSize: '0.875rem' }}
+                      />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={skipDuplicates}
+                          onChange={(e) => setSkipDuplicates(e.target.checked)}
+                        />
+                        Skip duplicates (by address + function code)
+                      </label>
+                    </div>
+
+                    {bulkResult && (
+                      <div style={{ fontSize: '0.875rem' }}>
+                        <div style={{ marginBottom: '6px', color: isDark ? '#b0b0b0' : '#495057' }}>
+                          <strong>{bulkResult.valid.length + bulkResult.errors.length}</strong> rows parsed —{' '}
+                          <span style={{ color: '#28a745' }}><strong>{bulkResult.valid.length}</strong> valid</span>
+                          {bulkResult.errors.length > 0 && (
+                            <span>, <span style={{ color: '#dc3545' }}><strong>{bulkResult.errors.length}</strong> invalid</span></span>
+                          )}
+                        </div>
+
+                        {bulkResult.errors.length > 0 && (
+                          <div style={{ marginBottom: '8px', padding: '8px', background: isDark ? 'rgba(220,53,69,0.1)' : '#f8d7da', borderRadius: '6px', color: isDark ? '#ff9999' : '#721c24', maxHeight: '120px', overflowY: 'auto' }}>
+                            {bulkResult.errors.slice(0, 10).map((e, i) => (
+                              <div key={i} style={{ marginBottom: '2px' }}>{e.message}</div>
+                            ))}
+                            {bulkResult.errors.length > 10 && <div>…and {bulkResult.errors.length - 10} more errors</div>}
+                          </div>
+                        )}
+
+                        {bulkResult.valid.length > 0 && (
+                          <button type="button" onClick={addBulkRegisters} className="btn btn-sm">
+                            Add {bulkResult.valid.length} valid register{bulkResult.valid.length !== 1 ? 's' : ''}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Registers Table */}
                   {slaveForm.registers.length > 0 ? (
                     <div className="registers-table-wrapper">
@@ -861,7 +1043,7 @@ const Configuration: React.FC = () => {
                 fontSize: '1.5rem',
                 animation: 'pulse 2s infinite'
               }}>
-                ⚠️
+                <AlertTriangle size={24} strokeWidth={2} />
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
                 Delete Slave Device
@@ -880,7 +1062,7 @@ const Configuration: React.FC = () => {
                 fontSize: '0.9rem',
                 color: isDark ? '#ff9999' : '#721c24'
               }}>
-                <strong>⚠️ Warning:</strong> This will permanently delete the slave device configuration and all its register mappings.
+                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={16} strokeWidth={2} /> Warning:</strong> This will permanently delete the slave device configuration and all its register mappings.
               </div>
             </div>
             

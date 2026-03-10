@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { User, Lock, X, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import logoWithFont from '../assets/logo_with_font.png';
+
+const SolarScene3D = lazy(() => import('./SolarScene3D'));
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -78,6 +81,9 @@ const Login: React.FC = () => {
 
   return (
     <div className="auth-container">
+      <Suspense fallback={null}>
+        <SolarScene3D />
+      </Suspense>
       <div className="auth-card">
         {/* Official 360watts logo */}
         <div className="auth-logo">
@@ -98,17 +104,14 @@ const Login: React.FC = () => {
                 onClick={() => setError('')}
                 aria-label="Dismiss error"
               >
-                ×
+                <X size={18} strokeWidth={2} />
               </button>
             </div>
           )}
 
           <div className="form-group">
             <label htmlFor="username">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
+              <User size={16} strokeWidth={2} />
               Username
             </label>
             <div className="input-wrapper">
@@ -130,10 +133,7 @@ const Login: React.FC = () => {
                   onClick={() => setUsername('')}
                   aria-label="Clear username"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+                  <X size={14} strokeWidth={2} />
                 </button>
               )}
             </div>
@@ -141,10 +141,7 @@ const Login: React.FC = () => {
 
           <div className="form-group">
             <label htmlFor="password">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
+              <Lock size={16} strokeWidth={2} />
               Password
             </label>
             <div className="input-wrapper">
@@ -165,15 +162,9 @@ const Login: React.FC = () => {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
+                  <EyeOff size={18} strokeWidth={2} />
                 ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
+                  <Eye size={18} strokeWidth={2} />
                 )}
               </button>
             </div>
@@ -203,11 +194,7 @@ const Login: React.FC = () => {
               </>
             ) : (
               <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                  <polyline points="10 17 15 12 10 7"/>
-                  <line x1="15" y1="12" x2="3" y2="12"/>
-                </svg>
+                <LogIn size={18} strokeWidth={2} />
                 Sign In
               </>
             )}
@@ -215,7 +202,7 @@ const Login: React.FC = () => {
         </form>
 
         <div className="auth-footer">
-          <p>🔒 Secure connection established</p>
+          <p><Lock size={14} strokeWidth={2} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} /> Secure connection established</p>
         </div>
       </div>
     </div>

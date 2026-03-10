@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Package, Upload, Loader2, Check, Zap, RotateCcw, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import '../App.css';
@@ -564,11 +565,7 @@ export const OTA: React.FC = () => {
           alignItems: 'center',
           gap: '0.75rem'
         }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
+          <Package size={32} strokeWidth={2} />
           OTA Firmware Management
         </h1>
         <p style={{ color: isDark ? '#a0a0a0' : '#7f8c8d', margin: 0 }}>
@@ -810,11 +807,7 @@ export const OTA: React.FC = () => {
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
+            <Upload size={20} strokeWidth={2} />
             Upload Firmware
           </button>
         </form>
@@ -842,10 +835,7 @@ export const OTA: React.FC = () => {
                   <tr>
                     <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', fontSize: '0.95rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                          <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                          <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
-                        </svg>
+                        <Loader2 size={20} strokeWidth={2} className="ota-spinner" style={{ animation: 'spin 1s linear infinite' }} />
                         Loading firmware versions...
                       </div>
                     </td>
@@ -863,9 +853,7 @@ export const OTA: React.FC = () => {
                       <div style={{ fontWeight: '500', color: isDark ? '#e0e0e0' : '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
                       {fw.signatureValid && (
                         <span style={{ fontSize: '0.75rem', color: '#28a745', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
+                          <Check size={12} strokeWidth={3} />
                           Signature Valid
                         </span>
                       )}
@@ -1174,9 +1162,7 @@ export const OTA: React.FC = () => {
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
+            <Zap size={20} strokeWidth={2} />
             {isDeploying ? 'Deploying...' : 'Deploy Firmware'}
           </button>
 
@@ -1570,7 +1556,7 @@ export const OTA: React.FC = () => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          <span style={{ fontSize: '1.25rem' }}>🚨</span>
+          <AlertCircle size={20} strokeWidth={2} />
           Emergency Rollback
         </h2>
         
@@ -1582,11 +1568,11 @@ export const OTA: React.FC = () => {
           marginBottom: '1.5rem',
           color: isDark ? '#ff9999' : '#721c24'
         }}>
-          <strong>⚠️ Warning:</strong> Use this feature only in emergency situations. Rollback command will revert devices to their previous firmware version automatically.
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={16} strokeWidth={2} /> Warning:</strong> Use this feature only in emergency situations. Rollback command will revert devices to their previous firmware version automatically.
         </div>
 
         <div style={{ marginBottom: '1.5rem', padding: '1rem', background: isDark ? '#1a2a3a' : '#e7f3ff', border: isDark ? '1px solid #2a4a6a' : '1px solid #b3d9ff', borderRadius: '8px', color: isDark ? '#66b2ff' : '#004085' }}>
-          <strong>ℹ️ How it works:</strong> The rollback sends an <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig</code> command with value <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>2</code> to selected devices, triggering them to automatically revert to their previous firmware version.
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Info size={16} strokeWidth={2} /> How it works:</strong> The rollback sends an <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig</code> command with value <code style={{ background: isDark ? '#0d1117' : '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>2</code> to selected devices, triggering them to automatically revert to their previous firmware version.
         </div>
 
         <div>
@@ -1893,10 +1879,7 @@ export const OTA: React.FC = () => {
               opacity: rollbackForm.selectedDevices.length === 0 ? 0.6 : 1
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="1 4 1 10 7 10"/>
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-            </svg>
+            <RotateCcw size={20} strokeWidth={2} />
             Rollback {rollbackForm.selectedDevices.length} Device{rollbackForm.selectedDevices.length !== 1 ? 's' : ''}
           </button>
         </div>

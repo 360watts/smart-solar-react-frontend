@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, AlertCircle, Info, HelpCircle } from 'lucide-react';
 import { apiService } from '../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
@@ -53,11 +54,12 @@ const Alerts: React.FC = () => {
   };
 
   const getSeverityIcon = (severity: string) => {
+    const iconSize = 24;
     switch (severity) {
-      case 'critical': return '🚨';
-      case 'warning': return '⚠️';
-      case 'info': return 'ℹ️';
-      default: return '❓';
+      case 'critical': return <AlertCircle size={iconSize} />;
+      case 'warning': return <AlertTriangle size={iconSize} />;
+      case 'info': return <Info size={iconSize} />;
+      default: return <HelpCircle size={iconSize} />;
     }
   };
 
@@ -87,11 +89,7 @@ const Alerts: React.FC = () => {
       <div className="admin-header" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
+            <AlertTriangle size={32} strokeWidth={2} />
             System Alerts
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
@@ -291,7 +289,7 @@ const Alerts: React.FC = () => {
                     marginBottom: '0.75rem',
                     flexWrap: 'wrap'
                   }}>
-                    <span className="alert-icon" style={{ fontSize: '1.5rem' }}>{getSeverityIcon(alert.severity)}</span>
+                    <span className="alert-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>{getSeverityIcon(alert.severity)}</span>
                     <span className="alert-type" style={{
                       background: isDark ? '#1a1a1a' : 'var(--bg-tertiary)',
                       padding: '0.25rem 0.75rem',

@@ -18,7 +18,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "three": ["./src/types/three.d.ts"],
+      "xlsx": ["./node_modules/xlsx/types/index.d.ts"]
+    }
   },
   "include": [
     "src"
