@@ -341,11 +341,34 @@ const Configuration: React.FC = () => {
   const TEMPLATE_HEADERS = 'label,address,num_registers,function_code,register_type,data_type,byte_order,word_order,access_mode,scale_factor,offset,unit,decimal_places,category,high_alarm_threshold,low_alarm_threshold,description,enabled';
 
   const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE_HEADERS + '\n'], { type: 'text/csv' });
+    let csv = TEMPLATE_HEADERS + '\n';
+    if (slaveForm.registers.length > 0) {
+      csv += slaveForm.registers.map(r => [
+        r.label,
+        r.address,
+        r.numRegisters ?? 1,
+        r.functionCode ?? 3,
+        r.registerType ?? 3,
+        r.dataType,
+        r.byteOrder ?? 0,
+        r.wordOrder ?? 0,
+        r.accessMode ?? 0,
+        r.scaleFactor,
+        r.offset,
+        r.unit ?? '',
+        r.decimalPlaces ?? 2,
+        r.category ?? '',
+        r.highAlarmThreshold ?? '',
+        r.lowAlarmThreshold ?? '',
+        r.description ?? '',
+        r.enabled
+      ].join(',')).join('\n');
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'register_template.csv';
+    a.download = slaveForm.registers.length > 0 ? 'registers_export.csv' : 'register_template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -876,7 +899,7 @@ const Configuration: React.FC = () => {
                     <h5 className="form-subsection-title">Bulk Upload Registers</h5>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
                       <button type="button" onClick={downloadTemplate} className="btn btn-sm btn-secondary">
-                        Download Template (CSV)
+                        {slaveForm.registers.length > 0 ? `Export Registers (${slaveForm.registers.length}) CSV` : 'Download Template (CSV)'}
                       </button>
                       <input
                         ref={bulkFileRef}
