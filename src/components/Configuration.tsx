@@ -403,7 +403,7 @@ const Configuration: React.FC = () => {
           if (!label) errs.push('label is required');
 
           const address = Number(row.address);
-          if (!row.address && row.address !== 0 || isNaN(address)) errs.push('address must be a number');
+          if ((!row.address && row.address !== 0) || isNaN(address)) errs.push('address must be a number');
 
           const functionCode = row.function_code !== '' ? Number(row.function_code) : 3;
           if (isNaN(functionCode)) errs.push('function_code must be a number');
