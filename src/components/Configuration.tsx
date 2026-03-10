@@ -338,6 +338,13 @@ const Configuration: React.FC = () => {
     });
   };
 
+  const toggleRegisterEnabled = (index: number) => {
+    const updated = slaveForm.registers.map((r, i) =>
+      i === index ? { ...r, enabled: !r.enabled } : r
+    );
+    setSlaveForm({ ...slaveForm, registers: updated });
+  };
+
   const TEMPLATE_HEADERS = 'label,address,num_registers,function_code,register_type,data_type,byte_order,word_order,access_mode,scale_factor,offset,unit,decimal_places,category,high_alarm_threshold,low_alarm_threshold,description,enabled';
 
   const downloadTemplate = () => {
@@ -987,7 +994,12 @@ const Configuration: React.FC = () => {
                                 ) : '-'}
                               </td>
                               <td>
-                                <span className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}>
+                                <span
+                                  className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}
+                                  onClick={() => toggleRegisterEnabled(index)}
+                                  title={reg.enabled ? 'Click to disable' : 'Click to enable'}
+                                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                                >
                                   {reg.enabled ? 'Enabled' : 'Disabled'}
                                 </span>
                               </td>
