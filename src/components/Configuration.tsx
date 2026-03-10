@@ -204,7 +204,26 @@ const Configuration: React.FC = () => {
         polling_interval_ms: slaveForm.polling_interval_ms,
         timeout_ms: slaveForm.timeout_ms,
         enabled: slaveForm.enabled,
-        registers: slaveForm.registers
+        registers: slaveForm.registers.map(r => ({
+          label: r.label,
+          address: r.address,
+          num_registers: r.numRegisters,
+          function_code: r.functionCode,
+          register_type: r.registerType,
+          data_type: r.dataType,
+          byte_order: r.byteOrder,
+          word_order: r.wordOrder,
+          access_mode: r.accessMode,
+          scale_factor: r.scaleFactor,
+          offset: r.offset,
+          unit: r.unit,
+          decimal_places: r.decimalPlaces,
+          category: r.category,
+          high_alarm_threshold: r.highAlarmThreshold,
+          low_alarm_threshold: r.lowAlarmThreshold,
+          description: r.description,
+          enabled: r.enabled,
+        })),
       };
 
       if (editingSlave) {
