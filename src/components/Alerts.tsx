@@ -16,6 +16,10 @@ interface Alert {
   resolved: boolean;
   created_by_username?: string;
   created_at?: string;
+  // Fault alerts from Group A engine (generated=false means DB-backed)
+  generated?: boolean;
+  fault_code?: string;
+  status?: 'active' | 'acknowledged' | 'resolved';
 }
 
 const Alerts: React.FC = () => {
@@ -297,7 +301,20 @@ const Alerts: React.FC = () => {
                       fontSize: '0.85rem',
                       fontWeight: '600',
                       color: isDark ? '#e0e0e0' : '#2c3e50'
-                    }}>{alert.type.replace('_', ' ').toUpperCase()}</span>
+                    }}>{alert.type.replace(/_/g, ' ').toUpperCase()}</span>
+                    {alert.fault_code && (
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '4px',
+                        background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)',
+                        color: isDark ? '#a5b4fc' : '#4f46e5',
+                        border: isDark ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(99,102,241,0.3)',
+                        letterSpacing: '0.03em'
+                      }}>{alert.fault_code}</span>
+                    )}
                     <span className="alert-device" style={{
                       color: 'var(--text-secondary)',
                       fontSize: '0.85rem'
@@ -321,17 +338,42 @@ const Alerts: React.FC = () => {
                     paddingTop: '0.75rem',
                     borderTop: isDark ? '1px solid #404040' : '1px solid var(--border-color)'
                   }}>
-                    <div className="alert-status" style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.8rem',
-                      fontWeight: '600',
-                      background: alert.resolved ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
-                      color: alert.resolved ? '#10b981' : '#ef4444'
-                    }}>
-                      {alert.resolved ? '✓ Resolved' : '● Active'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="alert-status" style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        background: (alert.status === 'resolved' || alert.resolved)
+                          ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)')
+                          : alert.status === 'acknowledged'
+                          ? (isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)')
+                          : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
+                        color: (alert.status === 'resolved' || alert.resolved)
+                          ? '#10b981'
+                          : alert.status === 'acknowledged'
+                          ? '#f59e0b'
+                          : '#ef4444'
+                      }}>
+                        {(alert.status === 'resolved' || alert.resolved)
+                          ? '✓ Resolved'
+                          : alert.status === 'acknowledged'
+                          ? '◐ Acknowledged'
+                          : '● Active'}
+                      </div>
+                      {alert.generated === false && (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '4px',
+                          background: isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.1)',
+                          color: isDark ? '#94a3b8' : '#64748b',
+                          border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(100,116,139,0.2)'
+                        }}>Fault</span>
+                      )}
                     </div>
-                    <AuditTrail 
+                    <AuditTrail
                       createdBy={alert.created_by_username}
                       createdAt={alert.created_at}
                     />

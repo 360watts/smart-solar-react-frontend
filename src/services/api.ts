@@ -1,6 +1,25 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
+/** Combined alert item returned by GET /api/alerts/ */
+export interface AlertItem {
+  id: string;
+  type: string;
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  device_id: string;
+  timestamp: string;
+  resolved: boolean;
+  created_by_username?: string;
+  created_at?: string;
+  /** false = persistent DB-backed fault alert; true or absent = ephemeral */
+  generated?: boolean;
+  /** e.g. 'BAT-001', 'GRID-001' — present on fault alerts */
+  fault_code?: string;
+  /** 'active' | 'acknowledged' | 'resolved' — present on fault alerts */
+  status?: 'active' | 'acknowledged' | 'resolved';
+}
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
 
 class ApiService {
@@ -156,7 +175,7 @@ class ApiService {
     return response.json();
   }
 
-  async getAlerts(): Promise<any[]> {
+  async getAlerts(): Promise<AlertItem[]> {
     const cacheKey = 'alerts';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
