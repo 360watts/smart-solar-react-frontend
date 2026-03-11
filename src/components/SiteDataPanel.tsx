@@ -576,11 +576,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const gridExporting  = gridKw     != null && gridKw     < -0.01;
   const batCharging    = batPowerKw != null && batPowerKw > 0.01;
 
+  // Deye SUN-series run_status: 0=Standby, 1=Self-test, 2=Normal, 3=Fault, 4=Permanent Fault
   const runStateBadge = runState != null ? (
-    runState === 0 ? { label: 'Standby', color: '#9ca3af' } :
-    runState === 1 ? { label: 'Online',  color: '#00a63e' } :
-    runState === 2 ? { label: 'Warning', color: '#f59e0b' } :
-    runState === 3 ? { label: 'Fault',   color: '#ef4444' } :
+    runState === 0 ? { label: 'Standby',  color: '#9ca3af' } :
+    runState === 1 ? { label: 'Starting', color: '#60a5fa' } :
+    runState === 2 ? { label: 'Normal',   color: '#00a63e' } :
+    runState === 3 ? { label: 'Fault',    color: '#ef4444' } :
+    runState === 4 ? { label: 'Fault',    color: '#ef4444' } :
                      { label: `State ${runState}`, color: '#6b7280' }
   ) : null;
 
