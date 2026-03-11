@@ -1026,7 +1026,7 @@ const DevicePresets: React.FC = () => {
                                 <td>{s.deviceName}</td>
                                 <td style={{ textAlign: 'center' }}>{s.pollingIntervalMs}ms</td>
                                 <td style={{ textAlign: 'center' }}>{s.timeoutMs}ms</td>
-                                <td style={{ textAlign: 'center' }}>{s.registers.length}</td>
+                                <td style={{ textAlign: 'center' }}>{s.registers.filter(r => r.enabled).length} / {s.registers.length}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1137,7 +1137,7 @@ const DevicePresets: React.FC = () => {
                             {slave.enabled ? 'Enabled' : 'Disabled'}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'center' }}>{slave.registers.length}</td>
+                        <td style={{ textAlign: 'center' }}>{slave.registers.filter(r => r.enabled).length} / {slave.registers.length}</td>
                         <td style={{ textAlign: 'center' }}>
                           {slave.attached ? (
                             <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginRight: '8px' }} title="Remove from preset">

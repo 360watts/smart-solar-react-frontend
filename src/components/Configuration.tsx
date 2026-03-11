@@ -566,7 +566,7 @@ const Configuration: React.FC = () => {
                       {slave.enabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'center' }}>{slave.registers.length}</td>
+                  <td style={{ textAlign: 'center' }}>{slave.registers.filter(r => r.enabled).length} / {slave.registers.length}</td>
                   <td style={{ textAlign: 'center' }}>
                     <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', margin: '0 6px', color: '#6366f1' }} title="Edit">
                       <Pencil size={16} strokeWidth={2} />
