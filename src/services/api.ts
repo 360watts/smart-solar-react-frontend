@@ -157,9 +157,6 @@ class ApiService {
     return response.json();
   }
 
-  async getTelemetry(): Promise<any[]> {
-    return this.request('/telemetry/');
-  }
 
   async provisionDevice(data: any): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/devices/provision`, {

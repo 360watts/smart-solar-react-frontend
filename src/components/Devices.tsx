@@ -69,13 +69,6 @@ interface SystemHealthData {
   overall_health: string;
 }
 
-interface TelemetryData {
-  deviceId: string;
-  timestamp: string;
-  data_type: string;
-  value: number;
-  unit: string;
-}
 
 interface TelemetrySummary {
   totalPoints: number;
@@ -149,7 +142,6 @@ const Devices: React.FC = () => {
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
-  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
@@ -236,32 +228,21 @@ const Devices: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [healthData, telemetryData, bufferData] = await Promise.all([
+      const [healthData, bufferData] = await Promise.all([
         apiService.getSystemHealth(),
-        apiService.getTelemetry(),
         apiService.getTelemetryBufferStats().catch(() => null),
       ]);
 
       setHealth(healthData || null);
       setBufferStats(bufferData);
 
-      const telemetryArray = Array.isArray(telemetryData) ? telemetryData : [];
-      setTelemetryData(telemetryArray);
-      const latest = telemetryArray.reduce<string | null>((currentLatest, item) => {
-        if (!item?.timestamp) return currentLatest;
-        const itemDate = new Date(item.timestamp);
-        if (Number.isNaN(itemDate.getTime())) return currentLatest;
-        if (!currentLatest) return item.timestamp;
-        const currentDate = new Date(currentLatest);
-        return itemDate > currentDate ? item.timestamp : currentLatest;
-      }, null);
-
-      const deviceCount = new Set(telemetryArray.map((item: TelemetryData) => item.deviceId)).size;
-      setTelemetrySummary({
-        totalPoints: telemetryArray.length,
-        deviceCount,
-        latestTimestamp: latest,
-      });
+      if (healthData) {
+        setTelemetrySummary({
+          totalPoints: healthData.total_telemetry_points ?? 0,
+          deviceCount: healthData.active_devices ?? 0,
+          latestTimestamp: null,
+        });
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
       setDashboardError('Failed to load device dashboards');
@@ -578,15 +559,6 @@ const Devices: React.FC = () => {
   };
 
   if (selectedDevice) {
-    const deviceTelemetry = telemetryData.filter((entry) => entry.deviceId === selectedDevice.device_serial);
-    const latestTelemetry = deviceTelemetry.reduce<string | null>((currentLatest, item) => {
-      if (!item?.timestamp) return currentLatest;
-      const itemDate = new Date(item.timestamp);
-      if (Number.isNaN(itemDate.getTime())) return currentLatest;
-      if (!currentLatest) return item.timestamp;
-      const currentDate = new Date(currentLatest);
-      return itemDate > currentDate ? item.timestamp : currentLatest;
-    }, null);
 
     return (
       <div>
@@ -842,12 +814,12 @@ const Devices: React.FC = () => {
           <div className="card">
             <h2>Telemetry Snapshot</h2>
             {dashboardError && <p className="error">{dashboardError}</p>}
-            {!dashboardError && !telemetrySummary && <p>Loading telemetry...</p>}
-            {telemetrySummary && (
+            {!dashboardError && !health && <p>Loading telemetry...</p>}
+            {health && (
               <div>
-                <p><strong>Total Points:</strong> {deviceTelemetry.length.toLocaleString()}</p>
-                <p><strong>Data Types:</strong> {new Set(deviceTelemetry.map((entry) => entry.data_type)).size}</p>
-                <p><strong>Latest:</strong> {latestTelemetry ? new Date(latestTelemetry).toLocaleString() : 'N/A'}</p>
+                <p><strong>Total Points:</strong> {(health.total_telemetry_points ?? 0).toLocaleString()}</p>
+                <p><strong>Active Devices:</strong> {health.active_devices ?? 0}</p>
+                <p><strong>Status:</strong> {health.mqtt_status ?? 'N/A'}</p>
               </div>
             )}
           </div>
