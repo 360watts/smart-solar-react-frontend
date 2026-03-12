@@ -200,6 +200,7 @@ const Users: React.FC = () => {
         <h1>User Management</h1>
         <div className="card">
           <div className="card-header"><h2>Users</h2></div>
+          <div className="table-responsive">
           <table className="table">
             <thead><tr><th>Username</th><th>Email</th><th>Name</th><th>Actions</th></tr></thead>
             <tbody>
@@ -208,6 +209,7 @@ const Users: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     );
@@ -241,7 +243,7 @@ const Users: React.FC = () => {
             </button>
           </div>
           <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+            <div className="device-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
               <div>
                 <strong>Username:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedUser.username}</p>
@@ -278,7 +280,7 @@ const Users: React.FC = () => {
           {loadingDevices ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary, #94a3b8)' }}>Loading devices...</div>
           ) : userDevices.length > 0 ? (
-            <table className="table">
+            <div className="table-responsive"><table className="table">
               <thead>
                 <tr>
                   <th style={{ textAlign: 'center' }}>Device Serial</th>
@@ -308,7 +310,7 @@ const Users: React.FC = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           ) : (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted, #64748b)', fontSize: '0.9375rem' }}>
               No devices assigned to this user yet.
@@ -428,7 +430,7 @@ const Users: React.FC = () => {
             </button>
           </div>
         </div>
-        <table className="table">
+        <div className="table-responsive"><table className="table">
           <thead>
             <tr>
               <th style={{ textAlign: 'center' }}>Name</th>
@@ -479,7 +481,7 @@ const Users: React.FC = () => {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
 
         {/* Pagination Controls */}
         {totalCount > 0 && (

@@ -540,7 +540,7 @@ const Configuration: React.FC = () => {
             <p>Click "Configure New Slave" to add your first slave device.</p>
           </div>
         ) : (
-          <table className="table">
+          <div className="table-responsive"><table className="table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'center' }}>Slave ID</th>
@@ -578,7 +578,7 @@ const Configuration: React.FC = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -974,7 +974,7 @@ const Configuration: React.FC = () => {
 
                   {/* Registers Table */}
                   {slaveForm.registers.length > 0 ? (
-                    <div className="registers-table-wrapper">
+                    <div className="registers-table-wrapper table-responsive">
                       <h5 className="form-subsection-title">Configured Registers ({slaveForm.registers.length})</h5>
                       <table className="table registers-table">
                         <thead>

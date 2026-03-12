@@ -176,7 +176,7 @@ const Employees: React.FC = () => {
             </button>
           </div>
         </div>
-        <table className="table">
+        <div className="table-responsive"><table className="table">
           <thead>
             <tr>
               <th style={{ textAlign: 'center' }}>Name</th>
@@ -212,7 +212,7 @@ const Employees: React.FC = () => {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {(editingEmployee || creatingEmployee) && (

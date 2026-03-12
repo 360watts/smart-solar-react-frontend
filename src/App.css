@@ -7864,3 +7864,183 @@ body.dark-mode .config-arrow {
   0%, 100% { opacity: 0.92; }
   50% { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE & TABLET RESPONSIVE — appended
+   Breakpoints: 1024px (tablet), 768px (mobile-l), 480px (mobile-s)
+   ═══════════════════════════════════════════════════ */
+
+/* Hamburger toggle button — only visible on mobile */
+.mobile-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  background: var(--sidebar-bg, #0f172a);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+@media (max-width: 767px) {
+  .mobile-nav-toggle { display: flex; align-items: center; justify-content: center; }
+}
+
+/* Sidebar overlay backdrop */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1050;
+  backdrop-filter: blur(2px);
+}
+@media (max-width: 767px) {
+  .sidebar-overlay.open { display: block; }
+}
+
+/* Sidebar slide-in on mobile */
+@media (max-width: 767px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 1060;
+    position: fixed !important;
+    width: 260px !important;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+}
+
+/* Main content top padding on mobile (room for hamburger) */
+@media (max-width: 767px) {
+  .main-content {
+    padding-top: calc(var(--space-4, 16px) + 44px) !important;
+    margin-left: 0 !important;
+  }
+}
+
+/* ── KPI / stat card grids ── */
+@media (max-width: 1023px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Responsive 2-col card grids → 1-col on mobile ── */
+@media (max-width: 640px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Horizontal scroll containers (weather strip, etc.) ── */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.scroll-x::-webkit-scrollbar { height: 4px; }
+.scroll-x::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+/* ── Device detail info grid → single column on mobile ── */
+@media (max-width: 640px) {
+  .device-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Tables: horizontal scroll on mobile ── */
+@media (max-width: 767px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-responsive table {
+    min-width: 560px;
+  }
+}
+
+/* ── Button groups: wrap on mobile ── */
+@media (max-width: 640px) {
+  .btn-group {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ── Cards: reduce padding on mobile ── */
+@media (max-width: 480px) {
+  .card {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* ── Modals: full-screen on mobile ── */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+}
+
+/* ── Tab navigation: scrollable on small screens ── */
+@media (max-width: 640px) {
+  .tab-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+  }
+  .tab-list::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* ── Page header: stack on mobile ── */
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .page-header h1 {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* ── Forecast/alert cards ── */
+@media (max-width: 480px) {
+  .alert-card, .forecast-card {
+    padding: 12px !important;
+  }
+}

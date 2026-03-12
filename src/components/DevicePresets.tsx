@@ -702,7 +702,7 @@ const DevicePresets: React.FC = () => {
             </button>
           </div>
         </div>
-        <table className="table">
+        <div className="table-responsive"><table className="table">
           <thead>
             <tr>
               <th style={{ textAlign: 'center' }}>Name</th>
@@ -736,7 +736,7 @@ const DevicePresets: React.FC = () => {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {(editingPreset || creatingPreset) && (
@@ -1009,7 +1009,7 @@ const DevicePresets: React.FC = () => {
                           <p>No slave devices for this preset.</p>
                         </div>
                       ) : (
-                        <table className="table">
+                        <div className="table-responsive"><table className="table">
                           <thead>
                             <tr>
                               <th style={{ textAlign: 'center' }}>Slave ID</th>
@@ -1030,7 +1030,7 @@ const DevicePresets: React.FC = () => {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </table></div>
                       )}
                     </div>
                   </div>
@@ -1113,7 +1113,7 @@ const DevicePresets: React.FC = () => {
                   <p>Click "Add Slave" to configure your first slave device.</p>
                 </div>
               ) : (
-                <table className="table">
+                <div className="table-responsive"><table className="table">
                   <thead>
                     <tr>
                       <th style={{ textAlign: 'center' }}>Slave ID</th>
@@ -1158,7 +1158,7 @@ const DevicePresets: React.FC = () => {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               )}
             </div>
 
@@ -1479,7 +1479,7 @@ const DevicePresets: React.FC = () => {
 
                   {/* Registers Table */}
                   {slaveForm.registers.length > 0 ? (
-                    <div className="registers-table-wrapper">
+                    <div className="registers-table-wrapper table-responsive">
                       <h5 className="form-subsection-title">Configured Registers ({slaveForm.registers.length})</h5>
                       <table className="table registers-table">
                         <thead>

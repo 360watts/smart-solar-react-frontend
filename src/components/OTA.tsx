@@ -1781,7 +1781,7 @@ export const OTA: React.FC = () => {
                 No devices match the current filters
               </div>
             ) : (
-              <table style={{ width: '100%', fontSize: '0.85rem' }}>
+              <div className="table-responsive"><table style={{ width: '100%', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ borderBottom: isDark ? '2px solid #404040' : '2px solid #dee2e6' }}>
                     <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', width: '50px', color: isDark ? '#b0b0b0' : 'inherit' }}>
@@ -1854,7 +1854,7 @@ export const OTA: React.FC = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
         </div>

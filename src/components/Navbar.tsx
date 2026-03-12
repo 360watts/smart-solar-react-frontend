@@ -35,6 +35,7 @@ const Navbar: React.FC = () => {
   const { setIsNavigating, navigationHistory } = useNavigation();
   const { isDark, toggleTheme } = useTheme();
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems: NavItem[] = [
     { path: '/devices',        label: 'Devices',        adminOnly: false, icon: <Monitor {...iconProps} /> },
@@ -50,6 +51,7 @@ const Navbar: React.FC = () => {
     setIsNavigating(true);
     navigate(path);
     setExpandedMenu(null);
+    setMobileOpen(false);
   };
 
   const handleLogout = async () => {
@@ -71,12 +73,34 @@ const Navbar: React.FC = () => {
     return () => clearTimeout(timer);
   }, [location, setIsNavigating]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   if (location.pathname === '/login' || !isAuthenticated) {
     return null;
   }
 
   return (
-    <nav className="sidebar" role="navigation" aria-label="Main navigation">
+    <>
+      {/* Hamburger toggle — only visible on mobile (<768px) */}
+      <button
+        className="mobile-nav-toggle"
+        onClick={() => setMobileOpen(prev => !prev)}
+        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileOpen}
+      >
+        {mobileOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Backdrop overlay */}
+      <div
+        className={'sidebar-overlay' + (mobileOpen ? ' open' : '')}
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+      />
+
+    <nav className={`sidebar${mobileOpen ? ' mobile-open' : ''}`} role="navigation" aria-label="Main navigation">
       {/* Header */}
       <div className="sidebar-header">
         <div className="logo-container">
@@ -183,6 +207,7 @@ const Navbar: React.FC = () => {
         </div>
       )}
     </nav>
+    </>
   );
 };
 

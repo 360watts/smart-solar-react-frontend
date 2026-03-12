@@ -12,7 +12,7 @@ import {
   AreaChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
 } from 'recharts';
-import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Zap, Activity, Thermometer } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Zap, Activity, Thermometer, BarChart3, GitCompare } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../constants';
@@ -41,7 +41,7 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
       borderRadius: 12,
       padding: '0.75rem 1rem',
       boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-      minWidth: 175,
+      minWidth: 140, maxWidth: '90vw',
     }}>
       <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, paddingBottom: '0.25rem' }}>
         {label}
@@ -57,6 +57,45 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
               </div>
               <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
                 {Number(entry.value).toFixed(3)} {unit}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/** Reusable chart tooltip matching Forecast style; unitResolver(entry) returns unit string (default 'kW'). */
+const ChartTooltip = ({ active, payload, label, unitResolver }: { active?: boolean; payload?: any[]; label?: string; unitResolver?: (entry: any) => string }) => {
+  const { isDark } = useTheme();
+  if (!active || !payload || !payload.length) return null;
+  const getUnit = unitResolver ?? (() => 'kW');
+  return (
+    <div style={{
+      background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+      backdropFilter: 'blur(8px)',
+      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`,
+      borderRadius: 12,
+      padding: '0.75rem 1rem',
+      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+      minWidth: 140, maxWidth: '90vw',
+    }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, paddingBottom: '0.25rem' }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+        {payload.map((entry: any) => {
+          const unit = getUnit(entry);
+          const val = entry.value != null ? Number(entry.value).toFixed(3) : '—';
+          return (
+            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
+                <span style={{ fontWeight: 600 }}>{entry.name ?? ''}</span>
+              </div>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
+                {val} {unit}
               </span>
             </div>
           );
@@ -154,7 +193,7 @@ interface KpiCardProps {
   accent: string; icon: React.ReactNode; badge?: React.ReactNode;
 }
 const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge }) => (
-  <div className="card card-3d" style={{ padding: '1.1rem', flex: 1, minWidth: 140 }}>
+  <div className="card card-3d" style={{ padding: '1.1rem', flex: 1, minWidth: 110 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
       <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{label}</span>
       <span style={{ width: 28, height: 28, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, flexShrink: 0 }}>{icon}</span>
@@ -186,7 +225,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
       <p style={{ margin: '0 0 0.65rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
         24 h Weather Outlook
       </p>
-      <div style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
+      <div className="scroll-x" style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
         <div style={{ display: 'flex', gap: '0.45rem', minWidth: 'max-content' }}>
           {hourly.map((h, i) => {
             const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }); } catch { return ''; } })();
@@ -381,8 +420,8 @@ const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   const val: string = payload?.value ?? '';
   if (!val) return null;
   const isToday = fw === 'today';
-  const line1 = isToday ? val : (val.split('||')[0] ?? val);
-  const line2 = isToday ? '' : (val.split('||')[1] ?? '');
+  const line1 = isToday ? val : (val.split('||')[0] ?? val).trim();
+  const line2 = isToday ? '' : (val.split('||')[1] ?? '').trim();
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -398,13 +437,35 @@ const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   );
 };
 
+// XAxis tick for History and vsActual: same date/time styling as Forecast (green bold line 1, optional muted line 2 if value contains " || "). No tilt.
+const ChartXAxisTick = ({ x, y, payload }: any) => {
+  const val: string = (payload?.value ?? '').toString().trim();
+  if (!val) return null;
+  const parts = val.split('||').map((s: string) => s.trim());
+  const line1 = parts[0] ?? val;
+  const line2 = parts.length > 1 ? parts[1] : '';
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={13} textAnchor="middle" fill="#00a63e" fontSize={10} fontWeight={700} fontFamily="Inter, sans-serif">
+        {line1}
+      </text>
+      {line2 && (
+        <text x={0} y={0} dy={25} textAnchor="middle" fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">
+          {line2}
+        </text>
+      )}
+    </g>
+  );
+};
+
 const ForecastTable = ({ data }: { data: any[] }) => {
   const { isDark } = useTheme();
   const theadBg  = isDark ? 'rgba(15,23,42,0.9)'  : '#f9fafb';
   const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
   return (
-    <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif' }}>
+    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
         <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
           <tr>
             <th style={{ padding: '0.7rem 1rem', textAlign: 'left',   fontWeight: 600, color: 'var(--text-secondary)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
@@ -446,6 +507,70 @@ const ForecastTable = ({ data }: { data: any[] }) => {
   );
 };
 
+// Table view for History chart data (same layout pattern as ForecastTable).
+const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
+  const { isDark } = useTheme();
+  const theadBg = isDark ? 'rgba(15,23,42,0.9)' : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  return (
+    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
+        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
+          <tr>
+            <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>PV (kW)</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Load (kW)</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Grid (kW)</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Batt SOC (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i} style={{ borderBottom: rowBorder }}>
+              <td style={{ padding: '0.55rem 1rem', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Table view for vsActual chart data.
+const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: number | null; diffPct?: number | null }[] }) => {
+  const { isDark } = useTheme();
+  const theadBg = isDark ? 'rgba(15,23,42,0.9)' : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  return (
+    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
+        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
+          <tr>
+            <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Actual PV (kW)</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P50 Forecast (kW)</th>
+            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Δ %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i} style={{ borderBottom: rowBorder }}>
+              <td style={{ padding: '0.55rem 1rem', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(3) : '—'}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(3)}</td>
+              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -475,6 +600,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate),     600); return () => clearTimeout(t); }, [customEndDate]);
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
   const [forecastWindow,  setForecastWindow]  = useState<'today' | '3d' | '7d'>('7d');
+  const [historyView,     setHistoryView]     = useState<'chart' | 'table'>('chart');
+  const [vsActualView,    setVsActualView]    = useState<'chart' | 'table'>('chart');
 
   // Drag-to-zoom state (stock-chart style) — Forecast tab
   const [refAreaLeft,  setRefAreaLeft]  = useState('');
@@ -496,16 +623,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [vsActualIsSelecting,  setVsActualIsSelecting]  = useState(false);
   const [vsActualZoomStart,    setVsActualZoomStart]    = useState<string | null>(null);
   const [vsActualZoomEnd,      setVsActualZoomEnd]      = useState<string | null>(null);
-
-  // Dark-mode-aware tooltip style for recharts — memoized so recharts never gets a new object ref
-  const tooltipStyle = useMemo(() => ({
-    background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-    border: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,166,62,0.15)'}`,
-    borderRadius: 10,
-    color: isDark ? '#f1f5f9' : '#0a0a0a',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-    fontSize: 12,
-  }), [isDark]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -622,13 +739,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   // ── Chart data ──────────────────────────────────────────────────────────────
   const historyData = useMemo(() => {
     const aggregated = aggregateByPeriod(telemetry, dateRange);
-    return aggregated.map(row => ({
-      time:           fmt(row.timestamp, dateRange),
+    return aggregated.map(row => {
+      const d = new Date(row.timestamp);
+      const timeLabel = dateRange === '7d'
+        ? `${d.toLocaleDateString([], { weekday: 'short', timeZone: IST })} || ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })}`
+        : fmt(row.timestamp, dateRange);
+      return {
+      time:           timeLabel,
       'PV (kW)':      +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
       'Load (kW)':    +((row.load_power_w ?? 0) / 1000).toFixed(2),
       'Grid (kW)':    +((row.grid_power_w ?? 0) / 1000).toFixed(2),
       'Batt SOC (%)': row.battery_soc_percent ?? null,
-    }));
+    };
+    });
   }, [telemetry, dateRange]);
 
   // Zoom-sliced data for History chart (drag-to-zoom, same pattern as Forecast)
@@ -861,7 +984,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return (
       <div style={{ padding: '1.5rem 0' }}>
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          {[...Array(6)].map((_, i) => <div key={i} className="card skeleton" style={{ flex: 1, minWidth: 140, height: 100 }} />)}
+          {[...Array(6)].map((_, i) => <div key={i} className="card skeleton" style={{ flex: 1, minWidth: 110, height: 100 }} />)}
         </div>
         <div className="card skeleton" style={{ height: 52, marginBottom: '0.75rem' }} />
         <div className="card skeleton" style={{ height: 130, marginBottom: '1rem' }} />
@@ -990,7 +1113,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         {activeTab === 'overview' && (<>
 
           {/* 6-card KPI strip */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <div className="kpi-grid" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem', overflowX: 'auto' }}>
             <KpiCard
               label="PV Power" value={pvKw != null ? pvKw.toFixed(2) : '—'} unit="kW"
               sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
@@ -1084,93 +1207,115 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         {/* ══ HISTORY TAB ══ */}
         {activeTab === 'history' && (
           historyData.length > 0 ? (<>
-            <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
-              <div style={{ marginBottom: '0.75rem' }}>
-                <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)' }}>
-                  Power History — {
-                    dateRange === '24h'   ? 'Today' :
-                    dateRange === '7d'    ? 'Last 7 days' :
-                    dateRange === '30d'   ? 'Last 30 days' :
-                    customStartDate && customEndDate
-                      ? `${new Date(customStartDate).toLocaleDateString([], { timeZone: IST })} – ${new Date(customEndDate).toLocaleDateString([], { timeZone: IST })}`
-                      : 'Custom range'
-                  }
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                  {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
-                </p>
-              </div>
-              <div style={{ height: 240, minHeight: 240, width: '100%', minWidth: 0, position: 'relative', userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
-                <ResponsiveContainer width="100%" height="100%" minHeight={240}>
-                  <AreaChart
-                    data={zoomedHistoryData}
-                    margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}
-                    onMouseDown={(e: any) => {
-                      if (e?.activeLabel) { setHistoryRefAreaLeft(e.activeLabel); setHistoryIsSelecting(true); }
-                    }}
-                    onMouseMove={(e: any) => {
-                      if (historyIsSelecting && e?.activeLabel) setHistoryRefAreaRight(e.activeLabel);
-                    }}
-                    onMouseUp={() => {
-                      if (historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight) {
-                        setHistoryZoomStart(historyRefAreaLeft);
-                        setHistoryZoomEnd(historyRefAreaRight);
+            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden', marginBottom: '1rem' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BarChart3 size={20} strokeWidth={2} /></div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      Power History — {
+                        dateRange === '24h'   ? 'Today' :
+                        dateRange === '7d'    ? 'Last 7 days' :
+                        dateRange === '30d'   ? 'Last 30 days' :
+                        customStartDate && customEndDate
+                          ? `${new Date(customStartDate).toLocaleDateString([], { timeZone: IST })} – ${new Date(customEndDate).toLocaleDateString([], { timeZone: IST })}`
+                          : 'Custom range'
                       }
-                      setHistoryIsSelecting(false);
-                      setHistoryRefAreaLeft('');
-                      setHistoryRefAreaRight('');
-                    }}
-                  >
-                    <defs>
-                      <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
-                        <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18}/>
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
-                    <XAxis
-                      dataKey="time" stroke="var(--text-muted)"
-                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(zoomedHistoryData.length / 10)}
-                      angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
-                      textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
-                      tick={{ fontSize: dateRange === '30d' ? 9 : 10, fill: 'var(--text-muted)' }}
-                    />
-                    <YAxis yAxisId="power" stroke="var(--text-muted)" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                    <YAxis yAxisId="soc" orientation="right" stroke="var(--text-muted)" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [`${v} ${String(name).includes('%') ? '%' : 'kW'}`, name]} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif', color: 'var(--text-secondary)' }} />
-                    <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} />
-                    <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} />
-                    <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
-                    <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" />
-                    {historyIsSelecting && historyRefAreaLeft && historyRefAreaRight && (
-                      <ReferenceArea x1={historyRefAreaLeft} x2={historyRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
-                {(historyZoomStart || historyZoomEnd) && (
-                  <button
-                    type="button"
-                    onClick={() => { setHistoryZoomStart(null); setHistoryZoomEnd(null); }}
-                    style={{
-                      position: 'absolute', top: 8, right: 48,
-                      background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
-                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
-                      borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
-                      color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-                      backdropFilter: 'blur(4px)',
-                    }}
-                  >
-                    ↺ Reset Zoom
-                  </button>
-                )}
-                <div style={{ position: 'absolute', bottom: 6, left: 4, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                  {historyZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                      {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
+                    </p>
+                  </div>
                 </div>
+                <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
+                  {(['chart', 'table'] as const).map(v => (
+                    <button key={v} type="button" onClick={() => setHistoryView(v)} style={{ border: 'none', background: historyView === v ? toggleActive : 'transparent', color: historyView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: historyView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
+                {historyView === 'chart' ? (
+                <div style={{ height: (dateRange === '7d' || dateRange === '30d') ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
+                  <ResponsiveContainer width="100%" height="100%" minHeight={280}>
+                    <AreaChart
+                      data={zoomedHistoryData}
+                      margin={{ top: 20, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 10 : 0 }}
+                      onMouseDown={(e: any) => {
+                        if (e?.activeLabel) { setHistoryRefAreaLeft(e.activeLabel); setHistoryIsSelecting(true); }
+                      }}
+                      onMouseMove={(e: any) => {
+                        if (historyIsSelecting && e?.activeLabel) setHistoryRefAreaRight(e.activeLabel);
+                      }}
+                      onMouseUp={() => {
+                        if (historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight) {
+                          setHistoryZoomStart(historyRefAreaLeft);
+                          setHistoryZoomEnd(historyRefAreaRight);
+                        }
+                        setHistoryIsSelecting(false);
+                        setHistoryRefAreaLeft('');
+                        setHistoryRefAreaRight('');
+                      }}
+                    >
+                      <defs>
+                        <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
+                          <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
+                      <XAxis
+                        dataKey="time"
+                        stroke="var(--text-muted)"
+                        tickLine={false}
+                        axisLine={false}
+                        height={42}
+                        allowDataOverflow
+                        type="category"
+                        interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(zoomedHistoryData.length / 10)}
+                        tick={(props: any) => <ChartXAxisTick {...props} />}
+                      />
+                      <YAxis yAxisId="power" stroke="var(--text-muted)" tickLine={false} axisLine={false} width={40} allowDataOverflow tickFormatter={(v: number) => `${v} kW`} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <YAxis yAxisId="soc" orientation="right" stroke="var(--text-muted)" tickLine={false} axisLine={false} allowDataOverflow domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} />
+                      <Tooltip content={<ChartTooltip unitResolver={(e: any) => String(e.name || '').includes('SOC') ? '%' : 'kW'} />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
+                      <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} animationDuration={300} />
+                      <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} animationDuration={300} />
+                      <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" animationDuration={300} />
+                      <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" animationDuration={300} />
+                      {historyIsSelecting && historyRefAreaLeft && historyRefAreaRight && (
+                        <ReferenceArea x1={historyRefAreaLeft} x2={historyRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  {(historyZoomStart || historyZoomEnd) && (
+                    <button
+                      type="button"
+                      onClick={() => { setHistoryZoomStart(null); setHistoryZoomEnd(null); }}
+                      style={{
+                        position: 'absolute', top: 10, right: 46,
+                        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
+                        border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
+                        borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
+                        color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                        backdropFilter: 'blur(4px)',
+                      }}
+                    >
+                      ↺ Reset Zoom
+                    </button>
+                  )}
+                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                    {historyZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+                  </div>
+                </div>
+                ) : (
+                  <HistoryTable data={zoomedHistoryData} />
+                )}
               </div>
             </div>
 
@@ -1179,7 +1324,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
 
                 {/* Load */}
-                <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
                   <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#8b5cf6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <IconLoad /> Household Load
                   </p>
@@ -1198,7 +1343,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 </div>
 
                 {/* Grid */}
-                <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
                   <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#3b82f6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                     <IconGrid /> Grid Import / Export
                   </p>
@@ -1218,7 +1363,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
                 {/* Battery */}
                 {historyStatsVisible.socAvg != null && (
-                  <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
+                  <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
                     <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00a63e', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <IconBattery /> Battery SOC
                     </p>
@@ -1482,105 +1627,123 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         {/* ══ PREDICTION VS ACTUAL (Forecast tab, today only) ══ */}
         {activeTab === 'forecast' && (
           vsActualData.length > 0 ? (
-            <div className="card" style={{ padding: '1.25rem', marginTop: '1rem' }}>
-              <div style={{ marginBottom: '0.75rem' }}>
-                <h3 style={{ margin: '0 0 0.2rem', fontSize: '0.9rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)' }}>
-                  Prediction vs Actual — Today
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                  P50 forecast vs measured PV generation · nearest reading within ±15 min
-                </p>
-              </div>
-
-              {/* Chart — drag to zoom (same pattern as Forecast / History) */}
-              <div style={{ height: 200, minHeight: 200, width: '100%', minWidth: 0, marginBottom: '0.75rem', position: 'relative', userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
-                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-                  <AreaChart
-                    data={zoomedVsActualData}
-                    margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-                    onMouseDown={(e: any) => {
-                      if (e?.activeLabel) { setVsActualRefAreaLeft(e.activeLabel); setVsActualIsSelecting(true); }
-                    }}
-                    onMouseMove={(e: any) => {
-                      if (vsActualIsSelecting && e?.activeLabel) setVsActualRefAreaRight(e.activeLabel);
-                    }}
-                    onMouseUp={() => {
-                      if (vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight) {
-                        setVsActualZoomStart(vsActualRefAreaLeft);
-                        setVsActualZoomEnd(vsActualRefAreaRight);
-                      }
-                      setVsActualIsSelecting(false);
-                      setVsActualRefAreaLeft('');
-                      setVsActualRefAreaRight('');
-                    }}
-                  >
-                    <defs>
-                      <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#F07522" stopOpacity={0.25}/>
-                        <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
-                    <XAxis dataKey="label" stroke="var(--text-muted)" interval={Math.ceil(zoomedVsActualData.length / 8)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                    <YAxis stroke="var(--text-muted)" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [`${v} kW`, name]} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif', color: 'var(--text-secondary)' }} />
-                    <Area type="monotone" dataKey="actual" name="Actual PV" stroke="#F07522" strokeWidth={2} fill="url(#actualGrad)" dot={false} connectNulls={false} />
-                    <Line type="monotone" dataKey="p50"    name="P50 Forecast" stroke="#00a63e" strokeWidth={2} dot={false} strokeDasharray="5 3" />
-                    {vsActualIsSelecting && vsActualRefAreaLeft && vsActualRefAreaRight && (
-                      <ReferenceArea x1={vsActualRefAreaLeft} x2={vsActualRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
-                {(vsActualZoomStart || vsActualZoomEnd) && (
-                  <button
-                    type="button"
-                    onClick={() => { setVsActualZoomStart(null); setVsActualZoomEnd(null); }}
-                    style={{
-                      position: 'absolute', top: 8, right: 8,
-                      background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
-                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
-                      borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
-                      color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-                      backdropFilter: 'blur(4px)',
-                    }}
-                  >
-                    ↺ Reset Zoom
-                  </button>
-                )}
-                <div style={{ position: 'absolute', bottom: 6, left: 4, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                  {vsActualZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden', marginTop: '1rem' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><GitCompare size={20} strokeWidth={2} /></div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      Prediction vs Actual — Today
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                      P50 forecast vs measured PV generation · nearest reading within ±15 min
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
+                  {(['chart', 'table'] as const).map(v => (
+                    <button key={v} type="button" onClick={() => setVsActualView(v)} style={{ border: 'none', background: vsActualView === v ? toggleActive : 'transparent', color: vsActualView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: vsActualView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
+                      {v}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Per-slot deviation summary (uses zoomed data when zoomed) */}
-              {(() => {
-                const paired = zoomedVsActualData.filter(d => d.actual != null && d.diffPct != null);
-                if (!paired.length) return (
-                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                    No matched actual readings yet — chart will populate as telemetry arrives.
-                  </p>
-                );
-                const mae = paired.reduce((s, d) => s + Math.abs(d.actual! - d.p50), 0) / paired.length;
-                const overCount  = paired.filter(d => d.diffPct! > 10).length;
-                const underCount = paired.filter(d => d.diffPct! < -10).length;
-                const onCount    = paired.length - overCount - underCount;
-                return (
-                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'MAE', value: `${mae.toFixed(3)} kW`, color: 'var(--text-primary)', bg: isDark ? 'rgba(148,163,184,0.08)' : '#f3f4f6' },
-                      { label: 'On target (±10%)', value: `${onCount}/${paired.length}`, color: '#00a63e', bg: '#00a63e10' },
-                      { label: 'Over-forecast',    value: `${underCount}/${paired.length}`, color: '#3b82f6', bg: '#3b82f610' },
-                      { label: 'Under-forecast',   value: `${overCount}/${paired.length}`,  color: '#f59e0b', bg: '#f59e0b10' },
-                    ].map(s => (
-                      <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.75rem', borderRadius: 8, background: s.bg, border: `1px solid ${s.color}20` }}>
-                        <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{s.label}</span>
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '0.88rem', color: s.color }}>{s.value}</span>
-                      </div>
-                    ))}
+              <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
+                {vsActualView === 'chart' ? (
+                <div style={{ height: 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
+                  <ResponsiveContainer width="100%" height="100%" minHeight={280}>
+                    <AreaChart
+                      data={zoomedVsActualData}
+                      margin={{ top: 20, right: 10, left: 0, bottom: 10 }}
+                      onMouseDown={(e: any) => {
+                        if (e?.activeLabel) { setVsActualRefAreaLeft(e.activeLabel); setVsActualIsSelecting(true); }
+                      }}
+                      onMouseMove={(e: any) => {
+                        if (vsActualIsSelecting && e?.activeLabel) setVsActualRefAreaRight(e.activeLabel);
+                      }}
+                      onMouseUp={() => {
+                        if (vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight) {
+                          setVsActualZoomStart(vsActualRefAreaLeft);
+                          setVsActualZoomEnd(vsActualRefAreaRight);
+                        }
+                        setVsActualIsSelecting(false);
+                        setVsActualRefAreaLeft('');
+                        setVsActualRefAreaRight('');
+                      }}
+                    >
+                      <defs>
+                        <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#F07522" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
+                      <XAxis dataKey="label" stroke="var(--text-muted)" tickLine={false} axisLine={false} height={42} allowDataOverflow type="category" interval={Math.ceil(zoomedVsActualData.length / 8)} tick={(props: any) => <ChartXAxisTick {...props} />} />
+                      <YAxis stroke="var(--text-muted)" tickLine={false} axisLine={false} width={40} allowDataOverflow tickFormatter={(v: number) => `${v} kW`} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
+                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
+                      <Area type="monotone" dataKey="actual" name="Actual PV" stroke="#F07522" strokeWidth={2} fill="url(#actualGrad)" dot={false} connectNulls={false} animationDuration={300} />
+                      <Line type="monotone" dataKey="p50" name="P50 Forecast" stroke="#00a63e" strokeWidth={2} dot={false} strokeDasharray="5 3" animationDuration={300} />
+                      {vsActualIsSelecting && vsActualRefAreaLeft && vsActualRefAreaRight && (
+                        <ReferenceArea x1={vsActualRefAreaLeft} x2={vsActualRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  {(vsActualZoomStart || vsActualZoomEnd) && (
+                    <button
+                      type="button"
+                      onClick={() => { setVsActualZoomStart(null); setVsActualZoomEnd(null); }}
+                      style={{
+                        position: 'absolute', top: 10, right: 10,
+                        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
+                        border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
+                        borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
+                        color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                        backdropFilter: 'blur(4px)',
+                      }}
+                    >
+                      ↺ Reset Zoom
+                    </button>
+                  )}
+                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                    {vsActualZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
                   </div>
-                );
-              })()}
+                </div>
+                ) : (
+                  <VsActualTable data={zoomedVsActualData} />
+                )}
+
+                {/* Per-slot deviation summary (uses zoomed data when zoomed) */}
+                <div style={{ marginTop: '0.5rem' }}>
+                  {(() => {
+                    const paired = zoomedVsActualData.filter(d => d.actual != null && d.diffPct != null);
+                    if (!paired.length) return (
+                      <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                        No matched actual readings yet — chart will populate as telemetry arrives.
+                      </p>
+                    );
+                    const mae = paired.reduce((s, d) => s + Math.abs(d.actual! - d.p50), 0) / paired.length;
+                    const overCount  = paired.filter(d => d.diffPct! > 10).length;
+                    const underCount = paired.filter(d => d.diffPct! < -10).length;
+                    const onCount    = paired.length - overCount - underCount;
+                    return (
+                      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        {[
+                          { label: 'MAE', value: `${mae.toFixed(3)} kW`, color: 'var(--text-primary)', bg: isDark ? 'rgba(148,163,184,0.08)' : '#f3f4f6' },
+                          { label: 'On target (±10%)', value: `${onCount}/${paired.length}`, color: '#00a63e', bg: '#00a63e10' },
+                          { label: 'Over-forecast',    value: `${underCount}/${paired.length}`, color: '#3b82f6', bg: '#3b82f610' },
+                          { label: 'Under-forecast',   value: `${overCount}/${paired.length}`,  color: '#f59e0b', bg: '#f59e0b10' },
+                        ].map(s => (
+                          <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.75rem', borderRadius: 8, background: s.bg, border: `1px solid ${s.color}20` }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{s.label}</span>
+                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '0.88rem', color: s.color }}>{s.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           ) : activeTab === 'forecast' && forecast.length > 0 && telemetry.length === 0 ? (
             <div style={{ marginTop: '1rem', padding: '1rem 1.25rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)', fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
