@@ -140,6 +140,7 @@ const Devices: React.FC = () => {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
   const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
@@ -226,13 +227,15 @@ const Devices: React.FC = () => {
   };
 
   const fetchDashboardData = async () => {
+    setHealthLoading(true);
     const [healthData, bufferData] = await Promise.all([
-      apiService.getSystemHealth().catch(() => null),
-      apiService.getTelemetryBufferStats().catch(() => null),
+      apiService.getSystemHealth().catch((e) => { console.error('[health]', e?.message); return null; }),
+      apiService.getTelemetryBufferStats().catch((e) => { console.error('[buffer]', e?.message); return null; }),
     ]);
 
     setHealth(healthData || null);
     setBufferStats(bufferData);
+    setHealthLoading(false);
 
     if (healthData) {
       setTelemetrySummary({
@@ -794,7 +797,13 @@ const Devices: React.FC = () => {
         <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)', marginTop: '32px' }}>
           <div className="card">
             <h2>System Health</h2>
-            {!health && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading system health...</p>}
+            {healthLoading && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading system health...</p>}
+            {!healthLoading && !health && (
+              <div>
+                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load health data.</p>
+                <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
+              </div>
+            )}
             {health && (
               <div>
                 <p><strong>Overall:</strong> {health.overall_health}</p>
@@ -806,7 +815,13 @@ const Devices: React.FC = () => {
 
           <div className="card">
             <h2>Telemetry Snapshot</h2>
-            {!health && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading telemetry...</p>}
+            {healthLoading && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading telemetry...</p>}
+            {!healthLoading && !health && (
+              <div>
+                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load telemetry data.</p>
+                <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
+              </div>
+            )}
             {health && (
               <div>
                 <p><strong>Total Points:</strong> {(health.total_telemetry_points ?? 0).toLocaleString()}</p>
