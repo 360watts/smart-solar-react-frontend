@@ -511,7 +511,7 @@ const Configuration: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="admin-container responsive-page">
       <h1>Slave Configuration</h1>
 
       {/* Show global error banner only when modal is not open */}

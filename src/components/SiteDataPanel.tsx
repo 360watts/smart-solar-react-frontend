@@ -1008,7 +1008,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     <div style={{ marginTop: '1.5rem' }}>
 
       {/* ── Section header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="site-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <p className="dash-section-label" style={{ margin: 0 }}>
             Live Site Intelligence — <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#00a63e' }}>{siteId}</span>
@@ -1025,8 +1025,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="site-panel-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="site-panel-filters" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {/* History range — shown on Overview and History tabs */}
             {(activeTab === 'overview' || activeTab === 'history') && (<>
               <select
@@ -1082,11 +1082,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       ) : (<>
 
         {/* ── Tab Bar ── */}
-        <div style={{ display: 'flex', borderBottom: `2px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, marginBottom: '1rem', gap: 0 }}>
+        <div className="tab-list site-tab-list" style={{ display: 'flex', borderBottom: `2px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, marginBottom: '1rem', gap: 0 }}>
           {TABS.map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button
+                className="tab-btn site-tab-btn"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
@@ -1113,7 +1114,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         {activeTab === 'overview' && (<>
 
           {/* 6-card KPI strip */}
-          <div className="kpi-grid" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem', overflowX: 'auto' }}>
+          <div className="kpi-grid site-kpi-grid" style={{ marginBottom: '0.75rem' }}>
             <KpiCard
               label="PV Power" value={pvKw != null ? pvKw.toFixed(2) : '—'} unit="kW"
               sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
@@ -1237,7 +1238,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               </div>
               <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
                 {historyView === 'chart' ? (
-                <div style={{ height: (dateRange === '7d' || dateRange === '30d') ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
+                <div className="site-chart-area site-chart-area-history" style={{ height: (dateRange === '7d' || dateRange === '30d') ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
                   <ResponsiveContainer width="100%" height="100%" minHeight={280}>
                     <AreaChart
                       data={zoomedHistoryData}
@@ -1295,6 +1296,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   </ResponsiveContainer>
                   {(historyZoomStart || historyZoomEnd) && (
                     <button
+                      className="chart-reset-btn"
                       type="button"
                       onClick={() => { setHistoryZoomStart(null); setHistoryZoomEnd(null); }}
                       style={{
@@ -1309,7 +1311,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       ↺ Reset Zoom
                     </button>
                   )}
-                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                  <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
                     {historyZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
                   </div>
                 </div>
@@ -1503,7 +1505,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               {/* Chart / Table area */}
               <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
                 {forecastView === 'chart' ? (
-                  <div style={{ height: forecastWindow === '7d' ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
+                  <div className="site-chart-area site-chart-area-forecast" style={{ height: forecastWindow === '7d' ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
                     <ResponsiveContainer width="100%" height="100%" minHeight={280}>
                       <AreaChart
                         data={zoomedForecastData}
@@ -1590,6 +1592,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     {/* Reset zoom button */}
                     {(zoomStart || zoomEnd) && (
                       <button
+                        className="chart-reset-btn"
                         onClick={() => { setZoomStart(null); setZoomEnd(null); }}
                         style={{
                           position: 'absolute', top: 10, right: 10,
@@ -1603,7 +1606,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         ↺ Reset Zoom
                       </button>
                     )}
-                    <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                    <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
                       {zoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
                     </div>
                   </div>
@@ -1650,7 +1653,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
               </div>
               <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
                 {vsActualView === 'chart' ? (
-                <div style={{ height: 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
+                <div className="site-chart-area site-chart-area-vsactual" style={{ height: 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
                   <ResponsiveContainer width="100%" height="100%" minHeight={280}>
                     <AreaChart
                       data={zoomedVsActualData}
@@ -1691,6 +1694,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   </ResponsiveContainer>
                   {(vsActualZoomStart || vsActualZoomEnd) && (
                     <button
+                      className="chart-reset-btn"
                       type="button"
                       onClick={() => { setVsActualZoomStart(null); setVsActualZoomEnd(null); }}
                       style={{
@@ -1705,7 +1709,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       ↺ Reset Zoom
                     </button>
                   )}
-                  <div style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                  <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
                     {vsActualZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
                   </div>
                 </div>

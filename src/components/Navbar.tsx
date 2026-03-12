@@ -77,6 +77,24 @@ const Navbar: React.FC = () => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    document.body.classList.toggle('mobile-nav-open', mobileOpen);
+    return () => {
+      document.body.classList.remove('mobile-nav-open');
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [mobileOpen]);
+
   if (location.pathname === '/login' || !isAuthenticated) {
     return null;
   }
@@ -100,7 +118,7 @@ const Navbar: React.FC = () => {
         aria-hidden="true"
       />
 
-    <nav className={`sidebar${mobileOpen ? ' mobile-open' : ''}`} role="navigation" aria-label="Main navigation">
+    <nav className={`sidebar sidebar-shell${mobileOpen ? ' mobile-open' : ''}`} role="navigation" aria-label="Main navigation">
       {/* Header */}
       <div className="sidebar-header">
         <div className="logo-container">
@@ -189,12 +207,12 @@ const Navbar: React.FC = () => {
                 title="Go back to previous page"
               >
                 <ArrowLeft {...iconProps} />
-                Back
+                <span>Back</span>
               </button>
             )}
             <button onClick={handleLogout} className="logout-button">
               <LogOut {...iconProps} />
-              Logout
+              <span>Logout</span>
             </button>
           </div>
         </>

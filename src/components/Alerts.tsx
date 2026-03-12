@@ -108,7 +108,7 @@ const Alerts: React.FC = () => {
       </div>
 
       {/* Modern Tab Navigation */}
-      <div style={{ 
+      <div className="tab-list alerts-tab-list" style={{ 
         display: 'flex', 
         gap: '0.5rem', 
         marginBottom: '1.5rem',
@@ -116,6 +116,7 @@ const Alerts: React.FC = () => {
         paddingBottom: '0'
       }}>
         <button
+          className="tab-btn"
           onClick={() => setActiveTab('overview')}
           style={{
             background: activeTab === 'overview' ? 'var(--primary-gradient)' : 'transparent',
@@ -141,6 +142,7 @@ const Alerts: React.FC = () => {
           Overview
         </button>
         <button
+          className="tab-btn"
           onClick={() => setActiveTab('alerts')}
           style={{
             background: activeTab === 'alerts' ? 'var(--primary-gradient)' : 'transparent',
@@ -165,6 +167,7 @@ const Alerts: React.FC = () => {
           All Alerts ({filteredAlerts.length})
         </button>
         <button
+          className="tab-btn"
           onClick={() => setActiveTab('analytics')}
           style={{
             background: activeTab === 'analytics' ? 'var(--primary-gradient)' : 'transparent',
@@ -193,7 +196,7 @@ const Alerts: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="alerts-overview-grid" style={{ display: 'grid', gap: '1.5rem' }}>
           <div className="admin-card">
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -386,7 +389,7 @@ const Alerts: React.FC = () => {
       )}
 
       {activeTab === 'analytics' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="alerts-overview-grid" style={{ display: 'grid', gap: '1.5rem' }}>
           <div className="admin-card">
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

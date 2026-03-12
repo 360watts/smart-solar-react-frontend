@@ -1,0 +1,113 @@
+/**
+ * Mobile sidebar drawer overrides — MUST load after App.css so we win over
+ * App.css line ~2589 (.sidebar { display: none }) and ~4444 (bottom bar theme).
+ * Import this last in App.tsx.
+ */
+
+/* Higher specificity (body .sidebar) so we override App.css .sidebar rules regardless of order */
+@media (max-width: 768px) {
+  body {
+    --sidebar-bg: #0f172a;
+  }
+
+  body .mobile-nav-toggle,
+  .mobile-nav-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: fixed !important;
+    top: 12px !important;
+    left: 12px !important;
+    z-index: 1100 !important;
+    background: var(--sidebar-bg, #0f172a) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    cursor: pointer !important;
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body .sidebar-overlay.open,
+  .sidebar-overlay.open {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.55) !important;
+    z-index: 1050 !important;
+    backdrop-filter: blur(2px) !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body nav.sidebar,
+  body .sidebar,
+  nav.sidebar,
+  .sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s ease !important;
+    z-index: 1060 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    width: 270px !important;
+    background: var(--sidebar-bg, #0f172a) !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5) !important;
+    border-right: 1px solid rgba(255,255,255,0.1) !important;
+    border-top: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 20px 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body nav.sidebar.mobile-open,
+  body .sidebar.mobile-open,
+  nav.sidebar.mobile-open,
+  .sidebar.mobile-open {
+    display: flex !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+  }
+
+  nav.sidebar .sidebar-header,
+  nav.sidebar .sidebar-footer,
+  nav.sidebar .user-info,
+  nav.sidebar .sidebar-nav,
+  nav.sidebar .sidebar-text,
+  nav.sidebar .user-name,
+  nav.sidebar .user-email,
+  nav.sidebar .user-role,
+  .sidebar .sidebar-header,
+  .sidebar .sidebar-footer,
+  .sidebar .user-info,
+  .sidebar .sidebar-nav,
+  .sidebar .sidebar-text,
+  .sidebar .user-name,
+  .sidebar .user-email,
+  .sidebar .user-role {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .sidebar .sidebar-nav li {
+    margin: 2px 0 !important;
+  }
+
+  body .main-content,
+  .main-content {
+    padding-top: calc(var(--space-4, 16px) + 52px) !important;
+    margin-left: 0 !important;
+  }
+}

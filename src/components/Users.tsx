@@ -196,7 +196,7 @@ const Users: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="admin-container">
+      <div className="admin-container responsive-page">
         <h1>User Management</h1>
         <div className="card">
           <div className="card-header"><h2>Users</h2></div>
@@ -222,8 +222,8 @@ const Users: React.FC = () => {
   // Show user dashboard when a user is selected
   if (selectedUser) {
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-container responsive-page">
+        <div className="page-title-row" style={{ marginBottom: '20px' }}>
           <button
             onClick={handleBackToList}
             className="btn btn-secondary"
@@ -411,7 +411,7 @@ const Users: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="admin-container responsive-page">
       <h1>User Management</h1>
 
       <div className="card">
@@ -485,18 +485,15 @@ const Users: React.FC = () => {
 
         {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+          <div className="pagination-bar" style={{
             padding: '16px',
             borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
             gap: '16px'
           }}>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
               Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} users
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="pagination-controls">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
@@ -512,7 +509,7 @@ const Users: React.FC = () => {
               >
                 ← Previous
               </button>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <div className="pagination-pages">
                 {(() => {
                   const pages = [];
                   for (let i = 1; i <= totalPages; i++) {
@@ -562,6 +559,7 @@ const Users: React.FC = () => {
               </button>
             </div>
             <select
+              className="pagination-size-select"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(parseInt(e.target.value));

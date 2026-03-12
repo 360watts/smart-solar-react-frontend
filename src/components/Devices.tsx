@@ -522,7 +522,7 @@ const Devices: React.FC = () => {
 
   if (loading) {
     return (
-      <div>
+      <div className="admin-container responsive-page">
         <h1>Device Management</h1>
         <div className="card">
           <div className="card-header"><h2>Devices</h2></div>
@@ -543,8 +543,8 @@ const Devices: React.FC = () => {
   if (selectedDevice) {
 
     return (
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-container responsive-page">
+        <div className="page-title-row" style={{ marginBottom: '20px' }}>
           <button
             onClick={handleBackToList}
             className="btn btn-secondary"
@@ -558,7 +558,7 @@ const Devices: React.FC = () => {
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <h2>Device Details</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="detail-action-row">
               <button onClick={() => handleEdit(selectedDevice)} className="btn">
                 Edit Device
               </button>
@@ -1542,7 +1542,7 @@ const Devices: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="admin-container responsive-page">
       <h1>Device Management</h1>
 
       <div className="card">
@@ -1691,10 +1691,7 @@ const Devices: React.FC = () => {
 
         {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+          <div className="pagination-bar devices-pagination-bar" style={{
             padding: '16px',
             borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
             gap: '16px'
@@ -1703,7 +1700,7 @@ const Devices: React.FC = () => {
               Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} devices
             </div>
             
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="pagination-controls devices-pagination-controls">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
@@ -1720,7 +1717,7 @@ const Devices: React.FC = () => {
                 ← Previous
               </button>
               
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <div className="pagination-pages">
                 {(() => {
                   const pages = [];
                   
@@ -1779,6 +1776,7 @@ const Devices: React.FC = () => {
             </div>
             
             <select
+              className="pagination-size-select"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(parseInt(e.target.value));

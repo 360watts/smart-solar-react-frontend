@@ -145,7 +145,7 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="admin-container responsive-page">
       <h1>My Profile</h1>
 
       {error && (
@@ -260,42 +260,44 @@ const Profile: React.FC = () => {
           </form>
         ) : (
           <div style={{ padding: '20px' }}>
+            <div className="table-responsive profile-table-wrap">
             <table className="profile-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold', width: '150px' }}>Username:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Username:</td>
                   <td style={{ padding: '10px' }}>{profile?.username}</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Name:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Name:</td>
                   <td style={{ padding: '10px' }}>{profile?.first_name} {profile?.last_name}</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Email:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Email:</td>
                   <td style={{ padding: '10px' }}>{profile?.email}</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Mobile:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Mobile:</td>
                   <td style={{ padding: '10px' }}>{profile?.mobile_number || '-'}</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Address:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Address:</td>
                   <td style={{ padding: '10px' }}>{profile?.address || '-'}</td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Role:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Role:</td>
                   <td style={{ padding: '10px' }}>
                     {profile?.is_superuser ? 'Administrator' : profile?.is_staff ? 'Employee' : 'User'}
                   </td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Member Since:</td>
+                  <td className="profile-label-cell" style={{ padding: '10px', fontWeight: 'bold' }}>Member Since:</td>
                   <td style={{ padding: '10px' }}>
                     {profile?.date_joined ? new Date(profile.date_joined).toLocaleDateString() : '-'}
                   </td>
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
