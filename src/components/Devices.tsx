@@ -70,12 +70,6 @@ interface SystemHealthData {
 }
 
 
-interface TelemetrySummary {
-  totalPoints: number;
-  deviceCount: number;
-  latestTimestamp: string | null;
-}
-
 interface TelemetryBufferStats {
   total: number;
   pending_dynamo: number;
@@ -142,7 +136,6 @@ const Devices: React.FC = () => {
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
-  const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -237,13 +230,6 @@ const Devices: React.FC = () => {
     setBufferStats(bufferData);
     setHealthLoading(false);
 
-    if (healthData) {
-      setTelemetrySummary({
-        totalPoints: healthData.total_telemetry_points ?? 0,
-        deviceCount: healthData.active_devices ?? 0,
-        latestTimestamp: null,
-      });
-    }
   };
 
   const fetchDeviceLogs = useCallback(async (deviceId: number) => {
@@ -343,9 +329,8 @@ const Devices: React.FC = () => {
 
   // Debounced search function that runs the actual search after 300ms of inactivity
   const debouncedSearch = useDebouncedCallback(
-    (query: string) => {
+    (_query: string) => {
       // The actual search happens via useEffect that watches currentPage and searchTerm
-      // This ensures we don't make too many API calls
     },
     300
   );

@@ -631,29 +631,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     }));
   }, [telemetry, dateRange]);
 
-  // ── History analytics summary (load / grid / battery) ──────────────────────
-  const historyStats = useMemo(() => {
-    if (!historyData.length) return null;
-    const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24; // hours per sample
-
-    const loads = historyData.map(d => d['Load (kW)'] as number).filter(v => v != null);
-    const grids = historyData.map(d => d['Grid (kW)'] as number).filter(v => v != null);
-    const socs  = historyData.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
-
-    const loadTotal   = loads.reduce((s, v) => s + v, 0) * intervalH;
-    const loadPeak    = loads.length ? Math.max(...loads) : 0;
-    const loadAvg     = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
-
-    const gridImport  = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
-    const gridExport  = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
-
-    const socMin      = socs.length ? Math.min(...socs) : null;
-    const socMax      = socs.length ? Math.max(...socs) : null;
-    const socAvg      = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
-
-    return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
-  }, [historyData, dateRange]);
-
   // Zoom-sliced data for History chart (drag-to-zoom, same pattern as Forecast)
   const zoomedHistoryData = useMemo(() => {
     if (!historyZoomStart || !historyZoomEnd || historyData.length === 0) return historyData;
