@@ -821,9 +821,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return { fcastP10: p10, fcastP50: p50, fcastP90: p90 };
   }, [forecastFiltered]);
 
-  // achievedPct: today's actual kWh vs today's P50 forecast — memoized on forecast + todayKwh
+  // achievedPct: today's actual kWh vs today's P50 forecast — memoized on forecast + todayKwh.
+  // Guard: only valid when the latest packet is from today (IST). pv_today_kwh is a daily
+  // accumulator that resets on the device — if the last packet is from yesterday, using it
+  // against today's P50 forecast produces a misleading percentage.
   const achievedPct = useMemo(() => {
     const todayISTStr = istDate(new Date());
+    if (!latest?.timestamp || istDate(new Date(latest.timestamp)) !== todayISTStr) return null;
+    if (todayKwh == null) return null;
     const todayForecast = forecast.filter(row => {
       const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
       return istDate(new Date(clean)) === todayISTStr;
@@ -839,10 +844,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i+1].p50_kw) / 2 * h;
       }
     }
-    return todayKwh != null && todayFcastP50 > 0
+    return todayFcastP50 > 0
       ? Math.min(999, Math.round((todayKwh / todayFcastP50) * 100))
       : null;
-  }, [forecast, todayKwh]);
+  }, [forecast, todayKwh, latest]);
 
   // ── Derived dark-mode colours ────────────────────────────────────────────────
   const cardBg     = isDark ? 'rgba(30,41,59,0.85)'   : '#ffffff';
