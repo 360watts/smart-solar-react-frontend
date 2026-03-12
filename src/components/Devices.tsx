@@ -142,7 +142,6 @@ const Devices: React.FC = () => {
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -227,25 +226,20 @@ const Devices: React.FC = () => {
   };
 
   const fetchDashboardData = async () => {
-    try {
-      const [healthData, bufferData] = await Promise.all([
-        apiService.getSystemHealth(),
-        apiService.getTelemetryBufferStats().catch(() => null),
-      ]);
+    const [healthData, bufferData] = await Promise.all([
+      apiService.getSystemHealth().catch(() => null),
+      apiService.getTelemetryBufferStats().catch(() => null),
+    ]);
 
-      setHealth(healthData || null);
-      setBufferStats(bufferData);
+    setHealth(healthData || null);
+    setBufferStats(bufferData);
 
-      if (healthData) {
-        setTelemetrySummary({
-          totalPoints: healthData.total_telemetry_points ?? 0,
-          deviceCount: healthData.active_devices ?? 0,
-          latestTimestamp: null,
-        });
-      }
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      setDashboardError('Failed to load device dashboards');
+    if (healthData) {
+      setTelemetrySummary({
+        totalPoints: healthData.total_telemetry_points ?? 0,
+        deviceCount: healthData.active_devices ?? 0,
+        latestTimestamp: null,
+      });
     }
   };
 
@@ -800,8 +794,7 @@ const Devices: React.FC = () => {
         <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)', marginTop: '32px' }}>
           <div className="card">
             <h2>System Health</h2>
-            {dashboardError && <p className="error">{dashboardError}</p>}
-            {!dashboardError && !health && <p>Loading system health...</p>}
+            {!health && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading system health...</p>}
             {health && (
               <div>
                 <p><strong>Overall:</strong> {health.overall_health}</p>
@@ -813,8 +806,7 @@ const Devices: React.FC = () => {
 
           <div className="card">
             <h2>Telemetry Snapshot</h2>
-            {dashboardError && <p className="error">{dashboardError}</p>}
-            {!dashboardError && !health && <p>Loading telemetry...</p>}
+            {!health && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading telemetry...</p>}
             {health && (
               <div>
                 <p><strong>Total Points:</strong> {(health.total_telemetry_points ?? 0).toLocaleString()}</p>

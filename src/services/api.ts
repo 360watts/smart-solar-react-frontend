@@ -296,13 +296,13 @@ class ApiService {
     if (params?.end_date) query.append('end_date', params.end_date);
     if (params?.days) query.append('days', params.days.toString());
     const url = `/sites/${siteId}/telemetry/${query.toString() ? '?' + query.toString() : ''}`;
-    // 60-second TTL: live data changes frequently but a 1-min cache avoids duplicate fetches
-    // on tab switches and rapid re-renders without showing stale data
+    // 55-second TTL: slightly under the 60-second auto-refresh interval so the
+    // next poll always fetches fresh data rather than hitting a same-age cache.
     const cacheKey = `telemetry_${siteId}_${query.toString()}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
     const data = await this.request(url);
-    cacheService.set(cacheKey, data, 60 * 1000);
+    cacheService.set(cacheKey, data, 55 * 1000);
     return data;
   }
 

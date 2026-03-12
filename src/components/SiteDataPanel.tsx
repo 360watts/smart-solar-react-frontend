@@ -88,6 +88,12 @@ function istDateOffset(n: number): string {
   return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS)); // back to UTC Date
 }
 
+/** Start of today 00:00:00 in IST as ISO string (for API). Use for "Today" range so the graph shows only today's data, not rolling 24h. */
+function startOfTodayIST(): string {
+  const todayStr = istDate(new Date());
+  return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
+}
+
 function fmt(ts: string, range: string): string {
   try {
     const d = new Date(ts);
@@ -470,12 +476,26 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
   const [forecastWindow,  setForecastWindow]  = useState<'today' | '3d' | '7d'>('7d');
 
-  // Drag-to-zoom state (stock-chart style)
+  // Drag-to-zoom state (stock-chart style) — Forecast tab
   const [refAreaLeft,  setRefAreaLeft]  = useState('');
   const [refAreaRight, setRefAreaRight] = useState('');
   const [isSelecting,  setIsSelecting]  = useState(false);
   const [zoomStart,    setZoomStart]    = useState<string | null>(null);
   const [zoomEnd,      setZoomEnd]      = useState<string | null>(null);
+
+  // Drag-to-zoom state — History tab
+  const [historyRefAreaLeft,  setHistoryRefAreaLeft]  = useState('');
+  const [historyRefAreaRight, setHistoryRefAreaRight] = useState('');
+  const [historyIsSelecting,  setHistoryIsSelecting]  = useState(false);
+  const [historyZoomStart,    setHistoryZoomStart]    = useState<string | null>(null);
+  const [historyZoomEnd,      setHistoryZoomEnd]      = useState<string | null>(null);
+
+  // Drag-to-zoom state — vsActual chart (Forecast tab)
+  const [vsActualRefAreaLeft,  setVsActualRefAreaLeft]  = useState('');
+  const [vsActualRefAreaRight, setVsActualRefAreaRight] = useState('');
+  const [vsActualIsSelecting,  setVsActualIsSelecting]  = useState(false);
+  const [vsActualZoomStart,    setVsActualZoomStart]    = useState<string | null>(null);
+  const [vsActualZoomEnd,      setVsActualZoomEnd]      = useState<string | null>(null);
 
   // Dark-mode-aware tooltip style for recharts — memoized so recharts never gets a new object ref
   const tooltipStyle = useMemo(() => ({
@@ -496,8 +516,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       const forecastEnd   = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
 
       // Telemetry from DynamoDB based on selected date range
+      // "Today" (24h): from start of today IST to now — avoids showing yesterday's data (API default is rolling 24h UTC).
       let telemetryParams: any = {};
-      if      (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
+      if      (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
+      else if (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
       else if (dateRange === '7d')  telemetryParams = { days: 7 };
       else if (dateRange === '30d') telemetryParams = { days: 30 };
 
@@ -558,6 +580,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     setZoomStart(null);
     setZoomEnd(null);
   }, [forecastWindow]);
+
+  // Reset History chart zoom when date range changes
+  useEffect(() => {
+    setHistoryZoomStart(null);
+    setHistoryZoomEnd(null);
+  }, [dateRange]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
@@ -626,6 +654,35 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
   }, [historyData, dateRange]);
 
+  // Zoom-sliced data for History chart (drag-to-zoom, same pattern as Forecast)
+  const zoomedHistoryData = useMemo(() => {
+    if (!historyZoomStart || !historyZoomEnd || historyData.length === 0) return historyData;
+    const li = historyData.findIndex(d => d.time === historyZoomStart);
+    const ri = historyData.findIndex(d => d.time === historyZoomEnd);
+    if (li === -1 || ri === -1 || li === ri) return historyData;
+    const [s, e] = li < ri ? [li, ri] : [ri, li];
+    return historyData.slice(s, e + 1);
+  }, [historyData, historyZoomStart, historyZoomEnd]);
+
+  // History stats for the visible range (zoomed or full) — summaries match what's on the chart
+  const historyStatsVisible = useMemo(() => {
+    const data = zoomedHistoryData;
+    if (!data.length) return null;
+    const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24;
+    const loads = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
+    const grids = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
+    const socs  = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
+    const loadTotal   = loads.reduce((s, v) => s + v, 0) * intervalH;
+    const loadPeak    = loads.length ? Math.max(...loads) : 0;
+    const loadAvg     = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
+    const gridImport  = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
+    const gridExport  = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
+    const socMin      = socs.length ? Math.min(...socs) : null;
+    const socMax      = socs.length ? Math.max(...socs) : null;
+    const socAvg      = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
+    return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
+  }, [zoomedHistoryData, dateRange]);
+
   // ── Prediction vs Actual ────────────────────────────────────────────────────
   // Joins today's forecast P50 slots with nearest actual telemetry reading.
   // Uses a ±15 min window; slot is left blank if no telemetry falls within it.
@@ -637,18 +694,28 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     });
     if (!todayForecast.length || !telemetry.length) return [];
 
+    // Build a sorted timestamp index once — O(n) — then binary-search per
+    // forecast slot instead of scanning the full telemetry array each time.
+    // Reduces complexity from O(forecast × telemetry) → O((n+m) log n).
     const WINDOW_MS = 15 * 60 * 1000; // ±15 min
+    const telTs = telemetry.map(t => ({ ms: new Date(t.timestamp).getTime(), row: t }));
+    telTs.sort((a, b) => a.ms - b.ms);
+    const tsMsArr = telTs.map(t => t.ms);
+
     return todayForecast.map(frow => {
       const clean = frow.forecast_for || frow.timestamp.replace('FORECAST#', '');
       const fTs   = new Date(clean).getTime();
       const label = new Date(clean).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
 
-      // find nearest actual reading within ±15 min
+      // Binary search for insertion point, then check neighbours
+      let lo = 0, hi = tsMsArr.length;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (tsMsArr[mid] < fTs) lo = mid + 1; else hi = mid; }
       let nearest: any = null;
       let minDiff = Infinity;
-      for (const t of telemetry) {
-        const diff = Math.abs(new Date(t.timestamp).getTime() - fTs);
-        if (diff < minDiff && diff <= WINDOW_MS) { minDiff = diff; nearest = t; }
+      for (const idx of [lo - 1, lo]) {
+        if (idx < 0 || idx >= telTs.length) continue;
+        const diff = Math.abs(telTs[idx].ms - fTs);
+        if (diff < minDiff && diff <= WINDOW_MS) { minDiff = diff; nearest = telTs[idx].row; }
       }
 
       const actualKw = nearest
@@ -662,6 +729,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       return { label, fTs, p50, actual: actualKw, diffPct };
     });
   }, [forecast, telemetry]);
+
+  // Zoom-sliced data for vsActual chart (drag-to-zoom)
+  const zoomedVsActualData = useMemo(() => {
+    if (!vsActualZoomStart || !vsActualZoomEnd || vsActualData.length === 0) return vsActualData;
+    const li = vsActualData.findIndex(d => d.label === vsActualZoomStart);
+    const ri = vsActualData.findIndex(d => d.label === vsActualZoomEnd);
+    if (li === -1 || ri === -1 || li === ri) return vsActualData;
+    const [s, e] = li < ri ? [li, ri] : [ri, li];
+    return vsActualData.slice(s, e + 1);
+  }, [vsActualData, vsActualZoomStart, vsActualZoomEnd]);
 
   // Filter + map forecast — memoized on forecast array and window selection
   const { forecastFiltered, forecastData } = useMemo(() => {
@@ -1041,9 +1118,27 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
                 </p>
               </div>
-              <div style={{ height: 240, minHeight: 240, width: '100%', minWidth: 0 }}>
+              <div style={{ height: 240, minHeight: 240, width: '100%', minWidth: 0, position: 'relative', userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
                 <ResponsiveContainer width="100%" height="100%" minHeight={240}>
-                  <AreaChart data={historyData} margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}>
+                  <AreaChart
+                    data={zoomedHistoryData}
+                    margin={{ top: 4, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 20 : 0 }}
+                    onMouseDown={(e: any) => {
+                      if (e?.activeLabel) { setHistoryRefAreaLeft(e.activeLabel); setHistoryIsSelecting(true); }
+                    }}
+                    onMouseMove={(e: any) => {
+                      if (historyIsSelecting && e?.activeLabel) setHistoryRefAreaRight(e.activeLabel);
+                    }}
+                    onMouseUp={() => {
+                      if (historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight) {
+                        setHistoryZoomStart(historyRefAreaLeft);
+                        setHistoryZoomEnd(historyRefAreaRight);
+                      }
+                      setHistoryIsSelecting(false);
+                      setHistoryRefAreaLeft('');
+                      setHistoryRefAreaRight('');
+                    }}
+                  >
                     <defs>
                       <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
@@ -1057,7 +1152,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
                     <XAxis
                       dataKey="time" stroke="var(--text-muted)"
-                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(historyData.length / 10)}
+                      interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(zoomedHistoryData.length / 10)}
                       angle={dateRange === '7d' || dateRange === '30d' ? -15 : 0}
                       textAnchor={dateRange === '7d' || dateRange === '30d' ? 'end' : 'middle'}
                       tick={{ fontSize: dateRange === '30d' ? 9 : 10, fill: 'var(--text-muted)' }}
@@ -1070,13 +1165,35 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} />
                     <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
                     <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" />
+                    {historyIsSelecting && historyRefAreaLeft && historyRefAreaRight && (
+                      <ReferenceArea x1={historyRefAreaLeft} x2={historyRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
+                {(historyZoomStart || historyZoomEnd) && (
+                  <button
+                    type="button"
+                    onClick={() => { setHistoryZoomStart(null); setHistoryZoomEnd(null); }}
+                    style={{
+                      position: 'absolute', top: 8, right: 48,
+                      background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
+                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
+                      borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
+                      color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    ↺ Reset Zoom
+                  </button>
+                )}
+                <div style={{ position: 'absolute', bottom: 6, left: 4, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                  {historyZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+                </div>
               </div>
             </div>
 
-            {/* ── History analytics summary ── */}
-            {historyStats && (
+            {/* ── History analytics summary (reflects zoomed range when zoomed) ── */}
+            {historyStatsVisible && (
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
 
                 {/* Load */}
@@ -1086,9 +1203,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
                     {[
-                      { label: 'Consumption', value: `${historyStats.loadTotal.toFixed(2)} kWh` },
-                      { label: 'Peak',        value: `${historyStats.loadPeak.toFixed(2)} kW`  },
-                      { label: 'Avg',         value: `${historyStats.loadAvg.toFixed(2)} kW`   },
+                      { label: 'Consumption', value: `${historyStatsVisible.loadTotal.toFixed(2)} kWh` },
+                      { label: 'Peak',        value: `${historyStatsVisible.loadPeak.toFixed(2)} kW`  },
+                      { label: 'Avg',         value: `${historyStatsVisible.loadAvg.toFixed(2)} kW`   },
                     ].map(r => (
                       <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
@@ -1105,9 +1222,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
                     {[
-                      { label: 'Imported',  value: `${historyStats.gridImport.toFixed(2)} kWh`, color: '#3b82f6' },
-                      { label: 'Exported',  value: `${historyStats.gridExport.toFixed(2)} kWh`, color: '#10b981' },
-                      { label: 'Net',       value: `${(historyStats.gridImport - historyStats.gridExport).toFixed(2)} kWh`, color: (historyStats.gridImport - historyStats.gridExport) > 0 ? '#3b82f6' : '#10b981' },
+                      { label: 'Imported',  value: `${historyStatsVisible.gridImport.toFixed(2)} kWh`, color: '#3b82f6' },
+                      { label: 'Exported',  value: `${historyStatsVisible.gridExport.toFixed(2)} kWh`, color: '#10b981' },
+                      { label: 'Net',       value: `${(historyStatsVisible.gridImport - historyStatsVisible.gridExport).toFixed(2)} kWh`, color: (historyStatsVisible.gridImport - historyStatsVisible.gridExport) > 0 ? '#3b82f6' : '#10b981' },
                     ].map(r => (
                       <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
@@ -1118,16 +1235,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 </div>
 
                 {/* Battery */}
-                {historyStats.socAvg != null && (
+                {historyStatsVisible.socAvg != null && (
                   <div className="card" style={{ flex: 1, minWidth: 180, padding: '0.9rem 1rem' }}>
                     <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00a63e', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       <IconBattery /> Battery SOC
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
                       {[
-                        { label: 'Avg SOC', value: `${historyStats.socAvg.toFixed(1)} %` },
-                        { label: 'Min SOC', value: `${historyStats.socMin!.toFixed(1)} %`, color: historyStats.socMin! < 20 ? '#ef4444' : historyStats.socMin! < 40 ? '#f59e0b' : undefined },
-                        { label: 'Max SOC', value: `${historyStats.socMax!.toFixed(1)} %` },
+                        { label: 'Avg SOC', value: `${historyStatsVisible.socAvg.toFixed(1)} %` },
+                        { label: 'Min SOC', value: `${historyStatsVisible.socMin!.toFixed(1)} %`, color: historyStatsVisible.socMin! < 20 ? '#ef4444' : historyStatsVisible.socMin! < 40 ? '#f59e0b' : undefined },
+                        { label: 'Max SOC', value: `${historyStatsVisible.socMax!.toFixed(1)} %` },
                       ].map(r => (
                         <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
                           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
@@ -1393,10 +1510,28 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 </p>
               </div>
 
-              {/* Chart */}
-              <div style={{ height: 200, minHeight: 200, width: '100%', minWidth: 0, marginBottom: '0.75rem' }}>
+              {/* Chart — drag to zoom (same pattern as Forecast / History) */}
+              <div style={{ height: 200, minHeight: 200, width: '100%', minWidth: 0, marginBottom: '0.75rem', position: 'relative', userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
                 <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-                  <AreaChart data={vsActualData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <AreaChart
+                    data={zoomedVsActualData}
+                    margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+                    onMouseDown={(e: any) => {
+                      if (e?.activeLabel) { setVsActualRefAreaLeft(e.activeLabel); setVsActualIsSelecting(true); }
+                    }}
+                    onMouseMove={(e: any) => {
+                      if (vsActualIsSelecting && e?.activeLabel) setVsActualRefAreaRight(e.activeLabel);
+                    }}
+                    onMouseUp={() => {
+                      if (vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight) {
+                        setVsActualZoomStart(vsActualRefAreaLeft);
+                        setVsActualZoomEnd(vsActualRefAreaRight);
+                      }
+                      setVsActualIsSelecting(false);
+                      setVsActualRefAreaLeft('');
+                      setVsActualRefAreaRight('');
+                    }}
+                  >
                     <defs>
                       <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%"  stopColor="#F07522" stopOpacity={0.25}/>
@@ -1404,19 +1539,41 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,166,62,0.08)'} />
-                    <XAxis dataKey="label" stroke="var(--text-muted)" interval={Math.ceil(vsActualData.length / 8)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                    <XAxis dataKey="label" stroke="var(--text-muted)" interval={Math.ceil(zoomedVsActualData.length / 8)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                     <YAxis stroke="var(--text-muted)" tickFormatter={(v: number) => `${v}kW`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                     <Tooltip contentStyle={tooltipStyle} formatter={(v: any, name: any) => [`${v} kW`, name]} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins, sans-serif', color: 'var(--text-secondary)' }} />
                     <Area type="monotone" dataKey="actual" name="Actual PV" stroke="#F07522" strokeWidth={2} fill="url(#actualGrad)" dot={false} connectNulls={false} />
                     <Line type="monotone" dataKey="p50"    name="P50 Forecast" stroke="#00a63e" strokeWidth={2} dot={false} strokeDasharray="5 3" />
+                    {vsActualIsSelecting && vsActualRefAreaLeft && vsActualRefAreaRight && (
+                      <ReferenceArea x1={vsActualRefAreaLeft} x2={vsActualRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
+                {(vsActualZoomStart || vsActualZoomEnd) && (
+                  <button
+                    type="button"
+                    onClick={() => { setVsActualZoomStart(null); setVsActualZoomEnd(null); }}
+                    style={{
+                      position: 'absolute', top: 8, right: 8,
+                      background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
+                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
+                      borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
+                      color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    ↺ Reset Zoom
+                  </button>
+                )}
+                <div style={{ position: 'absolute', bottom: 6, left: 4, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
+                  {vsActualZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+                </div>
               </div>
 
-              {/* Per-slot deviation summary */}
+              {/* Per-slot deviation summary (uses zoomed data when zoomed) */}
               {(() => {
-                const paired = vsActualData.filter(d => d.actual != null && d.diffPct != null);
+                const paired = zoomedVsActualData.filter(d => d.actual != null && d.diffPct != null);
                 if (!paired.length) return (
                   <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
                     No matched actual readings yet — chart will populate as telemetry arrives.
