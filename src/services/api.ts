@@ -117,7 +117,7 @@ class ApiService {
         const data = await response.json();
         const newTokens = {
           access: data.access,
-          refresh: parsedTokens.refresh, // Keep the same refresh token
+          refresh: data.refresh ?? parsedTokens.refresh, // Use rotated token if server sent one
         };
         localStorage.setItem('authTokens', JSON.stringify(newTokens));
         return true;

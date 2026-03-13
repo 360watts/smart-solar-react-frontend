@@ -297,8 +297,9 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
 
 // ── Daily Energy Breakdown ─────────────────────────────────────────────────────
 
-const EnergyBreakdownRow = ({ latest }: { latest: any }) => {
+const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
   if (!latest) return null;
+  if (!isLatestToday) return null;
   const items = [
     { label: 'PV Yield',    value: latest.pv_today_kwh,              color: '#F07522', bg: '#F0752212', icon: '☀' },
     { label: 'Grid In',     value: latest.grid_buy_today_kwh,         color: '#3b82f6', bg: '#3b82f612', icon: '⬇' },
@@ -331,8 +332,8 @@ const EnergyBreakdownRow = ({ latest }: { latest: any }) => {
 
 // ── Solar Insights Row ─────────────────────────────────────────────────────────
 
-const InsightsRow = ({ latest }: { latest: any }) => {
-  if (!latest) return null;
+const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
+  if (!latest || !isLatestToday) return null;
 
   const pvKwh    = Number(latest.pv_today_kwh      ?? 0);
   const loadKwh  = Number(latest.load_today_kwh    ?? 0);
@@ -716,6 +717,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const invTemp    = latest?.inverter_temp_c   ?? null;
   const batVoltage = latest?.battery_voltage_v ?? null;
   const runState   = latest?.run_state;
+
+  // Guard: daily-accumulator registers (pv_today_kwh, load_today_kwh, etc.) reset at Deye
+  // midnight. If the latest packet is from a previous day, those values belong to that day —
+  // showing them under "Today" would be misleading.
+  const isLatestToday = latest?.timestamp
+    ? istDate(new Date(latest.timestamp)) === istDate(new Date())
+    : false;
 
   const gridImporting  = gridKw     != null && gridKw     > 0.01;
   const gridExporting  = gridKw     != null && gridKw     < -0.01;
@@ -1162,8 +1170,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
           </div>
 
           {/* Daily energy breakdown */}
-          <EnergyBreakdownRow latest={latest} />
-          <InsightsRow latest={latest} />
+          <EnergyBreakdownRow latest={latest} isLatestToday={isLatestToday} />
+          <InsightsRow latest={latest} isLatestToday={isLatestToday} />
 
         </>)}
 

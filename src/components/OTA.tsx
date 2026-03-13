@@ -605,7 +605,7 @@ export const OTA: React.FC = () => {
           marginBottom: '2rem',
           border: isDark ? '1px solid #404040' : '1px solid #dee2e6'
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+          <div className="responsive-grid-auto-fit">
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Firmware Name *
@@ -721,7 +721,7 @@ export const OTA: React.FC = () => {
             />
           </div>
 
-          <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'end' }}>
+          <div className="responsive-grid-2" style={{ marginTop: '1rem', alignItems: 'end' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
                 Firmware File (.bin) *
@@ -962,7 +962,7 @@ export const OTA: React.FC = () => {
           Deployment Panel
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div className="responsive-grid-auto-fit">
           <div>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
               Select Firmware Version *
@@ -1358,7 +1358,7 @@ export const OTA: React.FC = () => {
                     ID: {activeDeployment.id}
                   </span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.9rem' }}>
+                <div className="responsive-grid-auto-fit" style={{ fontSize: '0.9rem' }}>
                   <div>
                     <strong>Firmware:</strong> {activeDeployment.target_firmware?.version || 'N/A'}
                   </div>
@@ -1390,8 +1390,8 @@ export const OTA: React.FC = () => {
             
             {/* Summary Metrics */}
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+            
+            
           gap: '1rem',
           marginBottom: '2rem'
         }}>
@@ -1605,7 +1605,7 @@ export const OTA: React.FC = () => {
           <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#495057' }}>
             Device Selection & Filters
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.85rem' }}>
                 Filter by Current Version

@@ -640,7 +640,7 @@ p {
 
 .grid-cols-2 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: var(--space-6);
   margin: var(--space-6) 0;
   align-items: stretch;
@@ -915,7 +915,7 @@ p {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: var(--space-5);
 }
 
@@ -1277,15 +1277,15 @@ p {
 }
 
 .form-grid-2 {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
 .form-grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
 
 .form-grid-auto {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
 }
 
 /* Form Group */
@@ -1499,14 +1499,7 @@ p {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .form-grid-2,
-  .form-grid-3 {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-grid-auto {
-    grid-template-columns: 1fr 1fr;
-  }
+  /* Utility grid classes are now responsive by default */
 }
 
 /* Large Modal (User Dashboard) */
@@ -5032,7 +5025,7 @@ body::before {
 }
 
 .slave-config-modal .form-grid-auto {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 }
 
 .slave-config-modal .form-group-btn {
@@ -5057,11 +5050,7 @@ body::before {
 }
 
 @media (max-width: 640px) {
-  .slave-config-modal .form-grid-2,
-  .slave-config-modal .form-grid-3,
-  .slave-config-modal .form-grid-auto {
-    grid-template-columns: 1fr;
-  }
+  /* Modal-specific grid overrides removed as they now follow global responsive patterns */
 }
 
 /* ============================================
@@ -5280,11 +5269,11 @@ body::before {
 }
 
 .form-grid-2 {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
 .form-grid-4 {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
 }
 
 .full-width {
@@ -7987,15 +7976,10 @@ body.dark-mode .config-arrow {
 }
 
 /* ── KPI / stat card grids ── */
-@media (max-width: 1023px) {
-  .kpi-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
-}
-@media (max-width: 640px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
+.kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)) !important;
+  gap: var(--space-4) !important;
 }
 
 /* ── Responsive 2-col card grids → 1-col on mobile ── */
@@ -8114,7 +8098,9 @@ body.dark-mode .config-arrow {
 }
 
 .alerts-overview-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  gap: 1.5rem;
 }
 
 .alerts-tab-list {
@@ -8385,27 +8371,15 @@ body.dark-mode .config-arrow {
 }
 
 @media (max-width: 1024px) {
-  .page-transition {
-    margin-left: 70px !important;
-    width: calc(100% - 70px) !important;
-  }
-
+  .page-transition,
   .breadcrumbs {
-    margin-left: 70px !important;
-    width: calc(100% - 70px) !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-
-  .main-content {
     margin-left: 0 !important;
     width: 100% !important;
   }
 
-  .modal,
-  .modal-overlay {
-    left: 70px !important;
-    width: calc(100% - 70px) !important;
+  .main-content {
+    margin-left: 0 !important;
+    padding-top: calc(var(--space-4, 16px) + 52px) !important;
   }
 }
 
@@ -8608,4 +8582,45 @@ body.dark-mode .config-arrow {
     justify-content: center !important;
     padding: 10px !important;
   }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Grid Utilities
+   -------------------------------------------------------------------------- */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.responsive-grid-auto-fit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-4, 16px);
+}
+
+.responsive-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-4, 16px);
+}
+
+@media (max-width: 1024px) {
+  /* No longer need explicit repeat(2, 1fr) for grid-4 as minmax handles it */
+}
+
+@media (max-width: 768px) {
+  /* Utility grid classes are now responsive by default */
 }

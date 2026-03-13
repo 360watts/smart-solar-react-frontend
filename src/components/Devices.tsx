@@ -601,7 +601,7 @@ const Devices: React.FC = () => {
             </div>
           </div>
           <div style={{ padding: '20px' }}>
-            <div className="device-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+            <div className="device-info-grid responsive-grid-2">
               <div>
                 <strong>Status:</strong>
                 <p style={{ margin: '5px 0' }}>
@@ -665,7 +665,7 @@ const Devices: React.FC = () => {
                   )}
                 </div>
                 {selectedDevice.config_version && (
-                  <div className="device-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '0.8rem' }}>
+                  <div className="device-info-grid responsive-grid-2">
                     <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
                       <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Preset ID</div>
                       <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>{selectedDevice.config_version}</div>
@@ -831,7 +831,7 @@ const Devices: React.FC = () => {
                   {bufferStats.status.toUpperCase()}
                 </span>
               </h2>
-              <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div className="grid-cols-3 responsive-grid-3">
                 <p><strong>Total Records:</strong> {bufferStats.total.toLocaleString()}</p>
                 <p><strong>Pending DynamoDB:</strong> {bufferStats.pending_dynamo}</p>
                 <p><strong>Pending S3:</strong> {bufferStats.pending_s3}</p>
@@ -879,7 +879,7 @@ const Devices: React.FC = () => {
             ) : !siteDetails ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No site configured for this device yet.</p>
             ) : (
-              <div className="grid-cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+              <div className="grid-cols-3 responsive-grid-3">
                 <div><strong>Site ID:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem', color: '#00a63e' }}>{siteDetails.site_id}</p></div>
                 <div><strong>Display Name:</strong><p style={{ margin: '4px 0' }}>{siteDetails.display_name || '—'}</p></div>
                 <div><strong>Status:</strong><p style={{ margin: '4px 0' }}><span className={siteDetails.is_active ? 'status-badge status-badge-success' : 'status-badge status-badge-danger'}>{siteDetails.is_active ? 'Active' : 'Inactive'}</span></p></div>

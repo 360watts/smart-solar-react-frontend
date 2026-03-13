@@ -1051,7 +1051,7 @@ const DevicePresets: React.FC = () => {
           <div className="modal-content" style={{ maxWidth: '700px' }}>
             <h3 style={{ marginBottom: 12 }}>Gateway Configuration: {selectedPreset.name}</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16, paddingLeft: 20 }}>
+            <div className="responsive-grid-2" style={{ marginBottom: 16, paddingLeft: 20 }}>
               <div>
                 <h4 style={{ marginBottom: 8 }}>General Settings</h4>
                 <div style={{ paddingLeft: 0 }}>

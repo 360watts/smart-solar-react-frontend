@@ -196,7 +196,7 @@ const Alerts: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="alerts-overview-grid" style={{ display: 'grid', gap: '1.5rem' }}>
+        <div className="alerts-overview-grid">
           <div className="admin-card">
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -207,7 +207,7 @@ const Alerts: React.FC = () => {
               </svg>
               Alert Summary
             </h2>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="responsive-grid-2" style={{ gap: '1rem' }}>
               <div style={{ padding: '1rem', background: isDark ? '#242424' : 'var(--bg-secondary)', borderRadius: '8px' }}>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Alerts</p>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : '#2c3e50' }}>{alerts.length}</p>
@@ -389,7 +389,7 @@ const Alerts: React.FC = () => {
       )}
 
       {activeTab === 'analytics' && (
-        <div className="alerts-overview-grid" style={{ display: 'grid', gap: '1.5rem' }}>
+        <div className="alerts-overview-grid">
           <div className="admin-card">
             <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -398,7 +398,7 @@ const Alerts: React.FC = () => {
               </svg>
               By Severity
             </h2>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="responsive-grid-auto-fit" style={{ gap: '1rem' }}>
               {[
                 { severity: 'critical', count: alerts.filter(a => a.severity === 'critical').length, color: '#ef4444', label: 'Critical' },
                 { severity: 'warning', count: alerts.filter(a => a.severity === 'warning').length, color: '#f59e0b', label: 'Warnings' },
@@ -427,7 +427,7 @@ const Alerts: React.FC = () => {
               </svg>
               By Status
             </h2>
-            <div style={{ display: 'grid', gap: '1rem' }}>
+            <div className="responsive-grid-auto-fit" style={{ gap: '1rem' }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -479,7 +479,7 @@ const Alerts: React.FC = () => {
                 <p>No critical alerts - system is stable</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div className="responsive-grid-auto-fit" style={{ gap: '0.75rem' }}>
                 {alerts.filter(a => a.severity === 'critical').slice(0, 5).map(alert => (
                   <div key={alert.id} style={{
                     display: 'flex',

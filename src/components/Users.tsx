@@ -243,7 +243,7 @@ const Users: React.FC = () => {
             </button>
           </div>
           <div style={{ padding: '20px' }}>
-            <div className="device-info-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
+            <div className="device-info-grid responsive-grid-2">
               <div>
                 <strong>Username:</strong>
                 <p style={{ margin: '5px 0' }}>{selectedUser.username}</p>
