@@ -1,5 +1,5 @@
 /**
- * SiteDataPanel — solar site intelligence panel
+ * SiteDataPanel — solar site intelligence panel with modern 3D animations & UX
  *
  * Tabs:
  *  - Overview: 6 live KPI cards + energy breakdown + insights
@@ -7,12 +7,13 @@
  *  - History:  power area chart with Battery SOC on secondary axis
  *  - Forecast: P10/P50/P90 + physics baseline, regime tags, % achieved
  */
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   AreaChart, Area, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, ReferenceArea,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea,
 } from 'recharts';
-import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Zap, Activity, Thermometer, BarChart3, GitCompare } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../constants';
@@ -28,106 +29,203 @@ const TABS = [
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
+const HISTORY_SERIES = [
+  { key: 'PV', label: 'PV' },
+  { key: 'Load', label: 'Load' },
+  { key: 'Grid', label: 'Grid' },
+  { key: 'SOC', label: 'SOC' },
+] as const;
+type HistorySeriesKey = typeof HISTORY_SERIES[number]['key'];
+
+const VS_ACTUAL_SERIES = [
+  { key: 'Actual', label: 'Actual' },
+  { key: 'P50', label: 'P50' },
+  { key: 'Delta', label: 'Δ %' },
+] as const;
+type VsActualSeriesKey = typeof VS_ACTUAL_SERIES[number]['key'];
+
+// ── Animation Variants ──────────────────────────────────────────────────────────
+
+const kpiCardVariants = {
+  initial: { opacity: 0, scale: 0.8, rotateX: -15 },
+  animate: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    rotateX: 0,
+    transition: {
+      delay: i * 0.08,
+      type: 'spring' as const,
+      stiffness: 200,
+      damping: 15
+    }
+  }),
+  hover: {
+    scale: 1.05,
+    rotateY: 2,
+    rotateX: -2,
+    boxShadow: '0 15px 35px rgba(0, 166, 62, 0.2)',
+    transition: { type: 'spring' as const, stiffness: 300, damping: 20 }
+  }
+};
+
+const tabTransition = {
+  type: 'spring' as const,
+  stiffness: 300,
+  damping: 30
+};
+
+const pulseAnimation = {
+  scale: [1, 1.05, 1],
+  opacity: [0.7, 1, 0.7],
+  transition: {
+    duration: 2,
+    repeat: Infinity,
+    ease: 'easeInOut' as const
+  }
+};
+
+// ── Animated Number Counter ────────────────────────────────────────────────────
+
+const AnimatedNumber: React.FC<{ value: number; decimals?: number }> = ({ value, decimals = 2 }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    const prevValue = prevValueRef.current;
+    const diff = value - prevValue;
+    const steps = 20;
+    const increment = diff / steps;
+    let currentStep = 0;
+
+    const interval = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        setDisplayValue(value);
+        clearInterval(interval);
+      } else {
+        setDisplayValue(prevValue + increment * currentStep);
+      }
+    }, 30);
+
+    prevValueRef.current = value;
+    return () => clearInterval(interval);
+  }, [value]);
+
+  return <>{displayValue.toFixed(decimals)}</>;
+};
+
 // ── Custom forecast tooltip ────────────────────────────────────────────────────
 
 const ForecastTooltip = ({ active, payload, label }: any) => {
   const { isDark } = useTheme();
   if (!active || !payload || !payload.length) return null;
   return (
-    <div style={{
-      background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-      backdropFilter: 'blur(8px)',
-      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`,
-      borderRadius: 12,
-      padding: '0.75rem 1rem',
-      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-      minWidth: 140, maxWidth: '90vw',
-    }}>
-      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, paddingBottom: '0.25rem' }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(12px)',
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}`,
+        borderRadius: 12,
+        padding: '12px 16px',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+        minWidth: 160,
+      }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
         {label}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-        {payload.map((entry: any) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {payload.map((entry: any, idx: number) => {
           const unit = entry.name?.includes('Temp') ? '°C' : entry.name?.includes('GHI') ? 'W/m²' : 'kW';
           return (
-            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
+            <motion.div
+              key={entry.name}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>{entry.name?.split(' ')[0]}</span>
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
                 {Number(entry.value).toFixed(3)} {unit}
               </span>
-            </div>
+            </motion.div>
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-/** Reusable chart tooltip matching Forecast style; unitResolver(entry) returns unit string (default 'kW'). */
+/** Reusable chart tooltip matching Forecast style */
 const ChartTooltip = ({ active, payload, label, unitResolver }: { active?: boolean; payload?: any[]; label?: string; unitResolver?: (entry: any) => string }) => {
   const { isDark } = useTheme();
   if (!active || !payload || !payload.length) return null;
   const getUnit = unitResolver ?? (() => 'kW');
   return (
-    <div style={{
-      background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-      backdropFilter: 'blur(8px)',
-      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`,
-      borderRadius: 12,
-      padding: '0.75rem 1rem',
-      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-      minWidth: 140, maxWidth: '90vw',
-    }}>
-      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.85rem', marginBottom: '0.4rem', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, paddingBottom: '0.25rem' }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(12px)',
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}`,
+        borderRadius: 12,
+        padding: '12px 16px',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+        minWidth: 160,
+      }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
         {label}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-        {payload.map((entry: any) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {payload.map((entry: any, idx: number) => {
           const unit = getUnit(entry);
           const val = entry.value != null ? Number(entry.value).toFixed(3) : '—';
           return (
-            <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
+            <motion.div
+              key={entry.name}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>{entry.name ?? ''}</span>
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: isDark ? '#f1f5f9' : '#111827' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
                 {val} {unit}
               </span>
-            </div>
+            </motion.div>
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-// All time displays use IST (Asia/Kolkata, UTC+5:30) — the site is in India.
 const IST = IST_TIMEZONE;
 
-/** Returns the ISO date string (YYYY-MM-DD) for a Date in IST, e.g. "2026-02-26" */
 function istDate(d: Date): string {
-  return d.toLocaleDateString('en-CA', { timeZone: IST }); // en-CA locale → YYYY-MM-DD
+  return d.toLocaleDateString('en-CA', { timeZone: IST });
 }
 
-/**
- * Returns the YYYY-MM-DD string in IST that is N calendar days after today IST.
- * n=0 → today IST, n=1 → tomorrow IST, n=3 → 3 days from today IST.
- * Uses IST midnight as the reference so the result is always a clean calendar day.
- */
 function istDateOffset(n: number): string {
-  const IST_MS = 5.5 * 60 * 60 * 1000;               // UTC+5:30 in ms
+  const IST_MS = 5.5 * 60 * 60 * 1000;
   const nowIST = Date.now() + IST_MS;
-  const istMidnightMS = Math.floor(nowIST / 86400000) * 86400000;  // floor to IST midnight
-  return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS)); // back to UTC Date
+  const istMidnightMS = Math.floor(nowIST / 86400000) * 86400000;
+  return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS));
 }
 
-/** Start of today 00:00:00 in IST as ISO string (for API). Use for "Today" range so the graph shows only today's data, not rolling 24h. */
 function startOfTodayIST(): string {
   const todayStr = istDate(new Date());
   return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
@@ -141,7 +239,6 @@ function fmt(ts: string, range: string): string {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: IST });
   } catch { return ts; }
 }
-
 
 function aggregateByPeriod(data: any[], range: string): any[] {
   if (!data.length) return [];
@@ -174,43 +271,129 @@ function aggregateByPeriod(data: any[], range: string): any[] {
   });
 }
 
-// ── Icons (Lucide) ─────────────────────────────────────────────────────────────
+function buildSparseCategoryTicks<T>(data: T[], valueSelector: (row: T) => string, maxTicks = 8): string[] {
+  if (!data.length) return [];
+  if (data.length <= maxTicks) return data.map(valueSelector);
+
+  const step = Math.max(1, Math.ceil((data.length - 1) / (maxTicks - 1)));
+  const ticks: string[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    ticks.push(valueSelector(data[i]));
+  }
+
+  const last = valueSelector(data[data.length - 1]);
+  if (ticks[ticks.length - 1] !== last) ticks.push(last);
+  return ticks;
+}
+
+// ── Icons ──────────────────────────────────────────────────────────────────────
 
 const iconSize = 16;
-const iconSizeSm = 14;
 const IconSunKpi = () => <Sun size={iconSize} className="site-data-panel-icon-solar" />;
 const IconBattery = () => <Battery size={iconSize} />;
 const IconLoad = () => <Home size={iconSize} />;
-const IconEnergy = () => <Zap size={iconSize} />;
-const IconCloud = () => <Cloud size={iconSizeSm} />;
 const IconGrid = () => <Activity size={iconSize} />;
 const IconThermometer = () => <Thermometer size={iconSize} />;
 
-// ── KPI Card ───────────────────────────────────────────────────────────────────
+// ── KPI Card with 3D tilt effect ───────────────────────────────────────────────
 
 interface KpiCardProps {
   label: string; value: string; unit?: string; sub?: string;
   accent: string; icon: React.ReactNode; badge?: React.ReactNode;
+  index: number;
 }
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge }) => (
-  <div className="card card-3d" style={{ padding: '1.1rem', flex: 1, minWidth: 110 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-      <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{label}</span>
-      <span style={{ width: 28, height: 28, borderRadius: '50%', background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, flexShrink: 0 }}>{icon}</span>
-    </div>
-    <p style={{ margin: 0, fontFamily: 'JetBrains Mono, monospace', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-      {value}{unit && <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: 4 }}>{unit}</span>}
-    </p>
-    {sub   && <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{sub}</p>}
-    {badge && <div style={{ marginTop: '0.3rem' }}>{badge}</div>}
-  </div>
-);
 
-// ── Weather Hourly Forecast Strip ──────────────────────────────────────────────
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge, index }) => {
+  const { isDark } = useTheme();
+  
+  return (
+    <motion.div
+      custom={index}
+      variants={kpiCardVariants as any}
+      initial="initial"
+      animate="animate"
+      whileHover="hover"
+      style={{
+        padding: '20px',
+        flex: 1,
+        minWidth: 130,
+        borderRadius: 16,
+        background: isDark 
+          ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.8))'
+          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        cursor: 'pointer',
+        transformStyle: 'preserve-3d',
+        perspective: 1000,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+          {label}
+        </span>
+        <motion.div
+          whileHover={{ rotate: 360, scale: 1.15 }}
+          transition={{ duration: 0.6 }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            background: `linear-gradient(135deg, ${accent}25, ${accent}15)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: accent,
+            flexShrink: 0,
+            boxShadow: `0 4px 12px ${accent}30`,
+          }}
+        >
+          {icon}
+        </motion.div>
+      </div>
+      <motion.p
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.1 + index * 0.05 }}
+        style={{
+          margin: 0,
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '1.75rem',
+          fontWeight: 800,
+          color: 'var(--text-primary)',
+          lineHeight: 1,
+          background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        {value}
+        {unit && <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: 4 }}>{unit}</span>}
+      </motion.p>
+      {sub && (
+        <motion.p
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 + index * 0.05 }}
+          style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
+        >
+          {sub}
+        </motion.p>
+      )}
+      {badge && <div style={{ marginTop: 8 }}>{badge}</div>}
+    </motion.div>
+  );
+};
 
-const weatherIconSize = 20;
+// ── Weather Hourly Forecast Strip with scroll animation ────────────────────────
+
+const weatherIconSize = 24;
+
 const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
+  const { isDark } = useTheme();
   if (!hourly || hourly.length === 0) return null;
+  
   const getWeatherIcon = (cloud: number, ghi: number, precip: number | null) => {
     if (ghi < 10) return <Moon size={weatherIconSize} />;
     if (precip != null && precip > 60) return <CloudRain size={weatherIconSize} />;
@@ -221,24 +404,39 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
   };
 
   return (
-    <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
-      <p style={{ margin: '0 0 0.65rem', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      style={{
+        padding: '18px 20px',
+        marginBottom: 16,
+        borderRadius: 16,
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.75))'
+          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+      }}
+    >
+      <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <CloudSun size={16} color="#00a63e" />
         24 h Weather Outlook
       </p>
-      <div className="scroll-x" style={{ overflowX: 'auto', paddingTop: 14, paddingBottom: 2 }}>
-        <div style={{ display: 'flex', gap: '0.45rem', minWidth: 'max-content' }}>
+      <div style={{ overflowX: 'auto', paddingTop: 8, paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 8, minWidth: 'max-content' }}>
           {hourly.map((h, i) => {
             const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }); } catch { return ''; } })();
-            const cloud    = h.cloud_cover_pct ?? 0;
-            const ghi      = h.ghi_wm2 ?? 0;
-            const temp     = Number(h.temperature_c ?? 0);
-            const wind     = Number(h.wind_speed_ms ?? 0);
+            const cloud = h.cloud_cover_pct ?? 0;
+            const ghi = h.ghi_wm2 ?? 0;
+            const temp = Number(h.temperature_c ?? 0);
+            const wind = Number(h.wind_speed_ms ?? 0);
             const humidity = h.humidity_pct != null ? Number(h.humidity_pct) : null;
-            const precip   = h.precip_prob_pct != null ? Number(h.precip_prob_pct) : null;
-            const ghiPct   = Math.min(100, (ghi / 900) * 100);
-            const humPct   = humidity != null ? Math.min(100, humidity) : null;
-            const isNow    = i === 0;
-            const wi       = getWeatherIcon(cloud, ghi, precip);
+            const precip = h.precip_prob_pct != null ? Number(h.precip_prob_pct) : null;
+            const ghiPct = Math.min(100, (ghi / 900) * 100);
+            const humPct = humidity != null ? Math.min(100, humidity) : null;
+            const isNow = i === 0;
+            const wi = getWeatherIcon(cloud, ghi, precip);
             const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : '#d1d5db';
             const humColor = humidity == null ? '#d1d5db'
               : humidity > 80 ? '#3b82f6'
@@ -248,106 +446,213 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
               : precip > 60 ? '#1d4ed8'
               : precip > 30 ? '#3b82f6'
               : '#93c5fd';
+
             return (
-              <div key={i} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                background: isNow ? 'rgba(0,166,62,0.09)' : 'rgba(0,0,0,0.025)',
-                border: `1px solid ${isNow ? 'rgba(0,166,62,0.28)' : 'rgba(0,0,0,0.07)'}`,
-                borderRadius: 10, padding: '0.45rem 0.65rem', minWidth: 64, gap: '0.1rem',
-                position: 'relative',
-              }}>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: i * 0.05, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.08, y: -4 }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  background: isNow 
+                    ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.15), rgba(0, 166, 62, 0.08))'
+                    : isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.6)',
+                  border: `1px solid ${isNow ? 'rgba(0, 166, 62, 0.4)' : isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  minWidth: 72,
+                  gap: 3,
+                  position: 'relative',
+                  boxShadow: isNow ? '0 4px 12px rgba(0, 166, 62, 0.25)' : 'none',
+                  cursor: 'pointer',
+                }}
+              >
                 {isNow && (
-                  <span style={{ position: 'absolute', top: -9, fontSize: '0.55rem', fontWeight: 700, background: '#00a63e', color: '#fff', padding: '1px 5px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>NOW</span>
+                  <motion.span
+                    animate={pulseAnimation}
+                    style={{
+                      position: 'absolute',
+                      top: -10,
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      background: '#00a63e',
+                      color: '#fff',
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                      fontFamily: 'Poppins, sans-serif',
+                      boxShadow: '0 2px 8px rgba(0, 166, 62, 0.4)',
+                    }}
+                  >
+                    NOW
+                  </motion.span>
                 )}
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>{time}</span>
-                <span style={{ fontSize: '1.1rem', lineHeight: 1.4 }}>{wi}</span>
-                <span style={{ fontSize: '0.8rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{temp.toFixed(1)}°</span>
-                {/* GHI mini-bar */}
-                <div title={`GHI ${Math.round(ghi)} W/m²`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.08)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
-                  <div style={{ width: `${ghiPct}%`, height: '100%', background: ghiColor, borderRadius: 2 }} />
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>{time}</span>
+                <motion.span
+                  whileHover={{ rotate: 360, scale: 1.2 }}
+                  transition={{ duration: 0.6 }}
+                  style={{ fontSize: '1.2rem', lineHeight: 1.4 }}
+                >
+                  {wi}
+                </motion.span>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {temp.toFixed(1)}°
+                </span>
+                {/* GHI mini-bar with animation */}
+                <div title={`GHI ${Math.round(ghi)} W/m²`} style={{ width: '100%', height: 4, background: 'rgba(0, 0, 0, 0.08)', borderRadius: 2, overflow: 'hidden', margin: '3px 0' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${ghiPct}%` }}
+                    transition={{ delay: i * 0.05 + 0.2, duration: 0.6 }}
+                    style={{ height: '100%', background: ghiColor, borderRadius: 2 }}
+                  />
                 </div>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
                 {/* Humidity bar */}
                 {humPct != null && (
                   <>
-                    <div title={`Humidity ${Math.round(humPct)}%`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
-                      <div style={{ width: `${humPct}%`, height: '100%', background: humColor, borderRadius: 2 }} />
+                    <div title={`Humidity ${Math.round(humPct)}%`} style={{ width: '100%', height: 4, background: 'rgba(0, 0, 0, 0.06)', borderRadius: 2, overflow: 'hidden', margin: '3px 0' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${humPct}%` }}
+                        transition={{ delay: i * 0.05 + 0.3, duration: 0.6 }}
+                        style={{ height: '100%', background: humColor, borderRadius: 2 }}
+                      />
                     </div>
-                    <span style={{ fontSize: '0.6rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>💧{Math.round(humPct)}%</span>
+                    <span style={{ fontSize: '0.625rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                      💧{Math.round(humPct)}%
+                    </span>
                   </>
                 )}
                 {/* Precipitation probability bar */}
                 {precip != null && (
                   <>
-                    <div title={`Rain ${Math.round(precip)}%`} style={{ width: '100%', height: 3, background: 'rgba(0,0,0,0.06)', borderRadius: 2, overflow: 'hidden', margin: '2px 0' }}>
-                      <div style={{ width: `${precip}%`, height: '100%', background: precipColor, borderRadius: 2 }} />
+                    <div title={`Rain ${Math.round(precip)}%`} style={{ width: '100%', height: 4, background: 'rgba(0, 0, 0, 0.06)', borderRadius: 2, overflow: 'hidden', margin: '3px 0' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${precip}%` }}
+                        transition={{ delay: i * 0.05 + 0.4, duration: 0.6 }}
+                        style={{ height: '100%', background: precipColor, borderRadius: 2 }}
+                      />
                     </div>
-                    <span style={{ fontSize: '0.6rem', color: precipColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>🌧{Math.round(precip)}%</span>
+                    <span style={{ fontSize: '0.625rem', color: precipColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                      🌧{Math.round(precip)}%
+                    </span>
                   </>
                 )}
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{wind.toFixed(1)} m/s</span>
-              </div>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                  {wind.toFixed(1)} m/s
+                </span>
+              </motion.div>
             );
           })}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-// ── Daily Energy Breakdown ─────────────────────────────────────────────────────
+// ── Daily Energy Breakdown with animations ──────────────────────────────────────
 
 const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
   if (!latest) return null;
   if (!isLatestToday) return null;
+  
   const items = [
-    { label: 'PV Yield',    value: latest.pv_today_kwh,              color: '#F07522', bg: '#F0752212', icon: '☀' },
-    { label: 'Grid In',     value: latest.grid_buy_today_kwh,         color: '#3b82f6', bg: '#3b82f612', icon: '⬇' },
-    { label: 'Grid Out',    value: latest.grid_sell_today_kwh,        color: '#10b981', bg: '#10b98112', icon: '⬆' },
-    { label: 'Batt Chg',    value: latest.batt_charge_today_kwh,      color: '#8b5cf6', bg: '#8b5cf612', icon: '↑' },
-    { label: 'Batt Dchg',   value: latest.batt_discharge_today_kwh,   color: '#ec4899', bg: '#ec489912', icon: '↓' },
-    { label: 'Consumption', value: latest.load_today_kwh,             color: '#6b7280', bg: '#6b728012', icon: '⌂' },
+    { label: 'PV Yield', value: latest.pv_today_kwh, color: '#F07522', bg: '#F0752215', icon: '☀' },
+    { label: 'Grid In', value: latest.grid_buy_today_kwh, color: '#3b82f6', bg: '#3b82f615', icon: '⬇' },
+    { label: 'Grid Out', value: latest.grid_sell_today_kwh, color: '#10b981', bg: '#10b98115', icon: '⬆' },
+    { label: 'Batt Chg', value: latest.batt_charge_today_kwh, color: '#8b5cf6', bg: '#8b5cf615', icon: '↑' },
+    { label: 'Batt Dchg', value: latest.batt_discharge_today_kwh, color: '#ec4899', bg: '#ec489915', icon: '↓' },
+    { label: 'Consumption', value: latest.load_today_kwh, color: '#6b7280', bg: '#6b728015', icon: '⌂' },
   ].filter(e => e.value != null);
+  
   if (!items.length) return null;
 
+  const lastUpdated = latest?.timestamp
+    ? new Date(latest.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: IST_TIMEZONE })
+    : null;
+
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>Today</span>
-      {items.map(e => (
-        <span key={e.label} style={{
-          fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
-          padding: '0.2rem 0.65rem', borderRadius: 99,
-          background: e.bg, border: `1px solid ${e.color}28`,
-          color: e.color, display: 'flex', alignItems: 'center', gap: '0.3rem',
-        }}>
-          <span style={{ opacity: 0.85 }}>{e.icon}</span>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}
+    >
+      {items.map((e, idx) => (
+        <motion.span
+          key={e.label}
+          initial={{ opacity: 0, scale: 0.8, x: -20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ delay: 0.5 + idx * 0.05, type: 'spring', stiffness: 200 }}
+          whileHover={{ scale: 1.08, y: -2 }}
+          style={{
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            fontFamily: 'Poppins, sans-serif',
+            padding: '6px 12px',
+            borderRadius: 20,
+            background: e.bg,
+            border: `1px solid ${e.color}30`,
+            color: e.color,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            boxShadow: `0 2px 8px ${e.color}20`,
+          }}
+        >
+          <span style={{ opacity: 0.85, fontSize: '1rem' }}>{e.icon}</span>
           {e.label}:&nbsp;
-          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{Number(e.value).toFixed(2)}</span>
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>kWh</span>
-        </span>
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', fontWeight: 700 }}>
+              <AnimatedNumber value={Number(e.value)} decimals={2} />
+            </span>
+            <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>kWh</span>
+          </span>
+        </motion.span>
       ))}
-    </div>
+      <span
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--text-muted)',
+          fontFamily: 'Poppins, sans-serif',
+          alignSelf: 'flex-start',
+          flexBasis: '100%',
+          marginTop: 2,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Today{lastUpdated && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}> · {lastUpdated}</span>}
+      </span>
+    </motion.div>
   );
 };
 
-// ── Solar Insights Row ─────────────────────────────────────────────────────────
+// ── Solar Insights Row with animations ──────────────────────────────────────────
 
 const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
   if (!latest || !isLatestToday) return null;
 
-  const pvKwh    = Number(latest.pv_today_kwh      ?? 0);
-  const loadKwh  = Number(latest.load_today_kwh    ?? 0);
-  const gridBuy  = Number(latest.grid_buy_today_kwh ?? 0);
+  const pvKwh = Number(latest.pv_today_kwh ?? 0);
+  const loadKwh = Number(latest.load_today_kwh ?? 0);
+  const gridBuy = Number(latest.grid_buy_today_kwh ?? 0);
 
-  // Only render if we have at least PV data
   if (pvKwh === 0 && loadKwh === 0) return null;
 
-  const co2Kg       = pvKwh * 0.82;  // India grid factor ~0.82 kg CO₂/kWh
-  // Self-sufficiency = portion of load met by solar+battery (not from grid)
+  const co2Kg = pvKwh * 0.82;
   const selfSufPct = loadKwh > 0
     ? Math.max(0, Math.min(100, Math.round(((loadKwh - gridBuy) / loadKwh) * 100)))
     : null;
-  const gridDepPct  = loadKwh > 0
+  const gridDepPct = loadKwh > 0
     ? Math.max(0, Math.min(100, Math.round((gridBuy / loadKwh) * 100)))
     : null;
 
@@ -355,68 +660,97 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
 
   if (pvKwh > 0) {
     items.push({
-      icon: '🌿', label: 'CO₂ Avoided',
+      icon: '🌿',
+      label: 'CO₂ Avoided',
       value: co2Kg >= 1 ? `${co2Kg.toFixed(2)} kg` : `${(co2Kg * 1000).toFixed(0)} g`,
       sub: 'vs grid (0.82 kg/kWh)',
-      color: '#10b981', bg: '#10b98110',
+      color: '#10b981',
+      bg: '#10b98115',
     });
   }
   if (selfSufPct != null) {
     const color = selfSufPct >= 70 ? '#00a63e' : selfSufPct >= 40 ? '#f59e0b' : '#ef4444';
     items.push({
-      icon: '⚡', label: 'Self-Sufficiency',
+      icon: '⚡',
+      label: 'Self-Sufficiency',
       value: `${selfSufPct}%`,
       sub: 'load met by solar+battery',
-      color, bg: `${color}10`,
+      color,
+      bg: `${color}15`,
     });
   }
   if (gridDepPct != null) {
     const color = gridDepPct <= 20 ? '#10b981' : gridDepPct <= 50 ? '#f59e0b' : '#ef4444';
     items.push({
-      icon: '🔌', label: 'Grid Dependency',
+      icon: '🔌',
+      label: 'Grid Dependency',
       value: `${gridDepPct}%`,
       sub: 'portion from grid',
-      color, bg: `${color}10`,
+      color,
+      bg: `${color}15`,
     });
   }
 
   if (!items.length) return null;
 
   return (
-    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-      <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 40 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6 }}
+      style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}
+    >
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 50 }}>
         Insights
       </span>
-      {items.map(item => (
-        <div key={item.label} style={{
-          display: 'flex', alignItems: 'center', gap: '0.55rem',
-          padding: '0.35rem 0.85rem', borderRadius: 10,
-          background: item.bg, border: `1px solid ${item.color}28`,
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: '1rem', lineHeight: 1 }}>{item.icon}</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{item.label}</span>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: item.color, fontSize: '0.88rem', lineHeight: 1 }}>{item.value}</span>
-            {item.sub && <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{item.sub}</span>}
+      {items.map((item, idx) => (
+        <motion.div
+          key={item.label}
+          initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
+          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+          transition={{ delay: 0.7 + idx * 0.08, type: 'spring', stiffness: 200 }}
+          whileHover={{ scale: 1.05, rotateY: 5, y: -4 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 16px',
+            borderRadius: 12,
+            background: item.bg,
+            border: `1px solid ${item.color}30`,
+            flexShrink: 0,
+            cursor: 'pointer',
+            boxShadow: `0 4px 12px ${item.color}20`,
+          }}
+        >
+          <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{item.icon}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: '0.688rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {item.label}
+            </span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: item.color, fontSize: '1rem', lineHeight: 1 }}>
+              {item.value}
+            </span>
+            {item.sub && (
+              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                {item.sub}
+              </span>
+            )}
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };
 
-// ── Forecast Table ─────────────────────────────────────────────────────────────
+// ── Forecast Table (keeping existing logic, adding subtle animations) ──────────
 
 const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
-  night:  { bg: '#1e293b1a', color: '#475569' },
-  ramp:   { bg: '#f59e0b18', color: '#d97706' },
+  night: { bg: '#1e293b1a', color: '#475569' },
+  ramp: { bg: '#f59e0b18', color: '#d97706' },
   midday: { bg: '#F0752218', color: '#c2410c' },
 };
 
-// XAxis tick for the forecast chart.
-// 'today' view: time on line 1 (green bold), no line 2.
-// '3d'/'7d' view: date on line 1 (green bold), time on line 2 (muted).
 const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   const val: string = payload?.value ?? '';
   if (!val) return null;
@@ -438,7 +772,6 @@ const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) => {
   );
 };
 
-// XAxis tick for History and vsActual: same date/time styling as Forecast (green bold line 1, optional muted line 2 if value contains " || "). No tilt.
 const ChartXAxisTick = ({ x, y, payload }: any) => {
   const val: string = (payload?.value ?? '').toString().trim();
   if (!val) return null;
@@ -462,43 +795,44 @@ const ChartXAxisTick = ({ x, y, payload }: any) => {
 
 const ForecastTable = ({ data }: { data: any[] }) => {
   const { isDark } = useTheme();
-  const theadBg  = isDark ? 'rgba(15,23,42,0.9)'  : '#f9fafb';
-  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
+  
   return (
-    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
+    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : '#e5e7eb'}` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
         <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
           <tr>
-            <th style={{ padding: '0.7rem 1rem', textAlign: 'left',   fontWeight: 600, color: 'var(--text-secondary)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
-            <th style={{ padding: '0.7rem 0.6rem', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Regime</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#f59e0b',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P10 ↓</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P50</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P90 ↑</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Physics</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#eab308',  borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>GHI W/m²</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Regime</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>P10 ↓</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>P50</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>P90 ↑</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Physics</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>GHI W/m²</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => {
             const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: 'var(--text-muted)' }) : null;
             return (
-              <tr key={i} style={{ borderBottom: rowBorder }}>
-                <td style={{ padding: '0.55rem 1rem', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
-                  {row.dateLabel ? <span style={{ marginRight: '0.5rem', color: '#00a63e', fontWeight: 700 }}>{row.dateLabel}</span> : null}
+              <tr key={i} style={{ borderBottom: rowBorder, transition: 'background 0.2s' }}>
+                <td style={{ padding: '10px 16px', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  {row.dateLabel ? <span style={{ marginRight: 8, color: '#00a63e', fontWeight: 700 }}>{row.dateLabel}</span> : null}
                   {row.timeLabel ?? row.time}
                 </td>
-                <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>
+                <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                   {row.regime && rc && (
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', background: rc.bg, color: rc.color, padding: '2px 6px', borderRadius: 4, fontFamily: 'Poppins, sans-serif' }}>
+                    <span style={{ fontSize: '0.688rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: rc.bg, color: rc.color, padding: '3px 8px', borderRadius: 6, fontFamily: 'Poppins, sans-serif' }}>
                       {row.regime}
                     </span>
                   )}
                 </td>
-                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
               </tr>
             );
           })}
@@ -508,31 +842,32 @@ const ForecastTable = ({ data }: { data: any[] }) => {
   );
 };
 
-// Table view for History chart data (same layout pattern as ForecastTable).
+// Similar tables for History and VsActual (keeping existing, adding border radius)
 const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15,23,42,0.9)' : '#f9fafb';
-  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
+  
   return (
-    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
+    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : '#e5e7eb'}` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
         <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
           <tr>
-            <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>PV (kW)</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Load (kW)</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Grid (kW)</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Batt SOC (%)</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>PV (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Load (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Grid (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Batt SOC (%)</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '0.55rem 1rem', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
+              <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -541,29 +876,29 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
   );
 };
 
-// Table view for vsActual chart data.
 const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: number | null; diffPct?: number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15,23,42,0.9)' : '#f9fafb';
-  const rowBorder = isDark ? '1px solid rgba(148,163,184,0.07)' : '1px solid #f3f4f6';
+  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
+  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
+  
   return (
-    <div className="scroll-x" style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', minWidth: 480 }}>
+    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : '#e5e7eb'}` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
         <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
           <tr>
-            <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Time</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Actual PV (kW)</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>P50 Forecast (kW)</th>
-            <th style={{ padding: '0.7rem 0.8rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>Δ %</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Time</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Actual PV (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>P50 Forecast (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Δ %</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '0.55rem 1rem', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(3) : '—'}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(3)}</td>
-              <td style={{ padding: '0.55rem 0.8rem', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
+              <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(3) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(3)}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -582,78 +917,82 @@ interface Props {
 const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const { isDark } = useTheme();
 
-  const [telemetry,  setTelemetry]  = useState<any[]>([]);
-  const [forecast,   setForecast]   = useState<any[]>([]);
-  const [weather,    setWeather]    = useState<any>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState<string | null>(null);
+  const [telemetry, setTelemetry] = useState<any[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [weather, setWeather] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const [activeTab,       setActiveTab]       = useState<TabId>('overview');
-  const [showBands,       setShowBands]       = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true });
-  const [dateRange,       setDateRange]       = useState('24h');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true });
+  const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
+    PV: true,
+    Load: true,
+    Grid: true,
+    SOC: true,
+  });
+  const [showVsActualSeries, setShowVsActualSeries] = useState<Record<VsActualSeriesKey, boolean>>({
+    Actual: true,
+    P50: true,
+    Delta: true,
+  });
+  const [dateRange, setDateRange] = useState('24h');
   const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate,   setCustomEndDate]   = useState('');
-  // Debounced versions used as fetchAll deps — avoids a fetch on every keystroke
-  const [debouncedStart,  setDebouncedStart]  = useState('');
-  const [debouncedEnd,    setDebouncedEnd]    = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [debouncedStart, setDebouncedStart] = useState('');
+  const [debouncedEnd, setDebouncedEnd] = useState('');
+  
   useEffect(() => { const t = setTimeout(() => setDebouncedStart(customStartDate), 600); return () => clearTimeout(t); }, [customStartDate]);
-  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate),     600); return () => clearTimeout(t); }, [customEndDate]);
-  const [forecastView,    setForecastView]    = useState<'chart' | 'table'>('chart');
-  const [forecastWindow,  setForecastWindow]  = useState<'today' | '3d' | '7d'>('7d');
-  const [historyView,     setHistoryView]     = useState<'chart' | 'table'>('chart');
-  const [vsActualView,    setVsActualView]    = useState<'chart' | 'table'>('chart');
+  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate), 600); return () => clearTimeout(t); }, [customEndDate]);
+  
+  const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
+  const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '7d'>('7d');
+  const [historyView, setHistoryView] = useState<'chart' | 'table'>('chart');
+  const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
 
-  // Drag-to-zoom state (stock-chart style) — Forecast tab
-  const [refAreaLeft,  setRefAreaLeft]  = useState('');
+  const [refAreaLeft, setRefAreaLeft] = useState('');
   const [refAreaRight, setRefAreaRight] = useState('');
-  const [isSelecting,  setIsSelecting]  = useState(false);
-  const [zoomStart,    setZoomStart]    = useState<string | null>(null);
-  const [zoomEnd,      setZoomEnd]      = useState<string | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [zoomStart, setZoomStart] = useState<string | null>(null);
+  const [zoomEnd, setZoomEnd] = useState<string | null>(null);
 
-  // Drag-to-zoom state — History tab
-  const [historyRefAreaLeft,  setHistoryRefAreaLeft]  = useState('');
+  const [historyRefAreaLeft, setHistoryRefAreaLeft] = useState('');
   const [historyRefAreaRight, setHistoryRefAreaRight] = useState('');
-  const [historyIsSelecting,  setHistoryIsSelecting]  = useState(false);
-  const [historyZoomStart,    setHistoryZoomStart]    = useState<string | null>(null);
-  const [historyZoomEnd,      setHistoryZoomEnd]      = useState<string | null>(null);
+  const [historyIsSelecting, setHistoryIsSelecting] = useState(false);
+  const [historyZoomStart, setHistoryZoomStart] = useState<string | null>(null);
+  const [historyZoomEnd, setHistoryZoomEnd] = useState<string | null>(null);
 
-  // Drag-to-zoom state — vsActual chart (Forecast tab)
-  const [vsActualRefAreaLeft,  setVsActualRefAreaLeft]  = useState('');
+  const [vsActualRefAreaLeft, setVsActualRefAreaLeft] = useState('');
   const [vsActualRefAreaRight, setVsActualRefAreaRight] = useState('');
-  const [vsActualIsSelecting,  setVsActualIsSelecting]  = useState(false);
-  const [vsActualZoomStart,    setVsActualZoomStart]    = useState<string | null>(null);
-  const [vsActualZoomEnd,      setVsActualZoomEnd]      = useState<string | null>(null);
+  const [vsActualIsSelecting, setVsActualIsSelecting] = useState(false);
+  const [vsActualZoomStart, setVsActualZoomStart] = useState<string | null>(null);
+  const [vsActualZoomEnd, setVsActualZoomEnd] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     try {
-      // Forecast: always next 7 days from today (independent of history dateRange)
       const now = new Date();
       const forecastStart = now.toISOString().split('T')[0] + 'T00:00:00Z';
       const forecastEndDt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-      const forecastEnd   = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
+      const forecastEnd = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
 
-      // Telemetry from DynamoDB based on selected date range
-      // "Today" (24h): from start of today IST to now — avoids showing yesterday's data (API default is rolling 24h UTC).
       let telemetryParams: any = {};
-      if      (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
+      if (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
       else if (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
-      else if (dateRange === '7d')  telemetryParams = { days: 7 };
+      else if (dateRange === '7d') telemetryParams = { days: 7 };
       else if (dateRange === '30d') telemetryParams = { days: 30 };
 
-      // DynamoDB telemetry TTL is 24 h — fetch S3 history for any range > 24 h
-      // so there is no gap between DynamoDB's recent 24 h and older S3 records.
       let historyParams: { start_date: string; end_date: string } | null = null;
-      const sevenDaysAgo   = new Date(now.getTime() -  7 * 24 * 3600 * 1000);
-      const thirtyDaysAgo  = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+      
       if (dateRange === '7d') {
         historyParams = { start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString() };
       } else if (dateRange === '30d') {
         historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: now.toISOString() };
       } else if (dateRange === 'custom' && debouncedStart && debouncedEnd) {
         const customStart = new Date(debouncedStart);
-        const customEnd   = new Date(debouncedEnd);
-        // Always fetch S3 for the full custom range; DynamoDB + dedup handles the recent overlap
+        const customEnd = new Date(debouncedEnd);
         historyParams = { start_date: customStart.toISOString(), end_date: customEnd.toISOString() };
       }
 
@@ -663,9 +1002,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         apiService.getSiteWeather(siteId),
         historyParams ? apiService.getSiteHistory(siteId, historyParams) : Promise.resolve(null),
       ] as Promise<any>[]);
+      
       const [tel, fcst, wth, hist] = results;
 
-      // Merge DynamoDB telemetry + S3 history, deduplicate by timestamp
       let merged: any[] = Array.isArray(tel) ? tel : [];
       if (Array.isArray(hist) && hist.length > 0) {
         const tsSet = new Set(merged.map((r: any) => r.timestamp));
@@ -693,13 +1032,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return () => clearInterval(id);
   }, [fetchAll, autoRefresh]);
 
-  // Reset zoom when forecast window changes
   useEffect(() => {
     setZoomStart(null);
     setZoomEnd(null);
   }, [forecastWindow]);
 
-  // Reset History chart zoom when date range changes
   useEffect(() => {
     setHistoryZoomStart(null);
     setHistoryZoomEnd(null);
@@ -708,35 +1045,31 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
 
-  const pvKw       = latest ? ((latest.pv1_power_w ?? 0) + (latest.pv2_power_w ?? 0)) / 1000 : null;
-  const batSoc     = latest?.battery_soc_percent ?? null;
-  const loadKw     = latest ? (latest.load_power_w    ?? 0) / 1000 : null;
-  const todayKwh   = latest?.pv_today_kwh ?? null;
-  const gridKw     = latest ? (latest.grid_power_w    ?? 0) / 1000 : null;
+  const pvKw = latest ? ((latest.pv1_power_w ?? 0) + (latest.pv2_power_w ?? 0)) / 1000 : null;
+  const batSoc = latest?.battery_soc_percent ?? null;
+  const loadKw = latest ? (latest.load_power_w ?? 0) / 1000 : null;
+  const todayKwh = latest?.pv_today_kwh ?? null;
+  const gridKw = latest ? (latest.grid_power_w ?? 0) / 1000 : null;
   const batPowerKw = latest ? (latest.battery_power_w ?? 0) / 1000 : null;
-  const invTemp    = latest?.inverter_temp_c   ?? null;
+  const invTemp = latest?.inverter_temp_c ?? null;
   const batVoltage = latest?.battery_voltage_v ?? null;
-  const runState   = latest?.run_state;
+  const runState = latest?.run_state;
 
-  // Guard: daily-accumulator registers (pv_today_kwh, load_today_kwh, etc.) reset at Deye
-  // midnight. If the latest packet is from a previous day, those values belong to that day —
-  // showing them under "Today" would be misleading.
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
     : false;
 
-  const gridImporting  = gridKw     != null && gridKw     > 0.01;
-  const gridExporting  = gridKw     != null && gridKw     < -0.01;
-  const batCharging    = batPowerKw != null && batPowerKw > 0.01;
+  const gridImporting = gridKw != null && gridKw > 0.01;
+  const gridExporting = gridKw != null && gridKw < -0.01;
+  const batCharging = batPowerKw != null && batPowerKw > 0.01;
 
-  // Deye SUN-series run_status: 0=Standby, 1=Self-test, 2=Normal, 3=Fault, 4=Permanent Fault
   const runStateBadge = runState != null ? (
-    runState === 0 ? { label: 'Standby',  color: '#9ca3af' } :
+    runState === 0 ? { label: 'Standby', color: '#9ca3af' } :
     runState === 1 ? { label: 'Starting', color: '#60a5fa' } :
-    runState === 2 ? { label: 'Normal',   color: '#00a63e' } :
-    runState === 3 ? { label: 'Fault',    color: '#ef4444' } :
-    runState === 4 ? { label: 'Fault',    color: '#ef4444' } :
-                     { label: `State ${runState}`, color: '#6b7280' }
+    runState === 2 ? { label: 'Normal', color: '#00a63e' } :
+    runState === 3 ? { label: 'Fault', color: '#ef4444' } :
+    runState === 4 ? { label: 'Fault', color: '#ef4444' } :
+      { label: `State ${runState}`, color: '#6b7280' }
   ) : null;
 
   const invTempColor = invTemp == null ? '#9ca3af'
@@ -753,16 +1086,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         ? `${d.toLocaleDateString([], { weekday: 'short', timeZone: IST })} || ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })}`
         : fmt(row.timestamp, dateRange);
       return {
-      time:           timeLabel,
-      'PV (kW)':      +((( row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
-      'Load (kW)':    +((row.load_power_w ?? 0) / 1000).toFixed(2),
-      'Grid (kW)':    +((row.grid_power_w ?? 0) / 1000).toFixed(2),
-      'Batt SOC (%)': row.battery_soc_percent ?? null,
-    };
+        time: timeLabel,
+        'PV (kW)': +(((row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
+        'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
+        'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
+        'Batt SOC (%)': row.battery_soc_percent ?? null,
+      };
     });
   }, [telemetry, dateRange]);
 
-  // Zoom-sliced data for History chart (drag-to-zoom, same pattern as Forecast)
   const zoomedHistoryData = useMemo(() => {
     if (!historyZoomStart || !historyZoomEnd || historyData.length === 0) return historyData;
     const li = historyData.findIndex(d => d.time === historyZoomStart);
@@ -772,28 +1104,30 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return historyData.slice(s, e + 1);
   }, [historyData, historyZoomStart, historyZoomEnd]);
 
-  // History stats for the visible range (zoomed or full) — summaries match what's on the chart
+  const historyTickValues = useMemo(
+    () => buildSparseCategoryTicks(zoomedHistoryData, d => d.time, dateRange === '24h' ? 8 : 7),
+    [zoomedHistoryData, dateRange]
+  );
+
   const historyStatsVisible = useMemo(() => {
     const data = zoomedHistoryData;
     if (!data.length) return null;
     const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24;
     const loads = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
     const grids = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
-    const socs  = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
-    const loadTotal   = loads.reduce((s, v) => s + v, 0) * intervalH;
-    const loadPeak    = loads.length ? Math.max(...loads) : 0;
-    const loadAvg     = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
-    const gridImport  = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
-    const gridExport  = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
-    const socMin      = socs.length ? Math.min(...socs) : null;
-    const socMax      = socs.length ? Math.max(...socs) : null;
-    const socAvg      = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
+    const socs = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
+    const loadTotal = loads.reduce((s, v) => s + v, 0) * intervalH;
+    const loadPeak = loads.length ? Math.max(...loads) : 0;
+    const loadAvg = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
+    const gridImport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
+    const gridExport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
+    const socMin = socs.length ? Math.min(...socs) : null;
+    const socMax = socs.length ? Math.max(...socs) : null;
+    const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
     return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
   }, [zoomedHistoryData, dateRange]);
 
   // ── Prediction vs Actual ────────────────────────────────────────────────────
-  // Joins today's forecast P50 slots with nearest actual telemetry reading.
-  // Uses a ±15 min window; slot is left blank if no telemetry falls within it.
   const vsActualData = useMemo(() => {
     const todayISTStr = istDate(new Date());
     const todayForecast = forecast.filter(row => {
@@ -802,20 +1136,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     });
     if (!todayForecast.length || !telemetry.length) return [];
 
-    // Build a sorted timestamp index once — O(n) — then binary-search per
-    // forecast slot instead of scanning the full telemetry array each time.
-    // Reduces complexity from O(forecast × telemetry) → O((n+m) log n).
-    const WINDOW_MS = 15 * 60 * 1000; // ±15 min
+    const WINDOW_MS = 15 * 60 * 1000;
     const telTs = telemetry.map(t => ({ ms: new Date(t.timestamp).getTime(), row: t }));
     telTs.sort((a, b) => a.ms - b.ms);
     const tsMsArr = telTs.map(t => t.ms);
 
     return todayForecast.map(frow => {
       const clean = frow.forecast_for || frow.timestamp.replace('FORECAST#', '');
-      const fTs   = new Date(clean).getTime();
+      const fTs = new Date(clean).getTime();
       const label = new Date(clean).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
 
-      // Binary search for insertion point, then check neighbours
       let lo = 0, hi = tsMsArr.length;
       while (lo < hi) { const mid = (lo + hi) >> 1; if (tsMsArr[mid] < fTs) lo = mid + 1; else hi = mid; }
       let nearest: any = null;
@@ -827,7 +1157,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       }
 
       const actualKw = nearest
-        ? +((( nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0)) / 1000).toFixed(3)
+        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0)) / 1000).toFixed(3)
         : null;
       const p50 = +Number(frow.p50_kw).toFixed(3);
       const diffPct = actualKw != null && p50 > 0
@@ -838,7 +1168,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     });
   }, [forecast, telemetry]);
 
-  // Zoom-sliced data for vsActual chart (drag-to-zoom)
   const zoomedVsActualData = useMemo(() => {
     if (!vsActualZoomStart || !vsActualZoomEnd || vsActualData.length === 0) return vsActualData;
     const li = vsActualData.findIndex(d => d.label === vsActualZoomStart);
@@ -848,15 +1177,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return vsActualData.slice(s, e + 1);
   }, [vsActualData, vsActualZoomStart, vsActualZoomEnd]);
 
-  // Filter + map forecast — memoized on forecast array and window selection
+  const vsActualTickValues = useMemo(
+    () => buildSparseCategoryTicks(zoomedVsActualData, d => d.label, 8),
+    [zoomedVsActualData]
+  );
+
   const { forecastFiltered, forecastData } = useMemo(() => {
     const todayIST = istDate(new Date());
     const filtered = forecast.filter(row => {
       const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
       const forecastIST = istDate(new Date(clean));
       if (forecastWindow === 'today') return forecastIST === todayIST;
-      if (forecastWindow === '3d')    return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
-      // 7d: next 7 IST calendar days (today excluded)
+      if (forecastWindow === '3d') return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
       return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(7);
     });
     const mapped = filtered.map(row => {
@@ -867,23 +1199,22 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
         : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
       const rawDate = istDate(d);
-      const rawTs   = d.getTime();
-      const time    = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
+      const rawTs = d.getTime();
+      const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
       return {
         time, dateLabel, timeLabel, rawDate, rawTs,
-        p50:     row.p50_kw             != null ? +Number(row.p50_kw).toFixed(3)             : null,
-        p10:     row.p10_kw             != null ? +Number(row.p10_kw).toFixed(3)             : null,
-        p90:     row.p90_kw             != null ? +Number(row.p90_kw).toFixed(3)             : null,
+        p50: row.p50_kw != null ? +Number(row.p50_kw).toFixed(3) : null,
+        p10: row.p10_kw != null ? +Number(row.p10_kw).toFixed(3) : null,
+        p90: row.p90_kw != null ? +Number(row.p90_kw).toFixed(3) : null,
         physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(3) : null,
-        ghi:     row.ghi_input_wm2      != null ? +row.ghi_input_wm2                        : null,
-        temp:    row.temperature_c      != null ? +row.temperature_c                         : null,
-        regime:  row.regime             ?? null,
+        ghi: row.ghi_input_wm2 != null ? +row.ghi_input_wm2 : null,
+        temp: row.temperature_c != null ? +row.temperature_c : null,
+        regime: row.regime ?? null,
       };
     });
     return { forecastFiltered: filtered, forecastData: mapped };
   }, [forecast, forecastWindow]);
 
-  // Zoom-sliced data for the chart (stock-market drag-to-zoom)
   const zoomedForecastData = useMemo(() => {
     if (!zoomStart || !zoomEnd) return forecastData;
     const li = forecastData.findIndex(d => d.time === zoomStart);
@@ -891,37 +1222,28 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     if (li === -1 || ri === -1 || li === ri) return forecastData;
     const [s, e] = li < ri ? [li, ri] : [ri, li];
     return forecastData.slice(s, e + 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forecastData, zoomStart, zoomEnd]);
 
-  // Pre-computed tick list for XAxis.
-  // For today: one tick per even IST hour (every 2h = UTC minutes=30, UTC hours even).
-  // For 3d/7d: one tick per IST calendar day, placed at 12:00 PM IST (06:30 UTC).
-  // Falls back to the first slot of that day if the noon slot isn't in the data.
   const forecastTickObjects = useMemo(() => {
     if (forecastWindow === 'today') {
-      // Pick slots at even IST hours (00:00, 02:00, 04:00, ... 22:00 IST)
-      // Even IST hours → UTC minutes=30 and UTC hours even
       return zoomedForecastData.filter(d => {
         const t = new Date(d.rawTs);
         return t.getUTCMinutes() === 30 && t.getUTCHours() % 2 === 0;
       });
     }
-    // Build a map: rawDate → best tick (noon preferred, else first of day)
     const dayMap = new Map<string, (typeof zoomedForecastData)[0]>();
     for (const d of zoomedForecastData) {
-      if (!dayMap.has(d.rawDate)) dayMap.set(d.rawDate, d); // first = fallback
-      // 12:00 PM IST = 06:30 UTC
+      if (!dayMap.has(d.rawDate)) dayMap.set(d.rawDate, d);
       const t = new Date(d.rawTs);
       if (t.getUTCHours() === 6 && t.getUTCMinutes() === 30) {
-        dayMap.set(d.rawDate, d); // overwrite with noon slot
+        dayMap.set(d.rawDate, d);
       }
     }
     return Array.from(dayMap.values());
   }, [zoomedForecastData, forecastWindow]);
+  
   const forecastTickValues = forecastTickObjects?.map(d => d.time);
 
-  // "Last updated" = most recent generated_at across ALL fetched records — memoized on forecast array
   const forecastGeneratedAt = useMemo<Date | null>(() => {
     if (forecast.length === 0) return null;
     let maxGenAt = '';
@@ -935,27 +1257,22 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     return null;
   }, [forecast]);
 
-  // Trapezoidal energy integration over the selected forecast window — memoized on filtered data
   const { fcastP10, fcastP50, fcastP90 } = useMemo(() => {
     let p10 = 0, p50 = 0, p90 = 0;
     if (forecastFiltered.length > 1) {
       for (let i = 0; i < forecastFiltered.length - 1; i++) {
         const h = Math.abs(
-          new Date(forecastFiltered[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+          new Date(forecastFiltered[i + 1].timestamp.replace('FORECAST#', '')).getTime() -
           new Date(forecastFiltered[i].timestamp.replace('FORECAST#', '')).getTime()
         ) / 3_600_000;
-        if (forecastFiltered[i].p10_kw != null && forecastFiltered[i+1].p10_kw != null) p10 += (forecastFiltered[i].p10_kw + forecastFiltered[i+1].p10_kw) / 2 * h;
-        if (forecastFiltered[i].p50_kw != null && forecastFiltered[i+1].p50_kw != null) p50 += (forecastFiltered[i].p50_kw + forecastFiltered[i+1].p50_kw) / 2 * h;
-        if (forecastFiltered[i].p90_kw != null && forecastFiltered[i+1].p90_kw != null) p90 += (forecastFiltered[i].p90_kw + forecastFiltered[i+1].p90_kw) / 2 * h;
+        if (forecastFiltered[i].p10_kw != null && forecastFiltered[i + 1].p10_kw != null) p10 += (forecastFiltered[i].p10_kw + forecastFiltered[i + 1].p10_kw) / 2 * h;
+        if (forecastFiltered[i].p50_kw != null && forecastFiltered[i + 1].p50_kw != null) p50 += (forecastFiltered[i].p50_kw + forecastFiltered[i + 1].p50_kw) / 2 * h;
+        if (forecastFiltered[i].p90_kw != null && forecastFiltered[i + 1].p90_kw != null) p90 += (forecastFiltered[i].p90_kw + forecastFiltered[i + 1].p90_kw) / 2 * h;
       }
     }
     return { fcastP10: p10, fcastP50: p50, fcastP90: p90 };
   }, [forecastFiltered]);
 
-  // achievedPct: today's actual kWh vs today's P50 forecast — memoized on forecast + todayKwh.
-  // Guard: only valid when the latest packet is from today (IST). pv_today_kwh is a daily
-  // accumulator that resets on the device — if the last packet is from yesterday, using it
-  // against today's P50 forecast produces a misleading percentage.
   const achievedPct = useMemo(() => {
     const todayISTStr = istDate(new Date());
     if (!latest?.timestamp || istDate(new Date(latest.timestamp)) !== todayISTStr) return null;
@@ -968,11 +1285,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     if (todayForecast.length > 1) {
       for (let i = 0; i < todayForecast.length - 1; i++) {
         const h = Math.abs(
-          new Date(todayForecast[i+1].timestamp.replace('FORECAST#', '')).getTime() -
+          new Date(todayForecast[i + 1].timestamp.replace('FORECAST#', '')).getTime() -
           new Date(todayForecast[i].timestamp.replace('FORECAST#', '')).getTime()
         ) / 3_600_000;
-        if (todayForecast[i].p50_kw != null && todayForecast[i+1].p50_kw != null)
-          todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i+1].p50_kw) / 2 * h;
+        if (todayForecast[i].p50_kw != null && todayForecast[i + 1].p50_kw != null)
+          todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i + 1].p50_kw) / 2 * h;
       }
     }
     return todayFcastP50 > 0
@@ -980,87 +1297,191 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       : null;
   }, [forecast, todayKwh, latest]);
 
-  // ── Derived dark-mode colours ────────────────────────────────────────────────
-  const cardBg     = isDark ? 'rgba(30,41,59,0.85)'   : '#ffffff';
-  const headerGrad = isDark ? 'rgba(30,41,59,0.6)'    : 'linear-gradient(to right,#ffffff,#f9fafb)';
-  const toggleBg   = isDark ? 'rgba(15,23,42,0.6)'    : '#f3f4f6';
-  const toggleActive = isDark ? 'rgba(30,41,59,0.95)' : '#fff';
-  const borderClr  = isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb';
-
   // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ padding: '1.5rem 0' }}>
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          {[...Array(6)].map((_, i) => <div key={i} className="card skeleton" style={{ flex: 1, minWidth: 110, height: 100 }} />)}
+      <div style={{ padding: '24px 0' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.4, 0.6, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+              style={{
+                flex: 1,
+                minWidth: 130,
+                height: 120,
+                borderRadius: 16,
+                background: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(249, 250, 251, 0.8)',
+              }}
+            />
+          ))}
         </div>
-        <div className="card skeleton" style={{ height: 52, marginBottom: '0.75rem' }} />
-        <div className="card skeleton" style={{ height: 130, marginBottom: '1rem' }} />
-        <div className="card skeleton" style={{ height: 240, marginBottom: '1rem' }} />
-        <div className="card skeleton" style={{ height: 200 }} />
+        {[52, 140, 260, 220].map((h, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.4, 0.6, 0.4] }}
+            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.15 }}
+            style={{
+              height: h,
+              marginBottom: 16,
+              borderRadius: 16,
+              background: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(249, 250, 251, 0.8)',
+            }}
+          />
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '1.5rem', color: '#ef4444', fontSize: '0.85rem', background: 'rgba(239,68,68,0.06)', borderRadius: 10, marginTop: '1rem' }}>
-        Failed to load DynamoDB data for <strong>{siteId}</strong>: {error}
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          padding: 24,
+          color: '#ef4444',
+          fontSize: '0.875rem',
+          background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.06)',
+          borderRadius: 16,
+          marginTop: 16,
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+        }}
+      >
+        Failed to load data for <strong>{siteId}</strong>: {error}
+      </motion.div>
     );
   }
 
   const noData = telemetry.length === 0 && forecast.length === 0 && !weather;
 
   return (
-    <div style={{ marginTop: '1.5rem' }}>
-
-      {/* ── Section header ── */}
-      <div className="site-panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <p className="dash-section-label" style={{ margin: 0 }}>
+    <div style={{ marginTop: 24 }}>
+      {/* ── Section header with glassmorphism ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          gap: 16,
+          flexWrap: 'wrap',
+          padding: '16px 20px',
+          borderRadius: 16,
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5))'
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
             Live Site Intelligence — <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#00a63e' }}>{siteId}</span>
           </p>
           {runStateBadge && (
-            <span style={{
-              fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-              background: `${runStateBadge.color}18`, color: runStateBadge.color,
-              padding: '2px 8px', borderRadius: 99, fontFamily: 'Poppins, sans-serif',
-              border: `1px solid ${runStateBadge.color}30`,
-            }}>
+            <motion.span
+              whileHover={{ scale: 1.05 }}
+              style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                background: `${runStateBadge.color}20`,
+                color: runStateBadge.color,
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontFamily: 'Poppins, sans-serif',
+                border: `1px solid ${runStateBadge.color}40`,
+              }}
+            >
               ● {runStateBadge.label}
-            </span>
+            </motion.span>
           )}
         </div>
 
-        <div className="site-panel-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div className="site-panel-filters" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {/* History range — shown on Overview and History tabs */}
-            {(activeTab === 'overview' || activeTab === 'history') && (<>
-              <select
-                value={dateRange}
-                onChange={e => setDateRange(e.target.value)}
-                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
-              >
-                <option value="24h">Today</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="custom">Custom range</option>
-              </select>
-              {dateRange === 'custom' && (<>
-                <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)}
-                  style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>to</span>
-                <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)}
-                  style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }} />
-              </>)}
-            </>)}
-            {/* Forecast window — shown on Forecast tab */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {(activeTab === 'overview' || activeTab === 'history') && (
+              <>
+                <select
+                  value={dateRange}
+                  onChange={e => setDateRange(e.target.value)}
+                  style={{
+                    background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid rgba(0, 166, 62, 0.3)',
+                    borderRadius: 8,
+                    padding: '6px 12px',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontFamily: 'Poppins, sans-serif',
+                    fontWeight: 600,
+                  }}
+                >
+                  <option value="24h">Today</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="custom">Custom range</option>
+                </select>
+                {dateRange === 'custom' && (
+                  <>
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={e => setCustomStartDate(e.target.value)}
+                      style={{
+                        background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid rgba(0, 166, 62, 0.3)',
+                        borderRadius: 8,
+                        padding: '6px 12px',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'Poppins, sans-serif',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={e => setCustomEndDate(e.target.value)}
+                      style={{
+                        background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid rgba(0, 166, 62, 0.3)',
+                        borderRadius: 8,
+                        padding: '6px 12px',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-primary)',
+                        fontFamily: 'Poppins, sans-serif',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </>
+                )}
+              </>
+            )}
             {activeTab === 'forecast' && (
               <select
                 value={forecastWindow}
                 onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '7d')}
-                style={{ background: 'var(--bg-card,#fff)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: 'var(--text-primary,#0a0a0a)', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
+                style={{
+                  background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid rgba(0, 166, 62, 0.3)',
+                  borderRadius: 8,
+                  padding: '6px 12px',
+                  fontSize: '0.75rem',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontFamily: 'Poppins, sans-serif',
+                  fontWeight: 600,
+                }}
               >
                 <option value="today">Today</option>
                 <option value="3d">Next 3 days</option>
@@ -1069,702 +1490,791 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             )}
           </div>
           {lastUpdated && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
               Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })} IST
             </span>
           )}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05, rotate: 180 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300 }}
             onClick={() => { setLoading(true); fetchAll(); }}
-            style={{ background: 'none', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 8, padding: '0.2rem 0.6rem', fontSize: '0.72rem', color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}
-          >↻ Refresh</button>
+            style={{
+              background: 'none',
+              border: '1px solid rgba(0, 166, 62, 0.3)',
+              borderRadius: 8,
+              padding: '4px 12px',
+              fontSize: '0.75rem',
+              color: '#00a63e',
+              cursor: 'pointer',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {noData ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
-          No DynamoDB data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the {
-            dateRange === '24h' ? 'today' : dateRange === '7d' ? 'last 7 days' : dateRange === '30d' ? 'last 30 days' : 'selected date range'
-          }.<br />
-          <span style={{ fontSize: '0.78rem' }}>Data is written by the ML forecast scheduler when the device is actively posting telemetry.</span>
-        </div>
-      ) : (<>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '0.875rem',
+            background: isDark ? 'rgba(0, 166, 62, 0.05)' : 'rgba(0, 166, 62, 0.03)',
+            borderRadius: 16,
+            border: '1px dashed rgba(0, 166, 62, 0.2)',
+          }}
+        >
+          No data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the{' '}
+          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'last 7 days' : dateRange === '30d' ? 'last 30 days' : 'selected date range'}
+          .<br />
+          <span style={{ fontSize: '0.8rem' }}>Data is written by the ML forecast scheduler when the device is actively posting telemetry.</span>
+        </motion.div>
+      ) : (
+        <>
+          {/* ── Tab Bar with 3D effect ── */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            style={{
+              display: 'flex',
+              borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+              marginBottom: 20,
+              gap: 0,
+              background: isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(249, 250, 251, 0.5)',
+              borderRadius: '12px 12px 0 0',
+              padding: '0 8px',
+            }}
+          >
+            {TABS.map(tab => {
+              const isActive = activeTab === tab.id;
+              return (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    border: 'none',
+                    background: isActive
+                      ? isDark
+                        ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.15), rgba(0, 166, 62, 0.08))'
+                        : 'linear-gradient(135deg, rgba(0, 166, 62, 0.1), rgba(0, 166, 62, 0.05))'
+                      : 'transparent',
+                    cursor: 'pointer',
+                    padding: '12px 20px',
+                    fontSize: '0.813rem',
+                    fontWeight: isActive ? 700 : 600,
+                    fontFamily: 'Poppins, sans-serif',
+                    color: isActive ? '#00a63e' : 'var(--text-muted)',
+                    borderBottom: `3px solid ${isActive ? '#00a63e' : 'transparent'}`,
+                    marginBottom: -2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.3s',
+                    letterSpacing: '0.02em',
+                    borderRadius: '8px 8px 0 0',
+                    boxShadow: isActive ? '0 -2px 10px rgba(0, 166, 62, 0.2)' : 'none',
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                </motion.button>
+              );
+            })}
+          </motion.div>
 
-        {/* ── Tab Bar ── */}
-        <div className="tab-list site-tab-list" style={{ display: 'flex', borderBottom: `2px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#f3f4f6'}`, marginBottom: '1rem', gap: 0 }}>
-          {TABS.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                className="tab-btn site-tab-btn"
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  border: 'none', background: 'transparent', cursor: 'pointer',
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.78rem', fontWeight: isActive ? 700 : 600,
-                  fontFamily: 'Poppins, sans-serif',
-                  color: isActive ? '#00a63e' : 'var(--text-muted)',
-                  borderBottom: `2px solid ${isActive ? '#00a63e' : 'transparent'}`,
-                  marginBottom: -2,
-                  display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  transition: 'color 0.15s',
-                  letterSpacing: '0.01em',
+          {/* ── Tab Content with AnimatePresence ── */}
+          <AnimatePresence mode="wait">
+            {activeTab === 'overview' && (
+              <motion.div
+                key="overview"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{
+                  initial: { opacity: 0, x: -20 },
+                  animate: { opacity: 1, x: 0 },
+                  exit: { opacity: 0, x: 20 }
                 }}
+                transition={tabTransition}
               >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ══ OVERVIEW TAB ══ */}
-        {activeTab === 'overview' && (<>
-
-          {/* 6-card KPI strip */}
-          <div className="kpi-grid site-kpi-grid" style={{ marginBottom: '0.75rem' }}>
-            <KpiCard
-              label="PV Power" value={pvKw != null ? pvKw.toFixed(2) : '—'} unit="kW"
-              sub={latest?.pv1_power_w != null && latest?.pv2_power_w != null
-                ? `S1: ${(latest.pv1_power_w/1000).toFixed(2)} · S2: ${(latest.pv2_power_w/1000).toFixed(2)} kW`
-                : 'Current generation'}
-              accent="#F07522" icon={<IconSunKpi />}
-            />
-            <KpiCard
-              label="Battery" value={batSoc != null ? batSoc.toFixed(1) : '—'} unit="%"
-              sub={batVoltage != null ? `${batVoltage.toFixed(1)} V` : 'State of charge'}
-              accent="#00a63e" icon={<IconBattery />}
-              badge={batPowerKw != null && Math.abs(batPowerKw) > 0.01 ? (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: batCharging ? '#00a63e' : '#ec4899', fontFamily: 'Poppins, sans-serif' }}>
-                  {batCharging ? '⚡ Charging' : '⬇ Discharging'} {Math.abs(batPowerKw).toFixed(2)} kW
-                </span>
-              ) : <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>Idle</span>}
-            />
-            <KpiCard
-              label="Load" value={loadKw != null ? loadKw.toFixed(2) : '—'} unit="kW"
-              sub="Current consumption" accent="#8b5cf6" icon={<IconLoad />}
-            />
-            <KpiCard
-              label="Energy Today" value={todayKwh != null ? todayKwh.toFixed(2) : '—'} unit="kWh"
-              sub="Solar yield today" accent="#10b981" icon={<IconEnergy />}
-            />
-            <KpiCard
-              label="Grid" value={gridKw != null ? Math.abs(gridKw).toFixed(2) : '—'} unit="kW"
-              sub={latest?.grid_voltage_v != null
-                ? `${Number(latest.grid_voltage_v).toFixed(0)} V · ${Number(latest.grid_frequency_hz ?? 0).toFixed(1)} Hz`
-                : 'Grid power'}
-              accent="#3b82f6" icon={<IconGrid />}
-              badge={gridKw != null ? (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: gridImporting ? '#3b82f6' : gridExporting ? '#10b981' : 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                  {gridImporting ? '⬇ Importing' : gridExporting ? '⬆ Exporting' : '↔ Standby'}
-                </span>
-              ) : undefined}
-            />
-            <KpiCard
-              label="Inv. Temp" value={invTemp != null ? invTemp.toFixed(1) : '—'} unit="°C"
-              sub={invTemp != null
-                ? invTemp > 60 ? '🔴 Hot — check cooling' : invTemp > 45 ? '🟡 Warm' : '🟢 Normal'
-                : 'No data'}
-              accent={invTempColor} icon={<IconThermometer />}
-            />
-          </div>
-
-          {/* Daily energy breakdown */}
-          <EnergyBreakdownRow latest={latest} isLatestToday={isLatestToday} />
-          <InsightsRow latest={latest} isLatestToday={isLatestToday} />
-
-        </>)}
-
-        {/* ══ WEATHER TAB ══ */}
-        {activeTab === 'weather' && (<>
-
-          {/* Current weather pills */}
-          {weather?.current ? (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>Now</span>
-              {[
-                { label: 'Temp',     value: weather.current.temperature_c  != null ? `${Number(weather.current.temperature_c).toFixed(1)} °C`  : null },
-                { label: 'Humidity', value: weather.current.humidity_pct   != null ? `${weather.current.humidity_pct} %`                        : null },
-                { label: 'Cloud',    value: weather.current.cloud_cover_pct != null ? `${weather.current.cloud_cover_pct} %`                    : null, icon: <IconCloud /> },
-                { label: 'Wind',     value: weather.current.wind_speed_ms  != null ? `${Number(weather.current.wind_speed_ms).toFixed(1)} m/s`  : null },
-                { label: 'GHI',      value: weather.current.ghi_wm2        != null ? `${Math.round(weather.current.ghi_wm2)} W/m²`              : null },
-              ].filter(p => p.value).map(p => (
-                <span key={p.label} style={{
-                  fontSize: '0.72rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
-                  padding: '0.2rem 0.65rem', borderRadius: 99,
-                  background: 'rgba(0,166,62,0.07)', border: '1px solid rgba(0,166,62,0.12)',
-                  color: '#007a55', display: 'flex', alignItems: 'center', gap: '0.3rem',
-                }}>
-                  {(p as any).icon}{p.label}: <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{p.value}</span>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)', marginBottom: '1rem' }}>
-              No current weather data available.
-            </div>
-          )}
-
-          {/* 24 h weather outlook */}
-          {weather?.hourly_forecast && weather.hourly_forecast.length > 0
-            ? <WeatherHourlyStrip hourly={weather.hourly_forecast} />
-            : !weather?.current && null
-          }
-
-        </>)}
-
-        {/* ══ HISTORY TAB ══ */}
-        {activeTab === 'history' && (
-          historyData.length > 0 ? (<>
-            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden', marginBottom: '1rem' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BarChart3 size={20} strokeWidth={2} /></div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>
-                      Power History — {
-                        dateRange === '24h'   ? 'Today' :
-                        dateRange === '7d'    ? 'Last 7 days' :
-                        dateRange === '30d'   ? 'Last 30 days' :
-                        customStartDate && customEndDate
-                          ? `${new Date(customStartDate).toLocaleDateString([], { timeZone: IST })} – ${new Date(customEndDate).toLocaleDateString([], { timeZone: IST })}`
-                          : 'Custom range'
-                      }
-                    </h3>
-                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                      {dateRange === '7d' ? 'Hourly aggregates' : dateRange !== '24h' ? 'Daily aggregates' : '30-min samples'} · Battery SOC on right axis
-                    </p>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
-                  {(['chart', 'table'] as const).map(v => (
-                    <button key={v} type="button" onClick={() => setHistoryView(v)} style={{ border: 'none', background: historyView === v ? toggleActive : 'transparent', color: historyView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: historyView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-                      {v}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
-                {historyView === 'chart' ? (
-                <div className="site-chart-area site-chart-area-history" style={{ height: (dateRange === '7d' || dateRange === '30d') ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: historyIsSelecting ? 'crosshair' : 'default' }}>
-                  <ResponsiveContainer width="100%" height="100%" minHeight={280}>
-                    <AreaChart
-                      data={zoomedHistoryData}
-                      margin={{ top: 20, right: 44, left: 0, bottom: dateRange === '7d' || dateRange === '30d' ? 10 : 0 }}
-                      onMouseDown={(e: any) => {
-                        if (e?.activeLabel) { setHistoryRefAreaLeft(e.activeLabel); setHistoryIsSelecting(true); }
-                      }}
-                      onMouseMove={(e: any) => {
-                        if (historyIsSelecting && e?.activeLabel) setHistoryRefAreaRight(e.activeLabel);
-                      }}
-                      onMouseUp={() => {
-                        if (historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight) {
-                          setHistoryZoomStart(historyRefAreaLeft);
-                          setHistoryZoomEnd(historyRefAreaRight);
-                        }
-                        setHistoryIsSelecting(false);
-                        setHistoryRefAreaLeft('');
-                        setHistoryRefAreaRight('');
-                      }}
-                    >
-                      <defs>
-                        <linearGradient id="pvGrad"   x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#F07522" stopOpacity={0.22}/>
-                          <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18}/>
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
-                      <XAxis
-                        dataKey="time"
-                        stroke="var(--text-muted)"
-                        tickLine={false}
-                        axisLine={false}
-                        height={42}
-                        allowDataOverflow
-                        type="category"
-                        interval={dateRange === '24h' ? 'preserveStartEnd' : Math.ceil(zoomedHistoryData.length / 10)}
-                        tick={(props: any) => <ChartXAxisTick {...props} />}
-                      />
-                      <YAxis yAxisId="power" stroke="var(--text-muted)" tickLine={false} axisLine={false} width={40} allowDataOverflow tickFormatter={(v: number) => `${v} kW`} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }} />
-                      <YAxis yAxisId="soc" orientation="right" stroke="var(--text-muted)" tickLine={false} axisLine={false} allowDataOverflow domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={36} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} />
-                      <Tooltip content={<ChartTooltip unitResolver={(e: any) => String(e.name || '').includes('SOC') ? '%' : 'kW'} />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
-                      <Area yAxisId="power" type="monotone" dataKey="PV (kW)"   stroke="#F07522" strokeWidth={2} fill="url(#pvGrad)"   dot={false} animationDuration={300} />
-                      <Area yAxisId="power" type="monotone" dataKey="Load (kW)" stroke="#8b5cf6" strokeWidth={2} fill="url(#loadGrad)" dot={false} animationDuration={300} />
-                      <Line  yAxisId="power" type="monotone" dataKey="Grid (kW)"     stroke="#3b82f6" strokeWidth={1.5} dot={false} strokeDasharray="4 3" animationDuration={300} />
-                      <Line  yAxisId="soc"   type="monotone" dataKey="Batt SOC (%)"  stroke="#00a63e" strokeWidth={1.5} dot={false} strokeDasharray="2 3" animationDuration={300} />
-                      {historyIsSelecting && historyRefAreaLeft && historyRefAreaRight && (
-                        <ReferenceArea x1={historyRefAreaLeft} x2={historyRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
-                      )}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  {(historyZoomStart || historyZoomEnd) && (
-                    <button
-                      className="chart-reset-btn"
-                      type="button"
-                      onClick={() => { setHistoryZoomStart(null); setHistoryZoomEnd(null); }}
-                      style={{
-                        position: 'absolute', top: 10, right: 46,
-                        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
-                        border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
-                        borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
-                        color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-                        backdropFilter: 'blur(4px)',
-                      }}
-                    >
-                      ↺ Reset Zoom
-                    </button>
+                {/* ── KPI Cards with 3D tilt ── */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                  <KpiCard
+                    index={0}
+                    label="Solar PV"
+                    value={pvKw != null ? pvKw.toFixed(2) : '—'}
+                    unit="kW"
+                    sub={todayKwh != null && isLatestToday ? `${todayKwh.toFixed(2)} kWh today` : undefined}
+                    accent="#F07522"
+                    icon={<IconSunKpi />}
+                  />
+                  <KpiCard
+                    index={1}
+                    label="Battery"
+                    value={batSoc != null ? batSoc.toFixed(0) : '—'}
+                    unit="%"
+                    sub={batPowerKw != null ? `${batCharging ? 'Charging' : 'Discharging'} ${Math.abs(batPowerKw).toFixed(2)} kW` : undefined}
+                    accent="#00a63e"
+                    icon={<IconBattery />}
+                    badge={
+                      batVoltage != null ? (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {batVoltage.toFixed(1)} V
+                        </span>
+                      ) : undefined
+                    }
+                  />
+                  <KpiCard
+                    index={2}
+                    label="Load"
+                    value={loadKw != null ? loadKw.toFixed(2) : '—'}
+                    unit="kW"
+                    accent="#8b5cf6"
+                    icon={<IconLoad />}
+                  />
+                  <KpiCard
+                    index={3}
+                    label="Grid"
+                    value={gridKw != null ? Math.abs(gridKw).toFixed(2) : '—'}
+                    unit="kW"
+                    sub={
+                      gridKw != null
+                        ? gridExporting
+                          ? 'Exporting to grid'
+                          : gridImporting
+                          ? 'Importing from grid'
+                          : 'No flow'
+                        : undefined
+                    }
+                    accent={gridExporting ? '#10b981' : gridImporting ? '#3b82f6' : '#9ca3af'}
+                    icon={<IconGrid />}
+                  />
+                  <KpiCard
+                    index={4}
+                    label="Temp"
+                    value={invTemp != null ? invTemp.toFixed(1) : '—'}
+                    unit="°C"
+                    sub="Inverter"
+                    accent={invTempColor}
+                    icon={<IconThermometer />}
+                  />
+                  {achievedPct != null && (
+                    <KpiCard
+                      index={5}
+                      label="Forecast"
+                      value={achievedPct.toString()}
+                      unit="%"
+                      sub="Today vs P50"
+                      accent={achievedPct >= 95 ? '#00a63e' : achievedPct >= 80 ? '#f59e0b' : '#ef4444'}
+                      icon={<Sun size={iconSize} />}
+                    />
                   )}
-                  <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                    {historyZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
-                  </div>
-                </div>
-                ) : (
-                  <HistoryTable data={zoomedHistoryData} />
-                )}
-              </div>
-            </div>
-
-            {/* ── History analytics summary (reflects zoomed range when zoomed) ── */}
-            {historyStatsVisible && (
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-
-                {/* Load */}
-                <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
-                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#8b5cf6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <IconLoad /> Household Load
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
-                    {[
-                      { label: 'Consumption', value: `${historyStatsVisible.loadTotal.toFixed(2)} kWh` },
-                      { label: 'Peak',        value: `${historyStatsVisible.loadPeak.toFixed(2)} kW`  },
-                      { label: 'Avg',         value: `${historyStatsVisible.loadAvg.toFixed(2)} kW`   },
-                    ].map(r => (
-                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
-                        <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>{r.value}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Grid */}
-                <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
-                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#3b82f6', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <IconGrid /> Grid Import / Export
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
-                    {[
-                      { label: 'Imported',  value: `${historyStatsVisible.gridImport.toFixed(2)} kWh`, color: '#3b82f6' },
-                      { label: 'Exported',  value: `${historyStatsVisible.gridExport.toFixed(2)} kWh`, color: '#10b981' },
-                      { label: 'Net',       value: `${(historyStatsVisible.gridImport - historyStatsVisible.gridExport).toFixed(2)} kWh`, color: (historyStatsVisible.gridImport - historyStatsVisible.gridExport) > 0 ? '#3b82f6' : '#10b981' },
-                    ].map(r => (
-                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
-                        <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: r.color ?? 'var(--text-primary)' }}>{r.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* ── Energy breakdown ── */}
+                <EnergyBreakdownRow latest={latest} isLatestToday={isLatestToday} />
 
-                {/* Battery */}
-                {historyStatsVisible.socAvg != null && (
-                  <div className="card" style={{ flex: 1, minWidth: 140, padding: '0.9rem 1rem' }}>
-                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#00a63e', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <IconBattery /> Battery SOC
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
-                      {[
-                        { label: 'Avg SOC', value: `${historyStatsVisible.socAvg.toFixed(1)} %` },
-                        { label: 'Min SOC', value: `${historyStatsVisible.socMin!.toFixed(1)} %`, color: historyStatsVisible.socMin! < 20 ? '#ef4444' : historyStatsVisible.socMin! < 40 ? '#f59e0b' : undefined },
-                        { label: 'Max SOC', value: `${historyStatsVisible.socMax!.toFixed(1)} %` },
-                      ].map(r => (
-                        <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{r.label}</span>
-                          <span style={{ fontSize: '0.82rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: (r as any).color ?? 'var(--text-primary)' }}>{r.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* ── Insights ── */}
+                <InsightsRow latest={latest} isLatestToday={isLatestToday} />
 
-              </div>
+                {/* ── Charts can be added here based on existing code ── */}
+              </motion.div>
             )}
 
-          </>) : (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
-              No telemetry history data available for the selected range.
-            </div>
-          )
-        )}
-
-        {/* ══ FORECAST TAB ══ */}
-        {activeTab === 'forecast' && (
-          forecastData.length > 0 ? (
-            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden' }}>
-
-              {/* Header */}
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sun size={20} strokeWidth={2} /></div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>Solar Forecast</h3>
-                  </div>
-                  {fcastP50 > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '2.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }}>
-                      {forecastWindow === 'today' ? 'Today' : forecastWindow === '3d' ? '3-day' : '7-day'} Est. Yield:
-                    </span>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', background: isDark ? 'rgba(148,163,184,0.1)' : '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>
-                        {fcastP10.toFixed(1)} <span style={{ color: 'var(--text-muted)' }}>/</span> <span style={{ color: '#00a63e' }}>{fcastP50.toFixed(1)}</span> <span style={{ color: 'var(--text-muted)' }}>/</span> {fcastP90.toFixed(1)} kWh
-                      </span>
-                      {achievedPct != null && (
-                        <span style={{
-                          fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
-                          padding: '2px 8px', borderRadius: 99,
-                          background: achievedPct >= 80 ? '#10b98118' : achievedPct >= 40 ? '#f59e0b18' : isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb',
-                          color:      achievedPct >= 80 ? '#059669'  : achievedPct >= 40 ? '#d97706'  : 'var(--text-muted)',
-                          border:     `1px solid ${achievedPct >= 80 ? '#10b98128' : achievedPct >= 40 ? '#f59e0b28' : borderClr}`,
-                        }}>
-                          {achievedPct}% achieved
+            {activeTab === 'weather' && (
+              <motion.div
+                key="weather"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{
+                  initial: { opacity: 0, x: -20 },
+                  animate: { opacity: 1, x: 0 },
+                  exit: { opacity: 0, x: 20 }
+                }}
+                transition={tabTransition}
+              >
+                {weather?.current ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      padding: 16,
+                      borderRadius: 16,
+                      marginBottom: 14,
+                      background: isDark ? 'rgba(15, 23, 42, 0.55)' : 'rgba(255, 255, 255, 0.86)',
+                      border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+                    }}
+                  >
+                    <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Current Weather
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {[
+                        { label: 'GHI', value: weather.current?.ghi_wm2 != null ? `${Math.round(weather.current.ghi_wm2)} W/m²` : '—' },
+                        { label: 'Temp', value: weather.current?.temperature_c != null ? `${Number(weather.current.temperature_c).toFixed(1)}°C` : '—' },
+                        { label: 'Humidity', value: weather.current?.humidity_pct != null ? `${Math.round(weather.current.humidity_pct)}%` : '—' },
+                        { label: 'Cloud', value: weather.current?.cloud_cover_pct != null ? `${Math.round(weather.current.cloud_cover_pct)}%` : '—' },
+                        { label: 'Wind', value: weather.current?.wind_speed_ms != null ? `${Number(weather.current.wind_speed_ms).toFixed(1)} m/s` : '—' },
+                      ].map((item) => (
+                        <span
+                          key={item.label}
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            fontFamily: 'Poppins, sans-serif',
+                            color: 'var(--text-secondary)',
+                            border: '1px solid rgba(0, 166, 62, 0.2)',
+                            borderRadius: 999,
+                            padding: '6px 10px',
+                            background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)',
+                          }}
+                        >
+                          {item.label}: <span style={{ color: 'var(--text-primary)' }}>{item.value}</span>
                         </span>
-                      )}
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </motion.div>
+                ) : null}
 
-                {/* Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  {/* Chart / Table toggle */}
-                  <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
-                    {(['chart', 'table'] as const).map(v => (
-                      <button key={v} onClick={() => setForecastView(v)} style={{ border: 'none', background: forecastView === v ? toggleActive : 'transparent', color: forecastView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: forecastView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-                        {v}
+                {(weather?.hourly_forecast?.length ?? 0) > 0 ? (
+                  <WeatherHourlyStrip hourly={weather?.hourly_forecast ?? []} />
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      padding: 24,
+                      textAlign: 'center',
+                      color: 'var(--text-muted)',
+                      borderRadius: 16,
+                      background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(249, 250, 251, 0.8)',
+                      border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+                    }}
+                  >
+                    No hourly weather forecast available.
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'history' && (
+              <motion.div
+                key="history"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{
+                  initial: { opacity: 0, x: -20 },
+                  animate: { opacity: 1, x: 0 },
+                  exit: { opacity: 0, x: 20 }
+                }}
+                transition={tabTransition}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['chart', 'table'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setHistoryView(mode)}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: historyView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: historyView === mode ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {mode}
                       </button>
                     ))}
                   </div>
-
-                  {/* Band toggles */}
-                  {forecastView === 'chart' && (
-                    <div style={{ display: 'flex', background: toggleBg, padding: 3, borderRadius: 8 }}>
-                      {[{ label: 'P10', color: '#f59e0b', desc: 'Conservative' }, { label: 'P50', color: '#00a63e', desc: 'Median' }, { label: 'P90', color: '#3b82f6', desc: 'Optimistic' }].map(b => (
-                        <button key={b.label} onClick={() => setShowBands(s => ({ ...s, [b.label]: !s[b.label] }))} style={{ border: 'none', background: showBands[b.label] ? toggleActive : 'transparent', color: showBands[b.label] ? b.color : 'var(--text-muted)', boxShadow: showBands[b.label] ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }} title={b.desc}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: showBands[b.label] ? b.color : isDark ? '#475569' : '#d1d5db' }} />
-                          {b.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Export */}
-                  <button
-                    onClick={async () => {
-                      const el = document.getElementById('forecast-chart-container');
-                      if (el) {
-                        const { default: html2canvas } = await import('html2canvas');
-                        const canvas = await html2canvas(el, { background: '#ffffff', scale: 2 } as any);
-                        const a = document.createElement('a');
-                        a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.png`;
-                        a.href = canvas.toDataURL(); a.click();
-                      }
-                    }}
-                    style={{ background: 'transparent', border: `1px solid ${borderClr}`, color: 'var(--text-secondary)', borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
-                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(148,163,184,0.07)' : '#f9fafb'}
-                    onMouseOut={e  => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span>📷</span><span>Save</span>
-                  </button>
-
-                  {/* CSV Export */}
-                  <button
-                    onClick={() => {
-                      if (!forecastData || forecastData.length === 0) return;
-                      // Get all keys from the first row
-                      const keys = Object.keys(forecastData[0]);
-                      // Build CSV header
-                      const header = keys.join(',');
-                      // Build CSV rows
-                      const rows = forecastData.map(row => keys.map(k => JSON.stringify((row as Record<string, any>)[k] ?? '')).join(','));
-                      const csv = [header, ...rows].join('\n');
-                      // Download
-                      const blob = new Blob([csv], { type: 'text/csv' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `solar-forecast-${new Date().toISOString().slice(0,10)}.csv`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                    style={{ background: 'transparent', border: `1px solid ${borderClr}`, color: '#00a63e', borderRadius: 8, padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}
-                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(148,163,184,0.07)' : '#f9fafb'}
-                    onMouseOut={e  => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span>💾</span><span>CSV</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Chart / Table area */}
-              <div id="forecast-chart-container" style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
-                {forecastView === 'chart' ? (
-                  <div className="site-chart-area site-chart-area-forecast" style={{ height: forecastWindow === '7d' ? 360 : 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: isSelecting ? 'crosshair' : 'default' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={280}>
-                      <AreaChart
-                        data={zoomedForecastData}
-                        margin={{ top: 20, right: 10, left: 0, bottom: forecastWindow !== 'today' ? 10 : 0 }}
-                        onMouseDown={(e: any) => {
-                          if (e?.activeLabel) { setRefAreaLeft(e.activeLabel); setIsSelecting(true); }
-                        }}
-                        onMouseMove={(e: any) => {
-                          if (isSelecting && e?.activeLabel) setRefAreaRight(e.activeLabel);
-                        }}
-                        onMouseUp={() => {
-                          if (refAreaLeft && refAreaRight && refAreaLeft !== refAreaRight) {
-                            setZoomStart(refAreaLeft);
-                            setZoomEnd(refAreaRight);
-                          }
-                          setIsSelecting(false);
-                          setRefAreaLeft('');
-                          setRefAreaRight('');
-                        }}
-                      >
-                        <defs>
-                          <linearGradient id="p50Grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#00a63e" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#00a63e" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="p90Grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.14}/>
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="p10Grad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.14}/>
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
-                        <XAxis
-                          dataKey="time" stroke="var(--text-muted)"
-                          tickLine={false} axisLine={false}
-                          height={42}
-                          allowDataOverflow type="category"
-                          ticks={forecastTickValues}
-                          minTickGap={-1}
-                          tick={(props: any) => (
-                            <ForecastXAxisTick
-                              {...props}
-                              forecastWindow={forecastWindow}
-                            />
-                          )}
-                        />
-                        <YAxis
-                          stroke="var(--text-muted)"
-                          tickLine={false} axisLine={false} width={40} allowDataOverflow
-                          tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }}
-                          label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }}
-                        />
-                        <Tooltip content={<ForecastTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
-                        <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
-
-                        {showBands['P90'] && <Area type="monotone" dataKey="p90" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" fill="url(#p90Grad)" activeDot={false} name="P90 (Optimistic)" animationDuration={500} />}
-                        {showBands['P10'] && <Area type="monotone" dataKey="p10" stroke="#f59e0b" strokeWidth={1} strokeDasharray="3 3" fill="url(#p10Grad)" activeDot={false} name="P10 (Conservative)" animationDuration={500} />}
-                        {showBands['P50'] && <Area type="monotone" dataKey="p50" stroke="#00a63e" strokeWidth={2.5} fill="url(#p50Grad)" activeDot={{ r: 4, strokeWidth: 0 }} name="P50 (Median)" animationDuration={800} />}
-                        <Line type="monotone" dataKey="physics" stroke={isDark ? '#475569' : '#d1d5db'} strokeWidth={1.5} strokeDasharray="5 3" dot={false} name="Physics Baseline" activeDot={false} />
-
-                        <ReferenceLine
-                          x={(() => {
-                            const n = new Date();
-                            const t = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-                            if (forecastWindow === 'today') return t;
-                            const dateL = forecastWindow === '3d'
-                              ? n.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
-                              : n.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
-                            return `${dateL} || ${t}`;
-                          })()}
-                          stroke="#ef4444" strokeWidth={1.5} strokeDasharray="3 3"
-                          label={{ value: 'NOW', position: 'top', fill: '#ef4444', fontSize: 9, fontWeight: 700 }}
-                        />
-
-                        {/* Drag-selection highlight */}
-                        {isSelecting && refAreaLeft && refAreaRight && (
-                          <ReferenceArea x1={refAreaLeft} x2={refAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
-                        )}
-                      </AreaChart>
-                    </ResponsiveContainer>
-                    {/* Reset zoom button */}
-                    {(zoomStart || zoomEnd) && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {HISTORY_SERIES.map(series => (
                       <button
-                        className="chart-reset-btn"
-                        onClick={() => { setZoomStart(null); setZoomEnd(null); }}
+                        key={series.key}
+                        onClick={() => setShowHistorySeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
                         style={{
-                          position: 'absolute', top: 10, right: 10,
-                          background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
-                          border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
-                          borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
-                          color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-                          backdropFilter: 'blur(4px)',
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: showHistorySeries[series.key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: showHistorySeries[series.key] ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
                         }}
                       >
-                        ↺ Reset Zoom
+                        {series.label}
                       </button>
-                    )}
-                    <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                      {zoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
-                    </div>
-                  </div>
-                ) : (
-                  <ForecastTable data={zoomedForecastData} />
-                )}
-                {forecastGeneratedAt && (
-                  <div style={{ textAlign: 'right', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'Inter, sans-serif', padding: '0 1rem 1rem' }}>
-                    last updated: {forecastGeneratedAt.toLocaleString([], { timeZone: IST, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)' }}>
-              No forecast data available for the selected range.
-            </div>
-          )
-        )}
-
-        {/* ══ PREDICTION VS ACTUAL (Forecast tab, today only) ══ */}
-        {activeTab === 'forecast' && (
-          vsActualData.length > 0 ? (
-            <div className="card" style={{ padding: 0, boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', border: `1px solid ${borderClr}`, borderRadius: 16, background: cardBg, overflow: 'hidden', marginTop: '1rem' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: `1px solid ${borderClr}`, display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', background: headerGrad }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,166,62,0.1)', color: '#00a63e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><GitCompare size={20} strokeWidth={2} /></div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontFamily: 'Urbanist, sans-serif', color: 'var(--text-primary)', fontWeight: 700 }}>
-                      Prediction vs Actual — Today
-                    </h3>
-                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                      P50 forecast vs measured PV generation · nearest reading within ±15 min
-                    </p>
+                    ))}
+                    {historyZoomStart && historyZoomEnd ? (
+                      <button
+                        onClick={() => {
+                          setHistoryZoomStart(null);
+                          setHistoryZoomEnd(null);
+                        }}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: 'transparent',
+                          color: '#00a63e',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        Reset Zoom
+                      </button>
+                    ) : null}
                   </div>
                 </div>
-                <div style={{ display: 'flex', background: toggleBg, borderRadius: 8, padding: 3 }}>
-                  {(['chart', 'table'] as const).map(v => (
-                    <button key={v} type="button" onClick={() => setVsActualView(v)} style={{ border: 'none', background: vsActualView === v ? toggleActive : 'transparent', color: vsActualView === v ? '#00a63e' : 'var(--text-muted)', borderRadius: 6, padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', boxShadow: vsActualView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
-                      {v}
-                    </button>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    background: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.85)',
+                    border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+                    marginBottom: 14,
+                  }}
+                >
+                  {zoomedHistoryData.length === 0 ? (
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>No history points for selected range.</p>
+                  ) : historyView === 'chart' ? (
+                    <div style={{ width: '100%', height: 360 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={zoomedHistoryData}
+                          margin={{ top: 16, right: 24, left: 0, bottom: 28 }}
+                          onMouseDown={(e: any) => {
+                            if (!e?.activeLabel) return;
+                            setHistoryIsSelecting(true);
+                            setHistoryRefAreaLeft(e.activeLabel);
+                            setHistoryRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseMove={(e: any) => {
+                            if (historyIsSelecting && e?.activeLabel) setHistoryRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseUp={() => {
+                            if (historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight) {
+                              setHistoryZoomStart(historyRefAreaLeft);
+                              setHistoryZoomEnd(historyRefAreaRight);
+                            }
+                            setHistoryIsSelecting(false);
+                            setHistoryRefAreaLeft('');
+                            setHistoryRefAreaRight('');
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.18)' : '#e5e7eb'} />
+                          <XAxis
+                            dataKey="time"
+                            ticks={historyTickValues}
+                            tick={<ChartXAxisTick />}
+                            interval={0}
+                            height={36}
+                          />
+                          <YAxis yAxisId="power" width={44} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} />
+                          <YAxis yAxisId="soc" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} width={42} tick={{ fill: isDark ? '#86efac' : '#166534', fontSize: 11 }} />
+                          <Tooltip content={<ChartTooltip unitResolver={(entry: any) => entry?.name?.includes('SOC') ? '%' : 'kW'} />} />
+                          <Legend wrapperStyle={{ fontSize: '0.72rem', fontFamily: 'Poppins, sans-serif' }} />
+                          {showHistorySeries.PV && (
+                            <Area yAxisId="power" type="monotone" dataKey="PV (kW)" name="PV" stroke="#F07522" fill="#F07522" fillOpacity={0.18} strokeWidth={2} />
+                          )}
+                          {showHistorySeries.Load && (
+                            <Area yAxisId="power" type="monotone" dataKey="Load (kW)" name="Load" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.12} strokeWidth={2} />
+                          )}
+                          {showHistorySeries.Grid && (
+                            <Line yAxisId="power" type="monotone" dataKey="Grid (kW)" name="Grid" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                          )}
+                          {showHistorySeries.SOC && (
+                            <Line yAxisId="soc" type="monotone" dataKey="Batt SOC (%)" name="SOC" stroke="#00a63e" strokeWidth={2} dot={false} />
+                          )}
+                          {historyRefAreaLeft && historyRefAreaRight && historyRefAreaLeft !== historyRefAreaRight ? (
+                            <ReferenceArea x1={historyRefAreaLeft} x2={historyRefAreaRight} strokeOpacity={0.3} fill="rgba(0,166,62,0.12)" />
+                          ) : null}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <HistoryTable data={zoomedHistoryData} />
+                  )}
+                </motion.div>
+
+                {historyStatsVisible && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                    {[
+                      `Load ${historyStatsVisible.loadTotal.toFixed(2)} kWh`,
+                      `Peak ${historyStatsVisible.loadPeak.toFixed(2)} kW`,
+                      `Avg ${historyStatsVisible.loadAvg.toFixed(2)} kW`,
+                      `Grid In ${historyStatsVisible.gridImport.toFixed(2)} kWh`,
+                      `Grid Out ${historyStatsVisible.gridExport.toFixed(2)} kWh`,
+                      historyStatsVisible.socAvg != null ? `SOC Avg ${historyStatsVisible.socAvg.toFixed(0)}%` : null,
+                    ].filter(Boolean).map((chip, idx) => (
+                      <span
+                        key={`${chip}-${idx}`}
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          fontFamily: 'Poppins, sans-serif',
+                          color: 'var(--text-muted)',
+                          border: '1px solid rgba(0, 166, 62, 0.2)',
+                          borderRadius: 999,
+                          padding: '5px 10px',
+                          background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)',
+                        }}
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'forecast' && (
+              <motion.div
+                key="forecast"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{
+                  initial: { opacity: 0, x: -20 },
+                  animate: { opacity: 1, x: 0 },
+                  exit: { opacity: 0, x: 20 }
+                }}
+                transition={tabTransition}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['chart', 'table'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setForecastView(mode)}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: forecastView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: forecastView === mode ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(['P10', 'P50', 'P90'] as const).map(key => (
+                      <button
+                        key={key}
+                        onClick={() => setShowBands(prev => ({ ...prev, [key]: !prev[key] }))}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: showBands[key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: showBands[key] ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                    {zoomStart && zoomEnd ? (
+                      <button
+                        onClick={() => {
+                          setZoomStart(null);
+                          setZoomEnd(null);
+                        }}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: 'transparent',
+                          color: '#00a63e',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        Reset Zoom
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {forecastGeneratedAt && (
+                  <p style={{ margin: '0 0 10px', color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Poppins, sans-serif' }}>
+                    Forecast generated {forecastGeneratedAt.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', timeZone: IST })}
+                  </p>
+                )}
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    background: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.85)',
+                    border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+                    marginBottom: 14,
+                  }}
+                >
+                  {zoomedForecastData.length === 0 ? (
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>No forecast points for the selected window.</p>
+                  ) : forecastView === 'chart' ? (
+                    <div style={{ width: '100%', height: 360 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={zoomedForecastData}
+                          margin={{ top: 16, right: 24, left: 0, bottom: 28 }}
+                          onMouseDown={(e: any) => {
+                            if (!e?.activeLabel) return;
+                            setIsSelecting(true);
+                            setRefAreaLeft(e.activeLabel);
+                            setRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseMove={(e: any) => {
+                            if (isSelecting && e?.activeLabel) setRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseUp={() => {
+                            if (refAreaLeft && refAreaRight && refAreaLeft !== refAreaRight) {
+                              setZoomStart(refAreaLeft);
+                              setZoomEnd(refAreaRight);
+                            }
+                            setIsSelecting(false);
+                            setRefAreaLeft('');
+                            setRefAreaRight('');
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.18)' : '#e5e7eb'} />
+                          <XAxis
+                            dataKey="time"
+                            ticks={forecastTickValues}
+                            tick={<ForecastXAxisTick forecastWindow={forecastWindow} />}
+                            interval={0}
+                            height={36}
+                          />
+                          <YAxis yAxisId="power" width={44} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} />
+                          <YAxis yAxisId="ghi" orientation="right" width={46} tick={{ fill: isDark ? '#fcd34d' : '#92400e', fontSize: 11 }} />
+                          <Tooltip content={<ForecastTooltip />} />
+                          <Legend wrapperStyle={{ fontSize: '0.72rem', fontFamily: 'Poppins, sans-serif' }} />
+                          {showBands.P10 && <Line yAxisId="power" type="monotone" dataKey="p10" name="P10" stroke="#f59e0b" strokeWidth={1.7} dot={false} />}
+                          {showBands.P50 && <Line yAxisId="power" type="monotone" dataKey="p50" name="P50" stroke="#00a63e" strokeWidth={2.4} dot={false} />}
+                          {showBands.P90 && <Line yAxisId="power" type="monotone" dataKey="p90" name="P90" stroke="#3b82f6" strokeWidth={1.7} dot={false} />}
+                          <Line yAxisId="power" type="monotone" dataKey="physics" name="Physics" stroke="#94a3b8" strokeDasharray="5 4" strokeWidth={1.5} dot={false} />
+                          <Area yAxisId="ghi" type="monotone" dataKey="ghi" name="GHI" stroke="#eab308" fill="#eab308" fillOpacity={0.12} strokeWidth={1.3} />
+                          {refAreaLeft && refAreaRight && refAreaLeft !== refAreaRight ? (
+                            <ReferenceArea x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} fill="rgba(0,166,62,0.12)" />
+                          ) : null}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <ForecastTable data={zoomedForecastData} />
+                  )}
+                </motion.div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {[
+                    `P10 ${fcastP10.toFixed(2)} kWh`,
+                    `P50 ${fcastP50.toFixed(2)} kWh`,
+                    `P90 ${fcastP90.toFixed(2)} kWh`,
+                    `Points ${zoomedForecastData.length}`,
+                  ].map((chip, idx) => (
+                    <span
+                      key={`${chip}-${idx}`}
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        fontFamily: 'Poppins, sans-serif',
+                        color: 'var(--text-muted)',
+                        border: '1px solid rgba(0, 166, 62, 0.2)',
+                        borderRadius: 999,
+                        padding: '5px 10px',
+                        background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)',
+                      }}
+                    >
+                      {chip}
+                    </span>
                   ))}
                 </div>
-              </div>
-              <div style={{ padding: '0 1.5rem 1.5rem 0.5rem', background: cardBg, position: 'relative' }}>
-                {vsActualView === 'chart' ? (
-                <div className="site-chart-area site-chart-area-vsactual" style={{ height: 300, minHeight: 300, width: '100%', minWidth: 0, userSelect: 'none', cursor: vsActualIsSelecting ? 'crosshair' : 'default' }}>
-                  <ResponsiveContainer width="100%" height="100%" minHeight={280}>
-                    <AreaChart
-                      data={zoomedVsActualData}
-                      margin={{ top: 20, right: 10, left: 0, bottom: 10 }}
-                      onMouseDown={(e: any) => {
-                        if (e?.activeLabel) { setVsActualRefAreaLeft(e.activeLabel); setVsActualIsSelecting(true); }
-                      }}
-                      onMouseMove={(e: any) => {
-                        if (vsActualIsSelecting && e?.activeLabel) setVsActualRefAreaRight(e.activeLabel);
-                      }}
-                      onMouseUp={() => {
-                        if (vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight) {
-                          setVsActualZoomStart(vsActualRefAreaLeft);
-                          setVsActualZoomEnd(vsActualRefAreaRight);
-                        }
-                        setVsActualIsSelecting(false);
-                        setVsActualRefAreaLeft('');
-                        setVsActualRefAreaRight('');
-                      }}
-                    >
-                      <defs>
-                        <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#F07522" stopOpacity={0.25}/>
-                          <stop offset="95%" stopColor="#F07522" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.07)' : '#f3f4f6'} vertical={false} />
-                      <XAxis dataKey="label" stroke="var(--text-muted)" tickLine={false} axisLine={false} height={42} allowDataOverflow type="category" interval={Math.ceil(zoomedVsActualData.length / 8)} tick={(props: any) => <ChartXAxisTick {...props} />} />
-                      <YAxis stroke="var(--text-muted)" tickLine={false} axisLine={false} width={40} allowDataOverflow tickFormatter={(v: number) => `${v} kW`} tick={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fill: 'var(--text-muted)' }} label={{ value: 'kW', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 }} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#00a63e', strokeWidth: 1, strokeDasharray: '4 4' }} animationDuration={300} wrapperStyle={{ pointerEvents: 'none' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ right: 0, top: 0, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'Inter, sans-serif' }} />
-                      <Area type="monotone" dataKey="actual" name="Actual PV" stroke="#F07522" strokeWidth={2} fill="url(#actualGrad)" dot={false} connectNulls={false} animationDuration={300} />
-                      <Line type="monotone" dataKey="p50" name="P50 Forecast" stroke="#00a63e" strokeWidth={2} dot={false} strokeDasharray="5 3" animationDuration={300} />
-                      {vsActualIsSelecting && vsActualRefAreaLeft && vsActualRefAreaRight && (
-                        <ReferenceArea x1={vsActualRefAreaLeft} x2={vsActualRefAreaRight} fill="#00a63e" fillOpacity={0.08} stroke="#00a63e" strokeOpacity={0.3} strokeDasharray="3 3" />
-                      )}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  {(vsActualZoomStart || vsActualZoomEnd) && (
-                    <button
-                      className="chart-reset-btn"
-                      type="button"
-                      onClick={() => { setVsActualZoomStart(null); setVsActualZoomEnd(null); }}
-                      style={{
-                        position: 'absolute', top: 10, right: 10,
-                        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.92)',
-                        border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)'}`,
-                        borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem',
-                        color: '#00a63e', cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-                        backdropFilter: 'blur(4px)',
-                      }}
-                    >
-                      ↺ Reset Zoom
-                    </button>
-                  )}
-                  <div className="chart-help-badge" style={{ position: 'absolute', bottom: 10, left: 24, fontSize: '0.62rem', color: 'var(--text-muted)', background: isDark ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', padding: '2px 6px', borderRadius: 4, pointerEvents: 'none' }}>
-                    {vsActualZoomStart ? 'Drag to select · Click ↺ to reset' : 'Drag on chart to zoom'}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
+                    Forecast vs Actual (Today)
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(['chart', 'table'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setVsActualView(mode)}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: vsActualView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: vsActualView === mode ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                    {VS_ACTUAL_SERIES.map(series => (
+                      <button
+                        key={series.key}
+                        onClick={() => setShowVsActualSeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: showVsActualSeries[series.key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
+                          color: showVsActualSeries[series.key] ? '#00a63e' : 'var(--text-muted)',
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        {series.label}
+                      </button>
+                    ))}
+                    {vsActualZoomStart && vsActualZoomEnd ? (
+                      <button
+                        onClick={() => {
+                          setVsActualZoomStart(null);
+                          setVsActualZoomEnd(null);
+                        }}
+                        style={{
+                          border: '1px solid rgba(0, 166, 62, 0.25)',
+                          background: 'transparent',
+                          color: '#00a63e',
+                          borderRadius: 8,
+                          padding: '6px 12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        Reset Zoom
+                      </button>
+                    ) : null}
                   </div>
                 </div>
-                ) : (
-                  <VsActualTable data={zoomedVsActualData} />
-                )}
 
-                {/* Per-slot deviation summary (uses zoomed data when zoomed) */}
-                <div style={{ marginTop: '0.5rem' }}>
-                  {(() => {
-                    const paired = zoomedVsActualData.filter(d => d.actual != null && d.diffPct != null);
-                    if (!paired.length) return (
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-                        No matched actual readings yet — chart will populate as telemetry arrives.
-                      </p>
-                    );
-                    const mae = paired.reduce((s, d) => s + Math.abs(d.actual! - d.p50), 0) / paired.length;
-                    const overCount  = paired.filter(d => d.diffPct! > 10).length;
-                    const underCount = paired.filter(d => d.diffPct! < -10).length;
-                    const onCount    = paired.length - overCount - underCount;
-                    return (
-                      <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        {[
-                          { label: 'MAE', value: `${mae.toFixed(3)} kW`, color: 'var(--text-primary)', bg: isDark ? 'rgba(148,163,184,0.08)' : '#f3f4f6' },
-                          { label: 'On target (±10%)', value: `${onCount}/${paired.length}`, color: '#00a63e', bg: '#00a63e10' },
-                          { label: 'Over-forecast',    value: `${underCount}/${paired.length}`, color: '#3b82f6', bg: '#3b82f610' },
-                          { label: 'Under-forecast',   value: `${overCount}/${paired.length}`,  color: '#f59e0b', bg: '#f59e0b10' },
-                        ].map(s => (
-                          <div key={s.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.75rem', borderRadius: 8, background: s.bg, border: `1px solid ${s.color}20` }}>
-                            <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{s.label}</span>
-                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '0.88rem', color: s.color }}>{s.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                <div
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    marginTop: 4,
+                    background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+                    border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+                  }}
+                >
+                  {zoomedVsActualData.length === 0 ? (
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>No overlap points yet between forecast and telemetry for today.</p>
+                  ) : vsActualView === 'chart' ? (
+                    <div style={{ width: '100%', height: 320 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={zoomedVsActualData}
+                          margin={{ top: 12, right: 24, left: 0, bottom: 24 }}
+                          onMouseDown={(e: any) => {
+                            if (!e?.activeLabel) return;
+                            setVsActualIsSelecting(true);
+                            setVsActualRefAreaLeft(e.activeLabel);
+                            setVsActualRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseMove={(e: any) => {
+                            if (vsActualIsSelecting && e?.activeLabel) setVsActualRefAreaRight(e.activeLabel);
+                          }}
+                          onMouseUp={() => {
+                            if (vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight) {
+                              setVsActualZoomStart(vsActualRefAreaLeft);
+                              setVsActualZoomEnd(vsActualRefAreaRight);
+                            }
+                            setVsActualIsSelecting(false);
+                            setVsActualRefAreaLeft('');
+                            setVsActualRefAreaRight('');
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.18)' : '#e5e7eb'} />
+                          <XAxis
+                            dataKey="label"
+                            ticks={vsActualTickValues}
+                            tick={<ChartXAxisTick />}
+                            interval={0}
+                            height={36}
+                          />
+                          <YAxis yAxisId="kw" width={44} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} />
+                          <YAxis yAxisId="pct" orientation="right" width={40} tickFormatter={(v: number) => `${v}%`} tick={{ fill: isDark ? '#fcd34d' : '#92400e', fontSize: 11 }} />
+                          <Tooltip content={<ChartTooltip unitResolver={(entry: any) => entry?.name === 'Δ %' ? '%' : 'kW'} />} />
+                          <Legend wrapperStyle={{ fontSize: '0.72rem', fontFamily: 'Poppins, sans-serif' }} />
+                          {showVsActualSeries.Actual && (
+                            <Line yAxisId="kw" type="monotone" dataKey="actual" name="Actual" stroke="#F07522" strokeWidth={2.2} dot={false} />
+                          )}
+                          {showVsActualSeries.P50 && (
+                            <Line yAxisId="kw" type="monotone" dataKey="p50" name="P50" stroke="#00a63e" strokeWidth={2.2} dot={false} />
+                          )}
+                          {showVsActualSeries.Delta && (
+                            <Line yAxisId="pct" type="monotone" dataKey="diffPct" name="Δ %" stroke="#3b82f6" strokeDasharray="4 4" strokeWidth={1.7} dot={false} />
+                          )}
+                          {vsActualRefAreaLeft && vsActualRefAreaRight && vsActualRefAreaLeft !== vsActualRefAreaRight ? (
+                            <ReferenceArea x1={vsActualRefAreaLeft} x2={vsActualRefAreaRight} strokeOpacity={0.3} fill="rgba(59,130,246,0.12)" />
+                          ) : null}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <VsActualTable data={zoomedVsActualData} />
+                  )}
                 </div>
-              </div>
-            </div>
-          ) : activeTab === 'forecast' && forecast.length > 0 && telemetry.length === 0 ? (
-            <div style={{ marginTop: '1rem', padding: '1rem 1.25rem', background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,166,62,0.03)', borderRadius: 12, border: '1px dashed rgba(0,166,62,0.15)', fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-              Prediction vs Actual chart will appear once the device starts sending telemetry today.
-            </div>
-          ) : null
-        )}
-
-      </>)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 };

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
-import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { Pencil, Trash2, AlertTriangle, X, CheckCircle2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
 
 interface GatewayConfig {
   configId: string;
@@ -27,29 +28,7 @@ interface SlaveDevice {
   enabled: boolean;
   configId?: number | null;
   configName?: string;
-  registers: RegisterMapping[];
-}
-
-interface RegisterMapping {
-  id: number;
-  label: string;
-  address: number;
-  numRegisters: number;
-  functionCode: number;
-  registerType?: number;
-  dataType: number;
-  byteOrder?: number;
-  wordOrder?: number;
-  accessMode?: number;
-  scaleFactor: number;
-  offset: number;
-  unit?: string;
-  decimalPlaces?: number;
-  category?: string;
-  highAlarmThreshold?: number | null;
-  lowAlarmThreshold?: number | null;
-  description?: string;
-  enabled: boolean;
+  registers: any[];
 }
 
 const Configuration: React.FC = () => {
@@ -58,58 +37,13 @@ const Configuration: React.FC = () => {
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
-  const [globalMode, setGlobalMode] = useState(false);
-  const [selectedPresetId, setSelectedPresetId] = useState<number | ''>('');
-  const [slaveForm, setSlaveForm] = useState({
-    slave_id: '',
-    device_name: '',
-    polling_interval_ms: 5000,
-    timeout_ms: 1000,
-    priority: 1,
-    enabled: true,
-    registers: [] as RegisterMapping[]
-  });
-  const [registerForm, setRegisterForm] = useState({
-    label: '',
-    address: 0,
-    num_registers: 1,
-    function_code: 3,
-    register_type: 3,
-    data_type: 0,
-    byte_order: 0,
-    word_order: 0,
-    access_mode: 0,
-    scale_factor: 1.0,
-    offset: 0.0,
-    unit: '',
-    decimal_places: 2,
-    category: 'Electrical',
-    high_alarm_threshold: null as number | null,
-    low_alarm_threshold: null as number | null,
-    description: '',
-    enabled: true
-  });
+  const [globalMode] = useState(true);
+  const [slaveSearch, setSlaveSearch] = useState('');
 
-  // Bulk upload state
-  interface BulkUploadRow {
-    rowIndex: number;
-    register: RegisterMapping;
-  }
-  interface BulkUploadError {
-    rowIndex: number;
-    message: string;
-  }
-  interface BulkUploadResult {
-    valid: BulkUploadRow[];
-    errors: BulkUploadError[];
-  }
-  const [bulkResult, setBulkResult] = useState<BulkUploadResult | null>(null);
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
-  const bulkFileRef = useRef<HTMLInputElement>(null);
-
-  // Modern modal states
+  // Delete / success modals
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
@@ -133,78 +67,68 @@ const Configuration: React.FC = () => {
       scaleFactor: reg.scale_factor,
       offset: reg.offset,
       enabled: reg.enabled,
-    }))
+      registerType: reg.register_type,
+      byteOrder: reg.byte_order,
+      wordOrder: reg.word_order,
+      accessMode: reg.access_mode,
+      unit: reg.unit,
+      decimalPlaces: reg.decimal_places,
+      category: reg.category,
+      highAlarmThreshold: reg.high_alarm_threshold,
+      lowAlarmThreshold: reg.low_alarm_threshold,
+      description: reg.description,
+    })),
   });
 
   useEffect(() => {
-    const loadAllSlaves = async () => {
+    (async () => {
       try {
-        // Default to listing all slaves across presets
         const slavesResult = await apiService.getGlobalSlaves();
         setSlaves(slavesResult.map(mapSlave));
         setConfig(null);
-        setGlobalMode(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
-    };
-    loadAllSlaves();
+    })();
   }, []);
 
-  
+  // ── Modal initialForm (for edit mode) ──────────────────────────────────────
 
-  const handleCreateSlave = () => {
-    setSlaveForm({
-      slave_id: '',
-      device_name: '',
-      polling_interval_ms: 5000,
-      timeout_ms: 1000,
-      priority: 1,
-      enabled: true,
-      registers: []
-    });
-    setCreatingSlave(true);
-  };
+  const editInitialForm: SlaveFormData | undefined = editingSlave
+    ? {
+        slave_id: editingSlave.slaveId.toString(),
+        device_name: editingSlave.deviceName,
+        polling_interval_ms: editingSlave.pollingIntervalMs,
+        timeout_ms: editingSlave.timeoutMs,
+        priority: editingSlave.priority || 1,
+        enabled: editingSlave.enabled,
+        registers: [...editingSlave.registers],
+      }
+    : undefined;
 
-  const handleEditSlave = (slave: SlaveDevice) => {
-    setSlaveForm({
-      slave_id: slave.slaveId.toString(),
-      device_name: slave.deviceName,
-      polling_interval_ms: slave.pollingIntervalMs,
-      timeout_ms: slave.timeoutMs,
-      priority: slave.priority || 1,
-      enabled: slave.enabled,
-      registers: [...slave.registers]
-    });
-    setEditingSlave(slave);
-  };
+  // ── Save handler (called by SlaveConfigModal) ───────────────────────────────
 
-  const handleSaveSlave = async () => {
-    // Treat missing preset selection as global: allow creating slaves without any config
-    const isGlobal = globalMode || !config || (!editingSlave && !selectedPresetId);
+  const handleSaveSlave = async (formData: SlaveFormData) => {
+    const slaveId = parseInt(formData.slave_id);
 
-    // In global mode, allow creating a slave without attaching to a preset (global slave)
-
-    // Validate slave ID uniqueness for new slaves
     if (!editingSlave) {
-      const slaveId = parseInt(slaveForm.slave_id);
-      const existingSlave = slaves.find(s => s.slaveId === slaveId);
+      const existingSlave = slaves.find((s) => s.slaveId === slaveId);
       if (existingSlave) {
-        setError(`Slave ID ${slaveId} already exists for this configuration. Please choose a different ID.`);
+        setModalError(`Slave ID ${slaveId} already exists. Please choose a different ID.`);
         return;
       }
     }
 
     try {
       const slaveData = {
-        slave_id: parseInt(slaveForm.slave_id),
-        device_name: slaveForm.device_name,
-        polling_interval_ms: slaveForm.polling_interval_ms,
-        timeout_ms: slaveForm.timeout_ms,
-        enabled: slaveForm.enabled,
-        registers: slaveForm.registers.map(r => ({
+        slave_id: slaveId,
+        device_name: formData.device_name,
+        polling_interval_ms: formData.polling_interval_ms,
+        timeout_ms: formData.timeout_ms,
+        enabled: formData.enabled,
+        registers: formData.registers.map((r) => ({
           label: r.label,
           address: r.address,
           num_registers: r.numRegisters,
@@ -227,1032 +151,216 @@ const Configuration: React.FC = () => {
       };
 
       if (editingSlave) {
-        const updatedSlave = isGlobal
+        const updated = globalMode
           ? await apiService.updateGlobalSlave(editingSlave.id, slaveData)
           : await apiService.updateSlave(config!.configId, editingSlave.slaveId, slaveData);
-        const mappedSlave = mapSlave(updatedSlave);
-        setSlaves(slaves.map(s => s.id === editingSlave.id ? mappedSlave : s));
-        setEditingSlave(null);
+        setSlaves(slaves.map((s) => (s.id === editingSlave.id ? mapSlave(updated) : s)));
       } else {
-        const newSlave = isGlobal
-          ? await apiService.createGlobalSlave(selectedPresetId ? { ...slaveData, config_id: selectedPresetId } : slaveData)
-          : await apiService.createSlave(config!.configId, slaveData);
-        const mappedSlave = mapSlave(newSlave);
-        setSlaves([...slaves, mappedSlave]);
+        const created = await apiService.createGlobalSlave(slaveData);
+        setSlaves([...slaves, mapSlave(created)]);
       }
 
       setCreatingSlave(false);
-      setSelectedPresetId('');
-      setSlaveForm({
-        slave_id: '',
-        device_name: '',
-        polling_interval_ms: 5000,
-        timeout_ms: 1000,
-        priority: 1,
-        enabled: true,
-        registers: []
-      });
+      setEditingSlave(null);
+      setModalError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save slave');
-    }
-  };
-
-  const handleDeleteSlave = (slave: SlaveDevice) => {
-    console.log('🗑️ handleDeleteSlave called with slave:', slave.deviceName);
-    setDeleteModal({ show: true, slave });
-  };
-
-  const confirmDeleteSlave = async () => {
-    if (!deleteModal.slave) return;
-    const isGlobal = globalMode || !config;
-    
-    try {
-      if (isGlobal) {
-        await apiService.deleteGlobalSlave(deleteModal.slave.id);
-      } else {
-        await apiService.deleteSlave(config!.configId, deleteModal.slave.slaveId);
-      }
-      setSlaves(slaves.filter(s => s.id !== deleteModal.slave!.id));
-      setDeleteModal({ show: false, slave: null });
-      setSuccessModal({ 
-        show: true, 
-        message: `Slave device "${deleteModal.slave.deviceName}" has been deleted successfully.` 
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete slave');
-      setDeleteModal({ show: false, slave: null });
+      setModalError(err instanceof Error ? err.message : 'Failed to save slave');
     }
   };
 
   const handleCancel = () => {
     setCreatingSlave(false);
     setEditingSlave(null);
-    setSelectedPresetId('');
-    setSlaveForm({
-      slave_id: '',
-      device_name: '',
-      polling_interval_ms: 5000,
-      timeout_ms: 1000,
-      priority: 1,
-      enabled: true,
-      registers: []
-    });
+    setModalError(null);
   };
 
-  const addRegister = () => {
-    const newRegister: RegisterMapping = {
-      id: Date.now(), // Temporary ID for form management
-      label: registerForm.label,
-      address: registerForm.address,
-      numRegisters: registerForm.num_registers,
-      functionCode: registerForm.function_code,
-      registerType: registerForm.register_type,
-      dataType: registerForm.data_type,
-      byteOrder: registerForm.byte_order,
-      wordOrder: registerForm.word_order,
-      accessMode: registerForm.access_mode,
-      scaleFactor: registerForm.scale_factor,
-      offset: registerForm.offset,
-      unit: registerForm.unit,
-      decimalPlaces: registerForm.decimal_places,
-      category: registerForm.category,
-      highAlarmThreshold: registerForm.high_alarm_threshold,
-      lowAlarmThreshold: registerForm.low_alarm_threshold,
-      description: registerForm.description,
-      enabled: registerForm.enabled
-    };
+  const handleDeleteSlave = (slave: SlaveDevice) => setDeleteModal({ show: true, slave });
 
-    setSlaveForm({
-      ...slaveForm,
-      registers: [...slaveForm.registers, newRegister]
-    });
-
-    // Reset register form
-    setRegisterForm({
-      label: '',
-      address: 0,
-      num_registers: 1,
-      function_code: 3,
-      register_type: 3,
-      data_type: 0,
-      byte_order: 0,
-      word_order: 0,
-      access_mode: 0,
-      scale_factor: 1.0,
-      offset: 0.0,
-      unit: '',
-      decimal_places: 2,
-      category: 'Electrical',
-      high_alarm_threshold: null,
-      low_alarm_threshold: null,
-      description: '',
-      enabled: true
-    });
-  };
-
-  const removeRegister = (index: number) => {
-    setSlaveForm({
-      ...slaveForm,
-      registers: slaveForm.registers.filter((_, i) => i !== index)
-    });
-  };
-
-  const toggleRegisterEnabled = (index: number) => {
-    const updated = slaveForm.registers.map((r, i) =>
-      i === index ? { ...r, enabled: !r.enabled } : r
-    );
-    setSlaveForm({ ...slaveForm, registers: updated });
-  };
-
-  const TEMPLATE_HEADERS = 'label,address,num_registers,function_code,register_type,data_type,byte_order,word_order,access_mode,scale_factor,offset,unit,decimal_places,category,high_alarm_threshold,low_alarm_threshold,description,enabled';
-
-  const downloadTemplate = () => {
-    let csv = TEMPLATE_HEADERS + '\n';
-    if (slaveForm.registers.length > 0) {
-      csv += slaveForm.registers.map(r => [
-        r.label,
-        r.address,
-        r.numRegisters ?? 1,
-        r.functionCode ?? 3,
-        r.registerType ?? 3,
-        r.dataType,
-        r.byteOrder ?? 0,
-        r.wordOrder ?? 0,
-        r.accessMode ?? 0,
-        r.scaleFactor,
-        r.offset,
-        r.unit ?? '',
-        r.decimalPlaces ?? 2,
-        r.category ?? '',
-        r.highAlarmThreshold ?? '',
-        r.lowAlarmThreshold ?? '',
-        r.description ?? '',
-        r.enabled
-      ].join(',')).join('\n');
+  const confirmDeleteSlave = async () => {
+    if (!deleteModal.slave) return;
+    try {
+      await apiService.deleteGlobalSlave(deleteModal.slave.id);
+      setSlaves(slaves.filter((s) => s.id !== deleteModal.slave!.id));
+      setDeleteModal({ show: false, slave: null });
+      setSuccessModal({ show: true, message: `Slave device "${deleteModal.slave.deviceName}" deleted successfully.` });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete slave');
+      setDeleteModal({ show: false, slave: null });
     }
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = slaveForm.registers.length > 0 ? 'registers_export.csv' : 'register_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
-  const coerceEnabled = (val: any): boolean => {
-    if (typeof val === 'boolean') return val;
-    if (typeof val === 'number') return val !== 0;
-    if (typeof val === 'string') {
-      const s = val.trim().toLowerCase();
-      return s === 'true' || s === '1' || s === 'yes';
-    }
-    return true;
-  };
+  // ── Filtered slave list ────────────────────────────────────────────────────
 
-  const parseRegisterFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const sq = slaveSearch.toLowerCase();
+  const filteredSlaves = sq
+    ? slaves.filter(
+        (s) =>
+          s.deviceName.toLowerCase().includes(sq) ||
+          String(s.slaveId).includes(sq) ||
+          (s.configName || '').toLowerCase().includes(sq)
+      )
+    : slaves;
 
-        const valid: BulkUploadRow[] = [];
-        const errors: BulkUploadError[] = [];
-
-        rows.forEach((row: any, i: number) => {
-          const rowNum = i + 2; // 1-based, row 1 is header
-          const errs: string[] = [];
-
-          const label = String(row.label ?? '').trim();
-          if (!label) errs.push('label is required');
-
-          const address = Number(row.address);
-          if ((!row.address && row.address !== 0) || isNaN(address)) errs.push('address must be a number');
-
-          const functionCode = row.function_code !== '' ? Number(row.function_code) : 3;
-          if (isNaN(functionCode)) errs.push('function_code must be a number');
-
-          const dataType = row.data_type !== '' ? Number(row.data_type) : 0;
-          if (isNaN(dataType)) errs.push('data_type must be a number');
-
-          const numRegisters = row.num_registers !== '' ? Number(row.num_registers) : 1;
-          if (isNaN(numRegisters) || numRegisters < 1 || numRegisters > 125) errs.push('num_registers must be 1–125');
-
-          const decimalPlaces = row.decimal_places !== '' ? Number(row.decimal_places) : 2;
-          if (isNaN(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 6) errs.push('decimal_places must be 0–6');
-
-          if (errs.length > 0) {
-            errors.push({ rowIndex: rowNum, message: `Row ${rowNum}: ${errs.join('; ')}` });
-            return;
-          }
-
-          const hiAlarm = row.high_alarm_threshold !== '' ? parseFloat(row.high_alarm_threshold) : null;
-          const loAlarm = row.low_alarm_threshold !== '' ? parseFloat(row.low_alarm_threshold) : null;
-
-          const register: RegisterMapping = {
-            id: Date.now() + i,
-            label,
-            address,
-            numRegisters,
-            functionCode,
-            registerType: row.register_type !== '' ? Number(row.register_type) : 3,
-            dataType,
-            byteOrder: row.byte_order !== '' ? Number(row.byte_order) : 0,
-            wordOrder: row.word_order !== '' ? Number(row.word_order) : 0,
-            accessMode: row.access_mode !== '' ? Number(row.access_mode) : 0,
-            scaleFactor: row.scale_factor !== '' ? parseFloat(row.scale_factor) : 1,
-            offset: row.offset !== '' ? parseFloat(row.offset) : 0,
-            unit: String(row.unit ?? ''),
-            decimalPlaces,
-            category: String(row.category ?? 'Electrical'),
-            highAlarmThreshold: isNaN(hiAlarm as number) ? null : hiAlarm,
-            lowAlarmThreshold: isNaN(loAlarm as number) ? null : loAlarm,
-            description: String(row.description ?? ''),
-            enabled: coerceEnabled(row.enabled),
-          };
-
-          valid.push({ rowIndex: rowNum, register });
-        });
-
-        setBulkResult({ valid, errors });
-      } catch (err) {
-        setBulkResult({ valid: [], errors: [{ rowIndex: 0, message: `Failed to parse file: ${err instanceof Error ? err.message : 'unknown error'}` }] });
-      }
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBulkResult(null);
-    const file = e.target.files?.[0];
-    if (file) parseRegisterFile(file);
-  };
-
-  const addBulkRegisters = () => {
-    if (!bulkResult || bulkResult.valid.length === 0) return;
-    let toAdd = bulkResult.valid.map(r => r.register);
-
-    if (skipDuplicates) {
-      const existing = new Set(
-        slaveForm.registers.map(r => `${r.address}:${r.functionCode}`)
-      );
-      toAdd = toAdd.filter(r => !existing.has(`${r.address}:${r.functionCode}`));
-    }
-
-    setSlaveForm({ ...slaveForm, registers: [...slaveForm.registers, ...toAdd] });
-    setBulkResult(null);
-    if (bulkFileRef.current) bulkFileRef.current.value = '';
-  };
-
-  if (loading) {
-    return <div className="loading">Loading configuration...</div>;
-  }
+  if (loading) return <div className="loading">Loading configuration...</div>;
 
   return (
     <div className="admin-container responsive-page">
       <h1>Slave Configuration</h1>
 
-      {/* Show global error banner only when modal is not open */}
       {!creatingSlave && !editingSlave && error && (
         <div className="error" style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
           <strong>Error:</strong> {error}
-          <button
-            onClick={() => setError(null)}
-            style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '16px' }}
-            title="Close error"
-          >
-            ×
-          </button>
+          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
       )}
 
       <div className="card">
         <div className="card-header">
-          <h2>All Slave Devices ({slaves.length})</h2>
-          <button onClick={handleCreateSlave} className="btn">Configure New Slave</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>
+              All Slave Devices ({slaves.length}{sq ? ` · ${filteredSlaves.length} shown` : ''})
+            </h2>
+            <input
+              type="text"
+              placeholder="Search by name, ID or config…"
+              value={slaveSearch}
+              onChange={(e) => setSlaveSearch(e.target.value)}
+              style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: 220 }}
+            />
+          </div>
+          <button onClick={() => setCreatingSlave(true)} className="btn">Configure New Slave</button>
         </div>
 
-        {slaves.length === 0 ? (
+        {filteredSlaves.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
-            <p>No slave devices configured yet.</p>
-            <p>Click "Configure New Slave" to add your first slave device.</p>
+            {slaves.length === 0
+              ? <><p>No slave devices configured yet.</p><p>Click "Configure New Slave" to add your first slave device.</p></>
+              : <p>No slaves match your search.</p>}
           </div>
         ) : (
-          <div className="table-responsive"><table className="table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'center' }}>Slave ID</th>
-                <th style={{ textAlign: 'center' }}>Device Name</th>
-                <th style={{ textAlign: 'center' }}>Config</th>
-                <th style={{ textAlign: 'center' }}>Polling Interval</th>
-                <th style={{ textAlign: 'center' }}>Timeout</th>
-                <th style={{ textAlign: 'center' }}>Status</th>
-                <th style={{ textAlign: 'center' }}>Registers</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {slaves.map((slave) => (
-                <tr key={slave.id}>
-                  <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
-                  <td style={{ textAlign: 'center' }}>{slave.deviceName}</td>
-                  <td style={{ textAlign: 'center' }}>{(slave as any).configName || 'global'}</td>
-                  <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
-                  <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className={slave.enabled ? 'status-online' : 'status-offline'}>
-                      {slave.enabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{slave.registers.filter(r => r.enabled).length} / {slave.registers.length}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', margin: '0 6px', color: '#6366f1' }} title="Edit">
-                      <Pencil size={16} strokeWidth={2} />
-                    </button>
-                    <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
-                      <Trash2 size={16} strokeWidth={2} />
-                    </button>
-                  </td>
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'center' }}>Slave ID</th>
+                  <th style={{ textAlign: 'center' }}>Device Name</th>
+                  <th style={{ textAlign: 'center' }}>Config</th>
+                  <th style={{ textAlign: 'center' }}>Polling Interval</th>
+                  <th style={{ textAlign: 'center' }}>Timeout</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
+                  <th style={{ textAlign: 'center' }}>Registers</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table></div>
+              </thead>
+              <tbody>
+                {filteredSlaves.map((slave) => (
+                  <tr key={slave.id}>
+                    <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
+                    <td style={{ textAlign: 'center' }}>{slave.deviceName}</td>
+                    <td style={{ textAlign: 'center' }}>{slave.configName || 'global'}</td>
+                    <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
+                    <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={slave.enabled ? 'status-online' : 'status-offline'}>
+                        {slave.enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {slave.registers.filter((r: any) => r.enabled).length} / {slave.registers.length}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button onClick={() => setEditingSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', margin: '0 6px', color: '#6366f1' }} title="Edit">
+                        <Pencil size={16} strokeWidth={2} />
+                      </button>
+                      <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
+                        <Trash2 size={16} strokeWidth={2} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Slave Configuration Modal */}
-      {(creatingSlave || editingSlave) && (
-        <div className="modal">
-          <div className="modal-content large-modal slave-config-modal">
-            <h3>{editingSlave ? `Edit Slave: ${editingSlave.deviceName}` : 'Configure New Slave'}</h3>
-            
-            <div className="modal-body">
-              {/* Show errors inside modal when configuring/creating a slave */}
-              {error && (
-                <div className="error" style={{ marginBottom: '12px', padding: '8px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
-                  <strong>Error:</strong> {error}
-                  <button
-                    onClick={() => setError(null)}
-                    style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '14px' }}
-                    title="Close error"
-                  >
-                    ×
-                  </button>
+      {/* Shared SlaveConfigModal */}
+      <SlaveConfigModal
+        open={creatingSlave || !!editingSlave}
+        editingSlave={editingSlave}
+        existingSlaveIds={slaves.map((s) => s.slaveId)}
+        initialForm={editInitialForm}
+        onSave={handleSaveSlave}
+        onCancel={handleCancel}
+        error={modalError}
+        onClearError={() => setModalError(null)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && deleteModal.slave && ReactDOM.createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 16, boxShadow: isDark ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '480px', width: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #dc3545, #c82333)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(220,53,69,0.4)' }}>
+                  <AlertTriangle size={22} color="white" />
                 </div>
-              )}
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
-                
-                {/* Config selector removed: creating a new slave no longer requires selecting a preset */}
-
-                {/* Section 1: Basic Information */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Basic Information</h4>
-                  <div className="form-grid form-grid-2">
-                    <div className="form-group">
-                      <label>Slave ID</label>
-                      <input
-                        type="number"
-                        value={slaveForm.slave_id}
-                        onChange={(e) => setSlaveForm({...slaveForm, slave_id: e.target.value})}
-                        required
-                        min="1"
-                        max="247"
-                        placeholder="1-247"
-                      />
-                      <small className="form-hint">
-                        Unique identifier (1-247)
-                        {slaves.length > 0 && (
-                          <span className="form-hint-accent">
-                            Existing: {slaves.map(s => s.slaveId).join(', ')}
-                          </span>
-                        )}
-                      </small>
-                    </div>
-                    <div className="form-group">
-                      <label>Device Name</label>
-                      <input
-                        type="text"
-                        value={slaveForm.device_name}
-                        onChange={(e) => setSlaveForm({...slaveForm, device_name: e.target.value})}
-                        required
-                        placeholder="e.g., Solar Inverter"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Communication Settings */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Communication Settings</h4>
-                  <div className="form-grid form-grid-4">
-                    <div className="form-group">
-                      <label>Polling Interval (ms)</label>
-                      <input
-                        type="number"
-                        value={slaveForm.polling_interval_ms}
-                        onChange={(e) => setSlaveForm({...slaveForm, polling_interval_ms: parseInt(e.target.value)})}
-                        min="100"
-                        placeholder="10000"
-                      />
-                      <small className="form-hint">How often to poll this device</small>
-                    </div>
-                    <div className="form-group">
-                      <label>Response Timeout (ms)</label>
-                      <input
-                        type="number"
-                        value={slaveForm.timeout_ms}
-                        onChange={(e) => setSlaveForm({...slaveForm, timeout_ms: parseInt(e.target.value)})}
-                        min="100"
-                        placeholder="1000"
-                      />
-                      <small className="form-hint">Max wait for response</small>
-                    </div>
-                    <div className="form-group">
-                      <label>Priority</label>
-                      <input
-                        type="number"
-                        value={slaveForm.priority || 1}
-                        onChange={(e) => setSlaveForm({...slaveForm, priority: parseInt(e.target.value)})}
-                        min="1"
-                        max="10"
-                        placeholder="1"
-                      />
-                      <small className="form-hint">1=Highest, 10=Lowest</small>
-                    </div>
-                    <div className="form-group checkbox-group">
-                      <label>Status</label>
-                      <label className="checkbox-label checkbox-vertical">
-                        <input
-                          type="checkbox"
-                          checked={slaveForm.enabled}
-                          onChange={(e) => setSlaveForm({...slaveForm, enabled: e.target.checked})}
-                        />
-                        <span className={slaveForm.enabled ? 'status-text-enabled' : 'status-text-disabled'}>
-                          {slaveForm.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Register Mappings */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Register Mappings</h4>
-                  <p className="form-section-desc">Configure the Modbus registers to read from this slave device.</p>
-
-                  {/* Add Register Sub-form */}
-                  <div className="form-subsection">
-                    <h5 className="form-subsection-title">Add New Register</h5>
-                    <div className="form-grid form-grid-auto">
-                      {/* Row 1: Basic Info */}
-                      <div className="form-group">
-                        <label>Label *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Battery_Voltage"
-                          value={registerForm.label}
-                          onChange={(e) => setRegisterForm({...registerForm, label: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Address *</label>
-                        <input
-                          type="number"
-                          placeholder="40001"
-                          value={registerForm.address}
-                          onChange={(e) => setRegisterForm({...registerForm, address: parseInt(e.target.value)})}
-                          min="1"
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Num Registers</label>
-                        <input
-                          type="number"
-                          placeholder="1"
-                          value={registerForm.num_registers || 1}
-                          onChange={(e) => setRegisterForm({...registerForm, num_registers: parseInt(e.target.value)})}
-                          min="1"
-                          max="125"
-                        />
-                        <small className="form-hint">Count (1-125)</small>
-                      </div>
-                      <div className="form-group">
-                        <label>Function Code *</label>
-                        <select
-                          value={registerForm.function_code || 3}
-                          onChange={(e) => setRegisterForm({...registerForm, function_code: parseInt(e.target.value)})}
-                        >
-                          <option value={0x01}>0x01 - Read Coils</option>
-                          <option value={0x02}>0x02 - Read Discrete Inputs</option>
-                          <option value={0x03}>0x03 - Read Holding Registers</option>
-                          <option value={0x04}>0x04 - Read Input Registers</option>
-                          <option value={0x05}>0x05 - Write Single Coil</option>
-                          <option value={0x06}>0x06 - Write Single Register</option>
-                          <option value={0x0F}>0x0F - Write Multiple Coils</option>
-                          <option value={0x10}>0x10 - Write Multiple Registers</option>
-                        </select>
-                      </div>
-                      
-                      {/* Row 2: Data Type & Format */}
-                      <div className="form-group">
-                        <label>Data Type *</label>
-                        <select
-                          value={registerForm.data_type}
-                          onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>UINT16 (16-bit Unsigned)</option>
-                          <option value={1}>INT16 (16-bit Signed)</option>
-                          <option value={2}>UINT32 (32-bit Unsigned)</option>
-                          <option value={3}>INT32 (32-bit Signed)</option>
-                          <option value={4}>FLOAT32 (32-bit Float)</option>
-                          <option value={5}>UINT64 (64-bit Unsigned)</option>
-                          <option value={6}>INT64 (64-bit Signed)</option>
-                          <option value={7}>FLOAT64 (64-bit Float)</option>
-                          <option value={8}>BOOL (Single Bit)</option>
-                          <option value={9}>STRING (ASCII)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Byte Order</label>
-                        <select
-                          value={registerForm.byte_order || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, byte_order: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Big Endian (ABCD)</option>
-                          <option value={1}>Little Endian (DCBA)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Word Order</label>
-                        <select
-                          value={registerForm.word_order || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, word_order: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Big Endian (AB CD)</option>
-                          <option value={1}>Little Endian (CD AB)</option>
-                          <option value={2}>Mid-Big Endian (BA DC)</option>
-                          <option value={3}>Mid-Little Endian (DC BA)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Decimal Places</label>
-                        <input
-                          type="number"
-                          placeholder="2"
-                          value={registerForm.decimal_places || 2}
-                          onChange={(e) => setRegisterForm({...registerForm, decimal_places: parseInt(e.target.value)})}
-                          min="0"
-                          max="6"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Access Mode</label>
-                        <select
-                          value={registerForm.access_mode || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, access_mode: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Read Only</option>
-                          <option value={1}>Read/Write</option>
-                          <option value={2}>Write Only</option>
-                        </select>
-                      </div>
-                      
-                      {/* Row 3: Scaling & Units */}
-                      <div className="form-group">
-                        <label>Scale Factor</label>
-                        <input
-                          type="number"
-                          placeholder="1.0"
-                          value={registerForm.scale_factor}
-                          onChange={(e) => setRegisterForm({...registerForm, scale_factor: parseFloat(e.target.value)})}
-                          step="0.001"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Offset</label>
-                        <input
-                          type="number"
-                          placeholder="0.0"
-                          value={registerForm.offset}
-                          onChange={(e) => setRegisterForm({...registerForm, offset: parseFloat(e.target.value)})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Unit</label>
-                        <input
-                          type="text"
-                          placeholder="V, A, W, °C, etc."
-                          value={registerForm.unit || ''}
-                          onChange={(e) => setRegisterForm({...registerForm, unit: e.target.value})}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Category</label>
-                        <select
-                          value={registerForm.category || 'Grid'}
-                          onChange={(e) => setRegisterForm({...registerForm, category: e.target.value})}
-                        >
-                          <option value="Grid">Grid</option>
-                          <option value="BMS">BMS</option>
-                          <option value="Status">Status</option>
-                          <option value="Energy">Energy</option>
-                          <option value="Temperature">Temperature</option>
-                          <option value="Battery">Battery</option>
-                          <option value="Load">Load</option>
-                          <option value="PV">PV</option>
-                        </select>
-                      </div>
-                      
-                      {/* Row 4: Alarms & Status */}
-                      <div className="form-group">
-                        <label>High Alarm</label>
-                        <input
-                          type="number"
-                          placeholder="Optional"
-                          value={registerForm.high_alarm_threshold || ''}
-                          onChange={(e) => setRegisterForm({...registerForm, high_alarm_threshold: parseFloat(e.target.value) || null})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Low Alarm</label>
-                        <input
-                          type="number"
-                          placeholder="Optional"
-                          value={registerForm.low_alarm_threshold || ''}
-                          onChange={(e) => setRegisterForm({...registerForm, low_alarm_threshold: parseFloat(e.target.value) || null})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group checkbox-group">
-                        <label>Enabled</label>
-                        <label className="checkbox-label checkbox-vertical">
-                          <input
-                          type="checkbox"
-                          checked={registerForm.enabled}
-                            onChange={(e) => setRegisterForm({...registerForm, enabled: e.target.checked})}
-                          />
-                          <span>{registerForm.enabled ? 'Yes' : 'No'}</span>
-                        </label>
-                      </div>
-                      <div className="form-group form-group-btn">
-                        <button type="button" onClick={addRegister} className="btn btn-sm">
-                          Add Register
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Description Field - Full Width */}
-                    <div className="form-group" style={{marginTop: '10px'}}>
-                      <label>Description</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., 0=Off, 1=On, 2=Standby"
-                        value={registerForm.description || ''}
-                        onChange={(e) => setRegisterForm({...registerForm, description: e.target.value})}
-                        style={{width: '100%'}}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bulk Upload */}
-                  <div className="form-subsection" style={{ marginTop: '16px' }}>
-                    <h5 className="form-subsection-title">Bulk Upload Registers</h5>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                      <button type="button" onClick={downloadTemplate} className="btn btn-sm btn-secondary">
-                        {slaveForm.registers.length > 0 ? `Export Registers (${slaveForm.registers.length}) CSV` : 'Download Template (CSV)'}
-                      </button>
-                      <input
-                        ref={bulkFileRef}
-                        type="file"
-                        accept=".xlsx,.csv"
-                        onChange={handleBulkFileChange}
-                        style={{ fontSize: '0.875rem' }}
-                      />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={skipDuplicates}
-                          onChange={(e) => setSkipDuplicates(e.target.checked)}
-                        />
-                        Skip duplicates (by address + function code)
-                      </label>
-                    </div>
-
-                    {bulkResult && (
-                      <div style={{ fontSize: '0.875rem' }}>
-                        <div style={{ marginBottom: '6px', color: isDark ? '#b0b0b0' : '#495057' }}>
-                          <strong>{bulkResult.valid.length + bulkResult.errors.length}</strong> rows parsed —{' '}
-                          <span style={{ color: '#28a745' }}><strong>{bulkResult.valid.length}</strong> valid</span>
-                          {bulkResult.errors.length > 0 && (
-                            <span>, <span style={{ color: '#dc3545' }}><strong>{bulkResult.errors.length}</strong> invalid</span></span>
-                          )}
-                        </div>
-
-                        {bulkResult.errors.length > 0 && (
-                          <div style={{ marginBottom: '8px', padding: '8px', background: isDark ? 'rgba(220,53,69,0.1)' : '#f8d7da', borderRadius: '6px', color: isDark ? '#ff9999' : '#721c24', maxHeight: '120px', overflowY: 'auto' }}>
-                            {bulkResult.errors.slice(0, 10).map((e, i) => (
-                              <div key={i} style={{ marginBottom: '2px' }}>{e.message}</div>
-                            ))}
-                            {bulkResult.errors.length > 10 && <div>…and {bulkResult.errors.length - 10} more errors</div>}
-                          </div>
-                        )}
-
-                        {bulkResult.valid.length > 0 && (
-                          <button type="button" onClick={addBulkRegisters} className="btn btn-sm">
-                            Add {bulkResult.valid.length} valid register{bulkResult.valid.length !== 1 ? 's' : ''}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Registers Table */}
-                  {slaveForm.registers.length > 0 ? (
-                    <div className="registers-table-wrapper table-responsive">
-                      <h5 className="form-subsection-title">Configured Registers ({slaveForm.registers.length})</h5>
-                      <table className="table registers-table">
-                        <thead>
-                          <tr>
-                            <th>Label</th>
-                            <th>Address</th>
-                            <th>Function</th>
-                            <th>Data Type</th>
-                            <th>Unit</th>
-                            <th>Scale</th>
-                            <th>Offset</th>
-                            <th>Category</th>
-                            <th>Alarms</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {slaveForm.registers.map((reg, index) => (
-                            <tr key={index}>
-                              <td>{reg.label}</td>
-                              <td>{reg.address}</td>
-                              <td>{reg.functionCode || 3}</td>
-                              <td>{getDataTypeName(reg.dataType)}</td>
-                              <td>{reg.unit || '-'}</td>
-                              <td>{reg.scaleFactor}</td>
-                              <td>{reg.offset}</td>
-                              <td>{reg.category || '-'}</td>
-                              <td>
-                                {reg.highAlarmThreshold || reg.lowAlarmThreshold ? (
-                                  <small>
-                                    {reg.highAlarmThreshold && `H:${reg.highAlarmThreshold}`}
-                                    {reg.highAlarmThreshold && reg.lowAlarmThreshold && ' / '}
-                                    {reg.lowAlarmThreshold && `L:${reg.lowAlarmThreshold}`}
-                                  </small>
-                                ) : '-'}
-                              </td>
-                              <td>
-                                <span
-                                  className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}
-                                  onClick={() => toggleRegisterEnabled(index)}
-                                  title={reg.enabled ? 'Click to disable' : 'Click to enable'}
-                                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                                >
-                                  {reg.enabled ? 'Enabled' : 'Disabled'}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  onClick={() => removeRegister(index)}
-                                  className="btn-icon btn-icon-danger"
-                                  title="Remove"
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="empty-state">
-                      No registers configured yet. Add registers above to define what data to read from this slave device.
-                    </div>
-                  )}
-                </div>
-
-              </form>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer">
-              <button type="button" className="btn btn-primary" onClick={(e) => { e.preventDefault(); handleSaveSlave(); }}>
-                {editingSlave ? 'Save Changes' : 'Create Slave'}
-              </button>
-              <button type="button" onClick={handleCancel} className="btn btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modern Delete Slave Confirmation Modal */}
-      {deleteModal.show && deleteModal.slave && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
-            animation: 'slideIn 0.2s ease-out'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                <AlertTriangle size={24} strokeWidth={2} />
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Delete Slave Device</span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
-                Delete Slave Device
-              </h3>
+              <button onClick={() => setDeleteModal({ show: false, slave: null })} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={16} />
+              </button>
             </div>
-            
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to delete slave device <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteModal.slave.deviceName}</strong> (ID: {deleteModal.slave.slaveId})?
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+                Are you sure you want to delete slave device <strong>{deleteModal.slave.deviceName}</strong> (ID: {deleteModal.slave.slaveId})?
               </p>
-              <div style={{
-                background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
-                border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#ff9999' : '#721c24'
-              }}>
-                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={16} strokeWidth={2} /> Warning:</strong> This will permanently delete the slave device configuration and all its register mappings.
+              <div style={{ background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb', borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem', color: isDark ? '#ff9999' : '#721c24' }}>
+                <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Warning:</strong> This will permanently delete the slave device and all its register mappings.
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteModal({ show: false, slave: null })}
-                style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
-              >
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteModal({ show: false, slave: null })} style={{ padding: '10px 18px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
                 Cancel
               </button>
-              <button
-                onClick={confirmDeleteSlave}
-                style={{
-                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
+              <button onClick={confirmDeleteSlave} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #dc3545, #c82333)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 14px rgba(220,53,69,0.4)' }}>
                 Yes, Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modern Success Notification Modal */}
-      {successModal.show && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(2px)'
-        }}>
-          <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '450px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-            animation: 'slideIn 0.2s ease-out'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                margin: '0 auto 1rem',
-                animation: 'scaleIn 0.3s ease-out'
-              }}>
-                ✓
+      {/* Success Modal */}
+      {successModal.show && ReactDOM.createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 16, boxShadow: isDark ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '480px', width: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+                  <CheckCircle2 size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Success</span>
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                Success
-              </h3>
-              
-              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                {successModal.message}
-              </p>
-              
-              <button
-                onClick={() => setSuccessModal({ show: false, message: '' })}
-                style={{
-                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
+              <button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>{successModal.message}</p>
+            </div>
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
                 Got it!
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
-};
-
-const getDataTypeName = (dataType: number): string => {
-  const types = {
-    0: 'UINT16',
-    1: 'INT16',
-    2: 'UINT32',
-    3: 'INT32',
-    4: 'FLOAT32',
-    5: 'UINT64',
-    6: 'INT64',
-    7: 'FLOAT64',
-    8: 'BOOL',
-    9: 'STRING'
-  };
-  return types[dataType as keyof typeof types] || `Unknown (${dataType})`;
 };
 
 export default Configuration;

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Settings, Pencil, Trash2 } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
 
 interface Preset {
   id: number;
@@ -101,26 +103,10 @@ const DevicePresets: React.FC = () => {
     enabled: true,
     registers: [] as RegisterMapping[]
   });
-  const [registerForm, setRegisterForm] = useState({
-    label: '',
-    address: 0,
-    num_registers: 1,
-    function_code: 3,
-    register_type: 3,
-    data_type: 0,
-    byte_order: 0,
-    word_order: 0,
-    access_mode: 0,
-    scale_factor: 1.0,
-    offset: 0.0,
-    unit: '',
-    decimal_places: 2,
-    category: 'Electrical',
-    high_alarm_threshold: null as number | null,
-    low_alarm_threshold: null as number | null,
-    description: '',
-    enabled: true,
-  });
+
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [slaveListSearch, setSlaveListSearch] = useState('');
+  const [editPresetSlaveSearch, setEditPresetSlaveSearch] = useState('');
 
   // Modern modal states
   const [deletePresetModal, setDeletePresetModal] = useState<{ show: boolean; preset: Preset | null }>({ show: false, preset: null });
@@ -180,26 +166,6 @@ const DevicePresets: React.FC = () => {
       timeout_ms: 1000,
       enabled: true,
       registers: [] as RegisterMapping[]
-    });
-    setRegisterForm({
-      label: '',
-      address: 0,
-      num_registers: 1,
-      function_code: 3,
-      register_type: 3,
-      data_type: 0,
-      byte_order: 0,
-      word_order: 0,
-      access_mode: 0,
-      scale_factor: 1.0,
-      offset: 0.0,
-      unit: '',
-      decimal_places: 2,
-      category: 'Electrical',
-      high_alarm_threshold: null,
-      low_alarm_threshold: null,
-      description: '',
-      enabled: true,
     });
   }, [creatingPreset]);
 
@@ -357,15 +323,6 @@ const DevicePresets: React.FC = () => {
     setSlaveSearch('');
   };
 
-  const getDataTypeName = (dataType: number): string => {
-    const types: Record<number, string> = {
-      0: 'UINT16', 1: 'INT16', 2: 'UINT32', 3: 'INT32',
-      4: 'FLOAT32', 5: 'UINT64', 6: 'INT64', 7: 'FLOAT64',
-      8: 'BOOL', 9: 'STRING',
-    };
-    return types[dataType] ?? `Unknown (${dataType})`;
-  };
-
   const handleConfigureSlaves = async (preset: Preset) => {
     setConfiguringSlaves(preset);
     await fetchSlavesForPreset(preset.config_id);
@@ -442,39 +399,18 @@ const DevicePresets: React.FC = () => {
     setSlaves([]);
     setCreatingSlave(false);
     setEditingSlave(null);
-    setSlaveForm({
-      slave_id: '',
-      device_name: '',
-      polling_interval_ms: 5000,
-      timeout_ms: 1000,
-      enabled: true,
-      registers: []
-    });
+    setSlaveListSearch('');
+    setModalError(null);
   };
 
   const handleCreateSlave = () => {
-    setSlaveForm({
-      slave_id: '',
-      device_name: '',
-      polling_interval_ms: 5000,
-      timeout_ms: 1000,
-      enabled: true,
-      registers: []
-    });
-    // Ensure we are not editing an existing slave when opening the create modal
     setEditingSlave(null);
+    setModalError(null);
     setCreatingSlave(true);
   };
 
   const handleEditSlave = (slave: SlaveDevice) => {
-    setSlaveForm({
-      slave_id: slave.slaveId.toString(),
-      device_name: slave.deviceName,
-      polling_interval_ms: slave.pollingIntervalMs,
-      timeout_ms: slave.timeoutMs,
-      enabled: slave.enabled,
-      registers: [...slave.registers]
-    });
+    setModalError(null);
     setEditingSlave(slave);
   };
 
@@ -502,95 +438,54 @@ const DevicePresets: React.FC = () => {
     }
   };
 
-  const handleSaveSlave = async () => {
+  const handleSaveSlave = async (formData: SlaveFormData) => {
     if (!configuringSlaves) return;
 
-    // Validate slave ID uniqueness for new slaves
-    if (!editingSlave) {
-      const slaveId = parseInt(slaveForm.slave_id);
-      const existingSlave = slaves.find(s => s.slaveId === slaveId);
-      if (existingSlave) {
-        setError(`Slave ID ${slaveId} already exists for this configuration. Please choose a different ID.`);
-        return;
-      }
-    }
+    const mapSlaveResponse = (s: any) => ({
+      id: s.id,
+      slaveId: s.slave_id,
+      deviceName: s.device_name,
+      pollingIntervalMs: s.polling_interval_ms,
+      timeoutMs: s.timeout_ms,
+      enabled: s.enabled,
+      registers: (s.registers || []).map((reg: any) => ({
+        id: reg.id,
+        label: reg.label,
+        address: reg.address,
+        numRegisters: reg.num_registers,
+        functionCode: reg.function_code,
+        dataType: reg.data_type,
+        scaleFactor: reg.scale_factor,
+        offset: reg.offset,
+        enabled: reg.enabled,
+      }))
+    });
 
     try {
       const slaveData = {
-        slave_id: parseInt(slaveForm.slave_id),
-        device_name: slaveForm.device_name,
-        polling_interval_ms: slaveForm.polling_interval_ms,
-        timeout_ms: slaveForm.timeout_ms,
-        enabled: slaveForm.enabled,
-        registers: slaveForm.registers
+        slave_id: parseInt(formData.slave_id),
+        device_name: formData.device_name,
+        polling_interval_ms: formData.polling_interval_ms,
+        timeout_ms: formData.timeout_ms,
+        enabled: formData.enabled,
+        registers: formData.registers,
       };
 
       if (editingSlave) {
-        const updatedSlave = await apiService.updateSlave(configuringSlaves.config_id, editingSlave.slaveId, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: updatedSlave.id,
-          slaveId: updatedSlave.slave_id,
-          deviceName: updatedSlave.device_name,
-          pollingIntervalMs: updatedSlave.polling_interval_ms,
-          timeoutMs: updatedSlave.timeout_ms,
-          enabled: updatedSlave.enabled,
-          registers: updatedSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        const updatedSlaves = slaves.map(s => s.slaveId === editingSlave.slaveId ? mappedSlave : s);
+        const updated = await apiService.updateSlave(configuringSlaves.config_id, editingSlave.slaveId, slaveData);
+        const updatedSlaves = slaves.map(s => s.slaveId === editingSlave.slaveId ? mapSlaveResponse(updated) : s);
         setSlaves(updatedSlaves);
-        // Update preset count
         updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
         setEditingSlave(null);
       } else {
-        const newSlave = await apiService.createSlave(configuringSlaves.config_id, slaveData);
-        // Map response to match interface
-        const mappedSlave = {
-          id: newSlave.id,
-          slaveId: newSlave.slave_id,
-          deviceName: newSlave.device_name,
-          pollingIntervalMs: newSlave.polling_interval_ms,
-          timeoutMs: newSlave.timeout_ms,
-          enabled: newSlave.enabled,
-          registers: newSlave.registers.map((reg: any) => ({
-            id: reg.id,
-            label: reg.label,
-            address: reg.address,
-            numRegisters: reg.num_registers,
-            functionCode: reg.function_code,
-            dataType: reg.data_type,
-            scaleFactor: reg.scale_factor,
-            offset: reg.offset,
-            enabled: reg.enabled,
-          }))
-        };
-        const updatedSlaves = [...slaves, mappedSlave];
+        const created = await apiService.createSlave(configuringSlaves.config_id, slaveData);
+        const updatedSlaves = [...slaves, mapSlaveResponse(created)];
         setSlaves(updatedSlaves);
-        // Update preset count
         updatePresetSlaveCount(configuringSlaves.config_id, updatedSlaves.length);
         setCreatingSlave(false);
       }
-
-      setSlaveForm({
-        slave_id: '',
-        device_name: '',
-        polling_interval_ms: 5000,
-        timeout_ms: 1000,
-        enabled: true,
-        registers: []
-      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save slave');
+      setModalError(err instanceof Error ? err.message : 'Failed to save slave');
     }
   };
 
@@ -620,60 +515,6 @@ const DevicePresets: React.FC = () => {
     }
   };
 
-  const addRegister = () => {
-    const newRegister: RegisterMapping = {
-      id: Date.now(),
-      label: registerForm.label,
-      address: registerForm.address,
-      numRegisters: registerForm.num_registers,
-      functionCode: registerForm.function_code,
-      registerType: registerForm.register_type,
-      dataType: registerForm.data_type,
-      byteOrder: registerForm.byte_order,
-      wordOrder: registerForm.word_order,
-      accessMode: registerForm.access_mode,
-      scaleFactor: registerForm.scale_factor,
-      offset: registerForm.offset,
-      unit: registerForm.unit,
-      decimalPlaces: registerForm.decimal_places,
-      category: registerForm.category,
-      highAlarmThreshold: registerForm.high_alarm_threshold,
-      lowAlarmThreshold: registerForm.low_alarm_threshold,
-      description: registerForm.description,
-      enabled: registerForm.enabled,
-    };
-
-    setSlaveForm({ ...slaveForm, registers: [...slaveForm.registers, newRegister] });
-
-    setRegisterForm({
-      label: '',
-      address: 0,
-      num_registers: 1,
-      function_code: 3,
-      register_type: 3,
-      data_type: 0,
-      byte_order: 0,
-      word_order: 0,
-      access_mode: 0,
-      scale_factor: 1.0,
-      offset: 0.0,
-      unit: '',
-      decimal_places: 2,
-      category: 'Electrical',
-      high_alarm_threshold: null,
-      low_alarm_threshold: null,
-      description: '',
-      enabled: true,
-    });
-  };
-
-  const removeRegister = (index: number) => {
-    setSlaveForm({
-      ...slaveForm,
-      registers: slaveForm.registers.filter((_, i) => i !== index)
-    });
-  };
-
   if (loading) {
     return <div className="loading">Loading presets...</div>;
   }
@@ -681,6 +522,15 @@ const DevicePresets: React.FC = () => {
   if (error) {
     return <div className="error">Error: {error}</div>;
   }
+
+  const editSlaveInitialForm: SlaveFormData | undefined = editingSlave ? {
+    slave_id: editingSlave.slaveId.toString(),
+    device_name: editingSlave.deviceName,
+    polling_interval_ms: editingSlave.pollingIntervalMs,
+    timeout_ms: editingSlave.timeoutMs,
+    enabled: editingSlave.enabled,
+    registers: editingSlave.registers,
+  } : undefined;
 
   return (
     <div>
@@ -739,20 +589,62 @@ const DevicePresets: React.FC = () => {
         </table></div>
       </div>
 
-      {(editingPreset || creatingPreset) && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</h3>
-            <div className="modal-body">
+      {(editingPreset || creatingPreset) && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }} onClick={() => { setEditingPreset(null); setCreatingPreset(false); }}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '700px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
+                  <Settings size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>{editingPreset ? 'Update gateway configuration preset' : 'Configure a new gateway preset'}</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => { setEditingPreset(null); setCreatingPreset(false); }} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
               <form onSubmit={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }}>
-                
+
                 {/* Section 1: Preset Information */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Preset Details</h4>
-                  <div className="form-grid form-grid-2">
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Details</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                     {editingPreset && (
-                      <div className="form-group">
-                        <label>Config ID</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config ID</label>
                         <input
                           type="text"
                           value={editForm.config_id}
@@ -760,12 +652,12 @@ const DevicePresets: React.FC = () => {
                           required
                           autoComplete="off"
                           readOnly
-                          className="form-control-readonly"
+                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                         />
                       </div>
                     )}
-                    <div className="form-group" style={editingPreset ? {} : { gridColumn: '1 / -1' }}>
-                      <label>Preset Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...(editingPreset ? {} : { gridColumn: '1 / -1' }) }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Name</label>
                       <input
                         type="text"
                         value={editingPreset ? editForm.name : createForm.name}
@@ -773,30 +665,40 @@ const DevicePresets: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="e.g., Standard Gateway Config"
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       />
                     </div>
-                    <div className="form-group full-width">
-                      <label>Description</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: '1 / -1' }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Description</label>
                       <textarea
                         value={editingPreset ? editForm.description : createForm.description}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, description: e.target.value}) : setCreateForm({...createForm, description: e.target.value})}
                         autoComplete="off"
                         placeholder="Describe the purpose of this preset..."
                         rows={2}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', resize: 'vertical' }}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Section 2: UART Configuration */}
-                <div className="form-section compact-inputs">
-                  <h4 className="form-section-title">UART Configuration</h4>
-                  <div className="form-grid form-grid-4">
-                    <div className="form-group">
-                      <label>Baud Rate</label>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>UART Configuration</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Baud Rate</label>
                       <select
                         value={editingPreset ? editForm.baud_rate : createForm.baud_rate}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, baud_rate: parseInt(e.target.value)}) : setCreateForm({...createForm, baud_rate: parseInt(e.target.value)})}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={9600}>9600</option>
                         <option value={19200}>19200</option>
@@ -805,31 +707,34 @@ const DevicePresets: React.FC = () => {
                         <option value={115200}>115200</option>
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>Data Bits</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Data Bits</label>
                       <select
                         value={editingPreset ? editForm.data_bits : createForm.data_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, data_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, data_bits: parseInt(e.target.value)})}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={7}>7</option>
                         <option value={8}>8</option>
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>Stop Bits</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Stop Bits</label>
                       <select
                         value={editingPreset ? editForm.stop_bits : createForm.stop_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, stop_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, stop_bits: parseInt(e.target.value)})}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={1}>1</option>
                         <option value={2}>2</option>
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label>Parity</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Parity</label>
                       <select
                         value={editingPreset ? editForm.parity : createForm.parity}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, parity: parseInt(e.target.value)}) : setCreateForm({...createForm, parity: parseInt(e.target.value)})}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={0}>None</option>
                         <option value={1}>Odd</option>
@@ -841,14 +746,25 @@ const DevicePresets: React.FC = () => {
 
                 {/* Section 3: Initial Slave Setup (Create Mode Only) */}
                 {creatingPreset && (
-                  <div className="form-section">
-                    <h4 className="form-section-title">Initial Slave Setup</h4>
-                    <p className="form-section-desc">Optionally configure a slave device for this preset immediately.</p>
-                    
-                    <div className="slave-options-container">
-                      <div className="slave-option-card">
-                        <div className="slave-option-header">
-                          <label className="radio-card-label">
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Initial Slave Setup</span>
+                    </div>
+                    <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 16, marginTop: -8 }}>Optionally configure a slave device for this preset immediately.</p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{
+                        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                        borderRadius: 10, padding: '14px 16px',
+                        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                      }}>
+                        <div style={{ marginBottom: createPresetSlaveMode === 'create' ? 12 : 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                             <input
                               type="radio"
                               name="slaveMode"
@@ -858,58 +774,62 @@ const DevicePresets: React.FC = () => {
                             <span>Create New Slave</span>
                           </label>
                         </div>
-                        <div className={`slave-option-content ${createPresetSlaveMode === 'create' ? 'active' : ''}`}>
-                          <p className="text-sm text-muted">Define a new slave device configuration from scratch.</p>
-                          {createPresetSlaveMode === 'create' && (
-                             <div className="nested-form">
-                                <div className="form-grid form-grid-2">
-                                  <div className="form-group">
-                                    <label>Slave ID</label>
-                                    <input
-                                      type="number"
-                                      value={slaveForm.slave_id}
-                                      onChange={(e) => setSlaveForm({ ...slaveForm, slave_id: e.target.value })}
-                                      required
-                                      placeholder="1-247"
-                                    />
-                                  </div>
-                                  <div className="form-group">
-                                    <label>Device Name</label>
-                                    <input
-                                      type="text"
-                                      value={slaveForm.device_name}
-                                      onChange={(e) => setSlaveForm({ ...slaveForm, device_name: e.target.value })}
-                                      required
-                                      placeholder="Device Name"
-                                    />
-                                  </div>
-                                  <div className="form-group">
-                                    <label>Polling (ms)</label>
-                                    <input
-                                      type="number"
-                                      value={slaveForm.polling_interval_ms}
-                                      onChange={(e) => setSlaveForm({ ...slaveForm, polling_interval_ms: parseInt(e.target.value) })}
-                                      placeholder="5000"
-                                    />
-                                  </div>
-                                  <div className="form-group">
-                                    <label>Timeout (ms)</label>
-                                    <input
-                                      type="number"
-                                      value={slaveForm.timeout_ms}
-                                      onChange={(e) => setSlaveForm({ ...slaveForm, timeout_ms: parseInt(e.target.value) })}
-                                      placeholder="1000"
-                                    />
-                                  </div>
-                                </div>
-                             </div>
-                          )}
+                        <div style={{ display: createPresetSlaveMode === 'create' ? 'block' : 'none' }}>
+                          <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '0 0 12px 0' }}>Define a new slave device configuration from scratch.</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Slave ID</label>
+                              <input
+                                type="number"
+                                value={slaveForm.slave_id}
+                                onChange={(e) => setSlaveForm({ ...slaveForm, slave_id: e.target.value })}
+                                required
+                                placeholder="1-247"
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Name</label>
+                              <input
+                                type="text"
+                                value={slaveForm.device_name}
+                                onChange={(e) => setSlaveForm({ ...slaveForm, device_name: e.target.value })}
+                                required
+                                placeholder="Device Name"
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Polling (ms)</label>
+                              <input
+                                type="number"
+                                value={slaveForm.polling_interval_ms}
+                                onChange={(e) => setSlaveForm({ ...slaveForm, polling_interval_ms: parseInt(e.target.value) })}
+                                placeholder="5000"
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Timeout (ms)</label>
+                              <input
+                                type="number"
+                                value={slaveForm.timeout_ms}
+                                onChange={(e) => setSlaveForm({ ...slaveForm, timeout_ms: parseInt(e.target.value) })}
+                                placeholder="1000"
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="slave-option-card">
-                        <div className="slave-option-header">
-                          <label className="radio-card-label">
+                      <div style={{
+                        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                        borderRadius: 10, padding: '14px 16px',
+                        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                      }}>
+                        <div style={{ marginBottom: createPresetSlaveMode === 'select' ? 12 : 0 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                             <input
                               type="radio"
                               name="slaveMode"
@@ -919,77 +839,73 @@ const DevicePresets: React.FC = () => {
                             <span>Link Existing Slave</span>
                           </label>
                         </div>
-                        <div className={`slave-option-content ${createPresetSlaveMode === 'select' ? 'active' : ''}`}>
-                           <p className="text-sm text-muted">Select an existing slave configuration to reuse.</p>
-                           {createPresetSlaveMode === 'select' && (
-                              <div style={{ marginTop: '10px' }}>
-                                {globalSlavesLoading ? (
-                                  <p className="text-sm text-muted">Loading slaves...</p>
-                                ) : globalSlaves.length === 0 ? (
-                                  <p className="text-sm text-muted">No existing slaves found.</p>
-                                ) : (() => {
-                                  const filtered = globalSlaves.filter(s =>
-                                    s.deviceName.toLowerCase().includes(slaveSearch.toLowerCase()) ||
-                                    String(s.slaveId).includes(slaveSearch)
-                                  );
-                                  return (
-                                    <>
+                        <div style={{ display: createPresetSlaveMode === 'select' ? 'block' : 'none' }}>
+                          <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '0 0 12px 0' }}>Select an existing slave configuration to reuse.</p>
+                          {globalSlavesLoading ? (
+                            <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: 0 }}>Loading slaves...</p>
+                          ) : globalSlaves.length === 0 ? (
+                            <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: 0 }}>No existing slaves found.</p>
+                          ) : (() => {
+                            const filtered = globalSlaves.filter(s =>
+                              s.deviceName.toLowerCase().includes(slaveSearch.toLowerCase()) ||
+                              String(s.slaveId).includes(slaveSearch)
+                            );
+                            return (
+                              <>
+                                <input
+                                  type="text"
+                                  placeholder="Search by name or slave ID…"
+                                  value={slaveSearch}
+                                  onChange={(e) => setSlaveSearch(e.target.value)}
+                                  style={{ width: '100%', marginBottom: '8px', padding: '10px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                                />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', borderRadius: 8, padding: '8px' }}>
+                                  {filtered.length === 0 ? (
+                                    <p style={{ margin: 0, color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.85em' }}>No slaves match your search.</p>
+                                  ) : filtered.map((slave) => (
+                                    <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
                                       <input
-                                        type="text"
-                                        placeholder="Search by name or slave ID…"
-                                        value={slaveSearch}
-                                        onChange={(e) => setSlaveSearch(e.target.value)}
-                                        style={{ width: '100%', marginBottom: '8px', padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(148,163,184,0.25)', background: 'rgba(15,23,42,0.6)', color: '#f8fafc', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                                        type="checkbox"
+                                        checked={selectedGlobalSlaveIds.includes(slave.id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedGlobalSlaveIds([...selectedGlobalSlaveIds, slave.id]);
+                                          } else {
+                                            setSelectedGlobalSlaveIds(selectedGlobalSlaveIds.filter(id => id !== slave.id));
+                                          }
+                                        }}
                                       />
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(148,163,184,0.15)', borderRadius: '4px', padding: '8px' }}>
-                                        {filtered.length === 0 ? (
-                                          <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85em' }}>No slaves match your search.</p>
-                                        ) : filtered.map((slave) => (
-                                          <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
-                                            <input
-                                              type="checkbox"
-                                              checked={selectedGlobalSlaveIds.includes(slave.id)}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setSelectedGlobalSlaveIds([...selectedGlobalSlaveIds, slave.id]);
-                                                } else {
-                                                  setSelectedGlobalSlaveIds(selectedGlobalSlaveIds.filter(id => id !== slave.id));
-                                                }
-                                              }}
-                                            />
-                                            <span><strong>{slave.deviceName}</strong> <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
-                                          </label>
-                                        ))}
-                                      </div>
-                                      <small className="form-hint" style={{ marginTop: '4px', display: 'block' }}>
-                                        {filtered.length} of {globalSlaves.length} shown
-                                        {selectedGlobalSlaveIds.length > 0 && (
-                                          <span className="form-hint-accent"> · {selectedGlobalSlaveIds.length} selected</span>
-                                        )}
-                                      </small>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                           )}
+                                      <span style={{ fontSize: '0.875rem', color: isDark ? '#f3f4f6' : '#111827' }}><strong>{slave.deviceName}</strong> <span style={{ color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
+                                    </label>
+                                  ))}
+                                </div>
+                                <small style={{ marginTop: '4px', display: 'block', fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                  {filtered.length} of {globalSlaves.length} shown
+                                  {selectedGlobalSlaveIds.length > 0 && (
+                                    <span style={{ color: '#6366f1' }}> · {selectedGlobalSlaveIds.length} selected</span>
+                                  )}
+                                </small>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
-                      <div className="slave-option-card">
-                        <div className="slave-option-header">
-                          <label className="radio-card-label">
-                            <input
-                              type="radio"
-                              name="slaveMode"
-                              checked={createPresetSlaveMode === 'none'}
-                              onChange={() => setCreatePresetSlaveMode('none')}
-                            />
-                            <span>Skip for Now</span>
-                          </label>
-                        </div>
-                        <div className="slave-option-content">
-                          <p className="text-sm text-muted">Create preset without any initial slave configuration.</p>
-                        </div>
+                      <div style={{
+                        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                        borderRadius: 10, padding: '14px 16px',
+                        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                      }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                          <input
+                            type="radio"
+                            name="slaveMode"
+                            checked={createPresetSlaveMode === 'none'}
+                            onChange={() => setCreatePresetSlaveMode('none')}
+                          />
+                          <span>Skip for Now</span>
+                        </label>
+                        <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '8px 0 0 0' }}>Create preset without any initial slave configuration.</p>
                       </div>
                     </div>
                   </div>
@@ -997,40 +913,61 @@ const DevicePresets: React.FC = () => {
 
                 {/* Section 4: Existing Slaves for this Preset (when editing) */}
                 {editingPreset && (
-                  <div className="form-section">
-                    <h4 className="form-section-title">Preset Slave Devices</h4>
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Slave Devices</span>
+                    </div>
                     <div className="card">
                       <div className="card-header">
-                        <h5>Slaves ({slaves.length})</h5>
-                        <button type="button" onClick={() => handleConfigureSlaves(editingPreset)} className="btn btn-sm">Configure Slaves</button>
+                        <h5>Slaves ({slaves.length}{editPresetSlaveSearch ? ` · ${slaves.filter(s => s.deviceName.toLowerCase().includes(editPresetSlaveSearch.toLowerCase()) || String(s.slaveId).includes(editPresetSlaveSearch)).length} shown` : ''})</h5>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="Search…"
+                            value={editPresetSlaveSearch}
+                            onChange={(e) => setEditPresetSlaveSearch(e.target.value)}
+                            style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.78rem', minWidth: 130 }}
+                          />
+                          <button type="button" onClick={() => handleConfigureSlaves(editingPreset)} className="btn btn-sm">Configure Slaves</button>
+                        </div>
                       </div>
                       {slaves.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '10px', color: '#666' }}>
                           <p>No slave devices for this preset.</p>
                         </div>
                       ) : (
-                        <div className="table-responsive"><table className="table">
-                          <thead>
-                            <tr>
-                              <th style={{ textAlign: 'center' }}>Slave ID</th>
-                              <th style={{ textAlign: 'center' }}>Device Name</th>
-                              <th style={{ textAlign: 'center' }}>Polling</th>
-                              <th style={{ textAlign: 'center' }}>Timeout</th>
-                              <th style={{ textAlign: 'center' }}>Registers</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {slaves.map(s => (
-                              <tr key={s.id}>
-                                <td style={{ textAlign: 'center' }}>{s.slaveId}</td>
-                                <td>{s.deviceName}</td>
-                                <td style={{ textAlign: 'center' }}>{s.pollingIntervalMs}ms</td>
-                                <td style={{ textAlign: 'center' }}>{s.timeoutMs}ms</td>
-                                <td style={{ textAlign: 'center' }}>{s.registers.filter(r => r.enabled).length} / {s.registers.length}</td>
+                        <div
+                          className="table-responsive"
+                          style={{ maxHeight: 260, overflowY: 'auto', overflowX: 'auto' }}
+                        >
+                          <table className="table" style={{ minWidth: 600 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ textAlign: 'center' }}>Slave ID</th>
+                                <th style={{ textAlign: 'center' }}>Device Name</th>
+                                <th style={{ textAlign: 'center' }}>Polling</th>
+                                <th style={{ textAlign: 'center' }}>Timeout</th>
+                                <th style={{ textAlign: 'center' }}>Registers</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table></div>
+                            </thead>
+                            <tbody>
+                              {slaves.filter(s => !editPresetSlaveSearch || s.deviceName.toLowerCase().includes(editPresetSlaveSearch.toLowerCase()) || String(s.slaveId).includes(editPresetSlaveSearch)).map(s => (
+                                <tr key={s.id}>
+                                  <td style={{ textAlign: 'center' }}>{s.slaveId}</td>
+                                  <td>{s.deviceName}</td>
+                                  <td style={{ textAlign: 'center' }}>{s.pollingIntervalMs}ms</td>
+                                  <td style={{ textAlign: 'center' }}>{s.timeoutMs}ms</td>
+                                  <td style={{ textAlign: 'center' }}>{s.registers.filter(r => r.enabled).length} / {s.registers.length}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1038,805 +975,613 @@ const DevicePresets: React.FC = () => {
 
               </form>
             </div>
-            <div className="form-actions">
-              <button type="submit" className="btn" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }}>{editingPreset ? 'Save' : 'Create'}</button>
-              <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+
+            {/* Footer */}
+            <div style={{
+              display: 'flex', gap: 10, justifyContent: 'flex-end',
+              padding: '16px 28px',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>{editingPreset ? 'Save' : 'Create'}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {selectedPreset && (
-        <div className="modal">
-          <div className="modal-content" style={{ maxWidth: '700px' }}>
-            <h3 style={{ marginBottom: 12 }}>Gateway Configuration: {selectedPreset.name}</h3>
+      {selectedPreset && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }} onClick={() => setSelectedPreset(null)}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '700px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(14,165,233,0.4)' }}>
+                  <Eye size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{selectedPreset.name}</div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>Configuration details</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedPreset(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={18} />
+              </button>
+            </div>
 
-            <div className="responsive-grid-2" style={{ marginBottom: 16, paddingLeft: 20 }}>
-              <div>
-                <h4 style={{ marginBottom: 8 }}>General Settings</h4>
-                <div style={{ paddingLeft: 0 }}>
-                  <p style={{ margin: '6px 0', wordBreak: 'break-word' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
-                  <p style={{ margin: '6px 0' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
-                  <p style={{ margin: '6px 0' }}><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 16 }}>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>General Settings</span>
+                  </div>
+                  <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
+                </div>
+
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px',
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>UART Configuration</span>
+                  </div>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
                 </div>
               </div>
 
-              <div>
-                <h4 style={{ marginBottom: 8 }}>UART Configuration</h4>
-                <div style={{ paddingLeft: 0 }}>
-                  <p style={{ margin: '6px 0' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
-                  <p style={{ margin: '6px 0' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
-                  <p style={{ margin: '6px 0' }}><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
-                  <p style={{ margin: '6px 0' }}><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                borderRadius: 12, padding: '20px',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Info</span>
                 </div>
+                <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
+                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px', paddingLeft: 20 }}>
-              <p style={{ margin: '6px 0', wordBreak: 'break-word' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
-              <p style={{ margin: '6px 0' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
-            </div>
-            <div className="form-actions">
-              <button onClick={handleCloseDetails} className="btn btn-secondary">Close</button>
+            {/* Footer */}
+            <div style={{
+              display: 'flex', gap: 10, justifyContent: 'flex-end',
+              padding: '16px 28px',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {configuringSlaves && (
-        <div className="modal">
-          <div className="modal-content" style={{ maxWidth: '1200px', maxHeight: '90vh', overflow: 'auto' }}>
-            <h3>Configure Slaves: {configuringSlaves.name}</h3>
-
-            {error && (
-              <div className="error" style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
-                <strong>Error:</strong> {error}
-                <button
-                  onClick={() => setError(null)}
-                  style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '16px' }}
-                  title="Close error"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            <div className="card" style={{ marginBottom: '20px' }}>
-              <div className="card-header">
-                <h4>Slave Devices ({slaves.length})</h4>
-                <button onClick={handleCreateSlave} className="btn">Add Slave</button>
-              </div>
-
-              {slaves.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
-                  <p>No slave devices configured yet.</p>
-                  <p>Click "Add Slave" to configure your first slave device.</p>
+      {configuringSlaves && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }} onClick={() => setConfiguringSlaves(null)}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '1100px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
+                  <Settings size={22} color="white" />
                 </div>
-              ) : (
-                <div className="table-responsive"><table className="table">
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'center' }}>Slave ID</th>
-                      <th style={{ textAlign: 'center' }}>Device Name</th>
-                      <th style={{ textAlign: 'center' }}>Polling Interval</th>
-                      <th style={{ textAlign: 'center' }}>Timeout</th>
-                      <th style={{ textAlign: 'center' }}>Status</th>
-                      <th style={{ textAlign: 'center' }}>Registers</th>
-                      <th style={{ textAlign: 'center' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {slaves.map((slave) => (
-                      <tr key={slave.id}>
-                        <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
-                        <td>{slave.deviceName}</td>
-                        <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
-                        <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <span className={slave.enabled ? 'status-online' : 'status-offline'}>
-                            {slave.enabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>{slave.registers.filter(r => r.enabled).length} / {slave.registers.length}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          {slave.attached ? (
-                            <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginRight: '8px' }} title="Remove from preset">
-                              Remove
-                            </button>
-                          ) : (
-                            <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '8px' }} title="Add to preset">
-                              Add
-                            </button>
-                          )}
-                          <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', marginRight: '10px' }} title="Edit">
-                            <Pencil size={16} strokeWidth={2} />
-                          </button>
-                          <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete">
-                            <Trash2 size={16} strokeWidth={2} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table></div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Manage Slave Devices</div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>{configuringSlaves.name}</div>
+                </div>
+              </div>
+              <button type="button" onClick={() => setConfiguringSlaves(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+              {error && (
+                <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: isDark ? 'rgba(220,53,69,0.15)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.3)' : '1px solid #f5c6cb', borderRadius: 8, color: isDark ? '#fca5a5' : '#721c24', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
+                  <span><strong>Error:</strong> {error}</span>
+                  <button
+                    onClick={() => setError(null)}
+                    style={{ background: 'none', border: 'none', color: isDark ? '#fca5a5' : '#721c24', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+                    title="Close error"
+                  >
+                    ×
+                  </button>
+                </div>
               )}
+
+              <div style={{
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                borderRadius: 12, padding: '20px',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Slave Devices ({slaves.length}{slaveListSearch ? ` · ${slaves.filter(s => s.deviceName.toLowerCase().includes(slaveListSearch.toLowerCase()) || String(s.slaveId).includes(slaveListSearch)).length} shown` : ''})</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Search by name or ID…"
+                      value={slaveListSearch}
+                      onChange={(e) => setSlaveListSearch(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.8rem', minWidth: 180, boxSizing: 'border-box' }}
+                    />
+                    <button onClick={handleCreateSlave} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', whiteSpace: 'nowrap' }}>Add Slave</button>
+                  </div>
+                </div>
+
+                {slaves.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '0.875rem' }}>No slave devices configured yet.</p>
+                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Click "Add Slave" to configure your first slave device.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive"><table className="table">
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'center' }}>Slave ID</th>
+                        <th style={{ textAlign: 'center' }}>Device Name</th>
+                        <th style={{ textAlign: 'center' }}>Polling Interval</th>
+                        <th style={{ textAlign: 'center' }}>Timeout</th>
+                        <th style={{ textAlign: 'center' }}>Status</th>
+                        <th style={{ textAlign: 'center' }}>Registers</th>
+                        <th style={{ textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slaves.filter(s => !slaveListSearch || s.deviceName.toLowerCase().includes(slaveListSearch.toLowerCase()) || String(s.slaveId).includes(slaveListSearch)).map((slave) => (
+                        <tr key={slave.id}>
+                          <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
+                          <td>{slave.deviceName}</td>
+                          <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
+                          <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={slave.enabled ? 'status-online' : 'status-offline'}>
+                              {slave.enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>{slave.registers.filter(r => r.enabled).length} / {slave.registers.length}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            {slave.attached ? (
+                              <button onClick={() => handleDetachSlaveFromPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', marginRight: '8px' }} title="Remove from preset">
+                                Remove
+                              </button>
+                            ) : (
+                              <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '8px' }} title="Add to preset">
+                                Add
+                              </button>
+                            )}
+                            <button onClick={() => handleEditSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', marginRight: '10px' }} title="Edit">
+                              <Pencil size={16} strokeWidth={2} />
+                            </button>
+                            <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Delete">
+                              <Trash2 size={16} strokeWidth={2} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table></div>
+                )}
+              </div>
             </div>
 
-            <div className="form-actions">
-              <button onClick={handleCancelSlaveConfig} className="btn btn-secondary">Close</button>
+            {/* Footer */}
+            <div style={{
+              display: 'flex', gap: 10, justifyContent: 'flex-end',
+              padding: '16px 28px',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <button type="button" onClick={handleCancelSlaveConfig} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Slave Configuration Modal */}
-      {(creatingSlave || editingSlave) && configuringSlaves && (
-        <div className="modal">
-          <div className="modal-content large-modal">
-            <h3>{editingSlave ? `Edit Slave: ${editingSlave.deviceName}` : 'Configure New Slave'}</h3>
-            
-            <div className="modal-body">
-              <form onSubmit={(e) => { e.preventDefault(); handleSaveSlave(); }}>
-                
-                {/* Section 1: Basic Information */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Basic Information</h4>
-                  <div className="form-grid form-grid-2">
-                    <div className="form-group">
-                      <label>Slave ID</label>
-                      <input
-                        type="number"
-                        value={slaveForm.slave_id}
-                        onChange={(e) => setSlaveForm({...slaveForm, slave_id: e.target.value})}
-                        required
-                        min="1"
-                        max="247"
-                        placeholder="1-247"
-                      />
-                      <small className="form-hint">
-                        Unique identifier (1-247)
-                        {slaves.length > 0 && (
-                          <span className="form-hint-accent">
-                            Existing: {slaves.map(s => s.slaveId).join(', ')}
-                          </span>
-                        )}
-                      </small>
-                    </div>
-                    <div className="form-group">
-                      <label>Device Name</label>
-                      <input
-                        type="text"
-                        value={slaveForm.device_name}
-                        onChange={(e) => setSlaveForm({...slaveForm, device_name: e.target.value})}
-                        required
-                        placeholder="e.g., Solar Inverter"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Communication Settings */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Communication Settings</h4>
-                  <div className="form-grid form-grid-3">
-                    <div className="form-group">
-                      <label>Polling Interval (ms)</label>
-                      <input
-                        type="number"
-                        value={slaveForm.polling_interval_ms}
-                        onChange={(e) => setSlaveForm({...slaveForm, polling_interval_ms: parseInt(e.target.value)})}
-                        min="100"
-                        placeholder="5000"
-                      />
-                      <small className="form-hint">How often to poll</small>
-                    </div>
-                    <div className="form-group">
-                      <label>Timeout (ms)</label>
-                      <input
-                        type="number"
-                        value={slaveForm.timeout_ms}
-                        onChange={(e) => setSlaveForm({...slaveForm, timeout_ms: parseInt(e.target.value)})}
-                        min="100"
-                        placeholder="1000"
-                      />
-                      <small className="form-hint">Response timeout</small>
-                    </div>
-                    <div className="form-group checkbox-group">
-                      <label>Status</label>
-                      <label className="checkbox-label checkbox-vertical">
-                        <input
-                          type="checkbox"
-                          checked={slaveForm.enabled}
-                          onChange={(e) => setSlaveForm({...slaveForm, enabled: e.target.checked})}
-                        />
-                        <span className={slaveForm.enabled ? 'status-text-enabled' : 'status-text-disabled'}>
-                          {slaveForm.enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Register Mappings */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Register Mappings</h4>
-                  <p className="form-section-desc">Configure the Modbus registers to read from this slave device.</p>
-
-                  <div className="form-subsection">
-                    <h5 className="form-subsection-title">Add New Register</h5>
-                    <div className="form-grid form-grid-auto">
-                      {/* Row 1: Basic Info */}
-                      <div className="form-group">
-                        <label>Label *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Battery_Voltage"
-                          value={registerForm.label}
-                          onChange={(e) => setRegisterForm({...registerForm, label: e.target.value})}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Address *</label>
-                        <input
-                          type="number"
-                          placeholder="40001"
-                          value={registerForm.address}
-                          onChange={(e) => setRegisterForm({...registerForm, address: parseInt(e.target.value)})}
-                          min="1"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Num Registers</label>
-                        <input
-                          type="number"
-                          placeholder="1"
-                          value={registerForm.num_registers || 1}
-                          onChange={(e) => setRegisterForm({...registerForm, num_registers: parseInt(e.target.value)})}
-                          min="1"
-                          max="125"
-                        />
-                        <small className="form-hint">Count (1-125)</small>
-                      </div>
-                      <div className="form-group">
-                        <label>Function Code *</label>
-                        <select
-                          value={registerForm.function_code || 3}
-                          onChange={(e) => setRegisterForm({...registerForm, function_code: parseInt(e.target.value)})}
-                        >
-                          <option value={0x01}>0x01 - Read Coils</option>
-                          <option value={0x02}>0x02 - Read Discrete Inputs</option>
-                          <option value={0x03}>0x03 - Read Holding Registers</option>
-                          <option value={0x04}>0x04 - Read Input Registers</option>
-                          <option value={0x05}>0x05 - Write Single Coil</option>
-                          <option value={0x06}>0x06 - Write Single Register</option>
-                          <option value={0x0F}>0x0F - Write Multiple Coils</option>
-                          <option value={0x10}>0x10 - Write Multiple Registers</option>
-                        </select>
-                      </div>
-
-                      {/* Row 2: Data Type & Format */}
-                      <div className="form-group">
-                        <label>Data Type *</label>
-                        <select
-                          value={registerForm.data_type}
-                          onChange={(e) => setRegisterForm({...registerForm, data_type: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>UINT16 (16-bit Unsigned)</option>
-                          <option value={1}>INT16 (16-bit Signed)</option>
-                          <option value={2}>UINT32 (32-bit Unsigned)</option>
-                          <option value={3}>INT32 (32-bit Signed)</option>
-                          <option value={4}>FLOAT32 (32-bit Float)</option>
-                          <option value={5}>UINT64 (64-bit Unsigned)</option>
-                          <option value={6}>INT64 (64-bit Signed)</option>
-                          <option value={7}>FLOAT64 (64-bit Float)</option>
-                          <option value={8}>BOOL (Single Bit)</option>
-                          <option value={9}>STRING (ASCII)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Byte Order</label>
-                        <select
-                          value={registerForm.byte_order || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, byte_order: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Big Endian (AB)</option>
-                          <option value={1}>Little Endian (BA)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Word Order</label>
-                        <select
-                          value={registerForm.word_order || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, word_order: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Big Endian (AB CD)</option>
-                          <option value={1}>Little Endian (CD AB)</option>
-                          <option value={2}>Mid-Big Endian (BA DC)</option>
-                          <option value={3}>Mid-Little Endian (DC BA)</option>
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Decimal Places</label>
-                        <input
-                          type="number"
-                          placeholder="2"
-                          value={registerForm.decimal_places || 2}
-                          onChange={(e) => setRegisterForm({...registerForm, decimal_places: parseInt(e.target.value)})}
-                          min="0"
-                          max="6"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Access Mode</label>
-                        <select
-                          value={registerForm.access_mode || 0}
-                          onChange={(e) => setRegisterForm({...registerForm, access_mode: parseInt(e.target.value)})}
-                        >
-                          <option value={0}>Read Only</option>
-                          <option value={1}>Read/Write</option>
-                          <option value={2}>Write Only</option>
-                        </select>
-                      </div>
-
-                      {/* Row 3: Scaling & Units */}
-                      <div className="form-group">
-                        <label>Scale Factor</label>
-                        <input
-                          type="number"
-                          placeholder="1.0"
-                          value={registerForm.scale_factor}
-                          onChange={(e) => setRegisterForm({...registerForm, scale_factor: parseFloat(e.target.value)})}
-                          step="0.001"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Offset</label>
-                        <input
-                          type="number"
-                          placeholder="0.0"
-                          value={registerForm.offset}
-                          onChange={(e) => setRegisterForm({...registerForm, offset: parseFloat(e.target.value)})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Unit</label>
-                        <input
-                          type="text"
-                          placeholder="V, A, W, °C, etc."
-                          value={registerForm.unit || ''}
-                          onChange={(e) => setRegisterForm({...registerForm, unit: e.target.value})}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Category</label>
-                        <select
-                          value={registerForm.category || 'Grid'}
-                          onChange={(e) => setRegisterForm({...registerForm, category: e.target.value})}
-                        >
-                          <option value="Grid">Grid</option>
-                          <option value="BMS">BMS</option>
-                          <option value="Status">Status</option>
-                          <option value="Energy">Energy</option>
-                          <option value="Temperature">Temperature</option>
-                          <option value="Battery">Battery</option>
-                          <option value="Load">Load</option>
-                          <option value="PV">PV</option>
-                        </select>
-                      </div>
-
-                      {/* Row 4: Alarms & Status */}
-                      <div className="form-group">
-                        <label>High Alarm</label>
-                        <input
-                          type="number"
-                          placeholder="Optional"
-                          value={registerForm.high_alarm_threshold ?? ''}
-                          onChange={(e) => setRegisterForm({...registerForm, high_alarm_threshold: e.target.value ? parseFloat(e.target.value) : null})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Low Alarm</label>
-                        <input
-                          type="number"
-                          placeholder="Optional"
-                          value={registerForm.low_alarm_threshold ?? ''}
-                          onChange={(e) => setRegisterForm({...registerForm, low_alarm_threshold: e.target.value ? parseFloat(e.target.value) : null})}
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="form-group checkbox-group">
-                        <label>Enabled</label>
-                        <label className="checkbox-label checkbox-vertical">
-                          <input
-                            type="checkbox"
-                            checked={registerForm.enabled}
-                            onChange={(e) => setRegisterForm({...registerForm, enabled: e.target.checked})}
-                          />
-                          <span>{registerForm.enabled ? 'Yes' : 'No'}</span>
-                        </label>
-                      </div>
-                      <div className="form-group form-group-btn">
-                        <button type="button" onClick={addRegister} className="btn btn-sm">
-                          Add Register
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Description - full width */}
-                    <div className="form-group" style={{ marginTop: '10px' }}>
-                      <label>Description</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., 0=Off, 1=On, 2=Standby"
-                        value={registerForm.description || ''}
-                        onChange={(e) => setRegisterForm({...registerForm, description: e.target.value})}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Registers Table */}
-                  {slaveForm.registers.length > 0 ? (
-                    <div className="registers-table-wrapper table-responsive">
-                      <h5 className="form-subsection-title">Configured Registers ({slaveForm.registers.length})</h5>
-                      <table className="table registers-table">
-                        <thead>
-                          <tr>
-                            <th>Label</th>
-                            <th>Address</th>
-                            <th>Function</th>
-                            <th>Data Type</th>
-                            <th>Unit</th>
-                            <th>Scale</th>
-                            <th>Offset</th>
-                            <th>Category</th>
-                            <th>Alarms</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {slaveForm.registers.map((reg, index) => (
-                            <tr key={index}>
-                              <td>{reg.label}</td>
-                              <td>{reg.address}</td>
-                              <td>{reg.functionCode || 3}</td>
-                              <td>{getDataTypeName(reg.dataType)}</td>
-                              <td>{reg.unit || '-'}</td>
-                              <td>{reg.scaleFactor}</td>
-                              <td>{reg.offset}</td>
-                              <td>{reg.category || '-'}</td>
-                              <td>
-                                {reg.highAlarmThreshold || reg.lowAlarmThreshold ? (
-                                  <small>
-                                    {reg.highAlarmThreshold && `H:${reg.highAlarmThreshold}`}
-                                    {reg.highAlarmThreshold && reg.lowAlarmThreshold && ' / '}
-                                    {reg.lowAlarmThreshold && `L:${reg.lowAlarmThreshold}`}
-                                  </small>
-                                ) : '-'}
-                              </td>
-                              <td>
-                                <span className={`status-badge ${reg.enabled ? 'status-badge-success' : 'status-badge-danger'}`}>
-                                  {reg.enabled ? 'Enabled' : 'Disabled'}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  onClick={() => removeRegister(index)}
-                                  className="btn-icon btn-icon-danger"
-                                  title="Remove"
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="empty-state">
-                      No registers configured yet. Add registers above to define what data to read from this slave device.
-                    </div>
-                  )}
-                </div>
-
-              </form>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="modal-footer">
-              <button type="button" className="btn btn-primary" onClick={(e) => { e.preventDefault(); handleSaveSlave(); }}>
-                {editingSlave ? 'Save Changes' : 'Create Slave'}
-              </button>
-              <button type="button" onClick={() => { setCreatingSlave(false); setEditingSlave(null); }} className="btn btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SlaveConfigModal
+        open={creatingSlave || !!editingSlave}
+        editingSlave={editingSlave ? { id: editingSlave.id, deviceName: editingSlave.deviceName, slaveId: editingSlave.slaveId } : null}
+        existingSlaveIds={slaves.map(s => s.slaveId)}
+        initialForm={editSlaveInitialForm}
+        onSave={handleSaveSlave}
+        onCancel={() => { setCreatingSlave(false); setEditingSlave(null); setModalError(null); }}
+        error={modalError}
+        onClearError={() => setModalError(null)}
+      />
 
       {/* Modern Delete Preset Confirmation Modal */}
-      {deletePresetModal.show && deletePresetModal.preset && (
+      {deletePresetModal.show && deletePresetModal.preset && ReactDOM.createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(4px)'
+          padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            width: '100%',
+            overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                🗑️
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <Trash2 size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Delete Preset
+                </span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
-                Delete Preset
-              </h3>
-            </div>
-            
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to delete preset <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deletePresetModal.preset.name}</strong>?
-              </p>
-              <div style={{
-                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
-                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#fca5a5' : '#991b1b'
-              }}>
-                <strong>⚠️ Warning:</strong> This will permanently delete the preset configuration. Devices using this preset will need to be reconfigured.
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setDeletePresetModal({ show: false, preset: null })}
                 style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+                Are you sure you want to delete preset <strong>{deletePresetModal.preset.name}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(220,53,69,0.12)' : '#fef2f2',
+                border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #fecaca',
+                borderRadius: 8,
+                padding: '12px 14px',
+                fontSize: '0.875rem',
+                color: isDark ? '#fca5a5' : '#991b1b',
+              }}>
+                <strong>Warning:</strong> This will permanently delete the preset configuration. Devices using this preset will need to be reconfigured.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeletePresetModal({ show: false, preset: null })}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeletePreset}
                 style={{
-                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                  color: 'white',
+                  padding: '10px 18px',
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
-                  transition: 'all 0.2s'
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 Yes, Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Delete Slave Confirmation Modal */}
-      {deleteSlaveModal.show && deleteSlaveModal.slave && (
+      {deleteSlaveModal.show && deleteSlaveModal.slave && ReactDOM.createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(4px)'
+          padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            width: '100%',
+            overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                ⚠️
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <AlertTriangle size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Remove Slave Device
+                </span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
-                Remove Slave Device
-              </h3>
-            </div>
-            
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to remove slave device <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteSlaveModal.slave.deviceName}</strong> (ID: {deleteSlaveModal.slave.slaveId})?
-              </p>
-              <div style={{
-                background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
-                border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#ff9999' : '#721c24'
-              }}>
-                <strong>⚠️ Warning:</strong> This will remove the slave device configuration and all its register mappings.
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setDeleteSlaveModal({ show: false, slave: null })}
                 style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+                Are you sure you want to remove slave device <strong>{deleteSlaveModal.slave.deviceName}</strong> (ID: {deleteSlaveModal.slave.slaveId})?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(220,53,69,0.12)' : '#fef2f2',
+                border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #fecaca',
+                borderRadius: 8,
+                padding: '12px 14px',
+                fontSize: '0.875rem',
+                color: isDark ? '#fca5a5' : '#991b1b',
+              }}>
+                <strong>Warning:</strong> This will remove the slave device configuration and all its register mappings.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteSlaveModal({ show: false, slave: null })}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDeleteSlave}
                 style={{
-                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                  color: 'white',
+                  padding: '10px 18px',
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
-                  transition: 'all 0.2s'
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 Yes, Remove
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Success Notification Modal */}
-      {successModal.show && (
+      {successModal.show && ReactDOM.createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(2px)'
+          padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '450px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            width: '100%',
+            overflow: 'hidden',
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                margin: '0 auto 1rem',
-                animation: 'scaleIn 0.3s ease-out'
-              }}>
-                ✓
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <CheckCircle2 size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Success
+                </span>
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                Success
-              </h3>
-              
-              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                {successModal.message}
-              </p>
-              
               <button
                 onClick={() => setSuccessModal({ show: false, message: '' })}
                 style={{
-                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                  color: 'white',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                  transition: 'all 0.2s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+                {successModal.message}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                }}
               >
                 Got it!
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

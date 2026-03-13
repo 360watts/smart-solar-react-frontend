@@ -28,6 +28,7 @@ const Alerts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
+  const [alertSearch, setAlertSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
 
   useEffect(() => {
@@ -67,9 +68,18 @@ const Alerts: React.FC = () => {
     }
   };
 
-  const filteredAlerts = alerts.filter(alert =>
-    filterSeverity === 'all' || alert.severity === filterSeverity
-  );
+  const filteredAlerts = alerts.filter(alert => {
+    if (filterSeverity !== 'all' && alert.severity !== filterSeverity) return false;
+    if (alertSearch.trim()) {
+      const q = alertSearch.toLowerCase();
+      return (
+        alert.message.toLowerCase().includes(q) ||
+        alert.device_id.toLowerCase().includes(q) ||
+        alert.type.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   const unresolvedAlerts = alerts.filter(alert => !alert.resolved);
 
@@ -264,14 +274,23 @@ const Alerts: React.FC = () => {
 
       {activeTab === 'alerts' && (
         <div className="admin-card">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            Active Alerts ({filteredAlerts.length})
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              Active Alerts ({filteredAlerts.length})
+            </h2>
+            <input
+              type="text"
+              placeholder="Search by message, device, or type…"
+              value={alertSearch}
+              onChange={(e) => setAlertSearch(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid #404040' : '1px solid var(--border-color)', background: isDark ? '#1a1a1a' : 'var(--bg-secondary)', color: isDark ? '#e0e0e0' : '#2c3e50', fontSize: '0.875rem', minWidth: 240 }}
+            />
+          </div>
           {filteredAlerts.length === 0 ? (
             <EmptyState
               title="No alerts"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
@@ -41,6 +42,7 @@ const Users: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userDevices, setUserDevices] = useState<Device[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
+  const [deviceSearch, setDeviceSearch] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -275,7 +277,16 @@ const Users: React.FC = () => {
         {/* Assigned Devices */}
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
-            <h2>Assigned Devices ({userDevices.length})</h2>
+            <h2>Assigned Devices ({userDevices.length}{deviceSearch ? ` · ${userDevices.filter(d => d.device_serial.toLowerCase().includes(deviceSearch.toLowerCase()) || (d.hw_id || '').toLowerCase().includes(deviceSearch.toLowerCase())).length} shown` : ''})</h2>
+            {userDevices.length > 0 && (
+              <input
+                type="text"
+                placeholder="Search by serial or HW ID…"
+                value={deviceSearch}
+                onChange={(e) => setDeviceSearch(e.target.value)}
+                style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.82rem', minWidth: 200 }}
+              />
+            )}
           </div>
           {loadingDevices ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary, #94a3b8)' }}>Loading devices...</div>
@@ -291,7 +302,7 @@ const Users: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {userDevices.map((device) => (
+                {userDevices.filter(d => !deviceSearch || d.device_serial.toLowerCase().includes(deviceSearch.toLowerCase()) || (d.hw_id || '').toLowerCase().includes(deviceSearch.toLowerCase())).map((device) => (
                   <tr
                     key={device.id}
                     className="clickable-row"
@@ -319,17 +330,75 @@ const Users: React.FC = () => {
         </div>
 
         {/* Edit User modal */}
-        {editingUser && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>Edit User: {editingUser.username}</h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-                <div className="modal-body">
-                  <div className="form-section">
-                    <h4 className="form-section-title">Account Information</h4>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Email Address</label>
+        {editingUser && ReactDOM.createPortal(
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '20px',
+          }} onClick={handleCancel}>
+            <div style={{
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+                : '0 25px 50px -12px rgba(0,0,0,0.25)',
+              maxWidth: '600px', width: '100%',
+              maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '24px 28px',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  }}>
+                    <Pencil size={22} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                      Edit User: {editingUser.username}
+                    </div>
+                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                      Update user account details
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={handleCancel} style={{
+                  width: 40, height: 40, borderRadius: 10, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <X size={18} />
+                </button>
+              </div>
+              {/* Scrollable body */}
+              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+                  {/* Account Information */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Account Information
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Email Address</label>
                         <input
                           type="email"
                           value={editForm.email}
@@ -337,16 +406,33 @@ const Users: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="john.doe@example.com"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Personal Details</h4>
-                    <div className="form-grid form-grid-2">
-                      <div className="form-group">
-                        <label>First Name</label>
+                  {/* Personal Details */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Personal Details
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>First Name</label>
                         <input
                           type="text"
                           value={editForm.first_name}
@@ -354,10 +440,17 @@ const Users: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="John"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Last Name</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Last Name</label>
                         <input
                           type="text"
                           value={editForm.last_name}
@@ -365,16 +458,33 @@ const Users: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="Doe"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Contact Information</h4>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Mobile Number</label>
+                  {/* Contact Information */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Contact Information
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Mobile Number</label>
                         <input
                           type="tel"
                           value={editForm.mobile_number}
@@ -382,28 +492,60 @@ const Users: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="+1 (555) 000-0000"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Address</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Address</label>
                         <textarea
                           value={editForm.address}
                           onChange={(e) => setEditForm({...editForm, address: e.target.value})}
                           autoComplete="off"
                           rows={3}
                           placeholder="123 Solar Street..."
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                            resize: 'vertical',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
-                  <button type="submit" className="btn">Save Changes</button>
-                  <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+                {/* Footer */}
+                <div style={{
+                  display: 'flex', gap: 10, justifyContent: 'flex-end',
+                  padding: '16px 28px',
+                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  flexShrink: 0,
+                }}>
+                  <button type="button" onClick={handleCancel} style={{
+                    padding: '10px 20px', borderRadius: 8,
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button type="submit" style={{
+                    padding: '10px 20px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                  }}>Save Changes</button>
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
@@ -584,48 +726,120 @@ const Users: React.FC = () => {
         )}
       </div>
 
-      {(editingUser || creatingUser) && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>{editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); editingUser ? handleSave() : handleCreate(); }}>
-              <div className="modal-body">
+      {(editingUser || creatingUser) && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
+        }} onClick={handleCancel}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '600px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: editingUser ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #10b981, #059669)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: editingUser ? '0 4px 14px rgba(99,102,241,0.4)' : '0 4px 14px rgba(16,185,129,0.4)',
+                }}>
+                  {editingUser ? <Pencil size={22} color="white" /> : <UserPlus size={22} color="white" />}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                    {editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}
+                  </div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                    {editingUser ? 'Update user account details' : 'Create a new customer account'}
+                  </div>
+                </div>
+              </div>
+              <button type="button" onClick={handleCancel} style={{
+                width: 40, height: 40, borderRadius: 10, border: 'none',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+            {/* Scrollable body + footer */}
+            <form onSubmit={(e) => { e.preventDefault(); editingUser ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
                 {/* Account Information */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Account Information</h4>
-                  <div className="form-grid">
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      Account Information
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {creatingUser && (
                       <>
                         <input type="text" autoComplete="username" style={{display: 'none'}} />
                         <input type="password" autoComplete="current-password" style={{display: 'none'}} />
-
-                        <div className="form-group">
-                          <label>Username</label>
-                          <input
-                            type="text"
-                            value={createForm.username}
-                            onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
-                            required
-                            autoComplete="off"
-                            placeholder="jdoe"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Password</label>
-                          <input
-                            type="password"
-                            value={createForm.password}
-                            onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                            required
-                            autoComplete="new-password"
-                            placeholder="••••••••"
-                          />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Username</label>
+                            <input
+                              type="text"
+                              value={createForm.username}
+                              onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
+                              required
+                              autoComplete="off"
+                              placeholder="jdoe"
+                              style={{
+                                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                                background: isDark ? '#2a2a2a' : '#ffffff',
+                                color: isDark ? '#f3f4f6' : '#111827',
+                                fontSize: '0.875rem',
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Password</label>
+                            <input
+                              type="password"
+                              value={createForm.password}
+                              onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                              required
+                              autoComplete="new-password"
+                              placeholder="••••••••"
+                              style={{
+                                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                                background: isDark ? '#2a2a2a' : '#ffffff',
+                                color: isDark ? '#f3f4f6' : '#111827',
+                                fontSize: '0.875rem',
+                              }}
+                            />
+                          </div>
                         </div>
                       </>
                     )}
-                    <div className="form-group">
-                      <label>Email Address</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Email Address</label>
                       <input
                         type="email"
                         value={editingUser ? editForm.email : createForm.email}
@@ -633,17 +847,33 @@ const Users: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="john.doe@example.com"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Personal Details */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Personal Details</h4>
-                  <div className="form-grid form-grid-2">
-                    <div className="form-group">
-                      <label>First Name</label>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      Personal Details
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>First Name</label>
                       <input
                         type="text"
                         value={editingUser ? editForm.first_name : createForm.first_name}
@@ -651,10 +881,17 @@ const Users: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="John"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                        }}
                       />
                     </div>
-                    <div className="form-group">
-                      <label>Last Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Last Name</label>
                       <input
                         type="text"
                         value={editingUser ? editForm.last_name : createForm.last_name}
@@ -662,17 +899,33 @@ const Users: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="Doe"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Contact Information */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Contact Information</h4>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Mobile Number</label>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      Contact Information
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Mobile Number</label>
                       <input
                         type="tel"
                         value={editingUser ? editForm.mobile_number : createForm.mobile_number}
@@ -680,205 +933,272 @@ const Users: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="+1 (555) 000-0000"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                        }}
                       />
                     </div>
-                    <div className="form-group">
-                      <label>Address</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Address</label>
                       <textarea
                         value={editingUser ? editForm.address : createForm.address}
                         onChange={(e) => editingUser ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
                         autoComplete="off"
                         rows={3}
                         placeholder="123 Solar Street..."
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                          resize: 'vertical',
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
               </div>
-              <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
-                <button type="submit" className="btn">{editingUser ? 'Save Changes' : 'Create Customer'}</button>
-                <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+              {/* Footer */}
+              <div style={{
+                display: 'flex', gap: 10, justifyContent: 'flex-end',
+                padding: '16px 28px',
+                borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <button type="button" onClick={handleCancel} style={{
+                  padding: '10px 20px', borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                }}>Cancel</button>
+                <button type="submit" style={{
+                  padding: '10px 20px', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                }}>{editingUser ? 'Save Changes' : 'Create Customer'}</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Delete User Confirmation Modal */}
-      {deleteModal.show && deleteModal.user && (
+      {deleteModal.show && deleteModal.user && ReactDOM.createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(4px)'
+          padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #7f1d1d' : '2px solid #7f1d1d',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            width: '100%',
+            overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                🗑️
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <AlertTriangle size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Delete User
+                </span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
-                Delete User
-              </h3>
-            </div>
-            
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>
-                Are you sure you want to delete user <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{deleteModal.user.username}</strong>?
-              </p>
-              <div style={{
-                background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
-                border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                fontSize: '0.9rem',
-                color: isDark ? '#fca5a5' : '#991b1b'
-              }}>
-                <strong>⚠️ Warning:</strong> This will permanently delete the user account. Any devices associated with this user will become unassigned.
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setDeleteModal({ show: false, user: null })}
                 style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0',
-                  color: isDark ? '#e0e0e0' : '#495057',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+                Are you sure you want to delete user <strong>{deleteModal.user.username}</strong>?
+              </p>
+              <div style={{
+                background: isDark ? 'rgba(220,53,69,0.12)' : '#fef2f2',
+                border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #fecaca',
+                borderRadius: 8,
+                padding: '12px 14px',
+                fontSize: '0.875rem',
+                color: isDark ? '#fca5a5' : '#991b1b',
+              }}>
+                This will permanently delete the user account. Any devices associated with this user will become unassigned.
+              </div>
+            </div>
+
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteModal({ show: false, user: null })}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 style={{
-                  background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                  color: 'white',
+                  padding: '10px 18px',
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)',
-                  transition: 'all 0.2s'
+                  boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 Yes, Delete
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Success Notification Modal */}
-      {successModal.show && (
+      {successModal.show && ReactDOM.createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(2px)'
+          padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '450px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px',
+            width: '100%',
+            overflow: 'hidden',
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                margin: '0 auto 1rem',
-                animation: 'scaleIn 0.3s ease-out'
-              }}>
-                ✓
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <CheckCircle2 size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Success
+                </span>
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                Success
-              </h3>
-              
-              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                {successModal.message}
-              </p>
-              
               <button
                 onClick={() => setSuccessModal({ show: false, message: '' })}
                 style={{
-                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                  color: 'white',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
                   border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                  transition: 'all 0.2s'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+                {successModal.message}
+              </p>
+            </div>
+
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
+                }}
               >
                 Got it!
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

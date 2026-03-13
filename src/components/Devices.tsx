@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
@@ -123,6 +124,8 @@ const Devices: React.FC = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [presetSearch, setPresetSearch] = useState('');
+  const [showPresetDropdown, setShowPresetDropdown] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
@@ -307,6 +310,20 @@ const Devices: React.FC = () => {
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showUserDropdown]);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowPresetDropdown(false);
+    };
+
+    if (showPresetDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showPresetDropdown]);
 
   useEffect(() => {
     if (userSearchTerm.trim() === '') {
@@ -955,10 +972,58 @@ const Devices: React.FC = () => {
         </div>
 
         {/* ── Site edit modal ── */}
-        {editingSite && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>{siteDetails ? `Edit Site: ${siteDetails.site_id}` : 'Add Site Configuration'}</h3>
+        {editingSite && ReactDOM.createPortal(
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '20px',
+          }} onClick={() => setEditingSite(false)}>
+            <div style={{
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+                : '0 25px 50px -12px rgba(0,0,0,0.25)',
+              maxWidth: '640px', width: '100%',
+              maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '24px 28px',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  }}>
+                    <MapPin size={22} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                      {siteDetails ? 'Edit Site' : 'Add Site'}
+                    </div>
+                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                      Configure solar site parameters
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setEditingSite(false)} style={{
+                  width: 40, height: 40, borderRadius: 10, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <X size={18} />
+                </button>
+              </div>
+
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 setSiteSaving(true);
@@ -1003,17 +1068,28 @@ const Devices: React.FC = () => {
                   setSiteError(err.message || 'Failed to save site');
                   setSiteSaving(false);
                 }
-              }}>
-                <div className="modal-body">
+              }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                {/* Scrollable body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
                   {siteError && (
                     <p style={{ color: isDark ? '#fca5a5' : '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
                   )}
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Identification</h4>
-                    <div className="form-grid form-grid-2">
-                      <div className="form-group">
-                        <label>Site ID *</label>
+                  {/* Identification */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Identification
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Site ID *</label>
                         <input
                           type="text"
                           required
@@ -1022,29 +1098,51 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, site_id: e.target.value })}
                           placeholder="e.g. site_mumbai_01"
                           autoComplete="off"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                         {!!siteDetails && <small className="form-hint">Site ID cannot be changed after creation.</small>}
                       </div>
-                      <div className="form-group">
-                        <label>Display Name</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Display Name</label>
                         <input
                           type="text"
                           value={siteForm.display_name}
                           onChange={e => setSiteForm({ ...siteForm, display_name: e.target.value })}
                           placeholder="e.g. Mumbai Rooftop"
                           autoComplete="off"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Location</h4>
-                    <div className="form-grid form-grid-3">
-                      <div className="form-group">
-                        <label>Latitude *</label>
+                  {/* Location */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Location
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Latitude *</label>
                         <input
                           type="number"
                           required
@@ -1052,11 +1150,17 @@ const Devices: React.FC = () => {
                           value={siteForm.latitude}
                           onChange={e => setSiteForm({ ...siteForm, latitude: e.target.value })}
                           placeholder="19.0760"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Longitude *</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Longitude *</label>
                         <input
                           type="number"
                           required
@@ -1064,28 +1168,50 @@ const Devices: React.FC = () => {
                           value={siteForm.longitude}
                           onChange={e => setSiteForm({ ...siteForm, longitude: e.target.value })}
                           placeholder="72.8777"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Timezone</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Timezone</label>
                         <input
                           type="text"
                           value={siteForm.timezone}
                           onChange={e => setSiteForm({ ...siteForm, timezone: e.target.value })}
                           placeholder="Asia/Kolkata"
                           autoComplete="off"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Panel Configuration</h4>
-                    <div className="form-grid form-grid-3">
-                      <div className="form-group">
-                        <label>Capacity (kW) *</label>
+                  {/* Panel Configuration */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Panel Configuration
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Capacity (kW) *</label>
                         <input
                           type="number"
                           required
@@ -1093,38 +1219,56 @@ const Devices: React.FC = () => {
                           value={siteForm.capacity_kw}
                           onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })}
                           placeholder="5.0"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Tilt (°)</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Tilt (°)</label>
                         <input
                           type="number"
                           step="any"
                           value={siteForm.tilt_deg}
                           onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })}
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>Azimuth (°)</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Azimuth (°)</label>
                         <input
                           type="number"
                           step="any"
                           value={siteForm.azimuth_deg}
                           onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })}
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
-                    <div className="form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                         <input
                           type="checkbox"
                           id="dev-site-active"
                           checked={siteForm.is_active}
                           onChange={e => setSiteForm({ ...siteForm, is_active: e.target.checked })}
-                          style={{ width: '16px', height: '16px', background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{ width: '16px', height: '16px' }}
                         />
                         Active
                       </label>
@@ -1132,32 +1276,105 @@ const Devices: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
-                  <button type="submit" className="btn" disabled={siteSaving}>
+                {/* Footer */}
+                <div style={{
+                  display: 'flex', gap: 10, justifyContent: 'flex-end',
+                  padding: '16px 28px',
+                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  flexShrink: 0,
+                }}>
+                  <button type="button" onClick={() => setEditingSite(false)} disabled={siteSaving} style={{
+                    padding: '10px 20px', borderRadius: 8,
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button type="submit" disabled={siteSaving} style={{
+                    padding: '10px 20px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                  }}>
                     {siteSaving ? 'Saving…' : siteDetails ? 'Save Changes' : 'Add Site'}
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setEditingSite(false)} disabled={siteSaving}>
-                    Cancel
                   </button>
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {editingDevice && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>{editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}</h3>
-              <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }}>
-                <div className="modal-body">
-                  
+        {editingDevice && ReactDOM.createPortal(
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '20px',
+          }} onClick={() => setEditingDevice(null)}>
+            <div style={{
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+                : '0 25px 50px -12px rgba(0,0,0,0.25)',
+              maxWidth: '640px', width: '100%',
+              maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '24px 28px',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  }}>
+                    <Pencil size={22} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                      Edit Device: {editingDevice.device_serial}
+                    </div>
+                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                      Update device configuration
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setEditingDevice(null)} style={{
+                  width: 40, height: 40, borderRadius: 10, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                {/* Scrollable body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
                   {/* Device Identity */}
-                  <div className="form-section">
-                    <h4 className="form-section-title">Device Identity</h4>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Device Serial Number</label>
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Device Identity
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
                         <input
                           type="text"
                           value={editingDevice ? editForm.device_serial : createForm.device_serial}
@@ -1165,18 +1382,33 @@ const Devices: React.FC = () => {
                           required
                           autoComplete="off"
                           placeholder="SN-12345678"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Ownership */}
-                  <div className="form-section">
-                    <h4 className="form-section-title">Ownership & Assignment</h4>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Assigned User</label>
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Ownership &amp; Assignment
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
                         <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="text"
@@ -1189,7 +1421,13 @@ const Devices: React.FC = () => {
                             onFocus={() => setShowUserDropdown(true)}
                             autoComplete="off"
                             className="full-width"
-                            style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                            style={{
+                              padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                              background: isDark ? '#2a2a2a' : '#ffffff',
+                              color: isDark ? '#f3f4f6' : '#111827',
+                              fontSize: '0.875rem',
+                            }}
                           />
                           {showUserDropdown && (
                             <div style={{
@@ -1248,59 +1486,120 @@ const Devices: React.FC = () => {
                   </div>
 
                   {/* Configuration */}
-                  <div className="form-section">
-                    <h4 className="form-section-title">Configuration</h4>
-                    <div className="form-grid form-grid-2">
-                      <div className="form-group">
-                        <label>Preset Template</label>
-                        <select
-                          value={editingDevice ? editForm.config_version : createForm.config_version}
-                          onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
-                          className="full-width"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
-                        >
-                          <option value="">-- Manual Configuration --</option>
-                          {presetsLoading && <option value="" disabled>Loading presets...</option>}
-                          {!presetsLoading && presets.map((preset) => (
-                            <option key={preset.id} value={getPresetConfigId(preset)}>
-                              {preset.name} ({getPresetConfigId(preset) || 'no ID'})
-                            </option>
-                          ))}
-                        </select>
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Configuration
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
+                        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            placeholder={presetsLoading ? 'Loading presets…' : 'Search presets…'}
+                            value={presetSearch}
+                            onChange={(e) => { setPresetSearch(e.target.value); setShowPresetDropdown(true); }}
+                            onFocus={() => setShowPresetDropdown(true)}
+                            autoComplete="off"
+                            className="full-width"
+                            style={{
+                              padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                              background: isDark ? '#2a2a2a' : '#ffffff',
+                              color: isDark ? '#f3f4f6' : '#111827',
+                              fontSize: '0.875rem',
+                            }}
+                          />
+                          {showPresetDropdown && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary, #1e293b)', border: '1px solid var(--border-color, rgba(148,163,184,0.2))', borderRadius: '6px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                              <div
+                                onClick={() => { if (editingDevice) setEditForm({ ...editForm, config_version: '' }); else setCreateForm({ ...createForm, config_version: '' }); setPresetSearch(''); setShowPresetDropdown(false); }}
+                                style={{ padding: '10px 14px', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)', fontSize: '0.875rem', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >— Manual Configuration —</div>
+                              {presets.filter(p => !presetSearch.trim() || p.name.toLowerCase().includes(presetSearch.toLowerCase()) || (getPresetConfigId(p) || '').toLowerCase().includes(presetSearch.toLowerCase())).map((preset) => (
+                                <div
+                                  key={preset.id}
+                                  onClick={() => { const cid = getPresetConfigId(preset); if (editingDevice) setEditForm({ ...editForm, config_version: cid }); else setCreateForm({ ...createForm, config_version: cid }); setPresetSearch(preset.name); setShowPresetDropdown(false); }}
+                                  style={{ padding: '10px 14px', cursor: 'pointer', background: (editingDevice ? editForm.config_version : createForm.config_version) === getPresetConfigId(preset) ? 'rgba(99,102,241,0.15)' : 'transparent', color: 'var(--text-primary, #f8fafc)', fontSize: '0.875rem', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.config_version : createForm.config_version) === getPresetConfigId(preset) ? 'rgba(99,102,241,0.15)' : 'transparent'}
+                                >
+                                  {preset.name} <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>({getPresetConfigId(preset) || 'no ID'})</span>
+                                </div>
+                              ))}
+                              {!presetsLoading && presets.filter(p => !presetSearch.trim() || p.name.toLowerCase().includes(presetSearch.toLowerCase()) || (getPresetConfigId(p) || '').toLowerCase().includes(presetSearch.toLowerCase())).length === 0 && (
+                                <div style={{ padding: '10px 14px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>No presets match</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <small className="form-hint">Selecting a preset sets the Config Version ID below.</small>
                       </div>
-                      <div className="form-group">
-                        <label>Config Version ID</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
                         <input
                           type="text"
                           value={editingDevice ? editForm.config_version : createForm.config_version}
                           onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
                           autoComplete="off"
                           placeholder="Manual Config ID"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
+                  {editingDevice && (
+                    <AuditTrail
+                      createdBy={editingDevice.created_by_username}
+                      createdAt={editingDevice.created_at}
+                      updatedBy={editingDevice.updated_by_username}
+                      updatedAt={editingDevice.updated_at}
+                    />
+                  )}
                 </div>
-                {editingDevice && (
-                  <div style={{ padding: '0 24px' }}>
-                     <AuditTrail
-                       createdBy={editingDevice.created_by_username}
-                       createdAt={editingDevice.created_at}
-                       updatedBy={editingDevice.updated_by_username}
-                       updatedAt={editingDevice.updated_at}
-                     />
-                  </div>
-                )}
-                <div className="form-actions" style={{ padding: '0 24px 24px 24px' }}>
-                  <button type="submit" className="btn">{editingDevice ? 'Save Changes' : 'Create Device'}</button>
-                  <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+
+                {/* Footer */}
+                <div style={{
+                  display: 'flex', gap: 10, justifyContent: 'flex-end',
+                  padding: '16px 28px',
+                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  flexShrink: 0,
+                }}>
+                  <button type="button" onClick={handleCancel} style={{
+                    padding: '10px 20px', borderRadius: 8,
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button type="submit" style={{
+                    padding: '10px 20px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                  }}>
+                    {editingDevice ? 'Save Changes' : 'Create Device'}
+                  </button>
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Modern Reboot Confirmation Modal */}
@@ -1327,116 +1626,95 @@ const Devices: React.FC = () => {
         </AccessibleModal>
 
         {/* Modern Hard Reset Confirmation Modal */}
-        {hardResetModal.show && hardResetModal.device && (
+        {hardResetModal.show && hardResetModal.device && ReactDOM.createPortal(
           <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            backdropFilter: 'blur(4px)'
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '20px',
           }}>
             <div style={{
-              background: isDark ? '#2d2d2d' : 'white',
-              borderRadius: '16px',
-              padding: '2rem',
-              maxWidth: '500px',
-              width: '90%',
-              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-              border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
-              animation: 'slideIn 0.2s ease-out'
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '480px', width: '100%', overflow: 'hidden',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                  animation: 'pulse 2s infinite'
-                }}>
-                  <AlertTriangle size={24} strokeWidth={2} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                    boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <AlertTriangle size={22} color="white" />
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Hard Reset Warning</span>
                 </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
-                  Hard Reset Warning
-                </h3>
-              </div>
-              
-              <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-                <div style={{
-                  background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
-                  border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                  color: isDark ? '#ff9999' : '#721c24'
-                }}>
-                  <strong style={{ fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> CRITICAL WARNING</strong>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                    This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
-                  </p>
-                </div>
-                
-                <p style={{ marginBottom: '0.75rem' }}>
-                  Device to reset: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{hardResetModal.device.device_serial}</strong>
-                </p>
-                
-                <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
-                  <li>All configuration will be lost</li>
-                  <li>Device will return to factory defaults</li>
-                  <li>Re-provisioning will be required</li>
-                </ul>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => setHardResetModal({ show: false, device: null })}
                   style={{
-                    background: isDark ? '#3a3a3a' : '#e0e0e0',
-                    color: isDark ? '#e0e0e0' : '#495057',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    width: 36, height: 36, borderRadius: 8, border: 'none',
+                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                    color: isDark ? '#9ca3af' : '#6b7280',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
-                  onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                  onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div style={{ padding: '20px 24px' }}>
+                <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+                  Device to reset: <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{hardResetModal.device.device_serial}</strong>
+                </p>
+                <div style={{
+                  background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
+                  border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb',
+                  borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem',
+                  color: isDark ? '#fca5a5' : '#721c24',
+                }}>
+                  <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={15} /> CRITICAL WARNING</strong>
+                  <p style={{ margin: '6px 0 0 0' }}>
+                    This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
+                  </p>
+                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '1.25rem' }}>
+                    <li>All configuration will be lost</li>
+                    <li>Device will return to factory defaults</li>
+                    <li>Re-provisioning will be required</li>
+                  </ul>
+                </div>
+              </div>
+              <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setHardResetModal({ show: false, device: null })}
+                  style={{
+                    padding: '10px 18px', borderRadius: 8,
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                    color: isDark ? '#d1d5db' : '#374151',
+                    fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmHardReset}
                   style={{
-                    background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
-                    transition: 'all 0.2s'
+                    padding: '10px 18px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600,
+                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
                   }}
-                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
                 >
                   Yes, Hard Reset
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         <AccessibleModal
@@ -1466,76 +1744,67 @@ const Devices: React.FC = () => {
         </AccessibleModal>
 
         {/* Modern Success Notification Modal */}
-        {successModal.show && (
+        {successModal.show && ReactDOM.createPortal(
           <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            backdropFilter: 'blur(2px)'
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: '20px',
           }}>
             <div style={{
-              background: isDark ? '#2d2d2d' : 'white',
-              borderRadius: '16px',
-              padding: '2rem',
-              maxWidth: '450px',
-              width: '90%',
-              boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-              border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-              animation: 'slideIn 0.2s ease-out'
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '480px', width: '100%', overflow: 'hidden',
             }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '2rem',
-                  margin: '0 auto 1rem',
-                  animation: 'scaleIn 0.3s ease-out'
-                }}>
-                  ✓
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <CheckCircle2 size={22} color="white" />
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Command Queued</span>
                 </div>
-                
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                  Command Queued
-                </h3>
-                
-                <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                  {successModal.message}
-                </p>
-                
                 <button
                   onClick={() => setSuccessModal({ show: false, message: '' })}
                   style={{
-                    background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 2rem',
-                    borderRadius: '8px',
-                    fontSize: '0.95rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                    transition: 'all 0.2s'
+                    width: 36, height: 36, borderRadius: 8, border: 'none',
+                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                    color: isDark ? '#9ca3af' : '#6b7280',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
-                  onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                  onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div style={{ padding: '20px 24px' }}>
+                <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+                  {successModal.message}
+                </p>
+              </div>
+              <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setSuccessModal({ show: false, message: '' })}
+                  style={{
+                    padding: '10px 18px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600,
+                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
+                  }}
                 >
                   Got it!
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     );
@@ -2003,116 +2272,95 @@ const Devices: React.FC = () => {
     </AccessibleModal>
 
     {/* Modern Hard Reset Confirmation Modal */}
-    {hardResetModal.show && hardResetModal.device && (
+    {hardResetModal.show && hardResetModal.device && ReactDOM.createPortal(
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        backdropFilter: 'blur(4px)'
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: '20px',
       }}>
         <div style={{
-          background: isDark ? '#2d2d2d' : 'white',
-          borderRadius: '16px',
-          padding: '2rem',
-          maxWidth: '500px',
-          width: '90%',
-          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-          border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
-          animation: 'slideIn 0.2s ease-out'
+          background: isDark ? '#1a1a1a' : '#ffffff',
+          borderRadius: 16,
+          boxShadow: isDark
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+            : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          maxWidth: '480px', width: '100%', overflow: 'hidden',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.5rem',
-              animation: 'pulse 2s infinite'
-            }}>
-              <AlertTriangle size={24} strokeWidth={2} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <AlertTriangle size={22} color="white" />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Hard Reset Warning</span>
             </div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#dc3545' }}>
-              Hard Reset Warning
-            </h3>
-          </div>
-          
-          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-            <div style={{
-              background: isDark ? 'rgba(220, 53, 69, 0.1)' : '#f8d7da',
-              border: isDark ? '1px solid rgba(220, 53, 69, 0.3)' : '1px solid #f5c6cb',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              color: isDark ? '#ff9999' : '#721c24'
-            }}>
-              <strong style={{ fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> CRITICAL WARNING</strong>
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
-              </p>
-            </div>
-            
-            <p style={{ marginBottom: '0.75rem' }}>
-              Device to reset: <strong style={{ color: isDark ? '#e0e0e0' : '#2c3e50' }}>{hardResetModal.device.device_serial}</strong>
-            </p>
-            
-            <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
-              <li>All configuration will be lost</li>
-              <li>Device will return to factory defaults</li>
-              <li>Re-provisioning will be required</li>
-            </ul>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
             <button
               onClick={() => setHardResetModal({ show: false, device: null })}
               style={{
-                background: isDark ? '#3a3a3a' : '#e0e0e0',
-                color: isDark ? '#e0e0e0' : '#495057',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
+                width: 36, height: 36, borderRadius: 8, border: 'none',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#9ca3af' : '#6b7280',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-              onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-              onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div style={{ padding: '20px 24px' }}>
+            <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+              Device to reset: <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{hardResetModal.device.device_serial}</strong>
+            </p>
+            <div style={{
+              background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
+              border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb',
+              borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem',
+              color: isDark ? '#fca5a5' : '#721c24',
+            }}>
+              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={15} /> CRITICAL WARNING</strong>
+              <p style={{ margin: '6px 0 0 0' }}>
+                This action will <strong>erase all device configuration</strong> and restart the device to factory settings.
+              </p>
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: '1.25rem' }}>
+                <li>All configuration will be lost</li>
+                <li>Device will return to factory defaults</li>
+                <li>Re-provisioning will be required</li>
+              </ul>
+            </div>
+          </div>
+          <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setHardResetModal({ show: false, device: null })}
+              style={{
+                padding: '10px 18px', borderRadius: 8,
+                border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                color: isDark ? '#d1d5db' : '#374151',
+                fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+              }}
             >
               Cancel
             </button>
             <button
               onClick={confirmHardReset}
               style={{
-                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
-                transition: 'all 0.2s'
+                padding: '10px 18px', borderRadius: 8, border: 'none',
+                background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                color: 'white', fontSize: '0.875rem', fontWeight: 600,
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
               }}
-              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
             >
               Yes, Hard Reset
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     <AccessibleModal
@@ -2142,76 +2390,67 @@ const Devices: React.FC = () => {
     </AccessibleModal>
 
     {/* Modern Success Notification Modal */}
-    {successModal.show && (
+    {successModal.show && ReactDOM.createPortal(
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        backdropFilter: 'blur(2px)'
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: '20px',
       }}>
         <div style={{
-          background: isDark ? '#2d2d2d' : 'white',
-          borderRadius: '16px',
-          padding: '2rem',
-          maxWidth: '450px',
-          width: '90%',
-          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-          border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-          animation: 'slideIn 0.2s ease-out'
+          background: isDark ? '#1a1a1a' : '#ffffff',
+          borderRadius: 16,
+          boxShadow: isDark
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+            : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          maxWidth: '480px', width: '100%', overflow: 'hidden',
         }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2rem',
-              margin: '0 auto 1rem',
-              animation: 'scaleIn 0.3s ease-out'
-            }}>
-              ✓
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <CheckCircle2 size={22} color="white" />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Command Queued</span>
             </div>
-            
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-              Command Queued
-            </h3>
-            
-            <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-              {successModal.message}
-            </p>
-            
             <button
               onClick={() => setSuccessModal({ show: false, message: '' })}
               style={{
-                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '0.75rem 2rem',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                transition: 'all 0.2s'
+                width: 36, height: 36, borderRadius: 8, border: 'none',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#9ca3af' : '#6b7280',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div style={{ padding: '20px 24px' }}>
+            <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+              {successModal.message}
+            </p>
+          </div>
+          <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setSuccessModal({ show: false, message: '' })}
+              style={{
+                padding: '10px 18px', borderRadius: 8, border: 'none',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white', fontSize: '0.875rem', fontWeight: 600,
+                cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
+              }}
             >
               Got it!
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     {/* Bulk Delete Confirmation Modal */}

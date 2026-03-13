@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Upload, Loader2, Check, Zap, RotateCcw, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { Package, Upload, Loader2, Check, Zap, RotateCcw, AlertCircle, AlertTriangle, Info, X, CheckCircle2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import '../App.css';
@@ -111,6 +112,9 @@ export const OTA: React.FC = () => {
 
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [firmwareSearch, setFirmwareSearch] = useState('');
+  const [idleDeviceSearch, setIdleDeviceSearch] = useState('');
+  const [rollbackDeviceSearch, setRollbackDeviceSearch] = useState('');
 
   // Initial load - runs once on mount
   useEffect(() => {
@@ -574,40 +578,46 @@ export const OTA: React.FC = () => {
       </div>
 
       {/* SECTION 1: Firmware Repository */}
-      <div style={{ 
-        background: isDark ? '#2d2d2d' : 'white', 
-        borderRadius: '12px', 
-        padding: '2rem',
+      <div style={{
+        background: isDark ? '#1a1a1a' : '#ffffff',
+        borderRadius: 16,
+        boxShadow: isDark
+          ? '0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06)'
+          : '0 4px 24px rgba(0,0,0,0.08)',
+        padding: 0,
         marginBottom: '2rem',
-        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        border: isDark ? '1px solid #404040' : '1px solid #e1e8ed'
+        overflow: 'hidden',
       }}>
-        <h2 style={{ 
-          fontSize: '1.5rem', 
-          fontWeight: '600', 
-          color: isDark ? '#e0e0e0' : '#2c3e50',
-          marginBottom: '1.5rem',
-          paddingBottom: '0.75rem',
-          borderBottom: isDark ? '2px solid #404040' : '2px solid #e1e8ed',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+        {/* Upload Firmware card header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '20px 24px',
+          borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb',
         }}>
-          <span style={{ fontSize: '1.25rem' }}>📦</span>
-          Firmware Repository
-        </h2>
+          <div style={{
+            width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(99,102,241,0.4)',
+          }}>
+            <Upload size={20} color="white" />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: isDark ? '#f9fafb' : '#111827' }}>Upload Firmware</div>
+            <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>Add a new firmware binary to the registry</div>
+          </div>
+        </div>
 
+        <div style={{ padding: '24px' }}>
         {/* Upload Form */}
-        <form onSubmit={handleUploadFirmware} style={{ 
-          background: isDark ? '#242424' : '#f8f9fa', 
-          padding: '1.5rem', 
-          borderRadius: '8px',
-          marginBottom: '2rem',
-          border: isDark ? '1px solid #404040' : '1px solid #dee2e6'
-        }}>
+        <form onSubmit={handleUploadFirmware}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 8 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Firmware Details</span>
+          </div>
           <div className="responsive-grid-auto-fit">
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 Firmware Name *
               </label>
               <input
@@ -616,20 +626,18 @@ export const OTA: React.FC = () => {
                 onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
                 placeholder="Solar Controller Firmware"
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '6px', 
-                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                  fontSize: '0.95rem',
-                  background: isDark ? '#1a1a1a' : 'white',
-                  color: isDark ? '#e0e0e0' : 'inherit'
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 Version (semver) *
               </label>
               <input
@@ -639,33 +647,29 @@ export const OTA: React.FC = () => {
                 placeholder="1.4.0"
                 required
                 pattern="\d+\.\d+\.\d+"
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '6px', 
-                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                  fontSize: '0.95rem',
-                  background: isDark ? '#1a1a1a' : 'white',
-                  color: isDark ? '#e0e0e0' : 'inherit'
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 Device Model
               </label>
               <select
                 value={uploadForm.deviceModel}
                 onChange={(e) => setUploadForm({ ...uploadForm, deviceModel: e.target.value })}
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '6px', 
-                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                  fontSize: '0.95rem',
-                  background: isDark ? '#1a1a1a' : 'white',
-                  color: isDark ? '#e0e0e0' : 'inherit'
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
                 }}
               >
                 <option value="ESP32-S3">ESP32-S3</option>
@@ -676,7 +680,7 @@ export const OTA: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 Min Bootloader Version
               </label>
               <input
@@ -685,21 +689,19 @@ export const OTA: React.FC = () => {
                 onChange={(e) => setUploadForm({ ...uploadForm, minBootloader: e.target.value })}
                 placeholder="1.0.0"
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '0.75rem', 
-                  borderRadius: '6px', 
-                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                  fontSize: '0.95rem',
-                  background: isDark ? '#1a1a1a' : 'white',
-                  color: isDark ? '#e0e0e0' : 'inherit'
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
                 }}
               />
             </div>
           </div>
 
           <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
               Release Notes
             </label>
             <textarea
@@ -707,23 +709,25 @@ export const OTA: React.FC = () => {
               onChange={(e) => setUploadForm({ ...uploadForm, releaseNotes: e.target.value })}
               placeholder="Bug fixes, new features, improvements..."
               rows={3}
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                fontSize: '0.95rem',
+              style={{
+                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                background: isDark ? '#2a2a2a' : '#ffffff',
+                color: isDark ? '#f3f4f6' : '#111827',
+                fontSize: '0.875rem',
                 fontFamily: 'inherit',
                 resize: 'vertical',
-                background: isDark ? '#1a1a1a' : 'white',
-                color: isDark ? '#e0e0e0' : 'inherit'
               }}
             />
           </div>
 
-          <div className="responsive-grid-2" style={{ marginTop: '1rem', alignItems: 'end' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 20 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>File & Checksum</span>
+          </div>
+          <div className="responsive-grid-2" style={{ alignItems: 'end' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 Firmware File (.bin) *
               </label>
               <input
@@ -731,47 +735,45 @@ export const OTA: React.FC = () => {
                 accept=".bin"
                 onChange={handleFileSelect}
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '0.5rem', 
-                  borderRadius: '6px', 
-                  border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                  fontSize: '0.9rem',
-                  background: isDark ? '#1a1a1a' : 'white',
-                  color: isDark ? '#e0e0e0' : 'inherit'
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
                 }}
               />
               {uploadForm.file && (
-                <small style={{ color: isDark ? '#a0a0a0' : '#6c757d', display: 'block', marginTop: '0.25rem' }}>
+                <small style={{ color: isDark ? '#9ca3af' : '#6b7280', display: 'block', marginTop: '0.25rem', fontSize: '0.813rem' }}>
                   {uploadForm.file.name} ({(uploadForm.file.size / 1024).toFixed(1)} KB)
                 </small>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
                 SHA256 (auto-calculated)
               </label>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: '0.75rem',
-                background: isDark ? '#242424' : '#e9ecef',
-                borderRadius: '6px',
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da'
+                background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6',
+                borderRadius: 8,
+                padding: '10px 14px',
+                fontSize: '0.813rem',
               }}>
                 <input
                   type="text"
                   value="Calculating..."
                   disabled
-                  style={{ 
+                  style={{
                     width: '100%',
                     border: 'none',
                     background: 'transparent',
-                    fontSize: '0.85rem',
+                    fontSize: '0.813rem',
                     fontFamily: 'monospace',
-                    color: isDark ? '#a0a0a0' : '#6c757d'
+                    color: isDark ? '#9ca3af' : '#6b7280'
                   }}
                 />
                 <span style={{
@@ -793,30 +795,41 @@ export const OTA: React.FC = () => {
             type="submit"
             style={{
               marginTop: '1.5rem',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               color: 'white',
               border: 'none',
-              padding: '0.875rem 2rem',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
+              padding: '10px 20px',
+              borderRadius: 8,
+              fontSize: '0.875rem',
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+              boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
             }}
           >
             <Upload size={20} strokeWidth={2} />
             Upload Firmware
           </button>
         </form>
+        </div>{/* end padding wrapper */}
 
         {/* Firmware List Table */}
-        <div>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#495057' }}>
-            Available Firmware Versions
-          </h3>
+        <div style={{ padding: '0 24px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 8 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Available Firmware Versions</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Search by name or version…"
+              value={firmwareSearch}
+              onChange={(e) => setFirmwareSearch(e.target.value)}
+              style={{ padding: '5px 10px', borderRadius: 6, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.85rem', minWidth: 220 }}
+            />
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -847,7 +860,7 @@ export const OTA: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  firmwares.map(fw => (
+                  firmwares.filter(fw => !firmwareSearch.trim() || fw.name.toLowerCase().includes(firmwareSearch.toLowerCase()) || fw.version.toLowerCase().includes(firmwareSearch.toLowerCase())).map(fw => (
                   <tr key={fw.id} style={{ borderBottom: isDark ? '1px solid #404040' : '1px solid #e9ecef' }}>
                     <td style={{ padding: '1rem 0.75rem' }}>
                       <div style={{ fontWeight: '500', color: isDark ? '#e0e0e0' : '#2c3e50', marginBottom: '0.25rem' }}>{fw.name}</div>
@@ -939,323 +952,365 @@ export const OTA: React.FC = () => {
       </div>
 
       {/* SECTION 2: Deployment Panel */}
-      <div style={{ 
-        background: isDark ? '#2d2d2d' : 'white', 
-        borderRadius: '12px', 
-        padding: '2rem',
+      <div style={{
+        background: isDark ? '#1a1a1a' : '#ffffff',
+        borderRadius: 16,
+        boxShadow: isDark
+          ? '0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06)'
+          : '0 4px 24px rgba(0,0,0,0.08)',
+        padding: 0,
         marginBottom: '2rem',
-        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        border: isDark ? '2px solid #667eea' : '2px solid #667eea'
+        overflow: 'hidden',
       }}>
-        <h2 style={{ 
-          fontSize: '1.5rem', 
-          fontWeight: '600', 
-          color: isDark ? '#e0e0e0' : '#2c3e50',
-          marginBottom: '1.5rem',
-          paddingBottom: '0.75rem',
-          borderBottom: isDark ? '2px solid #404040' : '2px solid #e1e8ed',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
+        {/* Deploy Firmware card header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '20px 24px',
+          borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb',
         }}>
-          <span style={{ fontSize: '1.25rem' }}>🚀</span>
-          Deployment Panel
-        </h2>
-
-        <div className="responsive-grid-auto-fit">
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
-              Select Firmware Version *
-            </label>
-            <select
-              value={deploymentConfig.firmwareVersion}
-              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, firmwareVersion: e.target.value })}
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                fontSize: '0.95rem',
-                background: isDark ? '#1a1a1a' : 'white',
-                color: isDark ? '#e0e0e0' : 'inherit'
-              }}
-            >
-              <option value="">-- Select Version --</option>
-              {firmwares.filter(f => f.status === 'stable').map(f => (
-                <option key={f.id} value={f.version}>
-                  {f.name} - v{f.version}
-                </option>
-              ))}
-            </select>
+          <div style={{
+            width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(245,158,11,0.4)',
+          }}>
+            <Zap size={20} color="white" />
           </div>
-
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
-              Deployment Mode
-            </label>
-            <select
-              value={deploymentConfig.mode}
-              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, mode: e.target.value as 'immediate' | 'canary' })}
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                fontSize: '0.95rem',
-                background: isDark ? '#1a1a1a' : 'white',
-                color: isDark ? '#e0e0e0' : 'inherit'
-              }}
-            >
-              <option value="immediate">Immediate (Push to all devices)</option>
-              <option value="canary">Canary (Gradual rollout)</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
-              Health Confirmation Timeout (seconds)
-            </label>
-            <input
-              type="number"
-              value={deploymentConfig.healthTimeout}
-              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, healthTimeout: parseInt(e.target.value) })}
-              min="30"
-              max="3600"
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                fontSize: '0.95rem',
-                background: isDark ? '#1a1a1a' : 'white',
-                color: isDark ? '#e0e0e0' : 'inherit'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
-              Failure Threshold (%)
-            </label>
-            <input
-              type="number"
-              value={deploymentConfig.failureThreshold}
-              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, failureThreshold: parseInt(e.target.value) })}
-              min="1"
-              max="100"
-              style={{ 
-                width: '100%', 
-                padding: '0.75rem', 
-                borderRadius: '6px', 
-                border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-                fontSize: '0.95rem',
-                background: isDark ? '#1a1a1a' : 'white',
-                color: isDark ? '#e0e0e0' : 'inherit'
-              }}
-            />
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: isDark ? '#f9fafb' : '#111827' }}>Deploy Firmware</div>
+            <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>Push firmware updates to target devices</div>
           </div>
         </div>
 
-        <div style={{ marginTop: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <label style={{ fontWeight: '500', color: isDark ? '#b0b0b0' : '#495057', fontSize: '0.9rem' }}>
-              Target Devices ({deploymentConfig.targetDevices.length} selected)
+        <div style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 8 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #f59e0b, #d97706)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#fcd34d' : '#d97706' }}>Configuration</span>
+          </div>
+          <div className="responsive-grid-auto-fit">
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                Select Firmware Version *
+              </label>
+              <select
+                value={deploymentConfig.firmwareVersion}
+                onChange={(e) => setDeploymentConfig({ ...deploymentConfig, firmwareVersion: e.target.value })}
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <option value="">-- Select Version --</option>
+                {firmwares.filter(f => f.status === 'stable').map(f => (
+                  <option key={f.id} value={f.version}>
+                    {f.name} - v{f.version}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                Deployment Mode
+              </label>
+              <select
+                value={deploymentConfig.mode}
+                onChange={(e) => setDeploymentConfig({ ...deploymentConfig, mode: e.target.value as 'immediate' | 'canary' })}
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <option value="immediate">Immediate (Push to all devices)</option>
+                <option value="canary">Canary (Gradual rollout)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                Health Confirmation Timeout (seconds)
+              </label>
+              <input
+                type="number"
+                value={deploymentConfig.healthTimeout}
+                onChange={(e) => setDeploymentConfig({ ...deploymentConfig, healthTimeout: parseInt(e.target.value) })}
+                min="30"
+                max="3600"
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                Failure Threshold (%)
+              </label>
+              <input
+                type="number"
+                value={deploymentConfig.failureThreshold}
+                onChange={(e) => setDeploymentConfig({ ...deploymentConfig, failureThreshold: parseInt(e.target.value) })}
+                min="1"
+                max="100"
+                style={{
+                  padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 20 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #f59e0b, #d97706)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#fcd34d' : '#d97706' }}>Target Devices</span>
+          </div>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <label style={{ display: 'block', fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                {deploymentConfig.targetDevices.length} device(s) selected
+              </label>
+              <input
+                type="text"
+                placeholder="Search device ID…"
+                value={idleDeviceSearch}
+                onChange={(e) => setIdleDeviceSearch(e.target.value)}
+                style={{
+                  padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  background: isDark ? '#2a2a2a' : '#ffffff',
+                  color: isDark ? '#f3f4f6' : '#111827',
+                  fontSize: '0.875rem', minWidth: 160,
+                }}
+              />
+              <button
+                onClick={handleSelectAllDevices}
+                style={{
+                  background: 'transparent',
+                  color: isDark ? '#fcd34d' : '#d97706',
+                  border: isDark ? '1px solid rgba(245,158,11,0.4)' : '1px solid #f59e0b',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Select All Idle ({devices.filter(d => d.status === 'idle').length})
+              </button>
+            </div>
+            <div style={{
+              maxHeight: '150px',
+              overflowY: 'auto',
+              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderRadius: 8,
+              padding: '0.75rem',
+              background: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6',
+            }}>
+              {loadingDevices ? (
+                <div style={{ textAlign: 'center', color: isDark ? '#9ca3af' : '#6b7280', padding: '1rem' }}>
+                  Loading devices...
+                </div>
+              ) : devices.filter(d => d.status === 'idle').length === 0 ? (
+                <div style={{ textAlign: 'center', color: isDark ? '#9ca3af' : '#6b7280', padding: '1rem' }}>
+                  No idle devices available for deployment
+                </div>
+              ) : (
+                <>
+                  {devices.filter(d => d.status === 'idle' && (!idleDeviceSearch.trim() || d.deviceId.toLowerCase().includes(idleDeviceSearch.toLowerCase()))).map(device => (
+                    <label key={device.deviceId} style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      color: isDark ? '#d1d5db' : '#374151',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={deploymentConfig.targetDevices.includes(device.deviceId)}
+                        onChange={(e) => {
+                          const newTargets = e.target.checked
+                            ? [...deploymentConfig.targetDevices, device.deviceId]
+                            : deploymentConfig.targetDevices.filter(id => id !== device.deviceId);
+                          setDeploymentConfig({ ...deploymentConfig, targetDevices: newTargets });
+                        }}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      {device.deviceId} (Current: {device.currentVersion})
+                    </label>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 20 }}>
+            <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #f59e0b, #d97706)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#fcd34d' : '#d97706' }}>Options</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.813rem',
+              color: isDark ? '#d1d5db' : '#374151',
+            }}>
+              <input
+                type="checkbox"
+                checked={deploymentConfig.autoRollback}
+                onChange={(e) => setDeploymentConfig({ ...deploymentConfig, autoRollback: e.target.checked })}
+                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+              />
+              Enable Auto Rollback
             </label>
+            <span style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+              (Automatically rollback on failure)
+            </span>
+          </div>
+
+          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <button
-              onClick={handleSelectAllDevices}
+              onClick={handleDeployClick}
+              disabled={isDeploying}
               style={{
-                background: 'transparent',
-                color: '#667eea',
-                border: '1px solid #667eea',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: '500'
+                background: isDeploying ? '#6c757d' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: 8,
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: isDeploying ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                boxShadow: isDeploying ? 'none' : '0 4px 12px rgba(245,158,11,0.35)',
               }}
             >
-              Select All Idle ({devices.filter(d => d.status === 'idle').length})
+              <Zap size={20} strokeWidth={2} />
+              {isDeploying ? 'Deploying...' : 'Deploy Firmware'}
             </button>
-          </div>
-          <div style={{
-            maxHeight: '150px',
-            overflowY: 'auto',
-            border: isDark ? '1px solid #404040' : '1px solid #ced4da',
-            borderRadius: '6px',
-            padding: '0.75rem',
-            background: isDark ? '#242424' : '#f8f9fa'
-          }}>
-            {loadingDevices ? (
-              <div style={{ textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', padding: '1rem' }}>
-                Loading devices...
-              </div>
-            ) : devices.filter(d => d.status === 'idle').length === 0 ? (
-              <div style={{ textAlign: 'center', color: isDark ? '#a0a0a0' : '#6c757d', padding: '1rem' }}>
-                No idle devices available for deployment
-              </div>
-            ) : (
+
+            {isDeploying && (
               <>
-                {devices.filter(d => d.status === 'idle').map(device => (
-                  <label key={device.deviceId} style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
+                <button
+                  style={{
+                    background: '#ffc107',
+                    color: '#000',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: 8,
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={deploymentConfig.targetDevices.includes(device.deviceId)}
-                      onChange={(e) => {
-                        const newTargets = e.target.checked
-                          ? [...deploymentConfig.targetDevices, device.deviceId]
-                          : deploymentConfig.targetDevices.filter(id => id !== device.deviceId);
-                        setDeploymentConfig({ ...deploymentConfig, targetDevices: newTargets });
-                      }}
-                      style={{ marginRight: '0.5rem' }}
-                    />
-                    {device.deviceId} (Current: {device.currentVersion})
-                  </label>
-                ))}
+                  }}
+                >
+                  ⏸ Pause Deployment
+                </button>
+                <button
+                  style={{
+                    background: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: 8,
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ⏹ Abort Deployment
+                </button>
               </>
             )}
           </div>
         </div>
-
-        <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: '500',
-            color: isDark ? '#b0b0b0' : '#495057'
-          }}>
-            <input
-              type="checkbox"
-              checked={deploymentConfig.autoRollback}
-              onChange={(e) => setDeploymentConfig({ ...deploymentConfig, autoRollback: e.target.checked })}
-              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-            />
-            Enable Auto Rollback
-          </label>
-          <span style={{ fontSize: '0.85rem', color: isDark ? '#a0a0a0' : '#6c757d' }}>
-            (Automatically rollback on failure)
-          </span>
-        </div>
-
-        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleDeployClick}
-            disabled={isDeploying}
-            style={{
-              background: isDeploying ? '#6c757d' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '1rem 2.5rem',
-              borderRadius: '8px',
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              cursor: isDeploying ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-            }}
-          >
-            <Zap size={20} strokeWidth={2} />
-            {isDeploying ? 'Deploying...' : 'Deploy Firmware'}
-          </button>
-
-          {isDeploying && (
-            <>
-              <button
-                style={{
-                  background: '#ffc107',
-                  color: '#000',
-                  border: 'none',
-                  padding: '1rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                ⏸ Pause Deployment
-              </button>
-              <button
-                style={{
-                  background: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  padding: '1rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                ⏹ Abort Deployment
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Deployment Confirmation Modal */}
-      {confirmModal.show && (
+      {confirmModal.show && ReactDOM.createPortal(
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '1px solid #404040' : 'none'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px', width: '100%', overflow: 'hidden',
           }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-              Confirm Deployment
-            </h3>
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.8' }}>
-              <p><strong>Firmware Version:</strong> {confirmModal.firmware}</p>
-              <p><strong>Target Devices:</strong> {confirmModal.deviceCount}</p>
-              <p><strong>Estimated Data Transfer:</strong> {confirmModal.dataTransfer}</p>
-              <p><strong>Auto Rollback:</strong> {deploymentConfig.autoRollback ? 'Enabled ✓' : 'Disabled'}</p>
-              <p><strong>Failure Threshold:</strong> {deploymentConfig.failureThreshold}%</p>
-            </div>
-            <div style={{
-              background: isDark ? '#3a2a00' : '#fff3cd',
-              border: isDark ? '1px solid #6b5300' : '1px solid #ffc107',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              color: isDark ? '#ffd966' : '#856404'
-            }}>
-              <strong>⚠️ Warning:</strong> This will push firmware updates to {confirmModal.deviceCount} devices.
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Upload size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Confirm Deployment
+                </span>
+              </div>
               <button
                 onClick={() => setConfirmModal({ ...confirmModal, show: false })}
                 style={{
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  width: 36, height: 36, borderRadius: 8, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '20px 24px', color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              <p style={{ margin: '0 0 4px' }}><strong>Firmware Version:</strong> {confirmModal.firmware}</p>
+              <p style={{ margin: '0 0 4px' }}><strong>Target Devices:</strong> {confirmModal.deviceCount}</p>
+              <p style={{ margin: '0 0 4px' }}><strong>Estimated Data Transfer:</strong> {confirmModal.dataTransfer}</p>
+              <p style={{ margin: '0 0 4px' }}><strong>Auto Rollback:</strong> {deploymentConfig.autoRollback ? 'Enabled ✓' : 'Disabled'}</p>
+              <p style={{ margin: '0 0 16px' }}><strong>Failure Threshold:</strong> {deploymentConfig.failureThreshold}%</p>
+              <div style={{
+                background: isDark ? '#3a2a00' : '#fff3cd',
+                border: isDark ? '1px solid #6b5300' : '1px solid #ffc107',
+                borderRadius: 8, padding: '12px 14px',
+                color: isDark ? '#ffd966' : '#856404',
+              }}>
+                <strong>Warning:</strong> This will push firmware updates to {confirmModal.deviceCount} devices.
+              </div>
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                style={{
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  padding: '10px 18px', borderRadius: 8, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -1263,21 +1318,18 @@ export const OTA: React.FC = () => {
               <button
                 onClick={confirmDeployment}
                 style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  border: 'none', padding: '10px 18px', borderRadius: 8,
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
                 }}
               >
                 Confirm Deploy
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* SECTION 3: Live Deployment Status */}
@@ -1758,18 +1810,25 @@ export const OTA: React.FC = () => {
           </div>
 
           {/* Device Selection Table */}
-          <div style={{ 
-            background: isDark ? '#242424' : '#f8f9fa', 
-            borderRadius: '8px', 
+          <div style={{
+            background: isDark ? '#242424' : '#f8f9fa',
+            borderRadius: '8px',
             padding: '1rem',
             border: isDark ? '1px solid #404040' : '1px solid #dee2e6',
             maxHeight: '400px',
             overflowY: 'auto'
           }}>
-            <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
               <strong style={{ fontSize: '0.95rem', color: isDark ? '#e0e0e0' : 'inherit' }}>
-                Devices List ({getFilteredRollbackDevices().length} available, {rollbackForm.selectedDevices.length} selected)
+                Devices List ({getFilteredRollbackDevices().filter(d => !rollbackDeviceSearch.trim() || d.deviceId.toLowerCase().includes(rollbackDeviceSearch.toLowerCase())).length} available, {rollbackForm.selectedDevices.length} selected)
               </strong>
+              <input
+                type="text"
+                placeholder="Search device ID…"
+                value={rollbackDeviceSearch}
+                onChange={(e) => setRollbackDeviceSearch(e.target.value)}
+                style={{ padding: '4px 8px', borderRadius: 5, border: isDark ? '1px solid #404040' : '1px solid #ced4da', background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : '#2c3e50', fontSize: '0.82rem', minWidth: 180 }}
+              />
             </div>
             
             {loadingDevices ? (
@@ -1807,8 +1866,8 @@ export const OTA: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getFilteredRollbackDevices().map(device => (
-                    <tr 
+                  {getFilteredRollbackDevices().filter(d => !rollbackDeviceSearch.trim() || d.deviceId.toLowerCase().includes(rollbackDeviceSearch.toLowerCase())).map(device => (
+                    <tr
                       key={device.deviceId} 
                       style={{ 
                         borderBottom: isDark ? '1px solid #404040' : '1px solid #e9ecef',
@@ -1886,62 +1945,72 @@ export const OTA: React.FC = () => {
       </div>
 
       {/* Rollback Confirmation Modal */}
-      {showRollbackModal && (
+      {showRollbackModal && ReactDOM.createPortal(
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px', width: '100%', overflow: 'hidden',
           }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#dc3545' }}>
-              ⚠️ Confirm Emergency Rollback
-            </h3>
-            <div style={{
-              background: isDark ? '#3d1a1a' : '#f8d7da',
-              border: isDark ? '1px solid #5a1f24' : '1px solid #f5c6cb',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              color: isDark ? '#ff9999' : '#721c24',
-              fontSize: '0.95rem'
-            }}>
-              <strong>This action cannot be undone!</strong>
-              <p style={{ margin: '0.5rem 0 0 0' }}>
-                You are about to rollback devices to a previous firmware version.
-              </p>
-            </div>
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.8' }}>
-              <p><strong>Command:</strong> <code style={{ background: isDark ? '#1a1a1a' : '#f8f9fa', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig = 2</code> (automatic rollback to previous version)</p>
-              <p><strong>Devices to Rollback:</strong> {rollbackForm.selectedDevices.length}</p>
-              <p><strong>Reason:</strong> {rollbackForm.reason || 'Not provided'}</p>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <RotateCcw size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Emergency Rollback
+                </span>
+              </div>
               <button
                 onClick={() => setShowRollbackModal(false)}
                 style={{
-                  background: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  width: 36, height: 36, borderRadius: 8, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '20px 24px', color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              <p style={{ margin: '0 0 4px' }}><strong>Command:</strong> <code style={{ background: isDark ? '#0d0d0d' : '#f8f9fa', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : 'inherit' }}>updateConfig = 2</code> (automatic rollback to previous version)</p>
+              <p style={{ margin: '0 0 4px' }}><strong>Devices to Rollback:</strong> {rollbackForm.selectedDevices.length}</p>
+              <p style={{ margin: '0 0 16px' }}><strong>Reason:</strong> {rollbackForm.reason || 'Not provided'}</p>
+              <div style={{
+                background: isDark ? '#3d1a1a' : '#f8d7da',
+                border: isDark ? '1px solid #5a1f24' : '1px solid #f5c6cb',
+                borderRadius: 8, padding: '12px 14px',
+                color: isDark ? '#ff9999' : '#721c24',
+              }}>
+                <strong>This action cannot be undone!</strong> You are about to rollback devices to a previous firmware version.
+              </div>
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowRollbackModal(false)}
+                style={{
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  padding: '10px 18px', borderRadius: 8, fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -1949,73 +2018,87 @@ export const OTA: React.FC = () => {
               <button
                 onClick={confirmRollback}
                 style={{
-                  background: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 1.5rem',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  border: 'none', padding: '10px 18px', borderRadius: 8,
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
                 }}
               >
                 Confirm Rollback
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Generic Confirm-Action Modal — used for delete, deactivate, and any future destructive action */}
-      {confirmActionModal.show && (
+      {confirmActionModal.show && ReactDOM.createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white', borderRadius: '16px', padding: '2rem',
-            maxWidth: '500px', width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: `2px solid ${confirmActionModal.accentColor}`,
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px', width: '100%', overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '48px', height: '48px', borderRadius: '12px', flexShrink: 0,
-                background: `linear-gradient(135deg, ${confirmActionModal.accentColor} 0%, ${confirmActionModal.accentColor}cc 100%)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.5rem', animation: 'pulse 2s infinite'
-              }}>
-                {confirmActionModal.icon}
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: `linear-gradient(135deg, ${confirmActionModal.accentColor}, ${confirmActionModal.accentColor}cc)`,
+                  boxShadow: `0 4px 14px ${confirmActionModal.accentColor}66`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.25rem',
+                }}>
+                  {confirmActionModal.icon}
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  {confirmActionModal.title}
+                </span>
               </div>
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: confirmActionModal.accentColor }}>
-                {confirmActionModal.title}
-              </h3>
+              <button
+                onClick={() => setConfirmActionModal(m => ({ ...m, show: false }))}
+                style={{
+                  width: 36, height: 36, borderRadius: 8, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
             </div>
-
-            <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
-              <p style={{ marginBottom: '1rem' }}>{confirmActionModal.message}</p>
+            {/* Body */}
+            <div style={{ padding: '20px 24px', color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem' }}>
+              <p style={{ margin: '0 0 16px' }}>{confirmActionModal.message}</p>
               <div style={{
                 background: isDark ? 'rgba(128,128,128,0.12)' : '#f8f9fa',
                 border: `1px solid ${confirmActionModal.accentColor}55`,
-                borderRadius: '8px', padding: '0.75rem 1rem',
-                fontSize: '0.9rem', color: isDark ? '#ccc' : '#555'
+                borderRadius: 8, padding: '12px 14px',
+                color: isDark ? '#ccc' : '#555',
               }}>
                 {confirmActionModal.warningText}
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setConfirmActionModal(m => ({ ...m, show: false }))}
                 style={{
-                  background: isDark ? '#3a3a3a' : '#e0e0e0', color: isDark ? '#e0e0e0' : '#495057',
-                  border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
-                  fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  padding: '10px 18px', borderRadius: 8, fontWeight: 600, cursor: 'pointer',
                 }}
-                onMouseOver={e => e.currentTarget.style.background = isDark ? '#4a4a4a' : '#d0d0d0'}
-                onMouseOut={e => e.currentTarget.style.background = isDark ? '#3a3a3a' : '#e0e0e0'}
               >
                 Cancel
               </button>
@@ -2027,165 +2110,152 @@ export const OTA: React.FC = () => {
                   catch (err: any) { setErrorModal({ show: true, message: err.message || 'Operation failed' }); }
                 }}
                 style={{
-                  background: `linear-gradient(135deg, ${confirmActionModal.accentColor} 0%, ${confirmActionModal.accentColor}cc 100%)`,
-                  color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
-                  fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer',
-                  boxShadow: `0 4px 12px ${confirmActionModal.accentColor}44`, transition: 'all 0.2s'
+                  background: `linear-gradient(135deg, ${confirmActionModal.accentColor}, ${confirmActionModal.accentColor}cc)`,
+                  border: 'none', padding: '10px 18px', borderRadius: 8,
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: `0 4px 12px ${confirmActionModal.accentColor}59`,
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 {confirmActionModal.confirmLabel}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Success Notification Modal */}
-      {successModal.show && (
+      {successModal.show && ReactDOM.createPortal(
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(2px)'
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '450px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '1px solid #28a745' : '2px solid #28a745',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px', width: '100%', overflow: 'hidden',
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                margin: '0 auto 1rem',
-                animation: 'scaleIn 0.3s ease-out'
-              }}>
-                ✓
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <CheckCircle2 size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Success
+                </span>
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                Success
-              </h3>
-              
-              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
-                {successModal.message}
-              </p>
-              
               <button
                 onClick={() => setSuccessModal({ show: false, message: '' })}
                 style={{
-                  background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                  transition: 'all 0.2s'
+                  width: 36, height: 36, borderRadius: 8, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '20px 24px', color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', whiteSpace: 'pre-line' }}>
+              {successModal.message}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSuccessModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none', padding: '10px 18px', borderRadius: 8,
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
+                }}
               >
                 Got it!
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modern Error Notification Modal */}
-      {errorModal.show && (
+      {errorModal.show && ReactDOM.createPortal(
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(2px)'
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#2d2d2d' : 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '450px',
-            width: '90%',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-            border: isDark ? '2px solid #dc3545' : '2px solid #dc3545',
-            animation: 'slideIn 0.2s ease-out'
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '480px', width: '100%', overflow: 'hidden',
           }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                margin: '0 auto 1rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                ⚠️
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <AlertCircle size={22} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  Error
+                </span>
               </div>
-              
-              <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#dc3545' }}>
-                Error
-              </h3>
-              
-              <p style={{ color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6', marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
-                {errorModal.message}
-              </p>
-              
               <button
                 onClick={() => setErrorModal({ show: false, message: '' })}
                 style={{
-                  background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.75rem 2rem',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(220, 53, 69, 0.3)',
-                  transition: 'all 0.2s'
+                  width: 36, height: 36, borderRadius: 8, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: '20px 24px', color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', whiteSpace: 'pre-line' }}>
+              {errorModal.message}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setErrorModal({ show: false, message: '' })}
+                style={{
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  border: 'none', padding: '10px 18px', borderRadius: 8,
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
+                }}
               >
                 Dismiss
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
