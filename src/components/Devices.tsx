@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, Activity, Database, Wifi, CheckCircle, XCircle, RotateCcw, ScrollText, Sun, Zap, Server } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
@@ -66,7 +66,7 @@ interface SystemHealthData {
   total_telemetry_points: number;
   uptime_seconds: number;
   database_status: string;
-  mqtt_status: string;
+  http_status: string;
   overall_health: string;
 }
 
@@ -561,100 +561,114 @@ const Devices: React.FC = () => {
 
     return (
       <div className="admin-container responsive-page">
-        <div className="page-title-row" style={{ marginBottom: '20px' }}>
-          <button
-            onClick={handleBackToList}
-            className="btn btn-secondary"
-            style={{ marginRight: '15px' }}
-          >
-            ← Back to Devices
-          </button>
-          <h1 style={{ margin: 0 }}>{selectedDevice.device_serial} Dashboard</h1>
+        {/* ── Device Detail Sticky Header ── */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 16px',
+          marginBottom: '20px',
+          borderRadius: '12px',
+          background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(247,255,249,0.95)',
+          backdropFilter: 'blur(12px)',
+          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,166,62,0.15)',
+          boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.08)',
+        }}>
+          {/* Left: back + title + status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <button
+              onClick={handleBackToList}
+              title="Back to Devices"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#94a3b8' : '#475569',
+                transition: 'background 150ms, color 150ms',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {selectedDevice.device_serial}
+              </h1>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0,
+                padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
+                background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
+                color: selectedDevice.is_online ? '#10b981' : '#64748b',
+                border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : '#64748b', display: 'inline-block' }} />
+                {selectedDevice.is_online ? 'Online' : 'Offline'}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            {[
+              { label: 'Edit', icon: <Pencil size={14} />, onClick: () => handleEdit(selectedDevice), color: 'default', title: 'Edit device configuration' },
+              { label: 'Reboot', icon: <RotateCcw size={14} />, onClick: () => handleReboot(selectedDevice), color: 'amber', title: 'Queue reboot command' },
+              { label: 'Hard Reset', icon: <AlertTriangle size={14} />, onClick: () => handleHardReset(selectedDevice), color: 'amber', title: 'Queue hard reset (erases config)' },
+              { label: 'Delete', icon: <Trash2 size={14} />, onClick: () => handleDeleteDevice(selectedDevice), color: 'red', title: 'Permanently delete device' },
+            ].map(({ label, icon, onClick, color, title }) => (
+              <button
+                key={label}
+                onClick={onClick}
+                title={title}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer',
+                  padding: '5px 10px', borderRadius: 7, border: 'none', fontSize: '0.8rem', fontWeight: 500,
+                  transition: 'background 150ms, color 150ms',
+                  background: 'transparent',
+                  color: color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : isDark ? '#cbd5e1' : '#475569',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLButtonElement;
+                  el.style.background = color === 'red' ? 'rgba(239,68,68,0.1)' : color === 'amber' ? 'rgba(245,158,11,0.1)' : isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+                }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+              >
+                {icon}
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">
             <h2>Device Details</h2>
-            <div className="detail-action-row">
-              <button onClick={() => handleEdit(selectedDevice)} className="btn">
-                Edit Device
-              </button>
-              <button 
-                onClick={() => handleReboot(selectedDevice)} 
-                className="btn"
-                style={{ 
-                  backgroundColor: '#f59e0b', 
-                  color: 'white',
-                  border: 'none'
-                }}
-                title="Queue reboot command for device"
-              >
-                🔄 Reboot
-              </button>
-              <button 
-                onClick={() => handleHardReset(selectedDevice)} 
-                className="btn"
-                style={{ 
-                  backgroundColor: '#dc2626', 
-                  color: 'white',
-                  border: 'none'
-                }}
-                title="Queue hard reset command for device (erases config)"
-              >
-                <><AlertTriangle size={16} strokeWidth={2} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} /> Hard Reset</>
-              </button>
-              <button 
-                onClick={() => handleDeleteDevice(selectedDevice)} 
-                className="btn"
-                style={{ 
-                  backgroundColor: '#7f1d1d', 
-                  color: 'white',
-                  border: 'none'
-                }}
-                title="Permanently delete device and all its data"
-              >
-                🗑️ Delete
-              </button>
-            </div>
           </div>
           <div style={{ padding: '20px' }}>
             <div className="device-info-grid responsive-grid-2">
-              <div>
-                <strong>Status:</strong>
-                <p style={{ margin: '5px 0' }}>
+              {[
+                { label: 'Status', content: (
                   <span style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    backgroundColor: selectedDevice.is_online ? '#dcfce7' : '#fee2e2',
-                    color: selectedDevice.is_online ? '#166534' : '#991b1b'
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600,
+                    background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
+                    color: selectedDevice.is_online ? '#10b981' : '#64748b',
+                    border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    {selectedDevice.is_online ? '🟢 Online' : '🔴 Offline'}
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : '#64748b', display: 'inline-block' }} />
+                    {selectedDevice.is_online ? 'Online' : 'Offline'}
                   </span>
-                </p>
-              </div>
-              <div>
-                <strong>Last Heartbeat:</strong>
-                <p style={{ margin: '5px 0' }}>
-                  {selectedDevice.last_heartbeat
-                    ? new Date(selectedDevice.last_heartbeat).toLocaleString()
-                    : 'Never'}
-                </p>
-              </div>
-              <div>
-                <strong>MAC / HW ID:</strong>
-                <p style={{ margin: '5px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem' }}>{selectedDevice.hw_id || '—'}</p>
-              </div>
-              <div>
-                <strong>Model:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedDevice.model || '—'}</p>
-              </div>
-              <div>
-                <strong>Assigned User:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedDevice.user || '-'}</p>
-              </div>
+                )},
+                { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{selectedDevice.last_heartbeat ? new Date(selectedDevice.last_heartbeat).toLocaleString() : 'Never'}</span> },
+                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#475569' }}>{selectedDevice.hw_id || '—'}</span> },
+                { label: 'Model', content: <span>{selectedDevice.model || '—'}</span> },
+                { label: 'Assigned User', content: <span>{selectedDevice.user || '—'}</span> },
+              ].map(({ label, content }) => (
+                <div key={label}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: '0.9rem', color: isDark ? '#e2e8f0' : '#1e293b' }}>{content}</div>
+                </div>
+              ))}
               <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-sync-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
@@ -767,16 +781,14 @@ const Devices: React.FC = () => {
                 )}
               </div>
               <div>
-                <strong>Provisioned At:</strong>
-                <p style={{ margin: '5px 0' }}>
-                  {selectedDevice.provisioned_at
-                    ? new Date(selectedDevice.provisioned_at).toLocaleDateString()
-                    : 'N/A'}
-                </p>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Provisioned At</div>
+                <div style={{ fontSize: '0.9rem', fontFamily: 'JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                  {selectedDevice.provisioned_at ? new Date(selectedDevice.provisioned_at).toLocaleDateString() : 'N/A'}
+                </div>
               </div>
               <div>
-                <strong>Created By:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedDevice.created_by_username || '-'}</p>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Created By</div>
+                <div style={{ fontSize: '0.9rem', color: isDark ? '#e2e8f0' : '#1e293b' }}>{selectedDevice.created_by_username || '—'}</div>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -796,76 +808,144 @@ const Devices: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2" style={{ gap: 'var(--space-6, 24px)', marginTop: '32px' }}>
-          <div className="card">
-            <h2>System Health</h2>
-            {healthLoading && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading system health...</p>}
-            {!healthLoading && !health && (
-              <div>
-                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load health data.</p>
-                <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
-              </div>
-            )}
-            {health && (
-              <div>
-                <p><strong>Overall:</strong> {health.overall_health}</p>
-                <p><strong>Devices:</strong> {health.active_devices}/{health.total_devices} active</p>
-                <p><strong>Telemetry Points:</strong> {health.total_telemetry_points.toLocaleString()}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="card">
-            <h2>Telemetry Snapshot</h2>
-            {healthLoading && <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Loading telemetry...</p>}
-            {!healthLoading && !health && (
-              <div>
-                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load telemetry data.</p>
-                <button className="btn btn-secondary" style={{ marginTop: '8px', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
-              </div>
-            )}
-            {health && (
-              <div>
-                <p><strong>Total Points:</strong> {(health.total_telemetry_points ?? 0).toLocaleString()}</p>
-                <p><strong>Active Devices:</strong> {health.active_devices ?? 0}</p>
-                <p><strong>Status:</strong> {health.mqtt_status ?? 'N/A'}</p>
-              </div>
-            )}
-          </div>
-
-          {bufferStats && (
-            <div className="card" style={{ gridColumn: '1 / -1' }}>
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Telemetry Buffer
-                <span style={{
-                  fontSize: '0.75rem',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontWeight: 600,
-                  background: bufferStats.status === 'healthy' ? '#dcfce7' : bufferStats.status === 'warning' ? '#fef3c7' : '#fee2e2',
-                  color: bufferStats.status === 'healthy' ? '#166534' : bufferStats.status === 'warning' ? '#92400e' : '#991b1b',
-                }}>
-                  {bufferStats.status.toUpperCase()}
-                </span>
-              </h2>
-              <div className="grid-cols-3 responsive-grid-3">
-                <p><strong>Total Records:</strong> {bufferStats.total.toLocaleString()}</p>
-                <p><strong>Pending DynamoDB:</strong> {bufferStats.pending_dynamo}</p>
-                <p><strong>Pending S3:</strong> {bufferStats.pending_s3}</p>
-                <p><strong>Failed Both:</strong> {bufferStats.failed_both}</p>
-                <p><strong>Success Rate:</strong> {bufferStats.success_rate}%</p>
-                <p><strong>Oldest Pending:</strong> {bufferStats.oldest_pending_age_seconds === 0 ? 'None' : bufferStats.oldest_pending_age_seconds < 3600 ? `${Math.floor(bufferStats.oldest_pending_age_seconds / 60)}m` : `${Math.floor(bufferStats.oldest_pending_age_seconds / 3600)}h ${Math.floor((bufferStats.oldest_pending_age_seconds % 3600) / 60)}m`}</p>
-                <p><strong>Avg Latency (24h):</strong> {bufferStats.avg_ingestion_latency_s === null ? '—' : bufferStats.avg_ingestion_latency_s < 60 ? `${bufferStats.avg_ingestion_latency_s}s` : `${Math.floor(bufferStats.avg_ingestion_latency_s / 60)}m ${Math.round(bufferStats.avg_ingestion_latency_s % 60)}s`}</p>
-                <p><strong>Max Latency (24h):</strong> {bufferStats.max_ingestion_latency_s === null ? '—' : bufferStats.max_ingestion_latency_s < 60 ? `${bufferStats.max_ingestion_latency_s}s` : `${Math.floor(bufferStats.max_ingestion_latency_s / 60)}m ${Math.round(bufferStats.max_ingestion_latency_s % 60)}s`}</p>
-              </div>
+        {/* ── System Health KPI Cards ── */}
+        <div style={{ marginTop: '32px' }}>
+          {healthLoading && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="card" style={{ padding: '20px', minHeight: 120, opacity: 0.5 }}>
+                  <div style={{ height: 12, width: '60%', borderRadius: 6, background: isDark ? '#333' : '#e5e7eb', marginBottom: 8 }} />
+                  <div style={{ height: 28, width: '40%', borderRadius: 6, background: isDark ? '#333' : '#e5e7eb' }} />
+                </div>
+              ))}
             </div>
           )}
+          {!healthLoading && !health && (
+            <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <XCircle size={18} color="#ef4444" />
+              <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load health data.</span>
+              <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
+            </div>
+          )}
+          {health && (() => {
+            const deviceRatio = health.active_devices / Math.max(health.total_devices, 1);
+            const httpOk = health.http_status?.toLowerCase() === 'connected' || health.http_status?.toLowerCase() === 'ok';
+            const overallOk = health.overall_health?.toLowerCase() === 'healthy' || health.overall_health?.toLowerCase() === 'ok';
+            const kpiCards = [
+              {
+                label: 'Active Devices',
+                value: `${health.active_devices}/${health.total_devices}`,
+                sub: `${(deviceRatio * 100).toFixed(0)}% online`,
+                icon: <Activity size={22} />,
+                status: deviceRatio >= 0.9 ? 'ok' : deviceRatio >= 0.7 ? 'warn' : 'err',
+              },
+              {
+                label: 'Telemetry Points',
+                value: health.total_telemetry_points.toLocaleString(),
+                sub: 'Total ingested',
+                icon: <Database size={22} />,
+                status: 'ok' as const,
+              },
+              {
+                label: 'HTTP API',
+                value: health.http_status ?? 'N/A',
+                sub: 'API connectivity',
+                icon: <Wifi size={22} />,
+                status: httpOk ? 'ok' : 'err',
+              },
+              {
+                label: 'System Health',
+                value: health.overall_health ?? 'N/A',
+                sub: 'Overall status',
+                icon: <Server size={22} />,
+                status: overallOk ? 'ok' : 'warn',
+              },
+            ] as const;
+            const statusStyles = {
+              ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
+              warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
+              err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
+            };
+            const statusIcons = {
+              ok:   <CheckCircle size={13} />,
+              warn: <AlertTriangle size={13} />,
+              err:  <XCircle size={13} />,
+            };
+            const statusLabels = { ok: 'Healthy', warn: 'Warning', err: 'Error' };
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                {kpiCards.map(({ label, value, sub, icon, status }) => {
+                  const s = statusStyles[status];
+                  return (
+                    <div key={label} className="card" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
+                      {/* decorative circles */}
+                      <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
+                      <span style={{ position: 'absolute', top: -8, right: -8, width: 32, height: 32, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                          {icon}
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                          {statusIcons[status]}
+                          {statusLabels[status]}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4, fontWeight: 500 }}>{label}</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? '#f1f5f9' : '#0f172a', marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
+                      <div style={{ fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8' }}>{sub}</div>
+                      <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
+        {/* ── Telemetry Buffer ── */}
+        {bufferStats && (
+          <div className="card" style={{ marginTop: '16px' }}>
+            <div className="card-header" style={{ paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Zap size={16} style={{ color: bufferStats.status === 'healthy' ? '#10b981' : bufferStats.status === 'warning' ? '#f59e0b' : '#ef4444' }} />
+                <h2 style={{ margin: 0 }}>Telemetry Buffer</h2>
+              </div>
+              <span style={{
+                fontSize: '0.72rem', padding: '2px 10px', borderRadius: '999px', fontWeight: 700, letterSpacing: '0.05em',
+                background: bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.12)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                color: bufferStats.status === 'healthy' ? '#10b981' : bufferStats.status === 'warning' ? '#f59e0b' : '#ef4444',
+                border: `1px solid ${bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.25)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.25)'}`,
+              }}>
+                {bufferStats.status.toUpperCase()}
+              </span>
+            </div>
+            <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+              {[
+                { label: 'Total Records', value: bufferStats.total.toLocaleString() },
+                { label: 'Pending DynamoDB', value: String(bufferStats.pending_dynamo) },
+                { label: 'Pending S3', value: String(bufferStats.pending_s3) },
+                { label: 'Failed Both', value: String(bufferStats.failed_both) },
+                { label: 'Success Rate', value: `${bufferStats.success_rate}%` },
+                { label: 'Oldest Pending', value: bufferStats.oldest_pending_age_seconds === 0 ? 'None' : bufferStats.oldest_pending_age_seconds < 3600 ? `${Math.floor(bufferStats.oldest_pending_age_seconds / 60)}m` : `${Math.floor(bufferStats.oldest_pending_age_seconds / 3600)}h ${Math.floor((bufferStats.oldest_pending_age_seconds % 3600) / 60)}m` },
+                { label: 'Avg Latency (24h)', value: bufferStats.avg_ingestion_latency_s === null ? '—' : bufferStats.avg_ingestion_latency_s < 60 ? `${bufferStats.avg_ingestion_latency_s}s` : `${Math.floor(bufferStats.avg_ingestion_latency_s / 60)}m ${Math.round(bufferStats.avg_ingestion_latency_s % 60)}s` },
+                { label: 'Max Latency (24h)', value: bufferStats.max_ingestion_latency_s === null ? '—' : bufferStats.max_ingestion_latency_s < 60 ? `${bufferStats.max_ingestion_latency_s}s` : `${Math.floor(bufferStats.max_ingestion_latency_s / 60)}m ${Math.round(bufferStats.max_ingestion_latency_s % 60)}s` },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: '0.7rem', color: isDark ? '#64748b' : '#94a3b8', fontWeight: 500, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Site Configuration ── */}
-        <div className="card" style={{ marginTop: '48px' }}>
+        <div className="card" style={{ marginTop: '32px' }}>
           <div className="card-header">
-            <h2>Site Configuration</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sun size={16} style={{ color: '#f59e0b' }} />
+              <h2 style={{ margin: 0 }}>Site Configuration</h2>
+            </div>
             {!siteLoading && (
               <button className="btn" onClick={() => {
                 if (siteDetails) {
@@ -897,15 +977,35 @@ const Devices: React.FC = () => {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No site configured for this device yet.</p>
             ) : (
               <div className="grid-cols-3 responsive-grid-3">
-                <div><strong>Site ID:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem', color: '#00a63e' }}>{siteDetails.site_id}</p></div>
-                <div><strong>Display Name:</strong><p style={{ margin: '4px 0' }}>{siteDetails.display_name || '—'}</p></div>
-                <div><strong>Status:</strong><p style={{ margin: '4px 0' }}><span className={siteDetails.is_active ? 'status-badge status-badge-success' : 'status-badge status-badge-danger'}>{siteDetails.is_active ? 'Active' : 'Inactive'}</span></p></div>
-                <div><strong>Latitude:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem' }}>{siteDetails.latitude}°</p></div>
-                <div><strong>Longitude:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.88rem' }}>{siteDetails.longitude}°</p></div>
-                <div><strong>Timezone:</strong><p style={{ margin: '4px 0' }}>{siteDetails.timezone}</p></div>
-                <div><strong>Capacity:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.capacity_kw} kW</p></div>
-                <div><strong>Tilt:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.tilt_deg}°</p></div>
-                <div><strong>Azimuth:</strong><p style={{ margin: '4px 0', fontFamily: 'JetBrains Mono, monospace' }}>{siteDetails.azimuth_deg}°</p></div>
+                {[
+                  { label: 'Site ID', value: siteDetails.site_id, mono: true, accent: true },
+                  { label: 'Display Name', value: siteDetails.display_name || '—', mono: false },
+                  { label: 'Status', value: null, badge: { active: siteDetails.is_active } },
+                  { label: 'Latitude', value: `${siteDetails.latitude}°`, mono: true },
+                  { label: 'Longitude', value: `${siteDetails.longitude}°`, mono: true },
+                  { label: 'Timezone', value: siteDetails.timezone, mono: false },
+                  { label: 'Capacity', value: `${siteDetails.capacity_kw} kW`, mono: true },
+                  { label: 'Tilt', value: `${siteDetails.tilt_deg}°`, mono: true },
+                  { label: 'Azimuth', value: `${siteDetails.azimuth_deg}°`, mono: true },
+                ].map(({ label, value, mono, accent, badge }) => (
+                  <div key={label}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>{label}</div>
+                    {badge ? (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '2px 9px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600,
+                        background: badge.active ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: badge.active ? '#10b981' : '#ef4444',
+                        border: badge.active ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(239,68,68,0.2)',
+                      }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: badge.active ? '#10b981' : '#ef4444', display: 'inline-block' }} />
+                        {badge.active ? 'Active' : 'Inactive'}
+                      </span>
+                    ) : (
+                      <div style={{ fontSize: '0.875rem', fontFamily: mono ? 'JetBrains Mono, monospace' : undefined, color: accent ? '#00a63e' : isDark ? '#e2e8f0' : '#1e293b', fontWeight: mono ? 500 : 400 }}>{value}</div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -921,51 +1021,72 @@ const Devices: React.FC = () => {
         {/* ── Device Logs ── */}
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
           <div className="card-header">
-            <h2>Device Logs</h2>
-            <button onClick={() => fetchDeviceLogs(selectedDevice.id)} className="btn" disabled={logsLoading}>
-              {logsLoading ? 'Loading...' : '🔄 Refresh'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ScrollText size={16} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
+              <h2 style={{ margin: 0 }}>Device Logs</h2>
+              {selectedDevice.logs_enabled && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 600, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                  Live
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => fetchDeviceLogs(selectedDevice.id)}
+              disabled={logsLoading}
+              title="Refresh logs"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: logsLoading ? 'not-allowed' : 'pointer',
+                padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', fontSize: '0.8rem', fontWeight: 500,
+                opacity: logsLoading ? 0.6 : 1, transition: 'background 150ms',
+              }}
+            >
+              <RefreshCw size={13} style={{ animation: logsLoading ? 'spin 1s linear infinite' : 'none' }} />
+              {logsLoading ? 'Loading…' : 'Refresh'}
             </button>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '16px 20px 20px' }}>
             {!selectedDevice.logs_enabled && (
-              <p style={{ color: 'var(--text-muted, #9ca3af)', fontStyle: 'italic' }}>
-                Logging is disabled for this device. Enable it in Device Details to receive logs.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)' }}>
+                <Info size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <p style={{ margin: 0, color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                  Logging is disabled. Enable it in Device Details to receive logs.
+                </p>
+              </div>
             )}
             {deviceLogs.length === 0 && selectedDevice.logs_enabled && !logsLoading && (
-              <p style={{ color: 'var(--text-muted, #9ca3af)' }}>
-                No logs available yet. Logs will appear when device sends them.
+              <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+                No logs available yet. Logs will appear when the device sends them.
               </p>
             )}
             {logsLoading && (
-              <p style={{ color: 'var(--text-muted, #9ca3af)' }}>
-                Loading logs...
-              </p>
+              <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>Loading logs…</p>
             )}
             {deviceLogs.length > 0 && (
-              <div style={{ 
-                maxHeight: '400px', 
-                overflowY: 'auto', 
-                fontFamily: 'JetBrains Mono, monospace', 
-                fontSize: '0.85rem',
-                backgroundColor: '#1e1e1e',
-                padding: '10px',
-                borderRadius: '4px'
+              <div style={{
+                maxHeight: '420px', overflowY: 'auto',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem',
+                background: '#0d1117', borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.08)',
+                padding: '4px 0',
               }}>
-                {deviceLogs.map((log) => (
-                  <div key={log.id} style={{ 
-                    marginBottom: '8px', 
-                    paddingBottom: '8px', 
-                    borderBottom: '1px solid #333',
-                    color: log.level === 'ERROR' ? '#ff6b6b' : 
-                           log.level === 'WARNING' ? '#ffa500' : 
-                           log.level === 'INFO' ? '#4dabf7' : '#ced4da'
-                  }}>
-                    <span style={{ color: '#888' }}>[{new Date(log.timestamp).toLocaleString()}]</span>
-                    <span style={{ fontWeight: 'bold', marginLeft: '8px' }}>[{log.level}]</span>
-                    <span style={{ marginLeft: '8px' }}>{log.message}</span>
-                  </div>
-                ))}
+                {/* Terminal top bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
+                  {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
+                  <span style={{ fontSize: '0.68rem', color: '#4b5563', marginLeft: 6 }}>device logs — {selectedDevice.device_serial}</span>
+                </div>
+                {deviceLogs.map((log) => {
+                  const levelColor = log.level === 'ERROR' ? '#f87171' : log.level === 'WARNING' ? '#fbbf24' : log.level === 'INFO' ? '#60a5fa' : '#94a3b8';
+                  const levelBg    = log.level === 'ERROR' ? 'rgba(248,113,113,0.1)' : log.level === 'WARNING' ? 'rgba(251,191,36,0.08)' : 'transparent';
+                  return (
+                    <div key={log.id} style={{ display: 'flex', gap: 10, padding: '5px 14px', background: levelBg, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <span style={{ color: '#4b5563', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.73rem' }}>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                      <span style={{ color: levelColor, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, minWidth: 54, fontSize: '0.73rem' }}>[{log.level}]</span>
+                      <span style={{ color: '#d1d5db', wordBreak: 'break-all' }}>{log.message}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -978,7 +1099,7 @@ const Devices: React.FC = () => {
             background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: '20px',
+            zIndex: 9999, padding: '20px',
           }} onClick={() => setEditingSite(false)}>
             <div style={{
               background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1310,7 +1431,7 @@ const Devices: React.FC = () => {
             background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: '20px',
+            zIndex: 9999, padding: '20px',
           }} onClick={() => setEditingDevice(null)}>
             <div style={{
               background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1632,7 +1753,7 @@ const Devices: React.FC = () => {
             background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: '20px',
+            zIndex: 9999, padding: '20px',
           }}>
             <div style={{
               background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1750,7 +1871,7 @@ const Devices: React.FC = () => {
             background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
             backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: '20px',
+            zIndex: 9999, padding: '20px',
           }}>
             <div style={{
               background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1812,11 +1933,22 @@ const Devices: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page">
-      <h1>Device Management</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '20px' }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #00a63e, #007a55)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,166,62,0.3)', flexShrink: 0 }}>
+          <Server size={20} color="white" />
+        </div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700 }}>Device Management</h1>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: isDark ? '#64748b' : '#94a3b8' }}>Monitor and manage your IoT gateway fleet</p>
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-header">
-          <h2>Devices ({filteredDevices.length})</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h2 style={{ margin: 0 }}>Devices</h2>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', color: isDark ? '#94a3b8' : '#64748b' }}>{filteredDevices.length}</span>
+          </div>
           <div className="card-actions">
             <input
               type="text"
@@ -1909,15 +2041,14 @@ const Devices: React.FC = () => {
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
                 <td style={{ textAlign: 'center' }}>
                   <span style={{
-                    display: 'inline-block',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    backgroundColor: device.is_online ? '#dcfce7' : '#fee2e2',
-                    color: device.is_online ? '#166534' : '#991b1b'
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 9px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
+                    background: device.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
+                    color: device.is_online ? '#10b981' : '#64748b',
+                    border: device.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    {device.is_online ? '🟢 Online' : '🔴 Offline'}
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#10b981' : '#64748b', display: 'inline-block', flexShrink: 0 }} />
+                    {device.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', color: device.hw_id ? 'inherit' : 'var(--text-muted, #9ca3af)' }}>{device.hw_id || '—'}</td>
@@ -2070,139 +2201,196 @@ const Devices: React.FC = () => {
         )}
       </div>
 
-      {(editingDevice || creatingDevice) && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>{editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }}>
-              <div className="modal-body">
-                
+      {(editingDevice || creatingDevice) && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px',
+        }} onClick={handleCancel}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '640px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                }}>
+                  <Pencil size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                    {editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}
+                  </div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                    {editingDevice ? 'Update device configuration and assignment' : 'Add a new device to the fleet'}
+                  </div>
+                </div>
+              </div>
+              <button type="button" onClick={handleCancel} style={{
+                width: 40, height: 40, borderRadius: 10, border: 'none',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {/* Scrollable body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
                 {/* Device Identity */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Device Identity</h4>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Device Serial Number</label>
-                      <input
-                        type="text"
-                        value={editingDevice ? editForm.device_serial : createForm.device_serial}
-                        onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
-                        required
-                        autoComplete="off"
-                        placeholder="SN-12345678"
-                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
-                      />
-                    </div>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Device Identity</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
+                    <input
+                      type="text"
+                      value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                      onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                      required
+                      autoComplete="off"
+                      placeholder="SN-12345678"
+                      style={{
+                        padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        background: isDark ? '#2a2a2a' : '#ffffff',
+                        color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                      }}
+                    />
                   </div>
                 </div>
 
                 {/* Ownership */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Ownership & Assignment</h4>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Assigned User</label>
-                      <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          placeholder="Search and select user..."
-                          value={userSearchTerm}
-                          onChange={(e) => {
-                            setUserSearchTerm(e.target.value);
-                            setShowUserDropdown(true);
-                          }}
-                          onFocus={() => setShowUserDropdown(true)}
-                          autoComplete="off"
-                          style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
-                        />
-                        {(editingDevice ? editForm.user : createForm.user) && (
-                          <div style={{ marginTop: '8px', fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
-                            <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (editingDevice) {
-                                  setEditForm({...editForm, user: ''});
-                                } else {
-                                  setCreateForm({...createForm, user: ''});
-                                }
-                                setUserSearchTerm('');
-                              }}
-                              className="btn-icon btn-icon-danger"
-                              style={{ marginLeft: '10px' }}
-                              title="Remove Assignment"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        )}
-                        {showUserDropdown && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            right: 0,
-                            background: 'var(--bg-secondary, #0f172a)',
-                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
-                            borderRadius: '8px',
-                            maxHeight: '200px',
-                            overflowY: 'auto',
-                            zIndex: 1000,
-                            boxShadow: 'var(--shadow-xl)',
-                            marginTop: '4px'
-                          }}>
-                            {filteredUsers.length > 0 ? (
-                              filteredUsers.map((user) => (
-                                <div
-                                  key={user.id}
-                                  onClick={() => {
-                                    if (editingDevice) {
-                                      setEditForm({...editForm, user: user.username});
-                                    } else {
-                                      setCreateForm({...createForm, user: user.username});
-                                    }
-                                    setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
-                                    setShowUserDropdown(false);
-                                  }}
-                                  style={{
-                                    padding: '12px 16px',
-                                    cursor: 'pointer',
-                                    borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
-                                    background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                                    color: 'var(--text-primary, #f8fafc)',
-                                    transition: 'all 0.15s ease',
-                                    fontSize: '0.875rem'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
-                                  onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
-                                >
-                                  {user.first_name} {user.last_name} ({user.username}) <br/>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
-                                </div>
-                              ))
-                            ) : (
-                              <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
-                                {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Ownership & Assignment</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
+                    <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        placeholder="Search and select user..."
+                        value={userSearchTerm}
+                        onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserDropdown(true); }}
+                        onFocus={() => setShowUserDropdown(true)}
+                        autoComplete="off"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
+                      />
+                      {(editingDevice ? editForm.user : createForm.user) && (
+                        <div style={{ marginTop: '8px', fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
+                          <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editingDevice) { setEditForm({...editForm, user: ''}); } else { setCreateForm({...createForm, user: ''}); }
+                              setUserSearchTerm('');
+                            }}
+                            className="btn-icon btn-icon-danger"
+                            style={{ marginLeft: '10px' }}
+                            title="Remove Assignment"
+                          >✕</button>
+                        </div>
+                      )}
+                      {showUserDropdown && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0,
+                          background: 'var(--bg-secondary, #0f172a)',
+                          border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                          borderRadius: '8px', maxHeight: '200px', overflowY: 'auto',
+                          zIndex: 1000, boxShadow: 'var(--shadow-xl)', marginTop: '4px',
+                        }}>
+                          {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                              <div
+                                key={user.id}
+                                onClick={() => {
+                                  if (editingDevice) { setEditForm({...editForm, user: user.username}); } else { setCreateForm({...createForm, user: user.username}); }
+                                  setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
+                                  setShowUserDropdown(false);
+                                }}
+                                style={{
+                                  padding: '12px 16px', cursor: 'pointer',
+                                  borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                                  background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                  color: 'var(--text-primary, #f8fafc)', transition: 'all 0.15s ease', fontSize: '0.875rem',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
+                              >
+                                {user.first_name} {user.last_name} ({user.username})<br/>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                              {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Configuration */}
-                <div className="form-section">
-                  <h4 className="form-section-title">Configuration</h4>
-                  <div className="form-grid form-grid-2">
-                    <div className="form-group">
-                      <label>Preset Template</label>
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Configuration</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
                       <select
                         value={editingDevice ? editForm.config_version : createForm.config_version}
                         onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
-                        className="full-width"
-                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
                       >
                         <option value="">-- Manual Configuration --</option>
                         {presetsLoading && <option value="" disabled>Loading presets...</option>}
@@ -2212,41 +2400,62 @@ const Devices: React.FC = () => {
                           </option>
                         ))}
                       </select>
-                      <small className="form-hint">Selecting a preset sets the Config Version ID below.</small>
+                      <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Selecting a preset sets the Config Version ID below.</small>
                     </div>
-                    <div className="form-group">
-                      <label>Config Version ID</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
                       <input
                         type="text"
                         value={editingDevice ? editForm.config_version : createForm.config_version}
                         onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
                         autoComplete="off"
                         placeholder="Manual Config ID"
-                        style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
+                {editingDevice && (
+                  <AuditTrail
+                    createdBy={editingDevice.created_by_username}
+                    createdAt={editingDevice.created_at}
+                    updatedBy={editingDevice.updated_by_username}
+                    updatedAt={editingDevice.updated_at}
+                  />
+                )}
               </div>
-              {editingDevice && (
-                <div style={{ padding: '0 24px' }}>
-                   <AuditTrail
-                     createdBy={editingDevice.created_by_username}
-                     createdAt={editingDevice.created_at}
-                     updatedBy={editingDevice.updated_by_username}
-                     updatedAt={editingDevice.updated_at}
-                   />
-                </div>
-              )}
-              <div className="form-actions" style={{ padding: '24px' }}>
-                <button type="submit" className="btn">{editingDevice ? 'Save Changes' : 'Register Device'}</button>
-                <button type="button" onClick={handleCancel} className="btn btn-secondary">Cancel</button>
+
+              {/* Footer */}
+              <div style={{
+                display: 'flex', gap: 10, justifyContent: 'flex-end',
+                padding: '16px 28px',
+                borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <button type="button" onClick={handleCancel} style={{
+                  padding: '10px 20px', borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                }}>Cancel</button>
+                <button type="submit" style={{
+                  padding: '10px 20px', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                }}>{editingDevice ? 'Save Changes' : 'Register Device'}</button>
               </div>
             </form>
-        </div>
-      </div>
-    )}
+          </div>
+        </div>,
+        document.body
+      )}
 
     {/* Modern Reboot Confirmation Modal */}
     <AccessibleModal
@@ -2278,7 +2487,7 @@ const Devices: React.FC = () => {
         background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: '20px',
+        zIndex: 9999, padding: '20px',
       }}>
         <div style={{
           background: isDark ? '#1a1a1a' : '#ffffff',
@@ -2396,7 +2605,7 @@ const Devices: React.FC = () => {
         background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: '20px',
+        zIndex: 9999, padding: '20px',
       }}>
         <div style={{
           background: isDark ? '#1a1a1a' : '#ffffff',
@@ -2458,7 +2667,7 @@ const Devices: React.FC = () => {
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+        justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)'
       }}>
         <div style={{
           background: isDark ? '#2d2d2d' : 'white', borderRadius: '16px',

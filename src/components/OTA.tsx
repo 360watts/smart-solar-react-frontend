@@ -1249,7 +1249,7 @@ export const OTA: React.FC = () => {
           background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1951,7 +1951,7 @@ export const OTA: React.FC = () => {
           background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -2039,7 +2039,7 @@ export const OTA: React.FC = () => {
           background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -2131,7 +2131,7 @@ export const OTA: React.FC = () => {
           background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -2198,7 +2198,7 @@ export const OTA: React.FC = () => {
           background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',

@@ -595,7 +595,7 @@ const DevicePresets: React.FC = () => {
           background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }} onClick={() => { setEditingPreset(null); setCreatingPreset(false); }}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -997,7 +997,7 @@ const DevicePresets: React.FC = () => {
           background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }} onClick={() => setSelectedPreset(null)}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1096,7 +1096,7 @@ const DevicePresets: React.FC = () => {
           background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '20px',
+          zIndex: 9999, padding: '20px',
         }} onClick={() => setConfiguringSlaves(null)}>
           <div style={{
             background: isDark ? '#1a1a1a' : '#ffffff',
@@ -1259,7 +1259,7 @@ const DevicePresets: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 9999,
           padding: '20px',
         }}>
           <div style={{
@@ -1380,7 +1380,7 @@ const DevicePresets: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 9999,
           padding: '20px',
         }}>
           <div style={{
@@ -1501,7 +1501,7 @@ const DevicePresets: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 9999,
           padding: '20px',
         }}>
           <div style={{

@@ -12,7 +12,7 @@ import {
   AreaChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea,
 } from 'recharts';
-import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
@@ -562,7 +562,6 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
   if (!isLatestToday) return null;
   
   const items = [
-    { label: 'PV Yield', value: latest.pv_today_kwh, color: '#F07522', bg: '#F0752215', icon: '☀' },
     { label: 'Grid In', value: latest.grid_buy_today_kwh, color: '#3b82f6', bg: '#3b82f615', icon: '⬇' },
     { label: 'Grid Out', value: latest.grid_sell_today_kwh, color: '#10b981', bg: '#10b98115', icon: '⬆' },
     { label: 'Batt Chg', value: latest.batt_charge_today_kwh, color: '#8b5cf6', bg: '#8b5cf615', icon: '↑' },
@@ -739,6 +738,244 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
           </div>
         </motion.div>
       ))}
+    </motion.div>
+  );
+};
+
+// ── Energy Flow Diagram ─────────────────────────────────────────────────────────
+
+interface EnergyFlowBlockProps {
+  pvKw: number | null;
+  loadKw: number | null;
+  gridKw: number | null;
+  battKw: number | null;
+  battSoc: number | null;
+}
+
+// Figma-inspired triangular energy flow diagram
+// Layout: House top-center · Solar bottom-left · Grid bottom-right
+// Lines: L-shaped orthogonal paths with SVG animateMotion flow dots
+const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw, battKw, battSoc }) => {
+  const { isDark } = useTheme();
+
+  // Stable unique ID for SVG element references
+  const uidRef = useRef('');
+  if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
+  const uid = uidRef.current;
+
+  // Sign conventions:
+  //   gridKw > 0  → importing from grid
+  //   gridKw < 0  → exporting to grid
+  //   battKw > 0  → battery charging
+  //   battKw < 0  → battery discharging
+  const isExporting   = (gridKw  ?? 0) < -0.01;
+  const isImporting   = (gridKw  ?? 0) >  0.01;
+  const isCharging    = (battKw  ?? 0) >  0.01;
+
+  const pvValue        = pvKw   ?? 0;
+  const loadValue      = loadKw ?? 0;
+  const gridValue      = Math.abs(gridKw  ?? 0);
+  const battSocValue   = battSoc ?? 0;
+  const battPowerValue = Math.abs(battKw  ?? 0);
+
+  const isPvActive    = pvValue        > 0.05;
+  const isLoadActive  = loadValue      > 0.05;
+  const isGridActive  = gridValue      > 0.05;
+  const isBattActive  = battPowerValue > 0.05;
+
+  // Triangular layout — equilateral spacing, viewBox 200×230, height 230px
+  // preserveAspectRatio="none" → SVG x/y map directly to CSS % / pixels
+  //   House  x=100 (50%), y=71:  label(14)+gap(6)+value(10)+gap(6)+radius(35)
+  //   Solar  x=50  (25%), y=159: 230-value(10)-gap(6)-label(14)-gap(6)-radius(35)
+  //   Grid   x=150 (75%), y=159
+  // Junction at y=115
+  const jY = 115;
+  const solarPath = `M 50 159 L 50 ${jY} L 100 ${jY} L 100 71`;
+  const gridPath  = `M 100 71 L 100 ${jY} L 150 ${jY} L 150 159`;
+
+  const gridStroke = isExporting ? '#5bbd79' : '#3b82f6';
+
+  const statusText = isPvActive && !isImporting
+    ? 'Your system is in optimal condition.'
+    : isExporting
+    ? 'Exporting surplus energy to grid.'
+    : isImporting
+    ? 'Drawing power from grid.'
+    : 'No active solar generation.';
+  const statusOk = isPvActive && !isImporting;
+
+  // Helpers
+  const ringStroke = (active: boolean, color: string) =>
+    active ? color : isDark ? 'rgba(100,116,139,0.22)' : 'rgba(166,171,179,0.45)';
+  const iconColor = (active: boolean, color: string) =>
+    active ? color : isDark ? '#475569' : '#cbd5e1';
+  const valueColor = (active: boolean) =>
+    active ? (isDark ? '#f1f5f9' : '#15171a') : isDark ? '#475569' : '#cbd5e1';
+  const labelColor = isDark ? '#64748b' : '#898e99';
+  const trackColor = isDark ? 'rgba(100,116,139,0.12)' : 'rgba(166,171,179,0.2)';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      style={{
+        padding: '10px 14px 14px',
+        marginBottom: 16,
+        borderRadius: 14,
+        background: isDark ? '#0f172a' : '#ffffff',
+        border: `0.6px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#a6aab3'}`,
+        boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Zap size={13} color="#5bbd79" />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: labelColor, fontFamily: 'Inter, sans-serif' }}>
+            Energy Flow
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
+          <motion.span
+            animate={{ opacity: [1, 0.2, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity }}
+            style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}
+          />
+          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981' }}>LIVE</span>
+        </div>
+      </div>
+      <p style={{ fontSize: '0.65rem', color: labelColor, fontFamily: 'Inter, sans-serif', marginBottom: 6, textAlign: 'right' }}>
+        Last updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </p>
+
+      {/* ── Diagram: SVG lines + absolutely positioned node divs ── */}
+      <div style={{ position: 'relative', width: '100%', height: 230 }}>
+        {/* SVG — lines & flow dots only. preserveAspectRatio="none" so SVG fills
+            the container exactly, making SVG coordinates map directly to screen pixels. */}
+        <svg
+          viewBox="0 0 200 230"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
+        >
+          <defs>
+            <path id={`sp-${uid}`} d={solarPath} />
+            <path id={`gp-${uid}`} d={gridPath} />
+            <filter id={`gl-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+
+          {/* Track lines */}
+          <path d={solarPath} stroke={trackColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={gridPath}  stroke={trackColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Active solar line */}
+          {isPvActive && <path d={solarPath} stroke="#5bbd79" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" filter={`url(#gl-${uid})`} />}
+
+          {/* Active grid line — always solid (same style as solar) */}
+          {isGridActive && (
+            <path d={gridPath} stroke={gridStroke} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" filter={`url(#gl-${uid})`} />
+          )}
+
+          {/* Flow dots */}
+          {isPvActive && [0, 0.7].map((d, i) => (
+            <circle key={`s${i}`} r={3.5} fill="#5bbd79" opacity={0.9}>
+              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`}><mpath href={`#sp-${uid}`} /></animateMotion>
+            </circle>
+          ))}
+          {isExporting && [0.2, 0.9].map((d, i) => (
+            <circle key={`e${i}`} r={3.5} fill="#5bbd79" opacity={0.9}>
+              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`}><mpath href={`#gp-${uid}`} /></animateMotion>
+            </circle>
+          ))}
+          {isImporting && [0.2, 0.9].map((d, i) => (
+            <circle key={`i${i}`} r={3.5} fill="#3b82f6" opacity={0.9}>
+              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`} keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+                <mpath href={`#gp-${uid}`} />
+              </animateMotion>
+            </circle>
+          ))}
+        </svg>
+
+        {/* ── Node: House — top-center. Circle center at y=71px matches SVG y=71 ── */}
+        <div style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>LOAD</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isLoadActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{loadValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span></span>
+          <motion.div
+            animate={isLoadActive ? { boxShadow: ['0 0 0 0 rgba(139,92,246,0)', '0 0 0 10px rgba(139,92,246,0.22)', '0 0 0 0 rgba(139,92,246,0)'] } : {}}
+            transition={{ duration: 2.2, repeat: Infinity }}
+            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isLoadActive, '#8b5cf6')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Home size={28} color={iconColor(isLoadActive, '#8b5cf6')} />
+          </motion.div>
+        </div>
+
+        {/* ── Node: Solar — bottom-left. Circle center at y=159px matches SVG y=159 ── */}
+        <div style={{ position: 'absolute', left: '25%', bottom: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <motion.div
+            animate={isPvActive ? { boxShadow: ['0 0 0 0 rgba(91,189,121,0)', '0 0 0 10px rgba(91,189,121,0.22)', '0 0 0 0 rgba(91,189,121,0)'] } : {}}
+            transition={{ duration: 2.2, repeat: Infinity }}
+            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isPvActive, '#5bbd79')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Sun size={28} color={iconColor(isPvActive, '#F07522')} />
+          </motion.div>
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>SOLAR</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isPvActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{pvValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span></span>
+        </div>
+
+        {/* ── Node: Grid — bottom-right. Circle center at y=159px matches SVG y=159 ── */}
+        <div style={{ position: 'absolute', right: '25%', bottom: 0, transform: 'translateX(50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <motion.div
+            animate={isGridActive ? { boxShadow: [`0 0 0 0 ${gridStroke}00`, `0 0 0 10px ${gridStroke}33`, `0 0 0 0 ${gridStroke}00`] } : {}}
+            transition={{ duration: 2.2, repeat: Infinity, delay: 0.7 }}
+            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isGridActive, gridStroke)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Activity size={28} color={iconColor(isGridActive, gridStroke)} />
+          </motion.div>
+          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>GRID</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isGridActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>
+            {gridValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span>
+            {isGridActive && <span style={{ fontSize: 7, fontWeight: 700, color: gridStroke, marginLeft: 2 }}>{isExporting ? '↑' : '↓'}</span>}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Battery row ── */}
+      {(isBattActive || battSocValue > 0) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '8px 12px', marginTop: 4, borderRadius: 10,
+          background: isDark ? 'rgba(245,158,11,0.07)' : 'rgba(245,158,11,0.05)',
+          border: `1px solid ${isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.22)'}`,
+        }}>
+          <Battery size={15} color="#f59e0b" />
+          <div style={{ flex: 1, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            <motion.div
+              animate={{ width: `${battSocValue}%` }}
+              transition={{ duration: 0.8 }}
+              style={{ height: '100%', borderRadius: 2, background: battSocValue > 30 ? '#f59e0b' : '#ef4444' }}
+            />
+          </div>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+            {battSocValue.toFixed(0)}%{isBattActive ? ` · ${battPowerValue.toFixed(1)} kW ${isCharging ? '↑' : '↓'}` : ''}
+          </span>
+        </div>
+      )}
+
+      {/* ── Status row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTop: `0.6px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>
+        <svg width={14} height={14} viewBox="0 0 14 14" aria-hidden="true" style={{ flexShrink: 0 }}>
+          <circle cx={7} cy={7} r={6} fill={statusOk ? 'rgba(91,189,121,0.15)' : 'rgba(245,158,11,0.12)'} stroke={statusOk ? '#5bbd79' : '#f59e0b'} strokeWidth={1.2} />
+          <text x={7} y={10.5} textAnchor="middle" fontSize={8} fontFamily="Inter" fontWeight={700} fill={statusOk ? '#5bbd79' : '#f59e0b'}>{statusOk ? '✓' : '!'}</text>
+        </svg>
+        <span style={{ fontSize: '0.7rem', color: isDark ? '#64748b' : '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+          {statusText}
+        </span>
+      </div>
     </motion.div>
   );
 };
@@ -925,7 +1162,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true });
+  const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
   const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
     PV: true,
     Load: true,
@@ -1690,7 +1927,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 {/* ── Insights ── */}
                 <InsightsRow latest={latest} isLatestToday={isLatestToday} />
 
-                {/* ── Charts can be added here based on existing code ── */}
+                {/* ── Live Energy Flow Diagram ── */}
+                <EnergyFlowBlock
+                  pvKw={pvKw}
+                  loadKw={loadKw}
+                  gridKw={gridKw}
+                  battKw={batPowerKw}
+                  battSoc={batSoc}
+                />
               </motion.div>
             )}
 
@@ -1993,7 +2237,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {(['P10', 'P50', 'P90'] as const).map(key => (
                       <button
                         key={key}
@@ -2013,6 +2257,27 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                         {key}
                       </button>
                     ))}
+                    {/* GHI toggle */}
+                    <button
+                      onClick={() => setShowBands(prev => ({ ...prev, GHI: !prev.GHI }))}
+                      style={{
+                        border: '1px solid rgba(234, 179, 8, 0.35)',
+                        background: showBands.GHI ? 'rgba(234, 179, 8, 0.14)' : 'transparent',
+                        color: showBands.GHI ? '#eab308' : 'var(--text-muted)',
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontFamily: 'Poppins, sans-serif',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                      }}
+                    >
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: showBands.GHI ? '#eab308' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
+                      GHI
+                    </button>
                     {zoomStart && zoomEnd ? (
                       <button
                         onClick={() => {
@@ -2090,14 +2355,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                             height={36}
                           />
                           <YAxis yAxisId="power" width={44} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} />
-                          <YAxis yAxisId="ghi" orientation="right" width={46} tick={{ fill: isDark ? '#fcd34d' : '#92400e', fontSize: 11 }} />
+                          {showBands.GHI && <YAxis yAxisId="ghi" orientation="right" width={46} tick={{ fill: isDark ? '#fcd34d' : '#92400e', fontSize: 11 }} />}
                           <Tooltip content={<ForecastTooltip />} />
                           <Legend wrapperStyle={{ fontSize: '0.72rem', fontFamily: 'Poppins, sans-serif' }} />
                           {showBands.P10 && <Line yAxisId="power" type="monotone" dataKey="p10" name="P10" stroke="#f59e0b" strokeWidth={1.7} dot={false} />}
                           {showBands.P50 && <Line yAxisId="power" type="monotone" dataKey="p50" name="P50" stroke="#00a63e" strokeWidth={2.4} dot={false} />}
                           {showBands.P90 && <Line yAxisId="power" type="monotone" dataKey="p90" name="P90" stroke="#3b82f6" strokeWidth={1.7} dot={false} />}
                           <Line yAxisId="power" type="monotone" dataKey="physics" name="Physics" stroke="#94a3b8" strokeDasharray="5 4" strokeWidth={1.5} dot={false} />
-                          <Area yAxisId="ghi" type="monotone" dataKey="ghi" name="GHI" stroke="#eab308" fill="#eab308" fillOpacity={0.12} strokeWidth={1.3} />
+                          {showBands.GHI && <Area yAxisId="ghi" type="monotone" dataKey="ghi" name="GHI" stroke="#eab308" fill="#eab308" fillOpacity={0.12} strokeWidth={1.3} />}
                           {refAreaLeft && refAreaRight && refAreaLeft !== refAreaRight ? (
                             <ReferenceArea x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} fill="rgba(0,166,62,0.12)" />
                           ) : null}
