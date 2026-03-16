@@ -1296,6 +1296,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
     : false;
 
+  // "Live" = last reading arrived within the past 10 minutes
+  const isDataLive = latest?.timestamp
+    ? (Date.now() - new Date(latest.timestamp).getTime()) < 10 * 60 * 1000
+    : false;
+
   const gridImporting = gridKw != null && gridKw > 0.01;
   const gridExporting = gridKw != null && gridKw < -0.01;
   const batCharging = batPowerKw != null && batPowerKw > 0.01;
@@ -1514,23 +1519,62 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
     const todayISTStr = istDate(new Date());
     if (!latest?.timestamp || istDate(new Date(latest.timestamp)) !== todayISTStr) return null;
     if (todayKwh == null) return null;
-    const todayForecast = forecast.filter(row => {
-      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-      return istDate(new Date(clean)) === todayISTStr;
-    });
-    let todayFcastP50 = 0;
-    if (todayForecast.length > 1) {
-      for (let i = 0; i < todayForecast.length - 1; i++) {
-        const h = Math.abs(
-          new Date(todayForecast[i + 1].timestamp.replace('FORECAST#', '')).getTime() -
-          new Date(todayForecast[i].timestamp.replace('FORECAST#', '')).getTime()
-        ) / 3_600_000;
-        if (todayForecast[i].p50_kw != null && todayForecast[i + 1].p50_kw != null)
-          todayFcastP50 += (todayForecast[i].p50_kw + todayForecast[i + 1].p50_kw) / 2 * h;
-      }
+    const nowMs = new Date(latest.timestamp).getTime();
+
+    // All today's forecast rows sorted by time
+    const todayForecast = forecast
+      .filter(row => {
+        const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
+        return istDate(new Date(clean)) === todayISTStr;
+      })
+      .map(row => ({
+        t: new Date((row.forecast_for || row.timestamp.replace('FORECAST#', ''))).getTime(),
+        p50: row.p50_kw as number | null,
+      }))
+      .sort((a, b) => a.t - b.t);
+
+    if (todayForecast.length < 2) return null;
+
+    // Find the two forecast points that bracket `nowMs`, then interpolate P50 at nowMs
+    const beforeNow = todayForecast.filter(r => r.t <= nowMs);
+    const afterNow  = todayForecast.filter(r => r.t >  nowMs);
+
+    let points = [...beforeNow];
+
+    // Interpolate a synthetic point at nowMs so the integral ends exactly at now
+    if (beforeNow.length > 0 && afterNow.length > 0) {
+      const prev = beforeNow[beforeNow.length - 1];
+      const next = afterNow[0];
+      const frac = (nowMs - prev.t) / (next.t - prev.t);
+      const interpP50 = prev.p50 != null && next.p50 != null
+        ? prev.p50 + frac * (next.p50 - prev.p50)
+        : (prev.p50 ?? next.p50);
+      points.push({ t: nowMs, p50: interpP50 });
     }
-    return todayFcastP50 > 0
-      ? Math.min(999, Math.round((todayKwh / todayFcastP50) * 100))
+
+    if (points.length < 2) return null;
+
+    // Trapezoidal integration up to nowMs
+    let fcastP50UpToNow = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const h = (points[i + 1].t - points[i].t) / 3_600_000;
+      if (points[i].p50 != null && points[i + 1].p50 != null)
+        fcastP50UpToNow += (points[i].p50! + points[i + 1].p50!) / 2 * h;
+    }
+
+    console.debug('[achievedPct]', {
+      lastReadingAt: latest.timestamp,
+      nowMs: new Date(nowMs).toISOString(),
+      todayKwh,
+      forecastPointsTotal: forecast.length,
+      forecastPointsToday: todayForecast.length,
+      forecastPointsBeforeNow: beforeNow.length,
+      fcastP50UpToNow: +fcastP50UpToNow.toFixed(4),
+      result: fcastP50UpToNow > 0 ? Math.min(999, Math.round((todayKwh / fcastP50UpToNow) * 100)) : null,
+    });
+
+    return fcastP50UpToNow > 0
+      ? Math.min(999, Math.round((todayKwh / fcastP50UpToNow) * 100))
       : null;
   }, [forecast, todayKwh, latest]);
 
@@ -1914,8 +1958,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                       label="Forecast"
                       value={achievedPct.toString()}
                       unit="%"
-                      sub="Today vs P50"
-                      accent={achievedPct >= 95 ? '#00a63e' : achievedPct >= 80 ? '#f59e0b' : '#ef4444'}
+                      sub="Actual vs P50 so far"
+                      accent={achievedPct >= 90 ? '#00a63e' : achievedPct >= 70 ? '#f59e0b' : '#ef4444'}
                       icon={<Sun size={iconSize} />}
                     />
                   )}
@@ -1927,14 +1971,31 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                 {/* ── Insights ── */}
                 <InsightsRow latest={latest} isLatestToday={isLatestToday} />
 
-                {/* ── Live Energy Flow Diagram ── */}
-                <EnergyFlowBlock
-                  pvKw={pvKw}
-                  loadKw={loadKw}
-                  gridKw={gridKw}
-                  battKw={batPowerKw}
-                  battSoc={batSoc}
-                />
+                {/* ── Live Energy Flow Diagram — only when data is fresh (< 10 min) ── */}
+                {isDataLive ? (
+                  <EnergyFlowBlock
+                    pvKw={pvKw}
+                    loadKw={loadKw}
+                    gridKw={gridKw}
+                    battKw={batPowerKw}
+                    battSoc={batSoc}
+                  />
+                ) : (
+                  <div style={{
+                    padding: '20px', borderRadius: 12, textAlign: 'center',
+                    background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                    border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
+                    color: isDark ? '#6b7280' : '#9ca3af', fontSize: '0.85rem',
+                  }}>
+                    {latest?.timestamp ? (() => {
+                      const mins = Math.round((Date.now() - new Date(latest.timestamp).getTime()) / 60000);
+                      const ago = mins >= 60
+                        ? `${Math.floor(mins / 60)}h ${mins % 60}m ago`
+                        : `${mins}m ago`;
+                      return `No live data — last reading ${ago}`;
+                    })() : 'No data received yet'}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -2376,9 +2437,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {[
-                    `P10 ${fcastP10.toFixed(2)} kWh`,
-                    `P50 ${fcastP50.toFixed(2)} kWh`,
-                    `P90 ${fcastP90.toFixed(2)} kWh`,
+                    `P10 = ${fcastP10.toFixed(2)} kWh`,
+                    `P50 = ${fcastP50.toFixed(2)} kWh`,
+                    `P90 = ${fcastP90.toFixed(2)} kWh`,
                     `Points ${zoomedForecastData.length}`,
                   ].map((chip, idx) => (
                     <span
