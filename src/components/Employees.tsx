@@ -1,9 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Pencil, Trash2, X, UserPlus, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import AuditTrail from './AuditTrail';
+import { DEFAULT_PAGE_SIZE } from '../constants';
+
+// ── Avatar helpers ────────────────────────────────────────────────────────────
+const EMP_AVATAR_COLORS = [
+  'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  'linear-gradient(135deg,#10b981,#059669)',
+  'linear-gradient(135deg,#f59e0b,#d97706)',
+  'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+  'linear-gradient(135deg,#ec4899,#be185d)',
+  'linear-gradient(135deg,#14b8a6,#0f766e)',
+];
+const empAvatarColor = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return EMP_AVATAR_COLORS[Math.abs(h) % EMP_AVATAR_COLORS.length];
+};
+const empInitials = (first: string, last: string, username: string) => {
+  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+  if (first) return first.substring(0, 2).toUpperCase();
+  return username.substring(0, 2).toUpperCase();
+};
 
 interface Employee {
   id: number;
@@ -32,6 +53,12 @@ const Employees: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingEmployee, setCreatingEmployee] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
@@ -50,29 +77,29 @@ const Employees: React.FC = () => {
     is_staff: true,
   });
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchEmployees(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchEmployees(debouncedSearchTerm, currentPage, pageSize);
+  }, [debouncedSearchTerm, currentPage, pageSize]);
 
-  const fetchEmployees = async (search?: string) => {
+  const fetchEmployees = async (search?: string, page = 1, size = DEFAULT_PAGE_SIZE) => {
+    setLoading(true);
     try {
-      const response = await apiService.getEmployees(search);
+      const response = await apiService.getEmployees(search, page, size);
       const staffData = response.results ?? [];
       setEmployees(staffData);
       setFilteredEmployees(staffData);
+      setTotalCount(response.count ?? 0);
+      setTotalPages(response.total_pages ?? 0);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -102,7 +129,7 @@ const Employees: React.FC = () => {
       await apiService.updateUser(editingEmployee.id, editForm);
       setEditingEmployee(null);
       // Refetch to get the updated employee with audit trail fields
-      await fetchEmployees(searchTerm);
+      await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update employee');
     }
@@ -123,7 +150,7 @@ const Employees: React.FC = () => {
         is_staff: true,
       });
       // Refetch to get the new employee with all fields including audit trail
-      await fetchEmployees(searchTerm);
+      await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create employee');
     }
@@ -165,7 +192,7 @@ const Employees: React.FC = () => {
 
       <div className="card">
         <div className="card-header">
-          <h2>Employees ({filteredEmployees.length})</h2>
+          <h2>Employees</h2>
           <div className="card-actions">
             <input
               type="text"
@@ -175,15 +202,31 @@ const Employees: React.FC = () => {
               className="search-input"
             />
             <button onClick={() => setCreatingEmployee(true)} className="btn">
+              <UserPlus size={15} style={{ marginRight: 6 }} />
               Add New Employee
             </button>
           </div>
         </div>
+
+        {/* Stats row */}
+        <div className="stats-chips-row">
+          <div className="stats-chip">
+            <UsersIcon size={13} />
+            <span className="stats-chip-count">{filteredEmployees.filter(e => e.is_superuser).length}</span>
+            <span>Admins</span>
+          </div>
+          <div className="stats-chip">
+            <UsersIcon size={13} />
+            <span className="stats-chip-count">{filteredEmployees.filter(e => !e.is_superuser && e.is_staff).length}</span>
+            <span>Staff</span>
+          </div>
+        </div>
+
         <div className="table-responsive"><table className="table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'center' }}>Name</th>
-              <th style={{ textAlign: 'center' }}>Username</th>
+              <th>Name</th>
+              <th style={{ textAlign: 'center' }}>Role</th>
               <th style={{ textAlign: 'center' }}>Email</th>
               <th style={{ textAlign: 'center' }}>Mobile</th>
               <th style={{ textAlign: 'center' }}>Joined</th>
@@ -193,8 +236,25 @@ const Employees: React.FC = () => {
           <tbody>
             {filteredEmployees.map((employee) => (
                 <tr key={employee.id}>
-                <td style={{ textAlign: 'center' }}>{employee.first_name} {employee.last_name}</td>
-                <td style={{ textAlign: 'center' }}>{employee.username}</td>
+                <td>
+                  <div className="table-avatar-cell">
+                    <div
+                      className="avatar-initials avatar-initials-sm"
+                      style={{ background: empAvatarColor(employee.username) }}
+                    >
+                      {empInitials(employee.first_name, employee.last_name, employee.username)}
+                    </div>
+                    <div className="table-name-block">
+                      <span className="table-name-primary">{employee.first_name} {employee.last_name}</span>
+                      <span className="table-name-secondary">@{employee.username}</span>
+                    </div>
+                  </div>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <span className={`role-badge ${employee.is_superuser ? 'role-badge-admin' : 'role-badge-staff'}`}>
+                    {employee.is_superuser ? 'Admin' : 'Staff'}
+                  </span>
+                </td>
                 <td style={{ textAlign: 'center' }}>{employee.email}</td>
                 <td style={{ textAlign: 'center' }}>{employee.mobile_number || '-'}</td>
                 <td style={{ textAlign: 'center' }}>
@@ -216,6 +276,54 @@ const Employees: React.FC = () => {
             ))}
           </tbody>
         </table></div>
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <div className="pagination-bar" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', gap: '16px' }}>
+            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount} employees
+            </div>
+            <div className="pagination-controls">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? '0.5' : '1' }}
+              >← Previous</button>
+              <div className="pagination-pages">
+                {(() => {
+                  const pages: React.ReactNode[] = [];
+                  let lastWasEllipsis = false;
+                  for (let i = 1; i <= totalPages; i++) {
+                    const show = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
+                    if (show) {
+                      lastWasEllipsis = false;
+                      pages.push(
+                        <button key={i} onClick={() => setCurrentPage(i)} style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: i === currentPage ? 'rgba(99,102,241,0.2)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: i === currentPage ? 'bold' : 'normal', minWidth: '32px' }}>{i}</button>
+                      );
+                    } else if (!lastWasEllipsis) {
+                      lastWasEllipsis = true;
+                      pages.push(<span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>);
+                    }
+                  }
+                  return pages;
+                })()}
+              </div>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === totalPages ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? '0.5' : '1' }}
+              >Next →</button>
+            </div>
+            <select
+              className="pagination-size-select"
+              value={pageSize}
+              onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
+              style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {(editingEmployee || creatingEmployee) && ReactDOM.createPortal(

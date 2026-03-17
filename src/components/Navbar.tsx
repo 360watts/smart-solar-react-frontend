@@ -1,296 +1,103 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Monitor,
-  Settings,
-  Bell,
-  Users,
-  Briefcase,
-  Star,
-  Download,
-  ArrowLeft,
-  LogOut,
-  Moon,
-  Sun,
-  ChevronLeft,
-  ChevronRight,
+  LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
+  Star, Download, ArrowLeft, LogOut, Moon, Sun, X, Menu,
+  ChevronDown, User,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useTheme } from '../contexts/ThemeContext';
 import finalLogo from '../assets/finalLogo.png';
 
-const iconProps = { size: 18, className: 'sidebar-icon-svg' };
-
-// ─── Design tokens ───────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const tok = {
-  bgSidebar:   (d: boolean) => d ? '#0B1222'  : '#FFFFFF',
-  border:      (d: boolean) => d ? 'rgba(255,255,255,0.07)' : '#E5E7EB',
-  textPrimary: (d: boolean) => d ? '#F1F5F9'  : '#0F172A',
-  textMuted:   (d: boolean) => d ? '#64748B'  : '#94A3B8',
-  activeBg:    (d: boolean) => d ? 'rgba(34,197,94,0.12)'  : 'rgba(34,197,94,0.1)',
-  hoverBg:     (d: boolean) => d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-  userCardBg:  (d: boolean) => d ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-  footerBg:    (d: boolean) => d ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+  bg:          (d: boolean) => d ? '#0B1222'  : '#FFFFFF',
+  border:      (d: boolean) => d ? 'rgba(255,255,255,0.08)' : '#e4e7eb',
+  text:        (d: boolean) => d ? '#F1F5F9'  : '#1c1e2e',
+  muted:       (d: boolean) => d ? '#64748B'  : '#64748B',
+  hover:       (d: boolean) => d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+  dropdownBg:  (d: boolean) => d ? '#111827'  : '#FFFFFF',
+  mobileBg:    (d: boolean) => d ? '#0D1526'  : '#F8FAFC',
 };
 
-// ─── Nav groups ──────────────────────────────────────────────────────────────
-interface NavItem {
-  path: string;
-  label: string;
-  adminOnly: boolean;
-  icon: React.ReactNode;
-}
+// ─── Nav definitions ──────────────────────────────────────────────────────────
+const iconProps = { size: 15 };
 
-const MAIN_NAV: NavItem[] = [
-  { path: '/dashboard',     label: 'Dashboard',     adminOnly: false, icon: <LayoutDashboard {...iconProps} /> },
-  { path: '/devices',       label: 'Devices',       adminOnly: false, icon: <Monitor {...iconProps} /> },
-  { path: '/configuration', label: 'Configuration', adminOnly: false, icon: <Settings {...iconProps} /> },
-  { path: '/alerts',        label: 'Alerts',        adminOnly: false, icon: <Bell {...iconProps} /> },
-  { path: '/users',         label: 'Users',         adminOnly: false, icon: <Users {...iconProps} /> },
-  { path: '/device-presets',label: 'Device Presets',adminOnly: false, icon: <Star {...iconProps} /> },
+const MAIN_NAV = [
+  { path: '/dashboard',      label: 'Dashboard',     icon: <LayoutDashboard {...iconProps} /> },
+  { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} /> },
+  { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} /> },
+  { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} /> },
+  { path: '/users',          label: 'Users',          icon: <Users {...iconProps} /> },
+  { path: '/device-presets', label: 'Device Presets', icon: <Star {...iconProps} /> },
 ];
 
-const ADMIN_NAV: NavItem[] = [
-  { path: '/employees', label: 'Employees',   adminOnly: true, icon: <Briefcase {...iconProps} /> },
-  { path: '/ota',       label: 'OTA Updates', adminOnly: true, icon: <Download {...iconProps} /> },
+const ADMIN_NAV = [
+  { path: '/employees', label: 'Employees', icon: <Briefcase {...iconProps} /> },
 ];
 
-// ─── Tooltip for collapsed icon-only mode ────────────────────────────────────
-const NavTooltip: React.FC<{ label: string; isDark: boolean }> = ({ label, isDark }) => (
-  <span
-    style={{
-      position: 'absolute',
-      left: '100%',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      marginLeft: 12,
-      background: isDark ? '#1E293B' : '#0F172A',
-      color: '#F1F5F9',
-      fontSize: 12,
-      fontWeight: 600,
-      padding: '5px 10px',
-      borderRadius: 7,
-      whiteSpace: 'nowrap',
-      pointerEvents: 'none',
-      zIndex: 2000,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
-    }}
-  >
-    {label}
-    <span
-      style={{
-        position: 'absolute',
-        right: '100%',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: 0,
-        height: 0,
-        borderTop: '5px solid transparent',
-        borderBottom: '5px solid transparent',
-        borderRight: `5px solid ${isDark ? '#1E293B' : '#0F172A'}`,
-      }}
-    />
-  </span>
-);
-
-// ─── Single nav item ─────────────────────────────────────────────────────────
-const NavLink: React.FC<{
-  item: NavItem;
-  isActive: boolean;
-  isCollapsed: boolean;
-  isDark: boolean;
-  onClick: () => void;
-}> = ({ item, isActive, isCollapsed, isDark, onClick }) => {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <li
-      style={{ position: 'relative', listStyle: 'none', margin: '1px 0' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <Link
-        to={item.path}
-        className="sidebar-link"
-        onClick={onClick}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isCollapsed ? 0 : 10,
-          padding: isCollapsed ? '11px 0' : '10px 14px',
-          borderRadius: 10,
-          margin: isCollapsed ? '0 8px' : '0 10px',
-          textDecoration: 'none',
-          color: isActive ? '#22C55E' : (hovered ? tok.textPrimary(isDark) : tok.textMuted(isDark)),
-          background: isActive ? tok.activeBg(isDark) : (hovered ? tok.hoverBg(isDark) : 'transparent'),
-          borderLeft: isActive ? '3px solid #22C55E' : '3px solid transparent',
-          transition: 'all 0.18s ease',
-          justifyContent: isCollapsed ? 'center' : 'flex-start',
-          position: 'relative',
-          fontWeight: isActive ? 600 : 450,
-          fontSize: 13.5,
-          letterSpacing: '0.01em',
-        }}
-      >
-        <span
-          className="sidebar-icon"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: isActive ? '#22C55E' : (hovered ? tok.textPrimary(isDark) : tok.textMuted(isDark)),
-            flexShrink: 0,
-          }}
-        >
-          {item.icon}
-        </span>
-        {!isCollapsed && (
-          <span className="sidebar-text">{item.label}</span>
-        )}
-        {isCollapsed && hovered && (
-          <NavTooltip label={item.label} isDark={isDark} />
-        )}
-        {isActive && !isCollapsed && (
-          <span
-            style={{
-              marginLeft: 'auto',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#22C55E',
-              boxShadow: '0 0 6px rgba(34,197,94,0.7)',
-              flexShrink: 0,
-            }}
-          />
-        )}
-      </Link>
-    </li>
-  );
-};
-
-// ─── Section label ───────────────────────────────────────────────────────────
-const SectionLabel: React.FC<{ label: string; isDark: boolean; isCollapsed: boolean }> = ({
-  label, isDark, isCollapsed,
-}) => {
-  if (isCollapsed) {
-    return (
-      <div
-        style={{
-          margin: '10px 16px 4px',
-          height: 1,
-          background: tok.border(isDark),
-        }}
-      />
-    );
-  }
-  return (
-    <div
-      className="nav-section-label"
-      style={{
-        padding: '10px 20px 4px',
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        color: tok.textMuted(isDark),
-        userSelect: 'none',
-      }}
-    >
-      {label}
-    </div>
-  );
-};
-
-// ─── Footer icon button ───────────────────────────────────────────────────────
-const FooterBtn: React.FC<{
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  isDark: boolean;
-  isCollapsed: boolean;
-  title?: string;
-  danger?: boolean;
-}> = ({ onClick, icon, label, isDark, isCollapsed, title, danger }) => {
-  const [hovered, setHovered] = useState(false);
-  const baseColor = danger ? '#EF4444' : tok.textMuted(isDark);
-  const hoverColor = danger ? '#F87171' : tok.textPrimary(isDark);
-  const hoverBg = danger ? 'rgba(239,68,68,0.1)' : tok.hoverBg(isDark);
-  return (
-    <button
-      className="logout-button"
-      onClick={onClick}
-      title={title ?? label}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: isCollapsed ? 0 : 8,
-        width: '100%',
-        background: hovered ? hoverBg : 'transparent',
-        border: 'none',
-        borderRadius: 9,
-        padding: isCollapsed ? '10px 0' : '9px 14px',
-        cursor: 'pointer',
-        color: hovered ? hoverColor : baseColor,
-        fontSize: 13,
-        fontWeight: 500,
-        transition: 'all 0.18s ease',
-        justifyContent: isCollapsed ? 'center' : 'flex-start',
-        position: 'relative',
-      }}
-    >
-      <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        {icon}
-      </span>
-      {!isCollapsed && <span>{label}</span>}
-      {isCollapsed && hovered && (
-        <NavTooltip label={label} isDark={isDark} />
-      )}
-    </button>
-  );
-};
+const STAFF_NAV = [
+  { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
+];
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const isStaff = !!(user?.is_staff);
   const { setIsNavigating, navigationHistory } = useNavigation();
   const { isDark, toggleTheme } = useTheme();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Auto-collapse on tablet (769–1024px); expand back on desktop (>1024px)
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const allNavItems = [
+    ...MAIN_NAV,
+    ...(isAdmin ? ADMIN_NAV : []),
+    ...((isAdmin || isStaff) ? STAFF_NAV : []),
+  ];
+
+  // Close user dropdown on outside click
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 769px) and (max-width: 1024px)');
-    const handler = (e: MediaQueryList | MediaQueryListEvent) => {
-      setIsCollapsed(e.matches);
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
     };
-    handler(mq);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Sync body class for layout offset
+  // Close mobile menu on route change
+  useEffect(() => { setMobileOpen(false); setUserMenuOpen(false); }, [location.pathname]);
+
+  // Body scroll lock when mobile menu open
   useEffect(() => {
-    if (isCollapsed) {
-      document.body.classList.add('sidebar-collapsed');
-    } else {
-      document.body.classList.remove('sidebar-collapsed');
-    }
-    return () => document.body.classList.remove('sidebar-collapsed');
-  }, [isCollapsed]);
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  // Escape key closes menus
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMobileOpen(false); setUserMenuOpen(false); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const handleNavigation = useCallback((path: string) => {
     setIsNavigating(true);
     navigate(path);
     setMobileOpen(false);
+    setUserMenuOpen(false);
   }, [navigate, setIsNavigating]);
 
   const handleLogout = async () => {
+    setUserMenuOpen(false);
     await logout();
     setIsNavigating(true);
     navigate('/login', { replace: true });
@@ -309,24 +116,6 @@ const Navbar: React.FC = () => {
     return () => clearTimeout(timer);
   }, [location, setIsNavigating]);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    document.body.classList.toggle('mobile-nav-open', mobileOpen);
-    return () => { document.body.classList.remove('mobile-nav-open'); };
-  }, [mobileOpen]);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [mobileOpen]);
-
   if (location.pathname === '/login' || !isAuthenticated) return null;
 
   const avatarBg = isDark
@@ -334,348 +123,413 @@ const Navbar: React.FC = () => {
     : 'linear-gradient(135deg, #16A34A 0%, #4F46E5 100%)';
 
   const initials = user
-    ? `${user.first_name.charAt(0).toUpperCase()}${user.last_name.charAt(0).toUpperCase()}`
+    ? `${(user.first_name || '').charAt(0).toUpperCase()}${(user.last_name || '').charAt(0).toUpperCase()}` || user.username.substring(0, 2).toUpperCase()
     : '??';
 
   const roleName = user?.is_superuser ? 'Admin' : user?.is_staff ? 'Staff' : 'User';
+  const displayName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username : '';
+
+  const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 10px',
+    borderRadius: 8,
+    textDecoration: 'none',
+    fontSize: 13,
+    fontWeight: isActive ? 600 : 450,
+    color: isActive ? '#22C55E' : tok.muted(isDark),
+    background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+    position: 'relative',
+  });
 
   return (
     <>
-      {/* Hamburger toggle — mobile only */}
-      <button
-        className="mobile-nav-toggle"
-        onClick={() => setMobileOpen(prev => !prev)}
-        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-        aria-expanded={mobileOpen}
-      >
-        {mobileOpen ? '✕' : '☰'}
-      </button>
-
-      {/* Backdrop overlay — mobile */}
-      <div
-        className={'sidebar-overlay' + (mobileOpen ? ' open' : '')}
-        onClick={() => setMobileOpen(false)}
-        aria-hidden="true"
-      />
-
-      <nav
-        className={`sidebar sidebar-shell${mobileOpen ? ' mobile-open' : ''}${isCollapsed ? ' sidebar--collapsed' : ''}`}
-        role="navigation"
-        aria-label="Main navigation"
+      {/* ── Top Navigation Bar ─────────────────────────────────────────── */}
+      <header
+        className="topnav"
         style={{
-          background: tok.bgSidebar(isDark),
-          borderRight: `1px solid ${tok.border(isDark)}`,
-          display: 'flex',
-          flexDirection: 'column',
           position: 'fixed',
           top: 0,
           left: 0,
-          bottom: 0,
-          width: isCollapsed ? 68 : 280,
-          transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+          right: 0,
+          height: 64,
           zIndex: 1000,
-          overflowX: 'hidden',
-          overflowY: 'auto',
+          background: tok.bg(isDark),
+          borderBottom: `1px solid ${tok.border(isDark)}`,
+          boxShadow: isDark
+            ? '0 1px 0 rgba(255,255,255,0.04)'
+            : '0 1px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+          display: 'flex',
+          alignItems: 'center',
+          backdropFilter: 'blur(12px)',
         }}
       >
-        {/* ── Header ── */}
-        <div
-          className="sidebar-header"
-          style={{
-            padding: isCollapsed ? '18px 8px 14px' : '18px 18px 14px',
-            borderBottom: `1px solid ${tok.border(isDark)}`,
-            flexShrink: 0,
-          }}
-        >
-          <div
-            className="logo-container"
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%',
+          padding: '0 16px',
+          gap: 8,
+          maxWidth: '100%',
+        }}>
+
+          {/* ── Brand / Logo ── */}
+          <Link
+            to="/dashboard"
+            onClick={() => { if (location.pathname !== '/dashboard') handleNavigation('/dashboard'); }}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              marginBottom: isCollapsed ? 0 : -1,
-              marginTop: isCollapsed ? 0 : -10,
+              gap: 12,
+              textDecoration: 'none',
+              flexShrink: 0,
+              marginRight: 8,
             }}
           >
-            <div
-              className="logo-badge"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 11,
-                background: 'linear-gradient(135deg, #22C55E, #6366F1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                alignSelf: 'center',
-                boxShadow: '0 2px 12px rgba(34,197,94,0.3)',
-              }}
-            >
-              <img
-                src={finalLogo}
-                alt="360watts"
-                style={{ width: 68, height: 68, objectFit: 'contain', display: 'block' }}
-              />
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 11,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 3px 12px rgba(34,197,94,0.35)',
+              flexShrink: 0,
+              overflow: 'visible',
+            }}>
+              <img src={finalLogo} alt="360watts" style={{ width: 68, height: 68, objectFit: 'contain' }} />
             </div>
-            {!isCollapsed && (
-              <div
-                className="logo-text"
+            <div className="topnav-brand-text" style={{ lineHeight: 1.25 }}>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: tok.text(isDark), letterSpacing: '-0.01em' }}>Smart Solar</div>
+              <div style={{ fontSize: 11, color: tok.muted(isDark), fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>IoT Platform</div>
+            </div>
+          </Link>
+
+          {/* ── Nav links — desktop ── */}
+          <nav
+            className="topnav-links"
+            aria-label="Main navigation"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flex: 1,
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+            }}
+          >
+            {allNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => { if (!isActive) handleNavigation(item.path); }}
+                  style={navLinkStyle(isActive)}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.color = tok.text(isDark);
+                      (e.currentTarget as HTMLElement).style.background = tok.hover(isDark);
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.color = tok.muted(isDark);
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <span style={{ color: isActive ? '#22C55E' : 'inherit', display: 'flex' }}>{item.icon}</span>
+                  <span className="topnav-link-label">{item.label}</span>
+                  {isActive && (
+                    <span style={{
+                      position: 'absolute',
+                      bottom: -1,
+                      left: 8,
+                      right: 8,
+                      height: 2,
+                      borderRadius: 2,
+                      background: '#22C55E',
+                    }} />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* ── Right controls ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+
+            {/* Back button */}
+            {navigationHistory.length > 1 && (
+              <button
+                onClick={handleGoBack}
+                title="Go back"
+                className="topnav-icon-btn"
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: 2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 8, border: 'none',
+                  background: 'transparent', color: tok.muted(isDark), cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <h2
-                  style={{
-                    margin: 0,
-                    padding: 0,
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: tok.textPrimary(isDark),
-                    lineHeight: 1.2,
-                  }}
-                >
-                  Smart Solar
-                </h2>
-                <p
-                  className="logo-subtitle"
-                  style={{
-                    margin: 0,
-                    padding: 0,
-                    fontSize: 11,
-                    color: tok.textMuted(isDark),
-                    fontWeight: 400,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  IoT Platform
-                </p>
-              </div>
+                <ArrowLeft size={15} />
+              </button>
             )}
-          </div>
 
-          {/* User card */}
-          {isAuthenticated && user && (
-            <Link
-              to="/profile"
-              className="user-card"
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
+              className="topnav-icon-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: isCollapsed ? 0 : 10,
-                textDecoration: 'none',
-                padding: isCollapsed ? '8px 0' : '10px 10px',
-                borderRadius: 10,
-                background: tok.userCardBg(isDark),
-                border: `1px solid ${tok.border(isDark)}`,
-                transition: 'all 0.18s ease',
-                justifyContent: isCollapsed ? 'center' : 'flex-start',
-                ...(isCollapsed ? {} : {}),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 8, border: 'none',
+                background: 'transparent', color: tok.muted(isDark), cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
-              <div
-                className="user-avatar"
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
+            {/* User avatar + dropdown */}
+            <div ref={userMenuRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setUserMenuOpen(v => !v)}
+                aria-expanded={userMenuOpen}
+                className="topnav-user-btn"
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 9,
-                  background: avatarBg,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: '#fff',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 8px rgba(34,197,94,0.25)',
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '5px 10px 5px 5px',
+                  borderRadius: 9, border: `1px solid ${tok.border(isDark)}`,
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                  cursor: 'pointer', transition: 'all 0.15s ease',
                 }}
               >
-                {initials}
-              </div>
-              {!isCollapsed && (
-                <div className="user-details" style={{ overflow: 'hidden', flex: 1 }}>
-                  <p
-                    className="user-name"
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: avatarBg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, color: '#fff',
+                  boxShadow: '0 2px 6px rgba(34,197,94,0.2)',
+                  flexShrink: 0,
+                }}>
+                  {initials}
+                </div>
+                <span className="topnav-username" style={{
+                  fontSize: 13, fontWeight: 600, color: tok.text(isDark),
+                  maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {displayName}
+                </span>
+                <ChevronDown
+                  size={13}
+                  style={{
+                    color: tok.muted(isDark),
+                    transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
+
+              {/* Dropdown */}
+              {userMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: 220,
+                  background: tok.dropdownBg(isDark),
+                  border: `1px solid ${tok.border(isDark)}`,
+                  borderRadius: 12,
+                  boxShadow: isDark
+                    ? '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)'
+                    : '0 16px 40px rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
+                  zIndex: 2000,
+                }}>
+                  {/* User info header */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '12px 14px',
+                    borderBottom: `1px solid ${tok.border(isDark)}`,
+                  }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 9,
+                      background: avatarBg, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: '#fff',
+                      flexShrink: 0,
+                    }}>
+                      {initials}
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: tok.text(isDark), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {displayName}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#22C55E', fontWeight: 500 }}>{roleName}</div>
+                    </div>
+                  </div>
+
+                  {/* Profile link */}
+                  <Link
+                    to="/profile"
+                    onClick={() => setUserMenuOpen(false)}
                     style={{
-                      margin: 0,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: tok.textPrimary(isDark),
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 14px',
+                      textDecoration: 'none',
+                      fontSize: 13, color: tok.text(isDark),
+                      transition: 'background 0.12s',
                     }}
+                    onMouseEnter={e => (e.currentTarget.style.background = tok.hover(isDark))}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {user.first_name} {user.last_name}
-                  </p>
-                  <p
-                    className="user-role-badge"
+                    <User size={14} style={{ color: tok.muted(isDark) }} />
+                    My Profile
+                  </Link>
+
+                  <div style={{ height: 1, background: tok.border(isDark), margin: '0 14px' }} />
+
+                  {/* Logout */}
+                  <button
+                    onClick={handleLogout}
                     style={{
-                      margin: 0,
-                      fontSize: 11,
-                      color: '#22C55E',
-                      fontWeight: 500,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 14px', width: '100%',
+                      background: 'transparent', border: 'none',
+                      fontSize: 13, color: '#EF4444',
+                      cursor: 'pointer', transition: 'background 0.12s',
+                      textAlign: 'left',
                     }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {roleName}
-                  </p>
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
                 </div>
               )}
-            </Link>
-          )}
+            </div>
+
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setMobileOpen(v => !v)}
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              className="topnav-hamburger"
+              style={{
+                display: 'none', // shown via CSS at ≤900px
+                alignItems: 'center', justifyContent: 'center',
+                width: 36, height: 36, borderRadius: 8,
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                border: `1px solid ${tok.border(isDark)}`,
+                color: tok.text(isDark), cursor: 'pointer',
+              }}
+            >
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* ── Nav items ── */}
-        {isAuthenticated && (
-          <>
-            <ul
-              className="sidebar-nav"
-              style={{
-                flex: 1,
-                padding: '10px 0',
-                margin: 0,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-              }}
-            >
-              <SectionLabel label="Main" isDark={isDark} isCollapsed={isCollapsed} />
-              {MAIN_NAV.map((item) => (
-                <NavLink
-                  key={item.path}
-                  item={item}
-                  isActive={location.pathname === item.path}
-                  isCollapsed={isCollapsed}
-                  isDark={isDark}
-                  onClick={() => {
-                    if (location.pathname !== item.path) handleNavigation(item.path);
-                    setMobileOpen(false);
-                  }}
-                />
-              ))}
+      {/* ── Mobile overlay + slide-down menu ──────────────────────────── */}
+      {mobileOpen && (
+        <>
+          <div
+            onClick={() => setMobileOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 999,
+              background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)',
+              top: 64,
+            }}
+          />
+          <div style={{
+            position: 'fixed', top: 64, left: 0, right: 0,
+            zIndex: 1001,
+            background: tok.mobileBg(isDark),
+            borderBottom: `1px solid ${tok.border(isDark)}`,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            overflowY: 'auto',
+            maxHeight: 'calc(100dvh - 60px)',
+          }}>
+            <div style={{ padding: '10px 12px' }}>
+              {allNavItems.map(item => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => { if (!isActive) handleNavigation(item.path); setMobileOpen(false); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '11px 14px', borderRadius: 10,
+                      textDecoration: 'none', marginBottom: 2,
+                      background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
+                      color: isActive ? '#22C55E' : tok.text(isDark),
+                      fontWeight: isActive ? 600 : 450,
+                      fontSize: 14,
+                      borderLeft: isActive ? '3px solid #22C55E' : '3px solid transparent',
+                    }}
+                  >
+                    <span style={{ color: isActive ? '#22C55E' : tok.muted(isDark), display: 'flex' }}>{item.icon}</span>
+                    {item.label}
+                  </Link>
+                );
+              })}
 
-              {isAdmin && (
-                <>
-                  <SectionLabel label="Admin" isDark={isDark} isCollapsed={isCollapsed} />
-                  {ADMIN_NAV.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      item={item}
-                      isActive={location.pathname === item.path}
-                      isCollapsed={isCollapsed}
-                      isDark={isDark}
-                      onClick={() => {
-                        if (location.pathname !== item.path) handleNavigation(item.path);
-                        setMobileOpen(false);
-                      }}
-                    />
-                  ))}
-                </>
-              )}
-            </ul>
-
-            {/* ── Footer ── */}
-            <div
-              className="sidebar-footer"
-              style={{
-                padding: isCollapsed ? '10px 6px' : '10px 10px',
+              {/* Mobile footer controls */}
+              <div style={{
                 borderTop: `1px solid ${tok.border(isDark)}`,
-                flexShrink: 0,
-                background: tok.footerBg(isDark),
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-              }}
-            >
-              {/* Theme toggle */}
-              <div
-                className="theme-toggle-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: isCollapsed ? '10px 0' : '8px 14px',
-                  borderRadius: 9,
-                  justifyContent: isCollapsed ? 'center' : 'space-between',
-                  cursor: 'pointer',
-                }}
-                onClick={toggleTheme}
-                title={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
-              >
-                <span
-                  className="theme-toggle-label"
+                marginTop: 8, paddingTop: 10,
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}>
+                <button
+                  onClick={() => { toggleTheme(); setMobileOpen(false); }}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    color: tok.textMuted(isDark),
-                    fontWeight: 500,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '11px 14px', borderRadius: 10,
+                    background: 'transparent', border: 'none',
+                    color: tok.text(isDark), fontSize: 14, fontWeight: 450,
+                    cursor: 'pointer', textAlign: 'left', width: '100%',
                   }}
                 >
-                  {isDark
-                    ? <Moon size={15} className="theme-toggle-icon" />
-                    : <Sun size={15} className="theme-toggle-icon" />}
-                  {!isCollapsed && (isDark ? 'Dark mode' : 'Light mode')}
-                </span>
-                {!isCollapsed && (
-                  <button
-                    className={`theme-switch${isDark ? ' theme-switch--dark' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
-                    aria-label="Toggle dark mode"
-                  >
-                    <span className="theme-switch-thumb" />
-                  </button>
-                )}
+                  {isDark ? <Sun size={15} style={{ color: tok.muted(isDark) }} /> : <Moon size={15} style={{ color: tok.muted(isDark) }} />}
+                  {isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                </button>
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '11px 14px', borderRadius: 10,
+                    textDecoration: 'none',
+                    color: tok.text(isDark), fontSize: 14, fontWeight: 450,
+                  }}
+                >
+                  <User size={15} style={{ color: tok.muted(isDark) }} />
+                  My Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '11px 14px', borderRadius: 10,
+                    background: 'transparent', border: 'none',
+                    color: '#EF4444', fontSize: 14, fontWeight: 500,
+                    cursor: 'pointer', textAlign: 'left', width: '100%',
+                  }}
+                >
+                  <LogOut size={15} />
+                  Sign Out
+                </button>
               </div>
-
-              {/* Collapse toggle (desktop only) */}
-              <FooterBtn
-                onClick={() => setIsCollapsed(c => !c)}
-                icon={isCollapsed ? <ChevronRight {...iconProps} /> : <ChevronLeft {...iconProps} />}
-                label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                isDark={isDark}
-                isCollapsed={isCollapsed}
-                title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              />
-
-              {/* Go back */}
-              {navigationHistory.length > 1 && (
-                <FooterBtn
-                  onClick={handleGoBack}
-                  icon={<ArrowLeft {...iconProps} />}
-                  label="Back"
-                  isDark={isDark}
-                  isCollapsed={isCollapsed}
-                  title="Go back to previous page"
-                />
-              )}
-
-              {/* Logout */}
-              <FooterBtn
-                onClick={handleLogout}
-                icon={<LogOut {...iconProps} />}
-                label="Logout"
-                isDark={isDark}
-                isCollapsed={isCollapsed}
-                danger
-              />
             </div>
-          </>
-        )}
-
-        {!isAuthenticated && (
-          <div className="sidebar-auth">
-            <Link to="/login" className="auth-link">
-              <Users {...iconProps} />
-              Login
-            </Link>
           </div>
-        )}
-      </nav>
+        </>
+      )}
     </>
   );
 };

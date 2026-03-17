@@ -424,13 +424,19 @@ class ApiService {
     });
   }
 
-  async getPresets(): Promise<any[]> {
-    const cacheKey = 'presets';
+  async getPresets(search?: string, page?: number, pageSize?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (page !== undefined) {
+      params.set('page', String(page));
+      params.set('page_size', String(pageSize ?? DEFAULT_PAGE_SIZE));
+    }
+    const qs = params.toString();
+    const cacheKey = `presets_${qs || 'all'}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.request('/presets/');
-    // Use longer TTL for presets as they change less frequently
+    const data = await this.request(`/presets/${qs ? `?${qs}` : ''}`);
     cacheService.set(cacheKey, data, 30 * 60 * 1000); // 30 minutes
     return data;
   }
@@ -440,7 +446,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    cacheService.clear('presets');
+    cacheService.clearPattern(/^presets_/);
     return result;
   }
 
@@ -449,7 +455,7 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify(data),
     });
-    cacheService.clear('presets');
+    cacheService.clearPattern(/^presets_/);
     return result;
   }
 
@@ -457,12 +463,19 @@ class ApiService {
     const result = await this.request(`/presets/${id}/delete/`, {
       method: 'DELETE',
     });
-    cacheService.clear('presets');
+    cacheService.clearPattern(/^presets_/);
     return result;
   }
 
-  async getGlobalSlaves(): Promise<any[]> {
-    return this.request('/slaves/');
+  async getGlobalSlaves(search?: string, page?: number, pageSize?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (page !== undefined) {
+      params.set('page', String(page));
+      params.set('page_size', String(pageSize ?? DEFAULT_PAGE_SIZE));
+    }
+    const qs = params.toString();
+    return this.request(`/slaves/${qs ? `?${qs}` : ''}`);
   }
 
   async createGlobalSlave(slaveData: any): Promise<any> {

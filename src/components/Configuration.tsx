@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Pencil, Trash2, AlertTriangle, X, CheckCircle2 } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, X, CheckCircle2, Cpu } from 'lucide-react';
 import { apiService } from '../services/api';
-import { useTheme } from '../contexts/ThemeContext';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 interface GatewayConfig {
   configId: string;
@@ -32,7 +32,6 @@ interface SlaveDevice {
 }
 
 const Configuration: React.FC = () => {
-  const { isDark } = useTheme();
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +41,12 @@ const Configuration: React.FC = () => {
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
   const [globalMode] = useState(true);
   const [slaveSearch, setSlaveSearch] = useState('');
+  const [debouncedSlaveSearch, setDebouncedSlaveSearch] = useState('');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // Delete / success modals
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
@@ -81,10 +86,22 @@ const Configuration: React.FC = () => {
   });
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSlaveSearch(slaveSearch);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [slaveSearch]);
+
+  useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-        const slavesResult = await apiService.getGlobalSlaves();
-        setSlaves(slavesResult.map(mapSlave));
+        const result = await apiService.getGlobalSlaves(debouncedSlaveSearch || undefined, currentPage, pageSize);
+        const list = result.results ?? result;
+        setSlaves((Array.isArray(list) ? list : []).map(mapSlave));
+        setTotalCount(result.count ?? (Array.isArray(list) ? list.length : 0));
+        setTotalPages(result.total_pages ?? 1);
         setConfig(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -92,7 +109,7 @@ const Configuration: React.FC = () => {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [debouncedSlaveSearch, currentPage, pageSize]);
 
   // ── Modal initialForm (for edit mode) ──────────────────────────────────────
 
@@ -189,28 +206,24 @@ const Configuration: React.FC = () => {
     }
   };
 
-  // ── Filtered slave list ────────────────────────────────────────────────────
-
-  const sq = slaveSearch.toLowerCase();
-  const filteredSlaves = sq
-    ? slaves.filter(
-        (s) =>
-          s.deviceName.toLowerCase().includes(sq) ||
-          String(s.slaveId).includes(sq) ||
-          (s.configName || '').toLowerCase().includes(sq)
-      )
-    : slaves;
-
   if (loading) return <div className="loading">Loading configuration...</div>;
 
   return (
     <div className="admin-container responsive-page">
-      <h1>Slave Configuration</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 'var(--space-5)' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)', flexShrink: 0 }}>
+          <Cpu size={20} color="white" />
+        </div>
+        <div>
+          <h1 style={{ margin: 0 }}>Slave Configuration</h1>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>Configure Modbus slave devices and their register mappings</p>
+        </div>
+      </div>
 
       {!creatingSlave && !editingSlave && error && (
-        <div className="error" style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', borderRadius: '4px', color: '#721c24' }}>
+        <div className="alert alert-error" style={{ marginBottom: '20px' }}>
           <strong>Error:</strong> {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', color: '#721c24', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
         </div>
       )}
 
@@ -218,68 +231,105 @@ const Configuration: React.FC = () => {
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>
-              All Slave Devices ({slaves.length}{sq ? ` · ${filteredSlaves.length} shown` : ''})
+              Slave Devices {totalCount > 0 ? `(${totalCount})` : ''}
             </h2>
             <input
               type="text"
-              placeholder="Search by name, ID or config…"
+              placeholder="Search by name, ID…"
               value={slaveSearch}
               onChange={(e) => setSlaveSearch(e.target.value)}
-              style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: 220 }}
+              className="search-input"
             />
           </div>
           <button onClick={() => setCreatingSlave(true)} className="btn">Configure New Slave</button>
         </div>
 
-        {filteredSlaves.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
-            {slaves.length === 0
-              ? <><p>No slave devices configured yet.</p><p>Click "Configure New Slave" to add your first slave device.</p></>
-              : <p>No slaves match your search.</p>}
+        {slaves.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+            <Cpu size={40} strokeWidth={1.25} style={{ color: 'var(--text-muted)', marginBottom: 12 }} />
+            {totalCount === 0 && !debouncedSlaveSearch
+              ? <><p style={{ fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No slave devices configured</p><p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>Click "Configure New Slave" to add your first device.</p></>
+              : <p style={{ color: 'var(--text-muted)', margin: 0 }}>No slaves match your search.</p>}
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'center' }}>Slave ID</th>
-                  <th style={{ textAlign: 'center' }}>Device Name</th>
-                  <th style={{ textAlign: 'center' }}>Config</th>
-                  <th style={{ textAlign: 'center' }}>Polling Interval</th>
-                  <th style={{ textAlign: 'center' }}>Timeout</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
-                  <th style={{ textAlign: 'center' }}>Registers</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSlaves.map((slave) => (
-                  <tr key={slave.id}>
-                    <td style={{ textAlign: 'center' }}>{slave.slaveId}</td>
-                    <td style={{ textAlign: 'center' }}>{slave.deviceName}</td>
-                    <td style={{ textAlign: 'center' }}>{slave.configName || 'global'}</td>
-                    <td style={{ textAlign: 'center' }}>{slave.pollingIntervalMs}ms</td>
-                    <td style={{ textAlign: 'center' }}>{slave.timeoutMs}ms</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={slave.enabled ? 'status-online' : 'status-offline'}>
-                        {slave.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {slave.registers.filter((r: any) => r.enabled).length} / {slave.registers.length}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => setEditingSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', margin: '0 6px', color: '#6366f1' }} title="Edit">
-                        <Pencil size={16} strokeWidth={2} />
-                      </button>
-                      <button onClick={() => handleDeleteSlave(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
-                        <Trash2 size={16} strokeWidth={2} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="slave-grid">
+            {slaves.map((slave) => {
+              const enabledRegs = slave.registers.filter((r: any) => r.enabled).length;
+              return (
+                <div key={slave.id} className="slave-card">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div className="slave-card-name">{slave.deviceName}</div>
+                      <div className="slave-card-id">Slave ID #{slave.slaveId} · {slave.configName || 'global'}</div>
+                    </div>
+                    <span className={slave.enabled ? 'status-online' : 'status-offline'} style={{ flexShrink: 0, marginTop: 2 }}>
+                      {slave.enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div className="slave-card-stats">
+                    <div className="slave-stat">
+                      <div className="slave-stat-label">Polling</div>
+                      <div className="slave-stat-value">{slave.pollingIntervalMs}ms</div>
+                    </div>
+                    <div className="slave-stat">
+                      <div className="slave-stat-label">Timeout</div>
+                      <div className="slave-stat-value">{slave.timeoutMs}ms</div>
+                    </div>
+                    <div className="slave-stat" style={{ gridColumn: '1 / -1' }}>
+                      <div className="slave-stat-label">Registers</div>
+                      <div className="slave-stat-value">{enabledRegs} active / {slave.registers.length} total</div>
+                    </div>
+                  </div>
+                  <div className="slave-card-actions">
+                    <button onClick={() => setEditingSlave(slave)} className="slave-card-btn slave-card-btn-edit">
+                      <Pencil size={13} /> Edit
+                    </button>
+                    <button onClick={() => handleDeleteSlave(slave)} className="slave-card-btn slave-card-btn-delete">
+                      <Trash2 size={13} /> Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <div className="pagination-bar" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', gap: '16px' }}>
+            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount} slaves
+            </div>
+            <div className="pagination-controls">
+              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? '0.5' : '1' }}
+              >← Previous</button>
+              <div className="pagination-pages">
+                {(() => {
+                  const pages: React.ReactNode[] = [];
+                  let lastWasEllipsis = false;
+                  for (let i = 1; i <= totalPages; i++) {
+                    const show = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
+                    if (show) {
+                      lastWasEllipsis = false;
+                      pages.push(<button key={i} onClick={() => setCurrentPage(i)} style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: i === currentPage ? 'rgba(99,102,241,0.2)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: i === currentPage ? 'bold' : 'normal', minWidth: '32px' }}>{i}</button>);
+                    } else if (!lastWasEllipsis) {
+                      lastWasEllipsis = true;
+                      pages.push(<span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>);
+                    }
+                  }
+                  return pages;
+                })()}
+              </div>
+              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === totalPages ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? '0.5' : '1' }}
+              >Next →</button>
+            </div>
+            <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
+              style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
+            </select>
           </div>
         )}
       </div>
@@ -298,32 +348,32 @@ const Configuration: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteModal.show && deleteModal.slave && ReactDOM.createPortal(
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 16, boxShadow: isDark ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '480px', width: '100%', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #dc3545, #c82333)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(220,53,69,0.4)' }}>
+        <div className="portal-modal-backdrop">
+          <div className="portal-modal-container">
+            <div className="portal-modal-header">
+              <div className="portal-modal-header-left">
+                <div className="portal-modal-icon portal-modal-icon-danger">
                   <AlertTriangle size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Delete Slave Device</span>
+                <span className="portal-modal-title">Delete Slave Device</span>
               </div>
-              <button onClick={() => setDeleteModal({ show: false, slave: null })} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setDeleteModal({ show: false, slave: null })} className="portal-modal-close-btn">
                 <X size={16} />
               </button>
             </div>
-            <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+            <div className="portal-modal-body">
+              <p>
                 Are you sure you want to delete slave device <strong>{deleteModal.slave.deviceName}</strong> (ID: {deleteModal.slave.slaveId})?
               </p>
-              <div style={{ background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb', borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem', color: isDark ? '#ff9999' : '#721c24' }}>
+              <div className="portal-modal-warning-box">
                 <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Warning:</strong> This will permanently delete the slave device and all its register mappings.
               </div>
             </div>
-            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setDeleteModal({ show: false, slave: null })} style={{ padding: '10px 18px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+            <div className="portal-modal-footer">
+              <button onClick={() => setDeleteModal({ show: false, slave: null })} className="portal-modal-btn portal-modal-btn-cancel">
                 Cancel
               </button>
-              <button onClick={confirmDeleteSlave} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #dc3545, #c82333)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 14px rgba(220,53,69,0.4)' }}>
+              <button onClick={confirmDeleteSlave} className="portal-modal-btn portal-modal-btn-danger">
                 Yes, Delete
               </button>
             </div>
@@ -334,24 +384,24 @@ const Configuration: React.FC = () => {
 
       {/* Success Modal */}
       {successModal.show && ReactDOM.createPortal(
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 16, boxShadow: isDark ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '480px', width: '100%', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+        <div className="portal-modal-backdrop">
+          <div className="portal-modal-container">
+            <div className="portal-modal-header">
+              <div className="portal-modal-header-left">
+                <div className="portal-modal-icon portal-modal-icon-success">
                   <CheckCircle2 size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Success</span>
+                <span className="portal-modal-title">Success</span>
               </div>
-              <button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setSuccessModal({ show: false, message: '' })} className="portal-modal-close-btn">
                 <X size={16} />
               </button>
             </div>
-            <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>{successModal.message}</p>
+            <div className="portal-modal-body">
+              <p>{successModal.message}</p>
             </div>
-            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
+            <div className="portal-modal-footer">
+              <button onClick={() => setSuccessModal({ show: false, message: '' })} className="portal-modal-btn portal-modal-btn-primary">
                 Got it!
               </button>
             </div>

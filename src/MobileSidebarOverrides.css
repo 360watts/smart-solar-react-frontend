@@ -389,3 +389,32 @@ body {
     max-height: 100dvh !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   FORM ACTIONS — reduce padding on small phones
+   Default: var(--space-6) var(--space-8) = 24px 32px
+   At 480px 32px horizontal padding eats ~17% of width
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .form-actions {
+    padding: 14px 16px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   TOAST CONTAINER — pin to screen edges on mobile
+   min-width: 290px + right: 24px could clip at 375px;
+   stretch full-width with safe inset on phones instead.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .toast-container {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+  .toast {
+    min-width: unset !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

@@ -1,0 +1,108 @@
+/**
+ * TopNavbar.css — horizontal top navigation layout
+ * Overrides App.css sidebar layout rules.
+ * Imported LAST in App.tsx so specificity wins.
+ */
+
+/* ── Main content: push down by navbar height ─────────────────────────────── */
+.main-content {
+  margin-left: 0 !important;
+  padding-top: 88px !important; /* 64px topnav + 24px breathing room */
+}
+
+/* Remove sidebar-driven left offsets */
+body.sidebar-collapsed .page-transition,
+.page-transition {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+body.sidebar-collapsed .breadcrumbs,
+.breadcrumbs {
+  margin-left: 0 !important;
+}
+
+body.sidebar-collapsed .modal,
+body.sidebar-collapsed .modal-overlay {
+  left: 0 !important;
+}
+
+/* ── Topnav link label: hide on narrow screens ───────────────────────────── */
+@media (max-width: 1100px) {
+  .topnav-link-label {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Hide desktop nav links entirely */
+  .topnav-links {
+    display: none !important;
+  }
+  /* Hide username text, show just avatar */
+  .topnav-username {
+    display: none !important;
+  }
+  /* Hide brand tagline */
+  .topnav-brand-text {
+    display: none;
+  }
+  /* Show hamburger */
+  .topnav-hamburger {
+    display: flex !important;
+  }
+}
+
+/* ── Icon button hover state ─────────────────────────────────────────────── */
+.topnav-icon-btn:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: #F1F5F9 !important;
+}
+body:not(.dark-mode) .topnav-icon-btn:hover {
+  background: rgba(0,0,0,0.07) !important;
+  color: #0F172A !important;
+}
+
+/* ── User button hover ───────────────────────────────────────────────────── */
+.topnav-user-btn:hover {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+body:not(.dark-mode) .topnav-user-btn:hover {
+  background: rgba(0,0,0,0.05) !important;
+  border-color: #D1D5DB !important;
+}
+
+/* ── Hide old sidebar elements ───────────────────────────────────────────── */
+.sidebar,
+.sidebar-overlay,
+.mobile-nav-toggle {
+  display: none !important;
+}
+
+/* ── Main content responsive adjustments ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 80px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding-top: 74px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* ── Scrollbar-free nav links strip ─────────────────────────────────────── */
+.topnav-links::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Active nav link green underline indicator ───────────────────────────── */
+.topnav a[style*="22C55E"] {
+  position: relative;
+}

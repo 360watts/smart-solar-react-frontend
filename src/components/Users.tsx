@@ -1,12 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus } from 'lucide-react';
+import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonTableRow } from './SkeletonLoader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+
+// ── Avatar helpers ────────────────────────────────────────────────────────────
+const AVATAR_COLORS_U = [
+  'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  'linear-gradient(135deg,#10b981,#059669)',
+  'linear-gradient(135deg,#f59e0b,#d97706)',
+  'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+  'linear-gradient(135deg,#ec4899,#be185d)',
+  'linear-gradient(135deg,#14b8a6,#0f766e)',
+];
+const userAvatarColor = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS_U[Math.abs(h) % AVATAR_COLORS_U.length];
+};
+const userInitials = (first: string, last: string, username: string) => {
+  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+  if (first) return first.substring(0, 2).toUpperCase();
+  return username.substring(0, 2).toUpperCase();
+};
 
 interface User {
   id: number;
@@ -146,7 +166,6 @@ const Users: React.FC = () => {
   };
 
   const handleDelete = (user: any) => {
-    console.log('🗑️ handleDelete called with user:', user.username);
     setDeleteModal({ show: true, user });
   };
 
@@ -558,7 +577,7 @@ const Users: React.FC = () => {
 
       <div className="card">
         <div className="card-header">
-          <h2>Users ({totalCount})</h2>
+          <h2>Users</h2>
           <div className="card-actions">
             <input
               type="text"
@@ -568,14 +587,25 @@ const Users: React.FC = () => {
               className="search-input"
             />
             <button onClick={() => setCreatingUser(true)} className="btn">
+              <UserPlus size={15} style={{ marginRight: 6 }} />
               Register New User
             </button>
           </div>
         </div>
+
+        {/* Stats row */}
+        <div className="stats-chips-row">
+          <div className="stats-chip">
+            <UsersIcon size={13} />
+            <span className="stats-chip-count">{totalCount}</span>
+            <span>Total Users</span>
+          </div>
+        </div>
+
         <div className="table-responsive"><table className="table">
           <thead>
             <tr>
-              <th style={{ textAlign: 'center' }}>Name</th>
+              <th>Name</th>
               <th style={{ textAlign: 'center' }}>Email</th>
               <th style={{ textAlign: 'center' }}>Mobile</th>
               <th style={{ textAlign: 'center' }}>Address</th>
@@ -601,7 +631,20 @@ const Users: React.FC = () => {
                 style={{ cursor: 'pointer' }}
                 className="clickable-row"
               >
-                <td style={{ textAlign: 'center' }}>{user.first_name} {user.last_name}</td>
+                <td>
+                  <div className="table-avatar-cell">
+                    <div
+                      className="avatar-initials avatar-initials-sm"
+                      style={{ background: userAvatarColor(user.username) }}
+                    >
+                      {userInitials(user.first_name, user.last_name, user.username)}
+                    </div>
+                    <div className="table-name-block">
+                      <span className="table-name-primary">{user.first_name} {user.last_name}</span>
+                      <span className="table-name-secondary">@{user.username}</span>
+                    </div>
+                  </div>
+                </td>
                 <td style={{ textAlign: 'center' }}>{user.email}</td>
                 <td style={{ textAlign: 'center' }}>{user.mobile_number || '-'}</td>
                 <td style={{ textAlign: 'center' }}>{user.address || '-'}</td>

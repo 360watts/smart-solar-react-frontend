@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 
 interface Preset {
   id: number;
@@ -108,14 +109,15 @@ const DevicePresets: React.FC = () => {
   const [slaveListSearch, setSlaveListSearch] = useState('');
   const [editPresetSlaveSearch, setEditPresetSlaveSearch] = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   // Modern modal states
   const [deletePresetModal, setDeletePresetModal] = useState<{ show: boolean; preset: Preset | null }>({ show: false, preset: null });
   const [deleteSlaveModal, setDeleteSlaveModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
-
-  useEffect(() => {
-    fetchPresets();
-  }, []);
 
   useEffect(() => {
     if (!creatingPreset || createPresetSlaveMode !== 'select') return;
@@ -149,13 +151,14 @@ const DevicePresets: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    fetchPresets(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchPresets(debouncedSearchTerm, currentPage, pageSize);
+  }, [debouncedSearchTerm, currentPage, pageSize]);
 
   useEffect(() => {
     if (!creatingPreset) return;
@@ -169,21 +172,15 @@ const DevicePresets: React.FC = () => {
     });
   }, [creatingPreset]);
 
-  const fetchPresets = async (search?: string) => {
+  const fetchPresets = async (search?: string, page = 1, size = DEFAULT_PAGE_SIZE) => {
+    setLoading(true);
     try {
-      const data = await apiService.getPresets();
-      // Filter presets based on search term
-      let filteredData = data;
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredData = data.filter((preset: Preset) =>
-          preset.name.toLowerCase().includes(searchLower) ||
-          preset.config_id.toLowerCase().includes(searchLower) ||
-          preset.description.toLowerCase().includes(searchLower)
-        );
-      }
-      setPresets(data);
-      setFilteredPresets(filteredData);
+      const response = await apiService.getPresets(search, page, size);
+      const list: Preset[] = response.results ?? response;
+      setPresets(list);
+      setFilteredPresets(list);
+      setTotalCount(response.count ?? list.length);
+      setTotalPages(response.total_pages ?? 1);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -220,7 +217,7 @@ const DevicePresets: React.FC = () => {
       await apiService.updatePreset(editingPreset.id, editForm);
       setEditingPreset(null);
       // Refetch to get the updated preset with all fields
-      await fetchPresets(searchTerm);
+      await fetchPresets(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update preset');
     }
@@ -270,37 +267,24 @@ const DevicePresets: React.FC = () => {
         parity: 0,
       });
       // Refetch to get the new preset with all fields
-      await fetchPresets(searchTerm);
+      await fetchPresets(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create preset');
     }
   };
 
   const handleDelete = (preset: any) => {
-    console.log('🗑️ handleDelete called with preset:', preset.name);
     setDeletePresetModal({ show: true, preset });
   };
 
   const confirmDeletePreset = async () => {
     if (!deletePresetModal.preset) return;
-    
+    const deletedName = deletePresetModal.preset.name;
     try {
       await apiService.deletePreset(deletePresetModal.preset.id);
-      const updatedPresets = presets.filter(p => p.id !== deletePresetModal.preset!.id);
-      setPresets(updatedPresets);
-      // Also update filtered presets to remove the deleted preset immediately
-      const searchLower = searchTerm.toLowerCase();
-      const updatedFiltered = updatedPresets.filter((preset: Preset) =>
-        preset.name.toLowerCase().includes(searchLower) ||
-        preset.config_id.toLowerCase().includes(searchLower) ||
-        preset.description.toLowerCase().includes(searchLower)
-      );
-      setFilteredPresets(updatedFiltered);
       setDeletePresetModal({ show: false, preset: null });
-      setSuccessModal({ 
-        show: true, 
-        message: `Preset "${deletePresetModal.preset.name}" has been deleted successfully.` 
-      });
+      setSuccessModal({ show: true, message: `Preset "${deletedName}" has been deleted successfully.` });
+      await fetchPresets(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete preset');
       setDeletePresetModal({ show: false, preset: null });
@@ -491,7 +475,6 @@ const DevicePresets: React.FC = () => {
 
   const handleDeleteSlave = (slave: SlaveDevice) => {
     if (!configuringSlaves) return;
-    console.log('🗑️ handleDeleteSlave called with slave:', slave.deviceName);
     setDeleteSlaveModal({ show: true, slave });
   };
 
@@ -533,12 +516,20 @@ const DevicePresets: React.FC = () => {
   } : undefined;
 
   return (
-    <div>
-      <h1>Device Presets</h1>
+    <div className="admin-container responsive-page">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 'var(--space-5)' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(16,185,129,0.35)', flexShrink: 0 }}>
+          <Layers size={20} color="white" />
+        </div>
+        <div>
+          <h1 style={{ margin: 0 }}>Device Presets</h1>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>Reusable gateway configuration templates for your devices</p>
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-header">
-          <h2>Presets ({filteredPresets.length})</h2>
+          <h2>Presets{filteredPresets.length !== presets.length ? ` · ${filteredPresets.length} of ${presets.length}` : ` (${presets.length})`}</h2>
           <div className="card-actions">
             <input
               type="text"
@@ -548,45 +539,109 @@ const DevicePresets: React.FC = () => {
               className="search-input"
             />
             <button onClick={() => setCreatingPreset(true)} className="btn">
+              <Layers size={15} style={{ marginRight: 6 }} />
               Create New Preset
             </button>
           </div>
         </div>
-        <div className="table-responsive"><table className="table">
-          <thead>
-            <tr>
-              <th style={{ textAlign: 'center' }}>Name</th>
-              <th style={{ textAlign: 'center' }}>Config ID</th>
-              <th style={{ textAlign: 'center' }}>Description</th>
-              <th style={{ textAlign: 'center' }}>Slaves</th>
-              <th style={{ textAlign: 'center' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPresets.map((preset) => (
-              <tr key={preset.id}>
-                <td style={{ textAlign: 'center' }}>{preset.name}</td>
-                <td style={{ textAlign: 'center' }}>{preset.config_id}</td>
-                <td style={{ textAlign: 'center' }}>{preset.description}</td>
-                <td style={{ textAlign: 'center' }}>{preset.slaves_count || 0}</td>
-                <td style={{ textAlign: 'center' }}>
-                  <button onClick={() => handleViewDetails(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', margin: '0 6px' }} title="View Details">
-                    <Eye size={16} strokeWidth={2} />
-                  </button>
-                  <button onClick={() => handleConfigureSlaves(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', margin: '0 6px' }} title="Configure Slaves">
-                    <Settings size={16} strokeWidth={2} />
-                  </button>
-                  <button onClick={() => handleEdit(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', margin: '0 6px' }} title="Edit">
-                    <Pencil size={16} strokeWidth={2} />
-                  </button>
-                  <button onClick={() => handleDelete(preset)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px' }} title="Delete">
-                    <Trash2 size={16} strokeWidth={2} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+
+        {filteredPresets.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+            <Layers size={40} strokeWidth={1.25} style={{ color: 'var(--text-muted)', marginBottom: 12 }} />
+            <p style={{ fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No presets found</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+              {searchTerm ? 'Try a different search term.' : 'Create a preset to get started.'}
+            </p>
+          </div>
+        ) : (
+          <div className="preset-grid">
+            {filteredPresets.map((preset) => {
+              const baudRate = preset.gateway_configuration?.uart_configuration?.baud_rate;
+              return (
+                <div key={preset.id} className="preset-card">
+                  <div className="preset-card-header">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="preset-card-title">{preset.name}</div>
+                      {preset.description && (
+                        <div className="preset-card-desc">{preset.description}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="preset-card-chips">
+                    <span className="preset-chip">
+                      <Settings size={11} />
+                      {preset.config_id}
+                    </span>
+                    {baudRate && (
+                      <span className="preset-chip">
+                        {baudRate} baud
+                      </span>
+                    )}
+                    <span className="preset-chip">
+                      <Layers size={11} />
+                      {preset.slaves_count || 0} slave{preset.slaves_count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <div className="preset-card-actions">
+                    <button onClick={() => handleViewDetails(preset)} className="preset-card-btn preset-card-btn-view" title="View Details">
+                      <Eye size={13} /> View
+                    </button>
+                    <button onClick={() => handleConfigureSlaves(preset)} className="preset-card-btn preset-card-btn-configure" title="Configure Slaves">
+                      <Settings size={13} /> Slaves
+                    </button>
+                    <button onClick={() => handleEdit(preset)} className="preset-card-btn preset-card-btn-edit" title="Edit">
+                      <Pencil size={13} /> Edit
+                    </button>
+                    <button onClick={() => handleDelete(preset)} className="preset-card-btn preset-card-btn-delete" title="Delete">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <div className="pagination-bar" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', gap: '16px' }}>
+            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount} presets
+            </div>
+            <div className="pagination-controls">
+              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? '0.5' : '1' }}
+              >← Previous</button>
+              <div className="pagination-pages">
+                {(() => {
+                  const pages: React.ReactNode[] = [];
+                  let lastWasEllipsis = false;
+                  for (let i = 1; i <= totalPages; i++) {
+                    const show = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
+                    if (show) {
+                      lastWasEllipsis = false;
+                      pages.push(<button key={i} onClick={() => setCurrentPage(i)} style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: i === currentPage ? 'rgba(99,102,241,0.2)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: i === currentPage ? 'bold' : 'normal', minWidth: '32px' }}>{i}</button>);
+                    } else if (!lastWasEllipsis) {
+                      lastWasEllipsis = true;
+                      pages.push(<span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>);
+                    }
+                  }
+                  return pages;
+                })()}
+              </div>
+              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
+                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === totalPages ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? '0.5' : '1' }}
+              >Next →</button>
+            </div>
+            <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
+              style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
+            >
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {(editingPreset || creatingPreset) && ReactDOM.createPortal(

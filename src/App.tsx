@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import './MobileSidebarOverrides.css'; /* Load after App.css so mobile drawer overrides win */
+import './TopNavbar.css'; /* Load last — overrides sidebar layout with top nav */
 import { AuthProvider } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
 import ProtectedRoute from './components/ProtectedRoute';

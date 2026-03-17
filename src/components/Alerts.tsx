@@ -365,7 +365,7 @@ const Alerts: React.FC = () => {
                     const active = filterSeverity === s;
                     const cfg = s !== 'all' ? SEVERITY_CONFIG[s as keyof typeof SEVERITY_CONFIG] : null;
                     return (
-                      <button key={s} onClick={() => setFilterSeverity(s)} style={{
+                      <button key={s} onClick={() => { setFilterSeverity(s); setActiveTab('alerts'); }} style={{
                         ...btnBase, padding: '5px 12px', fontSize: '0.8125rem',
                         background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
                         color: active ? (cfg ? cfg.color : '#818CF8') : sub,
@@ -384,7 +384,7 @@ const Alerts: React.FC = () => {
                     const active = filterStatus === s;
                     const cfg = s !== 'all' ? STATUS_CONFIG[s as keyof typeof STATUS_CONFIG] : null;
                     return (
-                      <button key={s} onClick={() => setFilterStatus(s)} style={{
+                      <button key={s} onClick={() => { setFilterStatus(s); setActiveTab('alerts'); }} style={{
                         ...btnBase, padding: '5px 12px', fontSize: '0.8125rem',
                         background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
                         color: active ? (cfg ? cfg.color : '#818CF8') : sub,
