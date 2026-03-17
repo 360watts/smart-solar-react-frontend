@@ -109,6 +109,50 @@
   .main-content {
     padding-top: calc(var(--space-4, 16px) + 52px) !important;
     margin-left: 0 !important;
+    margin-bottom: 0 !important;   /* undo old 80px bottom-bar space */
+  }
+
+  /* ── ROOT CAUSE FIX: old bottom-bar CSS (App.css:4454-4480) sets
+     sidebar-nav flex-direction:row and sidebar-link flex-direction:column.
+     These were NEVER overridden — fix them here. ── */
+
+  nav.sidebar .sidebar-nav,
+  .sidebar .sidebar-nav {
+    flex-direction: column !important;   /* was: row (bottom-bar) */
+    overflow-x: hidden !important;       /* was: auto (bottom-bar) */
+    overflow-y: auto !important;
+    justify-content: flex-start !important; /* was: space-around (bottom-bar) */
+    padding: 10px 0 !important;          /* was: 8px flat (bottom-bar) */
+    width: 100% !important;
+  }
+
+  nav.sidebar .sidebar-nav li,
+  .sidebar .sidebar-nav li {
+    margin: 1px 0 !important;
+    width: 100% !important;
+  }
+
+  nav.sidebar .sidebar-link,
+  .sidebar .sidebar-link {
+    flex-direction: row !important;      /* was: column (bottom-bar) */
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  nav.sidebar .sidebar-text,
+  .sidebar .sidebar-text {
+    display: block !important;
+    font-size: 13.5px !important;        /* was: 10px (bottom-bar tiny text) */
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  nav.sidebar .sidebar-icon,
+  .sidebar .sidebar-icon {
+    flex-shrink: 0 !important;
+    margin-right: 0 !important;
   }
 
   /* ── CRITICAL: Reset the 280px layout offsets on mobile ── */
@@ -246,5 +290,102 @@ body {
   .responsive-grid-3,
   .responsive-grid-4 {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTH PAGE — hide large decorative blur blobs
+   position:fixed 600px/400px elements cause GPU
+   repaint on scroll and visual overflow on 375px.
+   Content is fully readable without them.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .auth-container::before,
+  .auth-container::after {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   TABLE-RESPONSIVE — remove min-width at ≤480px
+   App.css sets min-width:560px @ 768px which still
+   overflows on 375–480px phones; allow natural width
+   so the table scrolls inside its overflow wrapper.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .table-responsive table {
+    min-width: unset;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SLAVE CONFIG MODAL — ensure form body scrolls
+   horizontally on phones so complex register grids
+   don't get clipped by overflow:hidden container.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .slave-config-modal .modal-body {
+    overflow-x: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   METRIC CARD — reduce vertical padding on phones
+   Default: var(--space-8) var(--space-6) = 32px 24px
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .metric-card {
+    padding: 16px 14px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   MODAL PADDING — tighten at 480px
+   App.css handles 768px; this fills the 480px gap.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .modal-header {
+    padding: 14px 16px !important;
+  }
+  .modal-header h2 {
+    font-size: 1rem !important;
+  }
+  .modal-content h3 {
+    padding: 16px !important;
+    font-size: 1.125rem !important;
+  }
+  .modal-body {
+    padding: 16px !important;
+  }
+  /* Allow taller modal on very small viewports */
+  .modal-content {
+    max-height: 92vh !important;
+  }
+  /* Inline-portal modals (Devices/Users site/device edit) */
+  .modal-content,
+  [style*="maxWidth: '640px'"] {
+    max-width: calc(100vw - 24px) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTH CARD — tighter padding on 375px phones
+   App.css sets 36px 28px @ 480px which is too large.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px 18px !important;
+    margin: 10px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   LARGE MODAL — full-width, no border-radius on 375px
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .large-modal {
+    width: 100% !important;
+    border-radius: 0 !important;
+    max-height: 100dvh !important;
   }
 }

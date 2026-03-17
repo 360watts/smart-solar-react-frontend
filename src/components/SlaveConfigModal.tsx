@@ -602,7 +602,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={accentBarStyle} />
                 <span style={sectionLabelStyle}>Basic Information</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div style={formGroupStyle}>
                   <label style={labelStyle}>Slave ID</label>
                   <input
@@ -681,7 +681,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={accentBarStyle} />
                 <span style={sectionLabelStyle}>Communication Settings</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 16, alignItems: 'start' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, alignItems: 'start' }}>
                 <div style={formGroupStyle}>
                   <label style={labelStyle}>Polling Interval (ms)</label>
                   <input
@@ -842,7 +842,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 </div>
 
                 {/* Row 1 — Identity */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                   <div style={formGroupStyle}>
                     <label style={labelStyle}>Label *</label>
                     <input
@@ -949,7 +949,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={rowSeparatorStyle} />
 
                 {/* Row 2 — Data Format */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1fr 2fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
                   <div style={formGroupStyle}>
                     <label style={labelStyle}>Data Type *</label>
                     <select
@@ -1087,7 +1087,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={rowSeparatorStyle} />
 
                 {/* Row 3 — Scaling */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                   <div style={formGroupStyle}>
                     <label style={labelStyle}>Scale Factor</label>
                     <input
@@ -1191,7 +1191,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={rowSeparatorStyle} />
 
                 {/* Row 4 — Alarms & Actions */}
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 140px 1fr auto auto', gap: 12, alignItems: 'flex-end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, alignItems: 'flex-end' }}>
                   <div style={formGroupStyle}>
                     <label style={labelStyle}>High Alarm</label>
                     <input
