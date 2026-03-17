@@ -8586,6 +8586,24 @@ body.dark-mode .config-arrow {
     justify-content: center !important;
     padding: 10px !important;
   }
+
+  /* ── Fix layout offsets: sidebar is 70px on tablet, not 280px ── */
+  .page-transition {
+    margin-left: 70px !important;
+    width: calc(100% - 70px) !important;
+  }
+  .breadcrumbs {
+    margin-left: 70px !important;
+  }
+  .modal,
+  .modal-overlay {
+    left: 70px !important;
+    width: calc(100% - 70px) !important;
+  }
+  /* main-content is inside page-transition — no extra left margin */
+  .main-content {
+    margin-left: 0 !important;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -8627,4 +8645,80 @@ body.dark-mode .config-arrow {
 
 @media (max-width: 768px) {
   /* Utility grid classes are now responsive by default */
+}
+
+/* ═══════════════════════════════════════════════════
+   COLLAPSIBLE SIDEBAR — sidebar--collapsed state
+   Toggle: Navbar adds/removes .sidebar--collapsed on <nav>
+   and body.sidebar-collapsed on <body> for layout offsets.
+   Desktop only (>768px); mobile keeps slide-in behaviour.
+   ═══════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+  .sidebar.sidebar--collapsed {
+    width: 68px !important;
+    overflow: hidden;
+  }
+
+  /* Hide text labels + subtitle in collapsed mode */
+  .sidebar.sidebar--collapsed .sidebar-text,
+  .sidebar.sidebar--collapsed .logo-text,
+  .sidebar.sidebar--collapsed .logo-subtitle,
+  .sidebar.sidebar--collapsed .user-details,
+  .sidebar.sidebar--collapsed .theme-toggle-label,
+  .sidebar.sidebar--collapsed .nav-section-label {
+    display: none !important;
+  }
+
+  /* Centre icon in nav items */
+  .sidebar.sidebar--collapsed .sidebar-link {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+  }
+
+  .sidebar.sidebar--collapsed .sidebar-icon {
+    margin: 0 auto !important;
+  }
+
+  /* Centre logo badge */
+  .sidebar.sidebar--collapsed .logo-container {
+    justify-content: center !important;
+  }
+
+  /* Centre user avatar */
+  .sidebar.sidebar--collapsed .user-card {
+    justify-content: center !important;
+    padding: 8px 0 !important;
+  }
+
+  /* Footer buttons icon-only */
+  .sidebar.sidebar--collapsed .logout-button {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+  }
+
+  /* Theme toggle: icon only */
+  .sidebar.sidebar--collapsed .theme-toggle-row {
+    justify-content: center !important;
+  }
+
+  .sidebar.sidebar--collapsed .theme-switch {
+    display: none !important;
+  }
+
+  /* Offset layout containers when sidebar is collapsed */
+  body.sidebar-collapsed .page-transition {
+    margin-left: 68px !important;
+    width: calc(100% - 68px) !important;
+  }
+
+  body.sidebar-collapsed .breadcrumbs {
+    margin-left: 68px !important;
+  }
+
+  body.sidebar-collapsed .modal,
+  body.sidebar-collapsed .modal-overlay {
+    left: 68px !important;
+    width: calc(100% - 68px) !important;
+  }
 }

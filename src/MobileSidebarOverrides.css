@@ -110,4 +110,141 @@
     padding-top: calc(var(--space-4, 16px) + 52px) !important;
     margin-left: 0 !important;
   }
+
+  /* ── CRITICAL: Reset the 280px layout offsets on mobile ── */
+  body .page-transition,
+  .page-transition {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  body .breadcrumbs,
+  .breadcrumbs {
+    margin-left: 0 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   GLOBAL OVERFLOW GUARD — prevent horizontal scroll
+   ═══════════════════════════════════════════════════ */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.App {
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE TYPOGRAPHY SCALE (≤768px)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.375rem !important;   /* 22px */
+  }
+  h2 {
+    font-size: 1.125rem !important;   /* 18px */
+  }
+  .page-header h1 {
+    font-size: 1.25rem !important;
+    margin-bottom: 4px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE TABLE SCROLL (≤768px)
+   Wraps any .table or <table> inside .card with
+   horizontal scroll so it never breaks the layout.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Let tables scroll inside card containers */
+  .card .table,
+  .card table,
+  .table-responsive {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  /* Keep table semantics intact */
+  .card .table thead,
+  .card .table tbody,
+  .card .table tfoot,
+  .card table thead,
+  .card table tbody,
+  .card table tfoot {
+    display: table-header-group;
+  }
+
+  .card .table thead,
+  .card table thead {
+    display: table-header-group;
+  }
+
+  .card .table tbody,
+  .card table tbody {
+    display: table-row-group;
+  }
+
+  .card .table tr,
+  .card table tr {
+    display: table-row;
+  }
+
+  .card .table td,
+  .card .table th,
+  .card table td,
+  .card table th {
+    display: table-cell;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE CONTENT PADDING (≤480px)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  body .main-content,
+  .main-content {
+    padding: 10px !important;
+    padding-top: calc(10px + 52px) !important;
+  }
+  .card {
+    padding: 14px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   TOUCH TARGET SIZES (≤768px)
+   Ensure all interactive elements meet 44×44px minimum
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .btn,
+  button:not(.mobile-nav-toggle) {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: max(16px, 1em); /* Prevent iOS zoom on focus — 16px minimum */
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   INLINE GRIDS — override hardcoded repeat(N, 1fr)
+   Devices.tsx and modals use inline grid styles that
+   CSS cannot override; these selectors target common
+   wrapper classes to enforce responsive columns.
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .device-info-grid,
+  .responsive-grid-2,
+  .responsive-grid-3,
+  .responsive-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
 }

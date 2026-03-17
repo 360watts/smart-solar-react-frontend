@@ -485,6 +485,10 @@ class ApiService {
     });
   }
 
+  async getAllSites(): Promise<any[]> {
+    return this.request('/sites/');
+  }
+
   async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);

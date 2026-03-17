@@ -17,6 +17,7 @@ import { ToastContainer } from './components/Toast';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 // Lazy load components for better initial load performance
+const Dashboard = lazy(() => import('./components/Dashboard'));
 const Devices = lazy(() => import('./components/Devices'));
 const Configuration = lazy(() => import('./components/Configuration'));
 const Alerts = lazy(() => import('./components/Alerts'));
@@ -59,7 +60,17 @@ function App() {
                             path="/"
                             element={
                               <ProtectedRoute>
-                                <Navigate to="/devices" replace />
+                                <Navigate to="/dashboard" replace />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/dashboard"
+                            element={
+                              <ProtectedRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Dashboard />
+                                </Suspense>
                               </ProtectedRoute>
                             }
                           />

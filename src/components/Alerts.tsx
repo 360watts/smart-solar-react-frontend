@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, AlertCircle, Info, HelpCircle } from 'lucide-react';
+import {
+  AlertTriangle, AlertCircle, Info, Bell,
+  CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
+  Shield, Activity,
+} from 'lucide-react';
 import { apiService } from '../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonLoader } from './SkeletonLoader';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Alert {
   id: string;
@@ -16,11 +22,74 @@ interface Alert {
   resolved: boolean;
   created_by_username?: string;
   created_at?: string;
-  // Fault alerts from Group A engine (generated=false means DB-backed)
   generated?: boolean;
   fault_code?: string;
   status?: 'active' | 'acknowledged' | 'resolved';
 }
+
+// ─── Design tokens (shared with OTA page) ────────────────────────────────────
+
+const tok = {
+  bgPage:  (d: boolean) => d ? '#0F172A' : '#F1F5F9',
+  bgCard:  (d: boolean) => d ? '#1E293B' : '#FFFFFF',
+  bgSub:   (d: boolean) => d ? '#0F172A' : '#F8FAFC',
+  bgInput: (d: boolean) => d ? '#0F172A' : '#FFFFFF',
+  bgMuted: (d: boolean) => d ? 'rgba(255,255,255,0.04)' : '#F3F4F6',
+  border:  (d: boolean) => d ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+  textPrimary:   (d: boolean) => d ? '#F8FAFC' : '#0F172A',
+  textSecondary: (d: boolean) => d ? '#94A3B8' : '#64748B',
+  textMuted:     (d: boolean) => d ? '#64748B' : '#94A3B8',
+};
+
+const SEVERITY_CONFIG = {
+  critical: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', label: 'Critical', icon: <AlertCircle size={16} /> },
+  warning:  { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', label: 'Warning',  icon: <AlertTriangle size={16} /> },
+  info:     { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  label: 'Info',     icon: <Info size={16} /> },
+};
+
+const STATUS_CONFIG = {
+  resolved:     { color: '#10B981', bg: 'rgba(16,185,129,0.12)', label: 'Resolved',    dot: '#10B981' },
+  acknowledged: { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', label: 'Acknowledged', dot: '#F59E0B' },
+  active:       { color: '#EF4444', bg: 'rgba(239,68,68,0.12)',  label: 'Active',       dot: '#EF4444' },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const cardStyle = (d: boolean, extra?: React.CSSProperties): React.CSSProperties => ({
+  background: tok.bgCard(d),
+  borderRadius: 14,
+  border: `1px solid ${tok.border(d)}`,
+  boxShadow: d ? '0 4px 20px rgba(0,0,0,0.35)' : '0 1px 6px rgba(0,0,0,0.06)',
+  overflow: 'hidden',
+  ...extra,
+});
+
+const inputStyle = (d: boolean, extra?: React.CSSProperties): React.CSSProperties => ({
+  padding: '8px 12px',
+  borderRadius: 8,
+  border: `1px solid ${tok.border(d)}`,
+  background: tok.bgInput(d),
+  color: tok.textPrimary(d),
+  fontSize: '0.875rem',
+  outline: 'none',
+  boxSizing: 'border-box' as const,
+  ...extra,
+});
+
+const btnBase: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  border: 'none',
+  borderRadius: 8,
+  fontWeight: 600,
+  fontSize: '0.875rem',
+  cursor: 'pointer',
+  transition: 'opacity 0.15s',
+  padding: '8px 14px',
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Alerts: React.FC = () => {
   const { isDark } = useTheme();
@@ -28,13 +97,14 @@ const Alerts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [alertSearch, setAlertSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchAlerts();
-    // Set up polling for real-time alerts
-    const interval = setInterval(fetchAlerts, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchAlerts, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -49,45 +119,56 @@ const Alerts: React.FC = () => {
     }
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'status-critical';
-      case 'warning': return 'status-warning';
-      case 'info': return 'status-info';
-      default: return 'status-offline';
-    }
-  };
-
-  const getSeverityIcon = (severity: string) => {
-    const iconSize = 24;
-    switch (severity) {
-      case 'critical': return <AlertCircle size={iconSize} />;
-      case 'warning': return <AlertTriangle size={iconSize} />;
-      case 'info': return <Info size={iconSize} />;
-      default: return <HelpCircle size={iconSize} />;
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchAlerts();
+    setRefreshing(false);
   };
 
   const filteredAlerts = alerts.filter(alert => {
     if (filterSeverity !== 'all' && alert.severity !== filterSeverity) return false;
+    if (filterStatus !== 'all') {
+      const resolvedOrStatus = alert.status === 'resolved' || alert.resolved;
+      if (filterStatus === 'resolved' && !resolvedOrStatus) return false;
+      if (filterStatus === 'active' && (resolvedOrStatus || alert.status === 'acknowledged')) return false;
+      if (filterStatus === 'acknowledged' && alert.status !== 'acknowledged') return false;
+    }
     if (alertSearch.trim()) {
       const q = alertSearch.toLowerCase();
-      return (
-        alert.message.toLowerCase().includes(q) ||
-        alert.device_id.toLowerCase().includes(q) ||
-        alert.type.toLowerCase().includes(q)
-      );
+      return alert.message.toLowerCase().includes(q) || alert.device_id.toLowerCase().includes(q) || alert.type.toLowerCase().includes(q);
     }
     return true;
   });
 
-  const unresolvedAlerts = alerts.filter(alert => !alert.resolved);
+  const unresolvedAlerts = alerts.filter(a => !a.resolved && a.status !== 'resolved');
+  const criticalCount  = alerts.filter(a => a.severity === 'critical').length;
+  const warningCount   = alerts.filter(a => a.severity === 'warning').length;
+  const infoCount      = alerts.filter(a => a.severity === 'info').length;
+  const resolvedCount  = alerts.filter(a => a.resolved || a.status === 'resolved').length;
+  const resolutionPct  = alerts.length > 0 ? Math.round((resolvedCount / alerts.length) * 100) : 0;
 
+  const bdr = tok.border(isDark);
+  const txt = tok.textPrimary(isDark);
+  const sub = tok.textSecondary(isDark);
+
+  const getAlertStatus = (alert: Alert) => {
+    if (alert.status === 'resolved' || alert.resolved) return 'resolved';
+    if (alert.status === 'acknowledged') return 'acknowledged';
+    return 'active';
+  };
+
+  // ── Loading / Error ──
   if (loading) {
     return (
-      <div className="admin-container">
-        <div className="admin-header" style={{ marginBottom: '2rem' }}>
-          <h1>System Alerts</h1>
+      <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bell size={26} color="white" />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: txt, letterSpacing: '-0.02em' }}>System Alerts</h1>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: sub }}>Loading alert data…</p>
+          </div>
         </div>
         <SkeletonLoader rows={8} height="24px" />
       </div>
@@ -95,440 +176,537 @@ const Alerts: React.FC = () => {
   }
 
   if (error) {
-    return <div className="error">Error: {error}</div>;
+    return (
+      <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '1rem 1.25rem', color: '#EF4444' }}>
+          <strong>Error loading alerts:</strong> {error}
+        </div>
+      </div>
+    );
   }
 
+  // ── Tabs config ──
+  const tabs: { key: 'overview' | 'alerts' | 'analytics'; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { key: 'overview',  label: 'Overview',   icon: <LayoutGrid size={15} /> },
+    { key: 'alerts',    label: 'All Alerts', icon: <Bell size={15} />, badge: filteredAlerts.length },
+    { key: 'analytics', label: 'Analytics',  icon: <BarChart3 size={15} /> },
+  ];
+
   return (
-    <div className="admin-container">
-      <div className="admin-header" style={{ marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-            <AlertTriangle size={32} strokeWidth={2} />
-            System Alerts
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
-            Monitor and track system alerts and notifications
-          </p>
+    <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+
+      {/* ── Page Header ── */}
+      <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14,
+            background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 6px 20px rgba(239,68,68,0.35)',
+          }}>
+            <Bell size={26} color="white" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: txt, letterSpacing: '-0.02em' }}>
+              System Alerts
+            </h1>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: sub }}>
+              Monitor and track alerts across your device fleet
+            </p>
+          </div>
         </div>
-        <div className="health-status">
-          <span className={`status-badge ${unresolvedAlerts.length === 0 ? 'status-badge-success' : unresolvedAlerts.some(a => a.severity === 'critical') ? 'status-badge-danger' : 'status-badge-warning'}`}>
-            {unresolvedAlerts.length} UNRESOLVED
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Live status badge */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px', borderRadius: 20, fontWeight: 700, fontSize: '0.8125rem',
+            background: unresolvedAlerts.length === 0
+              ? 'rgba(34,197,94,0.12)'
+              : unresolvedAlerts.some(a => a.severity === 'critical')
+                ? 'rgba(239,68,68,0.12)'
+                : 'rgba(245,158,11,0.12)',
+            color: unresolvedAlerts.length === 0
+              ? '#22C55E'
+              : unresolvedAlerts.some(a => a.severity === 'critical')
+                ? '#EF4444'
+                : '#F59E0B',
+            border: `1px solid ${unresolvedAlerts.length === 0 ? 'rgba(34,197,94,0.3)' : unresolvedAlerts.some(a => a.severity === 'critical') ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'currentColor' }} />
+            {unresolvedAlerts.length === 0 ? 'All Clear' : `${unresolvedAlerts.length} Unresolved`}
           </span>
+          <button onClick={handleRefresh} style={{
+            ...btnBase,
+            background: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9',
+            color: sub, border: `1px solid ${bdr}`,
+          }}>
+            <RefreshCw size={14} className={refreshing ? 'ota-spinner' : undefined} /> Refresh
+          </button>
         </div>
       </div>
 
-      {/* Modern Tab Navigation */}
-      <div className="tab-list alerts-tab-list" style={{ 
-        display: 'flex', 
-        gap: '0.5rem', 
-        marginBottom: '1.5rem',
-        borderBottom: isDark ? '2px solid #404040' : '2px solid var(--border-color)',
-        paddingBottom: '0'
-      }}>
-        <button
-          className="tab-btn"
-          onClick={() => setActiveTab('overview')}
-          style={{
-            background: activeTab === 'overview' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'overview' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'overview' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-          </svg>
-          Overview
-        </button>
-        <button
-          className="tab-btn"
-          onClick={() => setActiveTab('alerts')}
-          style={{
-            background: activeTab === 'alerts' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'alerts' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'alerts' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          All Alerts ({filteredAlerts.length})
-        </button>
-        <button
-          className="tab-btn"
-          onClick={() => setActiveTab('analytics')}
-          style={{
-            background: activeTab === 'analytics' ? 'var(--primary-gradient)' : 'transparent',
-            color: activeTab === 'analytics' ? (isDark ? '#e0e0e0' : 'var(--text-primary)') : 'var(--text-secondary)',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'analytics' ? '600' : '500',
-            borderRadius: '8px 8px 0 0',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 3v18h18"/>
-            <path d="M18 17V9"/>
-            <path d="M13 17V5"/>
-            <path d="M8 17v-3"/>
-          </svg>
-          Analytics
-        </button>
+      {/* ── KPI Row ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
+        {[
+          { label: 'Total',       value: alerts.length,    color: '#6366F1', icon: <Bell size={17} /> },
+          { label: 'Unresolved',  value: unresolvedAlerts.length, color: '#EF4444', icon: <AlertCircle size={17} /> },
+          { label: 'Critical',    value: criticalCount,    color: '#DC2626', icon: <AlertCircle size={17} /> },
+          { label: 'Warnings',    value: warningCount,     color: '#F59E0B', icon: <AlertTriangle size={17} /> },
+          { label: 'Info',        value: infoCount,        color: '#3B82F6', icon: <Info size={17} /> },
+          { label: 'Resolved',    value: resolvedCount,    color: '#10B981', icon: <CheckCircle2 size={17} /> },
+        ].map(kpi => (
+          <div key={kpi.label} style={{
+            ...cardStyle(isDark),
+            padding: '14px 16px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: `${kpi.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: kpi.color }}>
+                {kpi.icon}
+              </div>
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ── Tabs ── */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: '1.25rem', background: tok.bgMuted(isDark), padding: 5, borderRadius: 12, width: 'fit-content' }}>
+        {tabs.map(tab => {
+          const active = activeTab === tab.key;
+          return (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+              ...btnBase,
+              background: active ? (isDark ? '#1E293B' : '#FFFFFF') : 'transparent',
+              color: active ? txt : sub,
+              boxShadow: active ? '0 1px 6px rgba(0,0,0,0.15)' : 'none',
+              padding: '8px 16px',
+              border: 'none',
+            }}>
+              {tab.icon}
+              {tab.label}
+              {tab.badge !== undefined && (
+                <span style={{
+                  background: active ? '#6366F1' : tok.bgMuted(isDark),
+                  color: active ? 'white' : sub,
+                  fontSize: '0.7rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
+                }}>{tab.badge}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ══════════════════════ TAB: Overview ══════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="alerts-overview-grid">
-          <div className="admin-card">
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18"/>
-                <path d="M18 17V9"/>
-                <path d="M13 17V5"/>
-                <path d="M8 17v-3"/>
-              </svg>
-              Alert Summary
-            </h2>
-            <div className="responsive-grid-2" style={{ gap: '1rem' }}>
-              <div style={{ padding: '1rem', background: isDark ? '#242424' : 'var(--bg-secondary)', borderRadius: '8px' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Alerts</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : '#2c3e50' }}>{alerts.length}</p>
-              </div>
-              <div style={{ padding: '1rem', background: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#ef4444' }}>Unresolved</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#ef4444' }}>{unresolvedAlerts.length}</p>
-              </div>
-              <div style={{ padding: '1rem', background: isDark ? 'rgba(220, 38, 38, 0.15)' : 'rgba(220, 38, 38, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(220, 38, 38, 0.3)' : '1px solid rgba(220, 38, 38, 0.2)' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#dc2626' }}>Critical</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#dc2626' }}>{alerts.filter(a => a.severity === 'critical').length}</p>
-              </div>
-              <div style={{ padding: '1rem', background: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)', borderRadius: '8px', border: isDark ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(245, 158, 11, 0.2)' }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#f59e0b' }}>Warnings</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: '#f59e0b' }}>{alerts.filter(a => a.severity === 'warning').length}</p>
-              </div>
-            </div>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
 
-          <div className="admin-card">
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-              </svg>
-              Filter by Severity
-            </h2>
-            <div className="form-group">
-              <label>Severity Level</label>
-              <select
-                className="form-control"
-                value={filterSeverity}
-                onChange={(e) => setFilterSeverity(e.target.value)}
-                style={{
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: isDark ? '1px solid #404040' : '1px solid var(--border-color)',
-                  background: isDark ? '#1a1a1a' : 'var(--bg-secondary)',
-                  color: isDark ? '#e0e0e0' : '#2c3e50'
-                }}
-              >
-                <option value="all">All Severities</option>
-                <option value="critical">Critical</option>
-                <option value="warning">Warning</option>
-                <option value="info">Info</option>
-              </select>
+          {/* Summary card */}
+          <div style={cardStyle(isDark, { padding: 0 })}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={17} color="white" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Alert Summary</div>
+                <div style={{ fontSize: '0.8125rem', color: sub }}>Fleet health overview</div>
+              </div>
             </div>
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: isDark ? '#242424' : 'var(--bg-secondary)', borderRadius: '8px' }}>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Filtered Results</p>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: '700', color: isDark ? '#e0e0e0' : '#2c3e50' }}>{filteredAlerts.length} alerts</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'alerts' && (
-        <div className="admin-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              Active Alerts ({filteredAlerts.length})
-            </h2>
-            <input
-              type="text"
-              placeholder="Search by message, device, or type…"
-              value={alertSearch}
-              onChange={(e) => setAlertSearch(e.target.value)}
-              style={{ padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid #404040' : '1px solid var(--border-color)', background: isDark ? '#1a1a1a' : 'var(--bg-secondary)', color: isDark ? '#e0e0e0' : '#2c3e50', fontSize: '0.875rem', minWidth: 240 }}
-            />
-          </div>
-          {filteredAlerts.length === 0 ? (
-            <EmptyState
-              title="No alerts"
-              description="All systems are running smoothly."
-            />
-          ) : (
-            <div className="alerts-list">
-              {filteredAlerts.map((alert) => (
-                <div key={alert.id} className={`alert-item ${getSeverityColor(alert.severity)}`} style={{
-                  border: isDark ? '1px solid #404040' : '1px solid var(--border-color)',
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  marginBottom: '1rem',
-                  background: isDark ? '#242424' : 'var(--bg-secondary)',
-                  transition: 'all 0.2s',
-                  borderLeft: `4px solid ${alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6'}`
-                }}>
-                  <div className="alert-header" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    marginBottom: '0.75rem',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span className="alert-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>{getSeverityIcon(alert.severity)}</span>
-                    <span className="alert-type" style={{
-                      background: isDark ? '#1a1a1a' : 'var(--bg-tertiary)',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      color: isDark ? '#e0e0e0' : '#2c3e50'
-                    }}>{alert.type.replace(/_/g, ' ').toUpperCase()}</span>
-                    {alert.fault_code && (
-                      <span style={{
-                        fontFamily: 'monospace',
-                        fontSize: '0.8rem',
-                        fontWeight: '700',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '4px',
-                        background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)',
-                        color: isDark ? '#a5b4fc' : '#4f46e5',
-                        border: isDark ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(99,102,241,0.3)',
-                        letterSpacing: '0.03em'
-                      }}>{alert.fault_code}</span>
-                    )}
-                    <span className="alert-device" style={{
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.85rem'
-                    }}>Device: {alert.device_id}</span>
-                    <span className="alert-time" style={{
-                      marginLeft: 'auto',
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.8rem'
-                    }}>{new Date(alert.timestamp).toLocaleString()}</span>
-                  </div>
-                  <div className="alert-message" style={{
-                    color: 'var(--text-primary)',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.95rem'
-                  }}>{alert.message}</div>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginTop: '0.75rem',
-                    paddingTop: '0.75rem',
-                    borderTop: isDark ? '1px solid #404040' : '1px solid var(--border-color)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div className="alert-status" style={{
-                        padding: '0.25rem 0.75rem',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: '600',
-                        background: (alert.status === 'resolved' || alert.resolved)
-                          ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)')
-                          : alert.status === 'acknowledged'
-                          ? (isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)')
-                          : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
-                        color: (alert.status === 'resolved' || alert.resolved)
-                          ? '#10b981'
-                          : alert.status === 'acknowledged'
-                          ? '#f59e0b'
-                          : '#ef4444'
-                      }}>
-                        {(alert.status === 'resolved' || alert.resolved)
-                          ? '✓ Resolved'
-                          : alert.status === 'acknowledged'
-                          ? '◐ Acknowledged'
-                          : '● Active'}
-                      </div>
-                      {alert.generated === false && (
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '4px',
-                          background: isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.1)',
-                          color: isDark ? '#94a3b8' : '#64748b',
-                          border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(100,116,139,0.2)'
-                        }}>Fault</span>
-                      )}
-                    </div>
-                    <AuditTrail
-                      createdBy={alert.created_by_username}
-                      createdAt={alert.created_at}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'analytics' && (
-        <div className="alerts-overview-grid">
-          <div className="admin-card">
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-              By Severity
-            </h2>
-            <div className="responsive-grid-auto-fit" style={{ gap: '1rem' }}>
+            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { severity: 'critical', count: alerts.filter(a => a.severity === 'critical').length, color: '#ef4444', label: 'Critical' },
-                { severity: 'warning', count: alerts.filter(a => a.severity === 'warning').length, color: '#f59e0b', label: 'Warnings' },
-                { severity: 'info', count: alerts.filter(a => a.severity === 'info').length, color: '#3b82f6', label: 'Info' }
+                { label: 'Total Alerts', value: alerts.length, color: '#6366F1' },
+                { label: 'Unresolved',   value: unresolvedAlerts.length, color: '#EF4444' },
+                { label: 'Critical',     value: criticalCount, color: '#DC2626' },
+                { label: 'Warnings',     value: warningCount,  color: '#F59E0B' },
               ].map(item => (
-                <div key={item.severity} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '1rem',
-                  background: isDark ? `${item.color}20` : `${item.color}15`,
-                  borderRadius: '8px',
-                  border: `1px solid ${item.color}40`
+                <div key={item.label} style={{
+                  background: `${item.color}0f`,
+                  border: `1px solid ${item.color}2a`,
+                  borderRadius: 10, padding: '12px 14px',
                 }}>
-                  <span style={{ fontWeight: '600', color: item.color }}>{item.label}</span>
-                  <span style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'monospace', color: item.color }}>{item.count}</span>
+                  <div style={{ fontSize: '0.75rem', color: item.color, fontWeight: 600, marginBottom: 6 }}>{item.label}</div>
+                  <div style={{ fontSize: '2rem', fontWeight: 800, color: item.color, lineHeight: 1 }}>{item.value}</div>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="admin-card">
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-              By Status
-            </h2>
-            <div className="responsive-grid-auto-fit" style={{ gap: '1rem' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem',
-                background: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
-                borderRadius: '8px',
-                border: isDark ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)'
-              }}>
-                <span style={{ fontWeight: '600', color: '#10b981' }}>Resolved</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'monospace', color: '#10b981' }}>{alerts.filter(a => a.resolved).length}</span>
+            {/* Resolution progress */}
+            <div style={{ padding: '0 20px 18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub }}>Resolution Rate</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#10B981' }}>{resolutionPct}%</span>
               </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem',
-                background: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)',
-                borderRadius: '8px',
-                border: isDark ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(239, 68, 68, 0.3)'
-              }}>
-                <span style={{ fontWeight: '600', color: '#ef4444' }}>Unresolved</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'monospace', color: '#ef4444' }}>{unresolvedAlerts.length}</span>
+              <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
+                <div style={{ width: `${resolutionPct}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6, transition: 'width 0.5s' }} />
               </div>
-              <div style={{
-                padding: '1rem',
-                background: isDark ? '#242424' : 'var(--bg-secondary)',
-                borderRadius: '8px',
-                textAlign: 'center'
-              }}>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resolution Rate</p>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '2rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#e0e0e0' : '#2c3e50' }}>
-                  {alerts.length > 0 ? Math.round((alerts.filter(a => a.resolved).length / alerts.length) * 100) : 0}%
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: '0.75rem', color: sub }}>
+                <span>{resolvedCount} resolved</span>
+                <span>{unresolvedAlerts.length} pending</span>
               </div>
             </div>
           </div>
 
-          <div className="admin-card" style={{ gridColumn: 'span 2' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2"/>
-                <path d="M8 21h8M12 17v4"/>
-              </svg>
-              Recent Critical Alerts
-            </h2>
-            {alerts.filter(a => a.severity === 'critical').length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                <p>No critical alerts - system is stable</p>
+          {/* Filter card */}
+          <div style={cardStyle(isDark, { padding: 0 })}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Shield size={17} color="white" />
               </div>
-            ) : (
-              <div className="responsive-grid-auto-fit" style={{ gap: '0.75rem' }}>
-                {alerts.filter(a => a.severity === 'critical').slice(0, 5).map(alert => (
-                  <div key={alert.id} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 1rem',
-                    background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-                    borderRadius: '8px',
-                    borderLeft: '4px solid #ef4444'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ color: '#ef4444', fontSize: '0.9rem' }}>{alert.type.replace('_', ' ').toUpperCase()}</strong>
-                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{alert.message}</p>
-                    </div>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      background: alert.resolved ? (isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)') : (isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'),
-                      color: alert.resolved ? '#10b981' : '#ef4444',
-                      whiteSpace: 'nowrap',
-                      marginLeft: '1rem'
+              <div>
+                <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Quick Filters</div>
+                <div style={{ fontSize: '0.8125rem', color: sub }}>Narrow down by severity or status</div>
+              </div>
+            </div>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Severity</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {['all', 'critical', 'warning', 'info'].map(s => {
+                    const active = filterSeverity === s;
+                    const cfg = s !== 'all' ? SEVERITY_CONFIG[s as keyof typeof SEVERITY_CONFIG] : null;
+                    return (
+                      <button key={s} onClick={() => setFilterSeverity(s)} style={{
+                        ...btnBase, padding: '5px 12px', fontSize: '0.8125rem',
+                        background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
+                        color: active ? (cfg ? cfg.color : '#818CF8') : sub,
+                        border: `1px solid ${active ? (cfg ? cfg.border : 'rgba(99,102,241,0.35)') : bdr}`,
+                      }}>
+                        {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {['all', 'active', 'acknowledged', 'resolved'].map(s => {
+                    const active = filterStatus === s;
+                    const cfg = s !== 'all' ? STATUS_CONFIG[s as keyof typeof STATUS_CONFIG] : null;
+                    return (
+                      <button key={s} onClick={() => setFilterStatus(s)} style={{
+                        ...btnBase, padding: '5px 12px', fontSize: '0.8125rem',
+                        background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
+                        color: active ? (cfg ? cfg.color : '#818CF8') : sub,
+                        border: `1px solid ${active ? (cfg ? `${cfg.dot}44` : 'rgba(99,102,241,0.35)') : bdr}`,
+                      }}>
+                        {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ marginTop: 4, padding: '10px 14px', background: tok.bgMuted(isDark), borderRadius: 8 }}>
+                <span style={{ fontSize: '0.8125rem', color: sub }}>Showing </span>
+                <span style={{ fontWeight: 700, color: txt }}>{filteredAlerts.length}</span>
+                <span style={{ fontSize: '0.8125rem', color: sub }}> of {alerts.length} alerts</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent critical */}
+          <div style={{ ...cardStyle(isDark, { padding: 0 }), gridColumn: 'span 2' } as React.CSSProperties}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #EF4444, #B91C1C)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AlertCircle size={17} color="white" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Recent Critical Alerts</div>
+                <div style={{ fontSize: '0.8125rem', color: sub }}>Latest critical issues requiring attention</div>
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                {criticalCount} critical
+              </span>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              {criticalCount === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: sub }}>
+                  <CheckCircle2 size={36} style={{ marginBottom: 10, color: '#22C55E', opacity: 0.6 }} />
+                  <div style={{ fontWeight: 600 }}>No critical alerts — system is stable</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {alerts.filter(a => a.severity === 'critical').slice(0, 6).map(alert => (
+                    <div key={alert.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: 'rgba(239,68,68,0.06)',
+                      borderLeft: '3px solid #EF4444',
                     }}>
-                      {alert.resolved ? 'Resolved' : 'Active'}
-                    </span>
-                  </div>
-                ))}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {alert.type.replace(/_/g, ' ')}
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {alert.message}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', padding: '3px 10px', borderRadius: 20,
+                        background: (alert.resolved || alert.status === 'resolved') ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                        color: (alert.resolved || alert.status === 'resolved') ? '#10B981' : '#EF4444',
+                      }}>
+                        {(alert.resolved || alert.status === 'resolved') ? 'Resolved' : 'Active'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ TAB: Alerts List ══════════════════════ */}
+      {activeTab === 'alerts' && (
+        <div style={cardStyle(isDark, { padding: 0 })}>
+          {/* Toolbar */}
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bell size={17} color="white" />
+              </div>
+              <span style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>
+                Alerts ({filteredAlerts.length})
+              </span>
+            </div>
+            {/* Severity pills */}
+            <div style={{ display: 'flex', gap: 5 }}>
+              {['all', 'critical', 'warning', 'info'].map(s => {
+                const active = filterSeverity === s;
+                const cfg = s !== 'all' ? SEVERITY_CONFIG[s as keyof typeof SEVERITY_CONFIG] : null;
+                return (
+                  <button key={s} onClick={() => setFilterSeverity(s)} style={{
+                    ...btnBase, padding: '4px 10px', fontSize: '0.75rem',
+                    background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
+                    color: active ? (cfg ? cfg.color : '#818CF8') : sub,
+                    border: `1px solid ${active ? (cfg ? cfg.border : 'rgba(99,102,241,0.35)') : bdr}`,
+                  }}>
+                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Search */}
+            <div style={{ position: 'relative' }}>
+              <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: sub }} />
+              <input placeholder="Search message, device, type…" value={alertSearch} onChange={e => setAlertSearch(e.target.value)}
+                style={{ ...inputStyle(isDark, { paddingLeft: 28, width: 240 }) }} />
+            </div>
+          </div>
+
+          {/* Alert list */}
+          <div style={{ padding: '16px 20px' }}>
+            {filteredAlerts.length === 0 ? (
+              <EmptyState title="No alerts" description="No alerts match your current filters." />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {filteredAlerts.map(alert => {
+                  const sevCfg = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.info;
+                  const alertStatus = getAlertStatus(alert);
+                  const stsCfg = STATUS_CONFIG[alertStatus];
+                  return (
+                    <div key={alert.id} style={{
+                      borderRadius: 12,
+                      border: `1px solid ${bdr}`,
+                      borderLeft: `3px solid ${sevCfg.color}`,
+                      background: tok.bgSub(isDark),
+                      padding: '14px 16px',
+                      transition: 'background 0.15s',
+                    }}>
+                      {/* Header row */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                        {/* Severity icon badge */}
+                        <div style={{
+                          width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                          background: sevCfg.bg, color: sevCfg.color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {sevCfg.icon}
+                        </div>
+                        {/* Type */}
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 6,
+                          background: sevCfg.bg, color: sevCfg.color,
+                          fontSize: '0.75rem', fontWeight: 700,
+                          letterSpacing: '0.05em', textTransform: 'uppercase',
+                        }}>
+                          {alert.type.replace(/_/g, ' ')}
+                        </span>
+                        {/* Fault code */}
+                        {alert.fault_code && (
+                          <code style={{
+                            fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700,
+                            padding: '2px 8px', borderRadius: 5,
+                            background: 'rgba(99,102,241,0.12)', color: '#818CF8',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                          }}>{alert.fault_code}</code>
+                        )}
+                        {/* Device */}
+                        <span style={{ fontSize: '0.8125rem', color: sub, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={12} />
+                          {alert.device_id}
+                        </span>
+                        {/* Fault tag */}
+                        {alert.generated === false && (
+                          <span style={{
+                            fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                            background: 'rgba(148,163,184,0.1)', color: sub, border: `1px solid ${bdr}`,
+                          }}>Fault</span>
+                        )}
+                        {/* Timestamp - push right */}
+                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: tok.textMuted(isDark), whiteSpace: 'nowrap' }}>
+                          {new Date(alert.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Message */}
+                      <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.55, paddingLeft: 40 }}>
+                        {alert.message}
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${bdr}`, flexWrap: 'wrap', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {/* Status badge */}
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
+                            background: stsCfg.bg, color: stsCfg.color,
+                          }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: stsCfg.dot }} />
+                            {stsCfg.label}
+                          </span>
+                          {/* Severity badge */}
+                          <span style={{
+                            padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
+                            background: sevCfg.bg, color: sevCfg.color,
+                          }}>
+                            {sevCfg.label}
+                          </span>
+                        </div>
+                        <AuditTrail createdBy={alert.created_by_username} createdAt={alert.created_at} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════ TAB: Analytics ══════════════════════ */}
+      {activeTab === 'analytics' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+
+          {/* By Severity */}
+          <div style={cardStyle(isDark, { padding: 0 })}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AlertTriangle size={17} color="white" />
+              </div>
+              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>By Severity</div>
+            </div>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: 'Critical', count: criticalCount, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
+                { label: 'Warning',  count: warningCount,  color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+                { label: 'Info',     count: infoCount,     color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
+              ].map(item => (
+                <div key={item.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: item.color }}>{item.label}</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: item.color, fontFamily: 'monospace' }}>{item.count}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
+                    <div style={{
+                      width: alerts.length > 0 ? `${Math.round((item.count / alerts.length) * 100)}%` : '0%',
+                      height: '100%', background: item.color, borderRadius: 6, transition: 'width 0.5s',
+                    }} />
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: sub, marginTop: 3 }}>
+                    {alerts.length > 0 ? Math.round((item.count / alerts.length) * 100) : 0}% of total
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* By Status */}
+          <div style={cardStyle(isDark, { padding: 0 })}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle2 size={17} color="white" />
+              </div>
+              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>By Status</div>
+            </div>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: 'Resolved',     count: resolvedCount, color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
+                { label: 'Active',       count: alerts.filter(a => ((!a.resolved && a.status === 'active') || (!a.status && !a.resolved))).length, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
+                { label: 'Acknowledged', count: alerts.filter(a => a.status === 'acknowledged').length, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+              ].map(item => (
+                <div key={item.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: item.color }}>{item.label}</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: item.color, fontFamily: 'monospace' }}>{item.count}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
+                    <div style={{
+                      width: alerts.length > 0 ? `${Math.round((item.count / alerts.length) * 100)}%` : '0%',
+                      height: '100%', background: item.color, borderRadius: 6, transition: 'width 0.5s',
+                    }} />
+                  </div>
+                </div>
+              ))}
+              {/* Big resolution rate */}
+              <div style={{
+                marginTop: 8, padding: '14px', borderRadius: 10,
+                background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: '0.875rem', color: sub }}>Resolution Rate</span>
+                <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#22C55E', fontFamily: 'monospace' }}>{resolutionPct}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Device breakdown */}
+          <div style={cardStyle(isDark, { padding: 0 })}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BarChart3 size={17} color="white" />
+              </div>
+              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Top Devices</div>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              {(() => {
+                const deviceCounts = alerts.reduce((acc: Record<string, number>, a) => {
+                  acc[a.device_id] = (acc[a.device_id] || 0) + 1;
+                  return acc;
+                }, {});
+                const sorted = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+                const max = sorted[0]?.[1] || 1;
+                return sorted.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: sub, padding: '2rem' }}>No device data</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {sorted.map(([deviceId, count]) => (
+                      <div key={deviceId}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <code style={{ fontSize: '0.8125rem', fontFamily: 'monospace', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{deviceId}</code>
+                          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#818CF8', fontFamily: 'monospace' }}>{count}</span>
+                        </div>
+                        <div style={{ height: 4, borderRadius: 4, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
+                          <div style={{ width: `${(count / max) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #6366F1, #8B5CF6)', borderRadius: 4, transition: 'width 0.5s' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

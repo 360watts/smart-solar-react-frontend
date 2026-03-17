@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, Activity, Database, Wifi, CheckCircle, XCircle, RotateCcw, ScrollText, Sun, Zap, Server } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
 import AuditTrail from './AuditTrail';
-import SiteDataPanel from './SiteDataPanel';
 import { EmptyState } from './EmptyState';
 import { SkeletonDeviceList } from './SkeletonLoader';
 import { AccessibleModal } from './AccessibleModal';
@@ -60,28 +59,6 @@ interface Preset {
   };
 }
 
-interface SystemHealthData {
-  total_devices: number;
-  active_devices: number;
-  total_telemetry_points: number;
-  uptime_seconds: number;
-  database_status: string;
-  http_status: string;
-  overall_health: string;
-}
-
-
-interface TelemetryBufferStats {
-  total: number;
-  pending_dynamo: number;
-  pending_s3: number;
-  failed_both: number;
-  success_rate: number;
-  oldest_pending_age_seconds: number;
-  status: string;
-  avg_ingestion_latency_s: number | null;
-  max_ingestion_latency_s: number | null;
-}
 
 interface SolarSite {
   id: number;
@@ -136,9 +113,6 @@ const Devices: React.FC = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
-  const [health, setHealth] = useState<SystemHealthData | null>(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-  const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -222,18 +196,6 @@ const Devices: React.FC = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
-    setHealthLoading(true);
-    const [healthData, bufferData] = await Promise.all([
-      apiService.getSystemHealth().catch((e) => { console.error('[health]', e?.message); return null; }),
-      apiService.getTelemetryBufferStats().catch((e) => { console.error('[buffer]', e?.message); return null; }),
-    ]);
-
-    setHealth(healthData || null);
-    setBufferStats(bufferData);
-    setHealthLoading(false);
-
-  };
 
   const fetchDeviceLogs = useCallback(async (deviceId: number) => {
     setLogsLoading(true);
@@ -277,7 +239,6 @@ const Devices: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchPresets();
-    fetchDashboardData();
   }, []);
 
   useEffect(() => {
@@ -808,137 +769,6 @@ const Devices: React.FC = () => {
           </div>
         </div>
 
-        {/* ── System Health KPI Cards ── */}
-        <div style={{ marginTop: '32px' }}>
-          {healthLoading && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="card" style={{ padding: '20px', minHeight: 120, opacity: 0.5 }}>
-                  <div style={{ height: 12, width: '60%', borderRadius: 6, background: isDark ? '#333' : '#e5e7eb', marginBottom: 8 }} />
-                  <div style={{ height: 28, width: '40%', borderRadius: 6, background: isDark ? '#333' : '#e5e7eb' }} />
-                </div>
-              ))}
-            </div>
-          )}
-          {!healthLoading && !health && (
-            <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <XCircle size={18} color="#ef4444" />
-              <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load health data.</span>
-              <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem' }} onClick={fetchDashboardData}>Retry</button>
-            </div>
-          )}
-          {health && (() => {
-            const deviceRatio = health.active_devices / Math.max(health.total_devices, 1);
-            const httpOk = health.http_status?.toLowerCase() === 'connected' || health.http_status?.toLowerCase() === 'ok';
-            const overallOk = health.overall_health?.toLowerCase() === 'healthy' || health.overall_health?.toLowerCase() === 'ok';
-            const kpiCards = [
-              {
-                label: 'Active Devices',
-                value: `${health.active_devices}/${health.total_devices}`,
-                sub: `${(deviceRatio * 100).toFixed(0)}% online`,
-                icon: <Activity size={22} />,
-                status: deviceRatio >= 0.9 ? 'ok' : deviceRatio >= 0.7 ? 'warn' : 'err',
-              },
-              {
-                label: 'Telemetry Points',
-                value: health.total_telemetry_points.toLocaleString(),
-                sub: 'Total ingested',
-                icon: <Database size={22} />,
-                status: 'ok' as const,
-              },
-              {
-                label: 'HTTP API',
-                value: health.http_status ?? 'N/A',
-                sub: 'API connectivity',
-                icon: <Wifi size={22} />,
-                status: httpOk ? 'ok' : 'err',
-              },
-              {
-                label: 'System Health',
-                value: health.overall_health ?? 'N/A',
-                sub: 'Overall status',
-                icon: <Server size={22} />,
-                status: overallOk ? 'ok' : 'warn',
-              },
-            ] as const;
-            const statusStyles = {
-              ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
-              warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
-              err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
-            };
-            const statusIcons = {
-              ok:   <CheckCircle size={13} />,
-              warn: <AlertTriangle size={13} />,
-              err:  <XCircle size={13} />,
-            };
-            const statusLabels = { ok: 'Healthy', warn: 'Warning', err: 'Error' };
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                {kpiCards.map(({ label, value, sub, icon, status }) => {
-                  const s = statusStyles[status];
-                  return (
-                    <div key={label} className="card" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-                      {/* decorative circles */}
-                      <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
-                      <span style={{ position: 'absolute', top: -8, right: -8, width: 32, height: 32, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                          {icon}
-                        </div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                          {statusIcons[status]}
-                          {statusLabels[status]}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: 4, fontWeight: 500 }}>{label}</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? '#f1f5f9' : '#0f172a', marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
-                      <div style={{ fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8' }}>{sub}</div>
-                      <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* ── Telemetry Buffer ── */}
-        {bufferStats && (
-          <div className="card" style={{ marginTop: '16px' }}>
-            <div className="card-header" style={{ paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Zap size={16} style={{ color: bufferStats.status === 'healthy' ? '#10b981' : bufferStats.status === 'warning' ? '#f59e0b' : '#ef4444' }} />
-                <h2 style={{ margin: 0 }}>Telemetry Buffer</h2>
-              </div>
-              <span style={{
-                fontSize: '0.72rem', padding: '2px 10px', borderRadius: '999px', fontWeight: 700, letterSpacing: '0.05em',
-                background: bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.12)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
-                color: bufferStats.status === 'healthy' ? '#10b981' : bufferStats.status === 'warning' ? '#f59e0b' : '#ef4444',
-                border: `1px solid ${bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.25)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.25)'}`,
-              }}>
-                {bufferStats.status.toUpperCase()}
-              </span>
-            </div>
-            <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-              {[
-                { label: 'Total Records', value: bufferStats.total.toLocaleString() },
-                { label: 'Pending DynamoDB', value: String(bufferStats.pending_dynamo) },
-                { label: 'Pending S3', value: String(bufferStats.pending_s3) },
-                { label: 'Failed Both', value: String(bufferStats.failed_both) },
-                { label: 'Success Rate', value: `${bufferStats.success_rate}%` },
-                { label: 'Oldest Pending', value: bufferStats.oldest_pending_age_seconds === 0 ? 'None' : bufferStats.oldest_pending_age_seconds < 3600 ? `${Math.floor(bufferStats.oldest_pending_age_seconds / 60)}m` : `${Math.floor(bufferStats.oldest_pending_age_seconds / 3600)}h ${Math.floor((bufferStats.oldest_pending_age_seconds % 3600) / 60)}m` },
-                { label: 'Avg Latency (24h)', value: bufferStats.avg_ingestion_latency_s === null ? '—' : bufferStats.avg_ingestion_latency_s < 60 ? `${bufferStats.avg_ingestion_latency_s}s` : `${Math.floor(bufferStats.avg_ingestion_latency_s / 60)}m ${Math.round(bufferStats.avg_ingestion_latency_s % 60)}s` },
-                { label: 'Max Latency (24h)', value: bufferStats.max_ingestion_latency_s === null ? '—' : bufferStats.max_ingestion_latency_s < 60 ? `${bufferStats.max_ingestion_latency_s}s` : `${Math.floor(bufferStats.max_ingestion_latency_s / 60)}m ${Math.round(bufferStats.max_ingestion_latency_s % 60)}s` },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)' }}>
-                  <div style={{ fontSize: '0.7rem', color: isDark ? '#64748b' : '#94a3b8', fontWeight: 500, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b' }}>{value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── Site Configuration ── */}
         <div className="card" style={{ marginTop: '32px' }}>
           <div className="card-header">
@@ -1010,13 +840,6 @@ const Devices: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* ── Live Site Intelligence (DynamoDB) ── */}
-        {siteDetails && (
-          <div style={{ marginTop: '48px' }}>
-            <SiteDataPanel siteId={siteDetails.site_id} autoRefresh />
-          </div>
-        )}
 
         {/* ── Device Logs ── */}
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
