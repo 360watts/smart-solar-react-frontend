@@ -1160,6 +1160,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [secondsSinceUpdate, setSecondsSinceUpdate] = useState<number>(0);
+  const isInitialLoad = useRef(true);
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
@@ -1206,7 +1208,35 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
   const [vsActualZoomStart, setVsActualZoomStart] = useState<string | null>(null);
   const [vsActualZoomEnd, setVsActualZoomEnd] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async () => {
+  // ── Fetch latest telemetry only (silent, no loading flash) ──────────────────
+  const fetchLatestTelemetry = useCallback(async () => {
+    try {
+      const now = new Date();
+      let telemetryParams: any = {};
+      if (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
+      else if (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
+      else if (dateRange === '7d') telemetryParams = { days: 7 };
+      else if (dateRange === '30d') telemetryParams = { days: 30 };
+
+      const tel = await apiService.getSiteTelemetry(siteId, telemetryParams);
+      if (Array.isArray(tel) && tel.length > 0) {
+        setTelemetry(prev => {
+          // Merge: keep existing, append any new readings by timestamp
+          const tsSet = new Set(prev.map((r: any) => r.timestamp));
+          const newer = tel.filter((r: any) => !tsSet.has(r.timestamp));
+          if (newer.length === 0) return prev; // nothing new
+          return [...prev, ...newer].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
+        });
+        setLastUpdated(new Date());
+        setSecondsSinceUpdate(0);
+      }
+    } catch {
+      // silent — don't show error on background poll
+    }
+  }, [siteId, dateRange, debouncedStart, debouncedEnd]);
+
+  const fetchAll = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
       const now = new Date();
       const forecastStart = now.toISOString().split('T')[0] + 'T00:00:00Z';
@@ -1222,7 +1252,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       let historyParams: { start_date: string; end_date: string } | null = null;
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-      
+
       if (dateRange === '7d') {
         historyParams = { start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString() };
       } else if (dateRange === '30d') {
@@ -1239,7 +1269,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
         apiService.getSiteWeather(siteId),
         historyParams ? apiService.getSiteHistory(siteId, historyParams) : Promise.resolve(null),
       ] as Promise<any>[]);
-      
+
       const [tel, fcst, wth, hist] = results;
 
       let merged: any[] = Array.isArray(tel) ? tel : [];
@@ -1253,21 +1283,41 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
       setForecast(Array.isArray(fcst) ? fcst : []);
       setWeather(wth || null);
       setLastUpdated(new Date());
+      setSecondsSinceUpdate(0);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load site data');
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
+  // Initial load + full refresh every 5 minutes
   useEffect(() => {
+    isInitialLoad.current = true;
     setLoading(true);
-    fetchAll();
+    fetchAll(false);
     if (!autoRefresh) return;
-    const id = setInterval(fetchAll, 60_000);
-    return () => clearInterval(id);
+    const fullId = setInterval(() => fetchAll(false), 5 * 60_000);
+    return () => clearInterval(fullId);
   }, [fetchAll, autoRefresh]);
+
+  // Fast telemetry poll every 30 seconds (only when autoRefresh and not initial load)
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const fastId = setInterval(fetchLatestTelemetry, 30_000);
+    return () => clearInterval(fastId);
+  }, [fetchLatestTelemetry, autoRefresh]);
+
+  // Tick counter: "X seconds ago"
+  useEffect(() => {
+    if (!lastUpdated) return;
+    const tick = setInterval(() => {
+      setSecondsSinceUpdate(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [lastUpdated]);
 
   useEffect(() => {
     setZoomStart(null);
@@ -1771,15 +1821,25 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
             )}
           </div>
           {lastUpdated && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
-              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })} IST
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+              <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: secondsSinceUpdate < 60 ? '#22c55e' : '#f59e0b',
+                boxShadow: secondsSinceUpdate < 60 ? '0 0 6px rgba(34,197,94,0.7)' : 'none',
+                animation: secondsSinceUpdate < 60 ? 'pulse 2s ease-in-out infinite' : 'none',
+              }} />
+              {secondsSinceUpdate < 60
+                ? `${secondsSinceUpdate}s ago`
+                : secondsSinceUpdate < 3600
+                ? `${Math.floor(secondsSinceUpdate / 60)}m ago`
+                : lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }) + ' IST'}
             </span>
           )}
           <motion.button
             whileHover={{ scale: 1.05, rotate: 180 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300 }}
-            onClick={() => { setLoading(true); fetchAll(); }}
+            onClick={() => { fetchAll(true); }}
             style={{
               background: 'none',
               border: '1px solid rgba(0, 166, 62, 0.3)',

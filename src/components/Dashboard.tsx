@@ -86,6 +86,8 @@ const Dashboard: React.FC = () => {
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
+  const sitesInitialized = useRef(false);
+
   const fetchSites = useCallback(async () => {
     try {
       setSitesError(null);
@@ -95,14 +97,17 @@ const Dashboard: React.FC = () => {
         setSelectedSiteId(data[0].site_id);
       }
     } catch {
-      setSitesError('Failed to load sites');
+      if (!sitesInitialized.current) setSitesError('Failed to load sites');
     } finally {
       setSitesLoading(false);
+      sitesInitialized.current = true;
     }
   }, [selectedSiteId]);
 
+  const healthInitialized = useRef(false);
+
   const fetchHealth = useCallback(async () => {
-    setHealthLoading(true);
+    if (!healthInitialized.current) setHealthLoading(true);
     const [healthData, bufferData] = await Promise.all([
       apiService.getSystemHealth().catch(() => null),
       apiService.getTelemetryBufferStats().catch(() => null),
@@ -110,11 +115,18 @@ const Dashboard: React.FC = () => {
     setHealth(healthData ?? null);
     setBufferStats(bufferData ?? null);
     setHealthLoading(false);
+    healthInitialized.current = true;
   }, []);
 
   useEffect(() => {
     fetchSites();
     fetchHealth();
+    // Poll health + site status every 30 seconds silently
+    const id = setInterval(() => {
+      fetchSites();
+      fetchHealth();
+    }, 30_000);
+    return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus search on open
