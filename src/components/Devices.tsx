@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
 import AuditTrail from './AuditTrail';
+import SiteDataPanel from './SiteDataPanel';
 import { EmptyState } from './EmptyState';
 import { SkeletonDeviceList } from './SkeletonLoader';
 import { AccessibleModal } from './AccessibleModal';
@@ -602,6 +603,115 @@ const Devices: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* ── Device KPI Cards ── */}
+        {(() => {
+          const statusPalette = {
+            ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
+            warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
+            err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
+          };
+
+          const fmtHeartbeat = (ts: string | undefined): { display: string; sub: string; status: 'ok' | 'warn' | 'err' } => {
+            if (!ts) return { display: 'Never', sub: '—', status: 'err' };
+            const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+            const sub = new Date(ts).toLocaleString();
+            if (diff < 300) return { display: `${Math.floor(diff / 60)}m ago`, sub, status: 'ok' };
+            if (diff < 3600) return { display: `${Math.floor(diff / 60)}m ago`, sub, status: 'warn' };
+            if (diff < 86400) return { display: `${Math.floor(diff / 3600)}h ago`, sub, status: 'warn' };
+            return { display: `${Math.floor(diff / 86400)}d ago`, sub, status: 'err' };
+          };
+
+          const heartbeat = fmtHeartbeat(selectedDevice.last_heartbeat);
+
+          const configStatus = !selectedDevice.config_version
+            ? { display: 'Not Configured', sub: 'No preset assigned', status: 'err' as const }
+            : selectedDevice.pending_config_update
+              ? { display: 'Pending', sub: `Preset: ${selectedDevice.config_version}`, status: 'warn' as const }
+              : { display: 'Synced', sub: `v${selectedDevice.config_ack_ver ?? '—'} · ${selectedDevice.config_version}`, status: 'ok' as const };
+
+          const deviceOnline = !!selectedDevice.is_online;
+          const textMain = isDark ? '#f1f5f9' : '#0f172a';
+          const textMute = isDark ? '#64748b' : '#94a3b8';
+          const textSub  = isDark ? '#94a3b8' : '#475569';
+
+          const kpiCards = [
+            {
+              label: 'Device Status',
+              value: deviceOnline ? 'Online' : 'Offline',
+              sub: selectedDevice.model || 'IoT Gateway',
+              icon: deviceOnline ? <Wifi size={22} /> : <WifiOff size={22} />,
+              status: (deviceOnline ? 'ok' : 'err') as keyof typeof statusPalette,
+            },
+            {
+              label: 'Last Heartbeat',
+              value: heartbeat.display,
+              sub: heartbeat.sub,
+              icon: <Clock size={22} />,
+              status: heartbeat.status,
+            },
+            {
+              label: 'Config Sync',
+              value: configStatus.display,
+              sub: configStatus.sub,
+              icon: <Settings size={22} />,
+              status: configStatus.status,
+            },
+            {
+              label: 'Linked Site',
+              value: siteDetails?.display_name || 'No Site',
+              sub: siteDetails?.site_id || 'Not linked',
+              icon: <MapPin size={22} />,
+              status: (siteDetails ? 'ok' : 'err') as keyof typeof statusPalette,
+            },
+          ];
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+              {kpiCards.map(({ label, value, sub, icon, status }) => {
+                const s = statusPalette[status];
+                return (
+                  <div key={label} style={{
+                    padding: 20, borderRadius: 14, position: 'relative', overflow: 'hidden', cursor: 'default',
+                    background: isDark ? '#0f172a' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)'}`,
+                    boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+                    transition: 'transform 150ms, box-shadow 150ms',
+                  }}>
+                    <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                        {icon}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: textSub, marginBottom: 4, fontWeight: 500 }}>{label}</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
+                    <div style={{ fontSize: '0.72rem', color: textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
+                    <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* ── Site Energy Dashboard ── */}
+        {siteLoading && !siteDetails && (
+          <div style={{ marginBottom: 24, padding: 24, borderRadius: 14, background: isDark ? '#0f172a' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.12)'}`, display: 'flex', alignItems: 'center', gap: 10, color: isDark ? '#64748b' : '#94a3b8' }}>
+            <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+            <span style={{ fontSize: '0.875rem' }}>Loading site energy data…</span>
+          </div>
+        )}
+        {siteDetails && (
+          <div style={{ marginBottom: 24 }}>
+            <SiteDataPanel
+              key={siteDetails.site_id}
+              siteId={siteDetails.site_id}
+              autoRefresh
+              inverterCapacityKw={siteDetails.inverter_capacity_kw}
+            />
+          </div>
+        )}
 
         <div className="card" style={{ marginBottom: '20px' }}>
           <div className="card-header">

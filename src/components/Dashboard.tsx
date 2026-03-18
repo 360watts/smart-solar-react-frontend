@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   LayoutDashboard, ChevronDown, Wifi, WifiOff, RefreshCw, Search, X,
-  Activity, Database, Server, CheckCircle, AlertTriangle, XCircle, Zap,
+  Activity, Server, CheckCircle, AlertTriangle, XCircle, Zap,
+  MapPin, Globe, Compass,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService } from '../services/api';
@@ -24,46 +25,15 @@ interface Site {
   longitude: number;
   timezone: string;
   devices: SiteDevice[];
-}
-
-interface SystemHealthData {
-  total_devices: number;
-  active_devices: number;
-  total_telemetry_points: number;
-  uptime_seconds: number;
-  database_status: string;
-  http_status: string;
-  overall_health: string;
-}
-
-interface TelemetryBufferStats {
-  total: number;
-  pending_dynamo: number;
-  pending_s3: number;
-  failed_both: number;
-  success_rate: number;
-  oldest_pending_age_seconds: number;
-  status: string;
-  avg_ingestion_latency_s: number | null;
-  max_ingestion_latency_s: number | null;
+  tilt_deg?: number;
+  azimuth_deg?: number;
+  is_active?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function siteIsOnline(site: Site): boolean {
   return site.devices.some(d => d.is_online);
-}
-
-function fmtAge(seconds: number): string {
-  if (seconds === 0) return 'None';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-}
-
-function fmtLatency(s: number | null): string {
-  if (s === null) return '—';
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -80,11 +50,6 @@ const Dashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // System health + buffer
-  const [health, setHealth] = useState<SystemHealthData | null>(null);
-  const [bufferStats, setBufferStats] = useState<TelemetryBufferStats | null>(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-
   // ── Fetch ────────────────────────────────────────────────────────────────
 
   const sitesInitialized = useRef(false);
@@ -94,8 +59,9 @@ const Dashboard: React.FC = () => {
       setSitesError(null);
       const data: Site[] = await apiService.getAllSites();
       setSites(data);
-      if (data.length > 0 && !selectedSiteId) {
-        setSelectedSiteId(data[0].site_id);
+      // Functional update: only auto-select if nothing is selected yet
+      if (data.length > 0) {
+        setSelectedSiteId(prev => prev ?? data[0].site_id);
       }
     } catch {
       if (!sitesInitialized.current) setSitesError('Failed to load sites');
@@ -103,29 +69,13 @@ const Dashboard: React.FC = () => {
       setSitesLoading(false);
       sitesInitialized.current = true;
     }
-  }, [selectedSiteId]);
-
-  const healthInitialized = useRef(false);
-
-  const fetchHealth = useCallback(async () => {
-    if (!healthInitialized.current) setHealthLoading(true);
-    const [healthData, bufferData] = await Promise.all([
-      apiService.getSystemHealth().catch(() => null),
-      apiService.getTelemetryBufferStats().catch(() => null),
-    ]);
-    setHealth(healthData ?? null);
-    setBufferStats(bufferData ?? null);
-    setHealthLoading(false);
-    healthInitialized.current = true;
   }, []);
 
   useEffect(() => {
     fetchSites();
-    fetchHealth();
-    // Poll health + site status every 30 seconds silently
+    // Poll site status every 30 seconds silently
     const id = setInterval(() => {
       fetchSites();
-      fetchHealth();
     }, 30_000);
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -211,69 +161,47 @@ const Dashboard: React.FC = () => {
 
   // ── Health KPI cards ─────────────────────────────────────────────────────
 
-  const renderHealthKPIs = () => {
-    if (healthLoading) {
-      return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="card" style={{ padding: 20, minHeight: 110, opacity: 0.4 }}>
-              <div style={{ height: 12, width: '60%', borderRadius: 6, background: isDark ? '#1e293b' : '#e5e7eb', marginBottom: 8 }} />
-              <div style={{ height: 28, width: '40%', borderRadius: 6, background: isDark ? '#1e293b' : '#e5e7eb' }} />
-            </div>
-          ))}
-        </div>
-      );
-    }
+  const renderSiteKPIs = () => {
+    if (!selectedSite) return null;
 
-    if (!health) {
-      return (
-        <div className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <XCircle size={18} color="#ef4444" />
-          <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>Failed to load health data.</span>
-          <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem' }} onClick={fetchHealth}>
-            Retry
-          </button>
-        </div>
-      );
-    }
+    const totalDevices  = selectedSite.devices.length;
+    const onlineDevices = selectedSite.devices.filter(d => d.is_online).length;
+    const deviceRatio   = onlineDevices / Math.max(totalDevices, 1);
+    const siteOnline    = onlineDevices > 0;
 
-    const deviceRatio = health.active_devices / Math.max(health.total_devices, 1);
-    const httpOk  = ['connected', 'ok'].includes(health.http_status?.toLowerCase());
-    const sysOk   = ['healthy', 'ok'].includes(health.overall_health?.toLowerCase());
+    const statusIcons  = { ok: <CheckCircle size={13} />, warn: <AlertTriangle size={13} />, err: <XCircle size={13} /> };
+    const statusLabels = { ok: 'Online', warn: 'Partial', err: 'Offline' };
 
     const kpiCards = [
       {
-        label: 'Active Devices',
-        value: `${health.active_devices}/${health.total_devices}`,
-        sub: `${(deviceRatio * 100).toFixed(0)}% online`,
+        label: 'Site Status',
+        value: siteOnline ? 'Online' : 'Offline',
+        sub: selectedSite.display_name,
+        icon: siteOnline ? <Wifi size={22} /> : <WifiOff size={22} />,
+        status: (siteOnline ? 'ok' : 'err') as keyof typeof statusPalette,
+      },
+      {
+        label: 'Devices Online',
+        value: `${onlineDevices} / ${totalDevices}`,
+        sub: `${(deviceRatio * 100).toFixed(0)}% active`,
         icon: <Activity size={22} />,
-        status: (deviceRatio >= 0.9 ? 'ok' : deviceRatio >= 0.7 ? 'warn' : 'err') as keyof typeof statusPalette,
+        status: (deviceRatio >= 1 ? 'ok' : deviceRatio > 0 ? 'warn' : 'err') as keyof typeof statusPalette,
       },
       {
-        label: 'Telemetry Points',
-        value: health.total_telemetry_points.toLocaleString(),
-        sub: 'Total ingested',
-        icon: <Database size={22} />,
-        status: 'ok' as const,
+        label: 'PV Capacity',
+        value: `${selectedSite.capacity_kw} kW`,
+        sub: 'Installed solar panels',
+        icon: <Zap size={22} />,
+        status: 'ok' as keyof typeof statusPalette,
       },
       {
-        label: 'HTTP API',
-        value: health.http_status ?? 'N/A',
-        sub: 'API connectivity',
-        icon: <Wifi size={22} />,
-        status: (httpOk ? 'ok' : 'err') as keyof typeof statusPalette,
-      },
-      {
-        label: 'System Health',
-        value: health.overall_health ?? 'N/A',
-        sub: 'Overall status',
+        label: 'Inverter Capacity',
+        value: selectedSite.inverter_capacity_kw != null ? `${selectedSite.inverter_capacity_kw} kW` : '—',
+        sub: 'Rated inverter output',
         icon: <Server size={22} />,
-        status: (sysOk ? 'ok' : 'warn') as keyof typeof statusPalette,
+        status: 'ok' as keyof typeof statusPalette,
       },
     ];
-
-    const statusIcons  = { ok: <CheckCircle size={13} />, warn: <AlertTriangle size={13} />, err: <XCircle size={13} /> };
-    const statusLabels = { ok: 'Healthy', warn: 'Warning', err: 'Error' };
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -282,7 +210,6 @@ const Dashboard: React.FC = () => {
           return (
             <div key={label} className="card" style={{ padding: 20, position: 'relative', overflow: 'hidden' }}>
               <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
-              <span style={{ position: 'absolute', top: -8,  right: -8,  width: 32, height: 32, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
                   {icon}
@@ -302,45 +229,46 @@ const Dashboard: React.FC = () => {
     );
   };
 
-  // ── Telemetry buffer panel ────────────────────────────────────────────────
+  // ── Site info strip ───────────────────────────────────────────────────────
 
-  const renderBufferPanel = () => {
-    if (!bufferStats) return null;
+  const renderSiteInfoStrip = () => {
+    if (!selectedSite) return null;
 
-    const bufColor = bufferStats.status === 'healthy' ? '#10b981' : bufferStats.status === 'warning' ? '#f59e0b' : '#ef4444';
-    const bufBg    = bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.12)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)';
-    const bufBdr   = bufferStats.status === 'healthy' ? 'rgba(16,185,129,0.25)' : bufferStats.status === 'warning' ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.25)';
+    const chipBg     = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+    const chipBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.09)';
+    const isActive   = selectedSite.is_active !== false; // treat undefined as active
 
-    const rows = [
-      { label: 'Total Records',     value: bufferStats.total.toLocaleString() },
-      { label: 'Pending DynamoDB',  value: String(bufferStats.pending_dynamo) },
-      { label: 'Pending S3',        value: String(bufferStats.pending_s3) },
-      { label: 'Failed Both',       value: String(bufferStats.failed_both) },
-      { label: 'Success Rate',      value: `${bufferStats.success_rate}%` },
-      { label: 'Oldest Pending',    value: fmtAge(bufferStats.oldest_pending_age_seconds) },
-      { label: 'Avg Latency (24h)', value: fmtLatency(bufferStats.avg_ingestion_latency_s) },
-      { label: 'Max Latency (24h)', value: fmtLatency(bufferStats.max_ingestion_latency_s) },
+    const chips: { icon: React.ReactNode; text: string }[] = [
+      { icon: <MapPin size={11} />, text: `${selectedSite.latitude}° N, ${selectedSite.longitude}° E` },
+      { icon: <Globe size={11} />,  text: selectedSite.timezone },
+      ...(selectedSite.tilt_deg != null && selectedSite.azimuth_deg != null
+        ? [{ icon: <Compass size={11} />, text: `Tilt ${selectedSite.tilt_deg}° · Azimuth ${selectedSite.azimuth_deg}°` }]
+        : []),
     ];
 
     return (
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="card-header" style={{ paddingBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Zap size={16} style={{ color: bufColor }} />
-            <h2 style={{ margin: 0 }}>Telemetry Buffer</h2>
-          </div>
-          <span style={{ fontSize: '0.72rem', padding: '2px 10px', borderRadius: 999, fontWeight: 700, letterSpacing: '0.05em', background: bufBg, color: bufColor, border: `1px solid ${bufBdr}` }}>
-            {bufferStats.status.toUpperCase()}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 0 }}>
+        {chips.map(({ icon, text }) => (
+          <span key={text} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', borderRadius: 999,
+            background: chipBg, border: `1px solid ${chipBorder}`,
+            fontSize: '0.72rem', color: textSub, fontWeight: 500,
+          }}>
+            <span style={{ color: textMute, display: 'flex' }}>{icon}</span>
+            {text}
           </span>
-        </div>
-        <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-          {rows.map(({ label, value }) => (
-            <div key={label} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'}` }}>
-              <div style={{ fontSize: '0.7rem', color: textMute, fontWeight: 500, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: textMain }}>{value}</div>
-            </div>
-          ))}
-        </div>
+        ))}
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px', borderRadius: 999,
+          background: isActive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+          border: `1px solid ${isActive ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+          fontSize: '0.72rem', color: isActive ? '#10b981' : '#ef4444', fontWeight: 600,
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? '#10b981' : '#ef4444', display: 'inline-block' }} />
+          {isActive ? 'Active' : 'Inactive'}
+        </span>
       </div>
     );
   };
@@ -492,16 +420,17 @@ const Dashboard: React.FC = () => {
       {/* ── Content ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>
 
-        {/* System Health KPIs */}
-        {renderHealthKPIs()}
+        {/* Site KPIs */}
+        {renderSiteKPIs()}
 
-        {/* Telemetry Buffer */}
-        {renderBufferPanel()}
+        {/* Site info strip */}
+        {renderSiteInfoStrip()}
 
         {/* Energy intelligence (SiteDataPanel) */}
         {selectedSiteId && (
-          <div style={{ marginTop: 32 }}>
+          <div style={{ marginTop: 24 }}>
             <SiteDataPanel
+              key={selectedSiteId}
               siteId={selectedSiteId}
               autoRefresh
               inverterCapacityKw={selectedSite?.inverter_capacity_kw}
