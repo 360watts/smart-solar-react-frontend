@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon } from 'lucide-react';
+import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon, ShieldCheck, ShieldOff } from 'lucide-react';
 import { apiService } from '../services/api';
+import { cacheService } from '../services/cacheService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import AuditTrail from './AuditTrail';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
@@ -36,6 +38,7 @@ interface Employee {
   address?: string;
   is_staff: boolean;
   is_superuser: boolean;
+  is_active: boolean;
   date_joined: string;
   created_by_username?: string;
   created_at?: string;
@@ -45,6 +48,7 @@ interface Employee {
 
 const Employees: React.FC = () => {
   const { isDark } = useTheme();
+  const { isAdmin } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +69,9 @@ const Employees: React.FC = () => {
     email: '',
     mobile_number: '',
     address: '',
+    is_active: true,
+    is_staff: true,
+    is_superuser: false,
   });
   const [createForm, setCreateForm] = useState({
     username: '',
@@ -78,6 +85,11 @@ const Employees: React.FC = () => {
   });
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Bust cache on mount so is_active field is always fresh
+  useEffect(() => {
+    cacheService.clearPattern(/^employees_/);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -119,6 +131,9 @@ const Employees: React.FC = () => {
       email: employee.email,
       mobile_number: employee.mobile_number || '',
       address: employee.address || '',
+      is_active: employee.is_active ?? true,
+      is_staff: employee.is_staff,
+      is_superuser: employee.is_superuser,
     });
   };
 
@@ -128,7 +143,6 @@ const Employees: React.FC = () => {
     try {
       await apiService.updateUser(editingEmployee.id, editForm);
       setEditingEmployee(null);
-      // Refetch to get the updated employee with audit trail fields
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update employee');
@@ -227,6 +241,7 @@ const Employees: React.FC = () => {
             <tr>
               <th>Name</th>
               <th style={{ textAlign: 'center' }}>Role</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
               <th style={{ textAlign: 'center' }}>Email</th>
               <th style={{ textAlign: 'center' }}>Mobile</th>
               <th style={{ textAlign: 'center' }}>Joined</th>
@@ -254,6 +269,23 @@ const Employees: React.FC = () => {
                   <span className={`role-badge ${employee.is_superuser ? 'role-badge-admin' : 'role-badge-staff'}`}>
                     {employee.is_superuser ? 'Admin' : 'Staff'}
                   </span>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const active = employee.is_active !== false;
+                    return (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600,
+                        background: active ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                        color: active ? '#10b981' : '#ef4444',
+                        border: `1px solid ${active ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                      }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
+                        {active ? 'Active' : 'Inactive'}
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td style={{ textAlign: 'center' }}>{employee.email}</td>
                 <td style={{ textAlign: 'center' }}>{employee.mobile_number || '-'}</td>
@@ -497,6 +529,85 @@ const Employees: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Role & Status — admin only, edit only */}
+                {editingEmployee && isAdmin && editingEmployee.id !== (JSON.parse(localStorage.getItem('user') || '{}').id) && (
+                  <div style={{
+                    background: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(99,102,241,0.18)' : '1px solid rgba(99,102,241,0.18)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Role &amp; Status</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.15)', color: isDark ? '#a5b4fc' : '#4f46e5' }}>Admin only</span>
+                    </div>
+
+                    {/* Active / Inactive toggle */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151', display: 'block', marginBottom: 8 }}>Account Status</label>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        {[{ val: true, label: 'Active', icon: <ShieldCheck size={14} />, green: true }, { val: false, label: 'Inactive', icon: <ShieldOff size={14} />, green: false }].map(({ val, label, icon, green }) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, is_active: val })}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              padding: '8px 16px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 600,
+                              cursor: 'pointer',
+                              border: editForm.is_active === val
+                                ? `2px solid ${green ? '#10b981' : '#ef4444'}`
+                                : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+                              background: editForm.is_active === val
+                                ? (green ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)')
+                                : (isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb'),
+                              color: editForm.is_active === val
+                                ? (green ? '#10b981' : '#ef4444')
+                                : (isDark ? '#9ca3af' : '#6b7280'),
+                            }}
+                          >
+                            {icon}{label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Role selector */}
+                    <div>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151', display: 'block', marginBottom: 8 }}>Role</label>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        {[
+                          { label: 'Staff', is_staff: true, is_superuser: false },
+                          { label: 'Admin', is_staff: true, is_superuser: true },
+                        ].map(({ label, is_staff, is_superuser }) => {
+                          const selected = editForm.is_superuser === is_superuser && editForm.is_staff === is_staff;
+                          return (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => setEditForm({ ...editForm, is_staff, is_superuser })}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '8px 16px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 600,
+                                cursor: 'pointer',
+                                border: selected
+                                  ? '2px solid #6366f1'
+                                  : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
+                                background: selected
+                                  ? 'rgba(99,102,241,0.15)'
+                                  : (isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb'),
+                                color: selected ? '#6366f1' : (isDark ? '#9ca3af' : '#6b7280'),
+                              }}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {editingEmployee && (
                   <AuditTrail
