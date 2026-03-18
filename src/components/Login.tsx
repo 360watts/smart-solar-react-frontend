@@ -48,13 +48,10 @@ const Login: React.FC = () => {
     try {
       const success = await login(username, password);
       if (success) {
-        // Use replace: true to prevent back button returning to login
         navigate('/devices', { replace: true });
-      } else {
-        setError('Invalid username or password');
       }
     } catch (err) {
-      setError('An error occurred during login');
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
       setLoading(false);
     }

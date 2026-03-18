@@ -70,27 +70,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setTokens(data.tokens);
-        localStorage.setItem('authTokens', JSON.stringify(data.tokens));
-        localStorage.setItem('authUser', JSON.stringify(data.user));
-        return true;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
+    const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user);
+      setTokens(data.tokens);
+      localStorage.setItem('authTokens', JSON.stringify(data.tokens));
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      return true;
     }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Login failed');
   }, []);
 
   const logout = useCallback(async () => {

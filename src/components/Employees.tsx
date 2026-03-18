@@ -48,7 +48,7 @@ interface Employee {
 
 const Employees: React.FC = () => {
   const { isDark } = useTheme();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user: currentUser } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -531,7 +531,7 @@ const Employees: React.FC = () => {
                 </div>
 
                 {/* Role & Status — admin only, edit only */}
-                {editingEmployee && isAdmin && editingEmployee.id !== (JSON.parse(localStorage.getItem('user') || '{}').id) && (
+                {editingEmployee && isAdmin && editingEmployee.id !== currentUser?.id && (
                   <div style={{
                     background: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)',
                     borderRadius: 12, padding: '20px', marginBottom: 16,

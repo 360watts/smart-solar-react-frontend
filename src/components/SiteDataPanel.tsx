@@ -1149,9 +1149,10 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
 interface Props {
   siteId: string;
   autoRefresh?: boolean;
+  inverterCapacityKw?: number | null;
 }
 
-const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
+const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterCapacityKw }) => {
   const { isDark } = useTheme();
 
   const [telemetry, setTelemetry] = useState<any[]>([]);
@@ -2012,6 +2013,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false }) => {
                     accent={invTempColor}
                     icon={<IconThermometer />}
                   />
+                  {inverterCapacityKw != null && (
+                    <KpiCard
+                      index={5}
+                      label="Inv. Capacity"
+                      value={inverterCapacityKw.toFixed(1)}
+                      unit="kW"
+                      sub="Rated output"
+                      accent="#6366f1"
+                      icon={<Zap size={iconSize} />}
+                    />
+                  )}
                   {achievedPct != null && (
                     <KpiCard
                       index={5}

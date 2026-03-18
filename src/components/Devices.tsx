@@ -68,6 +68,7 @@ interface SolarSite {
   latitude: number;
   longitude: number;
   capacity_kw: number;
+  inverter_capacity_kw?: number | null;
   tilt_deg: number;
   azimuth_deg: number;
   timezone: string;
@@ -82,6 +83,7 @@ interface SolarSiteForm {
   latitude: string;
   longitude: string;
   capacity_kw: string;
+  inverter_capacity_kw: string;
   tilt_deg: string;
   azimuth_deg: string;
   timezone: string;
@@ -133,7 +135,7 @@ const Devices: React.FC = () => {
   const [editingSite, setEditingSite] = useState(false);
   const [siteForm, setSiteForm] = useState<SolarSiteForm>({
     site_id: '', display_name: '', latitude: '', longitude: '',
-    capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
+    capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
     timezone: IST_TIMEZONE, is_active: true,
   });
   const [siteSaving, setSiteSaving] = useState(false);
@@ -785,13 +787,14 @@ const Devices: React.FC = () => {
                     latitude: String(siteDetails.latitude),
                     longitude: String(siteDetails.longitude),
                     capacity_kw: String(siteDetails.capacity_kw),
+                    inverter_capacity_kw: siteDetails.inverter_capacity_kw != null ? String(siteDetails.inverter_capacity_kw) : '',
                     tilt_deg: String(siteDetails.tilt_deg),
                     azimuth_deg: String(siteDetails.azimuth_deg),
                     timezone: siteDetails.timezone,
                     is_active: siteDetails.is_active,
                   });
                 } else {
-                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true });
+                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true });
                 }
                 setSiteError(null);
                 setEditingSite(true);
@@ -814,7 +817,8 @@ const Devices: React.FC = () => {
                   { label: 'Latitude', value: `${siteDetails.latitude}°`, mono: true },
                   { label: 'Longitude', value: `${siteDetails.longitude}°`, mono: true },
                   { label: 'Timezone', value: siteDetails.timezone, mono: false },
-                  { label: 'Capacity', value: `${siteDetails.capacity_kw} kW`, mono: true },
+                  { label: 'PV Capacity', value: `${siteDetails.capacity_kw} kW`, mono: true },
+                  { label: 'Inverter Capacity', value: siteDetails.inverter_capacity_kw != null ? `${siteDetails.inverter_capacity_kw} kW` : '—', mono: true },
                   { label: 'Tilt', value: `${siteDetails.tilt_deg}°`, mono: true },
                   { label: 'Azimuth', value: `${siteDetails.azimuth_deg}°`, mono: true },
                 ].map(({ label, value, mono, accent, badge }) => (
@@ -979,6 +983,7 @@ const Devices: React.FC = () => {
                     latitude: parseFloat(siteForm.latitude),
                     longitude: parseFloat(siteForm.longitude),
                     capacity_kw: parseFloat(siteForm.capacity_kw),
+                    inverter_capacity_kw: siteForm.inverter_capacity_kw !== '' ? parseFloat(siteForm.inverter_capacity_kw) : null,
                     tilt_deg: parseFloat(siteForm.tilt_deg),
                     azimuth_deg: parseFloat(siteForm.azimuth_deg),
                     timezone: siteForm.timezone.trim(),
@@ -1155,13 +1160,30 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Capacity (kW) *</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>PV Capacity (kW) *</label>
                         <input
                           type="number"
                           required
                           step="any"
                           value={siteForm.capacity_kw}
                           onChange={e => setSiteForm({ ...siteForm, capacity_kw: e.target.value })}
+                          placeholder="5.0"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Inverter Capacity (kW)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={siteForm.inverter_capacity_kw}
+                          onChange={e => setSiteForm({ ...siteForm, inverter_capacity_kw: e.target.value })}
                           placeholder="5.0"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',

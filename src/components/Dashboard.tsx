@@ -19,6 +19,7 @@ interface Site {
   site_id: string;
   display_name: string;
   capacity_kw: number;
+  inverter_capacity_kw?: number | null;
   latitude: number;
   longitude: number;
   timezone: string;
@@ -500,7 +501,11 @@ const Dashboard: React.FC = () => {
         {/* Energy intelligence (SiteDataPanel) */}
         {selectedSiteId && (
           <div style={{ marginTop: 32 }}>
-            <SiteDataPanel siteId={selectedSiteId} autoRefresh />
+            <SiteDataPanel
+              siteId={selectedSiteId}
+              autoRefresh
+              inverterCapacityKw={selectedSite?.inverter_capacity_kw}
+            />
           </div>
         )}
       </div>

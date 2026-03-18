@@ -364,6 +364,7 @@ class ApiService {
       body: JSON.stringify(data),
     });
     cacheService.clearPattern(/^users_/);
+    cacheService.clearPattern(/^employees_/);
     return result;
   }
 
