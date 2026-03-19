@@ -442,6 +442,14 @@ class ApiService {
     return data;
   }
 
+  async getPresetFresh(configId: string): Promise<any> {
+    // Bypass cache — used when we need the real current version (e.g. after a config bump)
+    cacheService.clearPattern(new RegExp(`^presets_search=${configId}`));
+    const params = new URLSearchParams({ search: configId });
+    const data = await this.request(`/presets/?${params}`);
+    return data;
+  }
+
   async createPreset(data: any): Promise<any> {
     const result = await this.request('/presets/create/', {
       method: 'POST',
@@ -548,6 +556,11 @@ class ApiService {
   async getDeviceLogs(deviceId: number, limit: number = 100, offset: number = 0): Promise<any> {
     return this.request(`/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`);
   }
+
+  async getRegisterCoverage(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/register-coverage/`);
+  }
+
 
   async toggleDeviceLogs(deviceId: number, enabled: boolean): Promise<any> {
     return this.request(`/devices/${deviceId}/logs/toggle/`, {

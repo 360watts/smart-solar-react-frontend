@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
@@ -91,6 +91,95 @@ interface SolarSiteForm {
   is_active: boolean;
 }
 
+// ── Register Coverage Sub-components ─────────────────────────────────────────
+
+const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave, isDark }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 20px', background: 'none', border: 'none', cursor: 'pointer',
+          transition: 'background 150ms',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {open
+            ? <ChevronDown size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
+            : <ChevronRight size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
+          }
+          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#374151', fontFamily: 'Poppins, sans-serif' }}>
+            Slave {slave.slave_id} — {slave.device_name}
+          </span>
+          {!slave.enabled && (
+            <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: isDark ? '#64748b' : '#94a3b8' }}>disabled</span>
+          )}
+        </div>
+        <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: slave.received === slave.configured ? '#22c55e' : '#f59e0b' }}>
+          {slave.received}/{slave.configured}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ overflowX: 'auto', padding: '0 20px 12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+            <thead>
+              <tr style={{ color: isDark ? '#475569' : '#94a3b8' }}>
+                {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
+                  <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {slave.registers.map((reg: any) => (
+                <tr
+                  key={reg.id}
+                  style={{
+                    borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+                    background: reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)',
+                    transition: 'background 150ms',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)')}
+                >
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b', whiteSpace: 'nowrap' }}>
+                    {reg.label}
+                  </td>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#64748b' : '#94a3b8' }}>
+                    {reg.address}
+                  </td>
+                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    {reg.category || '—'}
+                  </td>
+                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                    {reg.unit || '—'}
+                  </td>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : isDark ? '#475569' : '#cbd5e1' }}>
+                    {reg.value != null ? reg.value : '—'}
+                  </td>
+                  <td style={{ padding: '5px 8px' }}>
+                    {reg.received
+                      ? <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
+                      : <X size={13} style={{ color: '#ef4444' }} />
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const Devices: React.FC = () => {
   const { isDark } = useTheme();
   const [searchParams] = useSearchParams();
@@ -142,6 +231,11 @@ const Devices: React.FC = () => {
   const [siteSaving, setSiteSaving] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
   const [devicePreset, setDevicePreset] = useState<Preset | null>(null);
+
+  // Register coverage state
+  const [regCoverage, setRegCoverage] = useState<any | null>(null);
+  const [regCoverageLoading, setRegCoverageLoading] = useState(false);
+  const [regCoverageExpanded, setRegCoverageExpanded] = useState(false);
   
   // Modern modal states
   const rebootModal = useModal<Device>();
@@ -218,16 +312,18 @@ const Devices: React.FC = () => {
     setSiteDetails(null);
     setSiteLoading(true);
     setDeviceLogs([]);
-    
-    // Load preset details if device has config
+    setRegCoverage(null);
+    setRegCoverageLoading(true);
+
+    // Set preset from cache immediately for instant display, then refresh from server
     if (device.config_version) {
-      const preset = presets.find(p => p.config_id === device.config_version);
-      setDevicePreset(preset || null);
+      const cached = presets.find(p => p.config_id === device.config_version);
+      setDevicePreset(cached || null);
     } else {
       setDevicePreset(null);
     }
-    
-    // Fetch site details and logs in parallel
+
+    // Fetch site details, logs, register coverage, and fresh preset version in parallel
     Promise.all([
       apiService.getDeviceSite(device.id)
         .then(data => setSiteDetails(data))
@@ -235,8 +331,24 @@ const Devices: React.FC = () => {
           console.error('Failed to fetch site for device', device.id, ':', err);
           setSiteDetails(null);
         }),
-      fetchDeviceLogs(device.id)
-    ]).finally(() => setSiteLoading(false));
+      fetchDeviceLogs(device.id),
+      apiService.getRegisterCoverage(device.id)
+        .then(data => setRegCoverage(data))
+        .catch(() => setRegCoverage(null)),
+      // Bypass cache to get the real current config version
+      device.config_version
+        ? apiService.getPresetFresh(device.config_version)
+            .then(data => {
+              const list: any[] = Array.isArray(data) ? data : (data?.results ?? []);
+              const fresh = list.find((p: any) => p.config_id === device.config_version);
+              if (fresh) setDevicePreset(fresh);
+            })
+            .catch(() => {/* keep cached value */})
+        : Promise.resolve(),
+    ]).finally(() => {
+      setSiteLoading(false);
+      setRegCoverageLoading(false);
+    });
   }, [fetchDeviceLogs, presets]);
 
   useEffect(() => {
@@ -879,6 +991,109 @@ const Devices: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── Register Coverage ── */}
+        <div style={{
+          marginTop: 24,
+          borderRadius: 14,
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,166,62,0.15)'}`,
+          background: isDark ? '#0f172a' : '#fff',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <button
+            onClick={() => setRegCoverageExpanded(v => !v)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer',
+              borderBottom: regCoverageExpanded ? `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.1)'}` : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Activity size={16} style={{ color: '#22c55e' }} />
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#111827', fontFamily: 'Poppins, sans-serif' }}>
+                Register Coverage
+              </span>
+              {regCoverage && !regCoverageLoading && (
+                <span style={{
+                  padding: '2px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700,
+                  background: regCoverage.coverage_pct >= 80
+                    ? 'rgba(34,197,94,0.15)' : regCoverage.coverage_pct >= 50
+                    ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)',
+                  color: regCoverage.coverage_pct >= 80 ? '#22c55e' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
+                  border: `1px solid ${regCoverage.coverage_pct >= 80 ? 'rgba(34,197,94,0.3)' : regCoverage.coverage_pct >= 50 ? 'rgba(251,191,36,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                }}>
+                  {regCoverage.coverage_pct}%
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {regCoverage && !regCoverageLoading && (
+                <span style={{ fontSize: '0.78rem', color: isDark ? '#64748b' : '#94a3b8', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                  {regCoverage.total_received} / {regCoverage.total_configured} registers
+                </span>
+              )}
+              {regCoverageExpanded
+                ? <ChevronDown size={16} style={{ color: isDark ? '#64748b' : '#94a3b8', transition: 'transform 200ms' }} />
+                : <ChevronRight size={16} style={{ color: isDark ? '#64748b' : '#94a3b8', transition: 'transform 200ms' }} />
+              }
+            </div>
+          </button>
+
+          {regCoverageExpanded && (
+            <div style={{ padding: '0 0 8px' }}>
+              {regCoverageLoading ? (
+                /* Skeleton */
+                <div style={{ padding: '20px 20px' }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{ height: 14, borderRadius: 6, marginBottom: 10,
+                      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                      width: i === 2 ? '60%' : i === 3 ? '80%' : '100%',
+                      animation: 'pulse 1.5s ease-in-out infinite',
+                    }} />
+                  ))}
+                </div>
+              ) : !regCoverage ? (
+                <div style={{ padding: '24px 20px', textAlign: 'center', color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.85rem' }}>
+                  No telemetry data available yet.
+                </div>
+              ) : (
+                <>
+                  {/* Summary bar */}
+                  <div style={{ padding: '12px 20px 8px', display: 'flex', gap: 20, flexWrap: 'wrap', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                    {[
+                      { label: 'Configured', value: regCoverage.total_configured, color: isDark ? '#94a3b8' : '#64748b' },
+                      { label: 'Received', value: regCoverage.total_received, color: '#22c55e' },
+                      { label: 'Missing', value: regCoverage.total_configured - regCoverage.total_received, color: '#ef4444' },
+                      { label: 'Last sample', value: new Date(regCoverage.last_telemetry_at).toLocaleTimeString(), color: isDark ? '#94a3b8' : '#64748b' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#475569' : '#94a3b8' }}>{label}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Coverage bar */}
+                  <div style={{ padding: '10px 20px', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                    <div style={{ height: 6, borderRadius: 99, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: 99, transition: 'width 600ms ease',
+                        width: `${regCoverage.coverage_pct}%`,
+                        background: regCoverage.coverage_pct >= 80 ? '#22c55e' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
+                      }} />
+                    </div>
+                  </div>
+
+                  {/* Slave sections */}
+                  {regCoverage.slaves.map((slave: any) => (
+                    <SlaveRegisterSection key={slave.slave_id} slave={slave} isDark={isDark} />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Site Configuration ── */}
