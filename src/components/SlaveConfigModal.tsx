@@ -138,6 +138,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   const [registerForm, setRegisterForm] = useState({ ...BLANK_REG_FORM });
   const [registerSearch, setRegisterSearch] = useState('');
   const [editingRegisterIndex, setEditingRegisterIndex] = useState<number | null>(null);
+  const [selectedRegisters, setSelectedRegisters] = useState<Set<number>>(new Set());
 
   // Bulk upload
   interface BulkUploadRow { rowIndex: number; register: RegisterMapping; }
@@ -155,6 +156,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
       setRegisterSearch('');
       setEditingRegisterIndex(null);
       setBulkResult(null);
+      setSelectedRegisters(new Set());
     }
   }, [open, initialForm]);
 
@@ -244,6 +246,56 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
         i === index ? { ...r, enabled: !r.enabled } : r
       ),
     });
+  };
+
+  const toggleSelectRegister = (index: number) => {
+    setSelectedRegisters(prev => {
+      const next = new Set(prev);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedRegisters(prev => {
+        const next = new Set(prev);
+        visibleIndices.forEach(i => next.delete(i));
+        return next;
+      });
+    } else {
+      setSelectedRegisters(prev => {
+        const next = new Set(prev);
+        visibleIndices.forEach(i => next.add(i));
+        return next;
+      });
+    }
+  };
+
+  const deleteSelected = () => {
+    if (editingRegisterIndex !== null && selectedRegisters.has(editingRegisterIndex)) {
+      resetRegisterForm();
+    }
+    setSlaveForm(prev => ({
+      ...prev,
+      registers: prev.registers.filter((_, i) => !selectedRegisters.has(i)),
+    }));
+    setSelectedRegisters(new Set());
+  };
+
+  const deleteAll = () => {
+    resetRegisterForm();
+    setSlaveForm(prev => ({ ...prev, registers: [] }));
+    setSelectedRegisters(new Set());
+  };
+
+  const setSelectedEnabled = (enabled: boolean) => {
+    setSlaveForm(prev => ({
+      ...prev,
+      registers: prev.registers.map((r, i) =>
+        selectedRegisters.has(i) ? { ...r, enabled } : r
+      ),
+    }));
   };
 
   // ── Bulk upload ─────────────────────────────────────────────────────────────
@@ -382,13 +434,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   // ── Filtered registers ──────────────────────────────────────────────────────
 
   const q = registerSearch.toLowerCase();
-  const visibleCount = q
-    ? slaveForm.registers.filter(
-        (r) =>
-          r.label.toLowerCase().includes(q) ||
-          String(r.address).includes(q)
-      ).length
-    : slaveForm.registers.length;
+  const visibleIndices = slaveForm.registers
+    .map((_, i) => i)
+    .filter(i => !q || slaveForm.registers[i].label.toLowerCase().includes(q) || String(slaveForm.registers[i].address).includes(q));
+  const allVisibleSelected = visibleIndices.length > 0 && visibleIndices.every(i => selectedRegisters.has(i));
+  const visibleCount = visibleIndices.length;
 
   if (!open) return null;
 
@@ -1591,6 +1641,43 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       />
                     </div>
                   </div>
+                  {/* Bulk action bar */}
+                  {selectedRegisters.size > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      marginBottom: 8,
+                      borderRadius: 8,
+                      background: isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.06)',
+                      border: `1px solid ${isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.2)'}`,
+                      fontSize: '0.8125rem',
+                      flexWrap: 'wrap',
+                    }}>
+                      <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600, marginRight: 4 }}>
+                        {selectedRegisters.size} selected
+                      </span>
+                      <button type="button" onClick={() => setSelectedEnabled(true)}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#16a34a', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        Enable
+                      </button>
+                      <button type="button" onClick={() => setSelectedEnabled(false)}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)', color: '#dc2626', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        Disable
+                      </button>
+                      <button type="button" onClick={deleteSelected}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.12)', color: '#ef4444', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Trash2 size={12} /> Delete selected
+                      </button>
+                      <div style={{ flex: 1 }} />
+                      <button type="button" onClick={deleteAll}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${isDark ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'}`, background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Trash2 size={12} /> Delete all ({slaveForm.registers.length})
+                      </button>
+                    </div>
+                  )}
+
                   <div style={{
                     overflowX: 'auto',
                     overflowY: 'auto',
@@ -1610,6 +1697,15 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                           top: 0,
                           zIndex: 1,
                         }}>
+                          <th style={{ padding: '12px 12px 12px 16px', width: 36 }}>
+                            <input
+                              type="checkbox"
+                              checked={allVisibleSelected}
+                              onChange={toggleSelectAll}
+                              style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#6366f1' }}
+                              title="Select all visible"
+                            />
+                          </th>
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Label</th>
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Address</th>
                           <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Function</th>
@@ -1652,6 +1748,14 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                                 }
                               }}
                             >
+                              <td style={{ padding: '12px 12px 12px 16px' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRegisters.has(index)}
+                                  onChange={() => toggleSelectRegister(index)}
+                                  style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#6366f1' }}
+                                />
+                              </td>
                               <td style={{ padding: '12px 16px', color: isDark ? '#f3f4f6' : '#111827', fontWeight: 500 }}>{reg.label}</td>
                               <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.address}</td>
                               <td style={{ padding: '12px 16px', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.functionCode || 3}</td>
