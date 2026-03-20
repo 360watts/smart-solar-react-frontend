@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   LayoutDashboard, ChevronDown, Wifi, WifiOff, RefreshCw, Search, X,
   Activity, Server, CheckCircle, AlertTriangle, XCircle, Zap,
-  MapPin, Globe, Compass,
+  MapPin, Globe, Compass, Bell,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiService } from '../services/api';
+import { apiService, AlertItem } from '../services/api';
 import SiteDataPanel from './SiteDataPanel';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
@@ -50,6 +50,9 @@ const Dashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Alerts
+  const [allAlerts, setAllAlerts] = useState<AlertItem[]>([]);
+
   // ── Fetch ────────────────────────────────────────────────────────────────
 
   const sitesInitialized = useRef(false);
@@ -71,11 +74,22 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const data = await apiService.getAlerts();
+      setAllAlerts(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore — alerts are non-critical
+    }
+  }, []);
+
   useEffect(() => {
     fetchSites();
-    // Poll site status every 30 seconds silently
+    fetchAlerts();
+    // Poll site status + alerts every 30 seconds silently
     const id = setInterval(() => {
       fetchSites();
+      fetchAlerts();
     }, 30_000);
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -98,6 +112,19 @@ const Dashboard: React.FC = () => {
     : sites;
 
   const selectedSite = sites.find(s => s.site_id === selectedSiteId);
+
+  // Active (non-resolved) alerts for the selected site's devices
+  const activeAlerts = useMemo(() => {
+    if (!selectedSite) return [];
+    const deviceIds = new Set(selectedSite.devices.map(d => d.device_id));
+    return allAlerts.filter(a => {
+      const id = parseInt(a.device_id);
+      if (!deviceIds.has(id)) return false;
+      if (a.resolved) return false;
+      // Include both DB-backed fault alerts (generated===false) and ephemeral
+      return a.status === 'active' || a.status === 'acknowledged' || a.status == null;
+    });
+  }, [allAlerts, selectedSite]);
 
   // ── Design tokens ────────────────────────────────────────────────────────
 
@@ -172,13 +199,19 @@ const Dashboard: React.FC = () => {
     const statusIcons  = { ok: <CheckCircle size={13} />, warn: <AlertTriangle size={13} />, err: <XCircle size={13} /> };
     const statusLabels = { ok: 'Online', warn: 'Partial', err: 'Offline' };
 
+    const hasCriticalAlerts = activeAlerts.some(a => a.severity === 'critical');
+    const hasWarningAlerts = activeAlerts.length > 0;
+    const siteStatusStatus = !siteOnline ? 'err' : hasCriticalAlerts ? 'err' : hasWarningAlerts ? 'warn' : 'ok';
+
     const kpiCards = [
       {
         label: 'Site Status',
         value: siteOnline ? 'Online' : 'Offline',
-        sub: selectedSite.display_name,
+        sub: activeAlerts.length > 0
+          ? `${activeAlerts.length} active alert${activeAlerts.length !== 1 ? 's' : ''}`
+          : selectedSite.display_name,
         icon: siteOnline ? <Wifi size={22} /> : <WifiOff size={22} />,
-        status: (siteOnline ? 'ok' : 'err') as keyof typeof statusPalette,
+        status: siteStatusStatus as keyof typeof statusPalette,
       },
       {
         label: 'Devices Online',
@@ -200,6 +233,15 @@ const Dashboard: React.FC = () => {
         sub: 'Rated inverter output',
         icon: <Server size={22} />,
         status: 'ok' as keyof typeof statusPalette,
+      },
+      {
+        label: 'Active Alerts',
+        value: activeAlerts.length === 0 ? 'None' : `${activeAlerts.length}`,
+        sub: activeAlerts.length === 0
+          ? 'No faults detected'
+          : hasCriticalAlerts ? 'Critical fault(s)' : 'Warning(s)',
+        icon: <Bell size={22} />,
+        status: (activeAlerts.length === 0 ? 'ok' : hasCriticalAlerts ? 'err' : 'warn') as keyof typeof statusPalette,
       },
     ];
 
@@ -269,6 +311,55 @@ const Dashboard: React.FC = () => {
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? '#10b981' : '#ef4444', display: 'inline-block' }} />
           {isActive ? 'Active' : 'Inactive'}
         </span>
+      </div>
+    );
+  };
+
+  // ── Active alerts strip ───────────────────────────────────────────────────
+
+  const renderAlertsStrip = () => {
+    if (activeAlerts.length === 0) return null;
+
+    const severityPalette: Record<string, { bg: string; color: string; border: string }> = {
+      critical: { bg: 'rgba(239,68,68,0.1)',  color: '#ef4444', border: 'rgba(239,68,68,0.25)'  },
+      warning:  { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
+      info:     { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: 'rgba(59,130,246,0.25)' },
+    };
+
+    return (
+      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {activeAlerts.map(alert => {
+          const p = severityPalette[alert.severity] ?? severityPalette.info;
+          return (
+            <div
+              key={alert.id}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 14px', borderRadius: 10,
+                background: p.bg, border: `1px solid ${p.border}`,
+              }}
+            >
+              <AlertTriangle size={13} color={p.color} style={{ flexShrink: 0 }} />
+              {alert.fault_code && (
+                <span style={{
+                  fontSize: '0.65rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+                  padding: '1px 6px', borderRadius: 4,
+                  background: p.bg, border: `1px solid ${p.border}`, color: p.color, flexShrink: 0,
+                }}>
+                  {alert.fault_code}
+                </span>
+              )}
+              <span style={{ fontSize: '0.75rem', color: p.color, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {alert.message}
+              </span>
+              {alert.status && (
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: p.color, opacity: 0.7, flexShrink: 0 }}>
+                  {alert.status}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -422,6 +513,9 @@ const Dashboard: React.FC = () => {
 
         {/* Site KPIs */}
         {renderSiteKPIs()}
+
+        {/* Active alerts strip */}
+        {renderAlertsStrip()}
 
         {/* Site info strip */}
         {renderSiteInfoStrip()}
