@@ -17,12 +17,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../constants';
+import DetailsTab from './DetailsTab';
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
 const tabIconSize = 16;
 const TABS = [
   { id: 'overview',  label: 'Overview',  icon: <Home size={tabIconSize} /> },
+  { id: 'details',   label: 'Details',   icon: <Activity size={tabIconSize} /> },
   { id: 'weather',   label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
   { id: 'history',   label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
   { id: 'forecast',  label: 'Forecast',  icon: <Sun size={tabIconSize} /> },
@@ -33,6 +35,7 @@ const HISTORY_SERIES = [
   { key: 'PV', label: 'PV' },
   { key: 'Load', label: 'Load' },
   { key: 'Grid', label: 'Grid' },
+  { key: 'InvOut', label: 'Inv Out' },
   { key: 'SOC', label: 'SOC' },
 ] as const;
 type HistorySeriesKey = typeof HISTORY_SERIES[number]['key'];
@@ -262,11 +265,14 @@ function aggregateByPeriod(data: any[], range: string): any[] {
       timestamp:            first.timestamp,
       pv1_power_w:          avg('pv1_power_w'),
       pv2_power_w:          avg('pv2_power_w'),
+      pv3_power_w:          avg('pv3_power_w'),
+      pv4_power_w:          avg('pv4_power_w'),
       load_power_w:         avg('load_power_w'),
       grid_power_w:         avg('grid_power_w'),
       battery_soc_percent:  avg('battery_soc_percent'),
       battery_power_w:      avg('battery_power_w'),
       pv_today_kwh:         isDay ? Math.max(...bucket.map(r => r.pv_today_kwh ?? 0)) : first.pv_today_kwh,
+      ac_output_power_w:    avg('ac_output_power_w'),
     };
   });
 }
@@ -752,13 +758,13 @@ interface EnergyFlowBlockProps {
   battSoc: number | null;
 }
 
-// Figma-inspired triangular energy flow diagram
-// Layout: House top-center · Solar bottom-left · Grid bottom-right
-// Lines: L-shaped orthogonal paths with SVG animateMotion flow dots
+// ── EnergyFlowBlock — premium 4-corner cross layout ──────────────────────────
+// Layout: Solar TL · Load TR · Battery BL · Grid BR · Hub center
+// SVG viewBox 300×270 with preserveAspectRatio="none" — diagonal gradient lines
+// with animateMotion flow dots indicating real-time power direction.
 const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw, battKw, battSoc }) => {
   const { isDark } = useTheme();
 
-  // Stable unique ID for SVG element references
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
   const uid = uidRef.current;
@@ -771,6 +777,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const isExporting   = (gridKw  ?? 0) < -0.01;
   const isImporting   = (gridKw  ?? 0) >  0.01;
   const isCharging    = (battKw  ?? 0) >  0.01;
+  const isDischarging = (battKw  ?? 0) < -0.01;
 
   const pvValue        = pvKw   ?? 0;
   const loadValue      = loadKw ?? 0;
@@ -782,21 +789,14 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const isLoadActive  = loadValue      > 0.05;
   const isGridActive  = gridValue      > 0.05;
   const isBattActive  = battPowerValue > 0.05;
+  const isBattPresent = isBattActive || battSocValue > 0;
 
-  // Triangular layout — equilateral spacing, viewBox 200×230, height 230px
-  // preserveAspectRatio="none" → SVG x/y map directly to CSS % / pixels
-  //   House  x=100 (50%), y=71:  label(14)+gap(6)+value(10)+gap(6)+radius(35)
-  //   Solar  x=50  (25%), y=159: 230-value(10)-gap(6)-label(14)-gap(6)-radius(35)
-  //   Grid   x=150 (75%), y=159
-  // Junction at y=115
-  const jY = 115;
-  const solarPath = `M 50 159 L 50 ${jY} L 100 ${jY} L 100 71`;
-  const gridPath  = `M 100 71 L 100 ${jY} L 150 ${jY} L 150 159`;
-
-  const gridStroke = isExporting ? '#5bbd79' : '#3b82f6';
+  const gridColor  = isExporting ? '#5bbd79' : '#3b82f6';
+  const labelColor = isDark ? '#64748b' : '#94a3b8';
+  const trackColor = isDark ? 'rgba(148,163,184,0.38)' : 'rgba(71,85,105,0.28)';
 
   const statusText = isPvActive && !isImporting
-    ? 'Your system is in optimal condition.'
+    ? 'System optimal — solar powering load.'
     : isExporting
     ? 'Exporting surplus energy to grid.'
     : isImporting
@@ -804,15 +804,135 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
     : 'No active solar generation.';
   const statusOk = isPvActive && !isImporting;
 
-  // Helpers
-  const ringStroke = (active: boolean, color: string) =>
-    active ? color : isDark ? 'rgba(100,116,139,0.22)' : 'rgba(166,171,179,0.45)';
-  const iconColor = (active: boolean, color: string) =>
-    active ? color : isDark ? '#475569' : '#cbd5e1';
-  const valueColor = (active: boolean) =>
-    active ? (isDark ? '#f1f5f9' : '#15171a') : isDark ? '#475569' : '#cbd5e1';
-  const labelColor = isDark ? '#64748b' : '#898e99';
-  const trackColor = isDark ? 'rgba(100,116,139,0.12)' : 'rgba(166,171,179,0.2)';
+  // ── SVG geometry ─────────────────────────────────────────────────────────────
+  // viewBox 300×270, preserveAspectRatio="none"
+  // Hub at (150, 135) — geometric center
+  // Corner anchors align with center of each node card's icon ring
+  //   Node cards: 80px wide, icon ring center ~32px from top, 40px from left
+  //   TL card at (0,0): icon center → SVG (40, 32)  → scaled to container coords
+  //   TR card at (right:0): icon center → SVG (260, 32)
+  //   BL card at (bottom:0, card height ~98px): icon center → SVG (40, 238)
+  //   BR card: icon center → SVG (260, 238)
+  const hub = { x: 150, y: 135 };
+  const C   = { solar: {x:58,y:50}, load: {x:242,y:50}, batt: {x:58,y:220}, grid: {x:242,y:220} };
+
+  // Hub circle radius in SVG units (hub is 58px CSS, container ~270px tall → ~29 SVG units)
+  const hubR = 30;
+  // Returns the point on the hub circle edge closest to (cx, cy)
+  const hubEdge = (cx: number, cy: number) => {
+    const dx = cx - hub.x, dy = cy - hub.y;
+    const d  = Math.sqrt(dx * dx + dy * dy);
+    return { x: hub.x + hubR * dx / d, y: hub.y + hubR * dy / d };
+  };
+  const HE = {
+    solar: hubEdge(C.solar.x, C.solar.y),
+    load:  hubEdge(C.load.x,  C.load.y),
+    batt:  hubEdge(C.batt.x,  C.batt.y),
+    grid:  hubEdge(C.grid.x,  C.grid.y),
+  };
+
+  // Paths named for animateMotion direction — stop at hub circle edge, not center
+  const P = {
+    solarToHub: `M ${C.solar.x} ${C.solar.y} L ${HE.solar.x} ${HE.solar.y}`,
+    hubToLoad:  `M ${HE.load.x} ${HE.load.y} L ${C.load.x} ${C.load.y}`,
+    hubToBatt:  `M ${HE.batt.x} ${HE.batt.y} L ${C.batt.x} ${C.batt.y}`,
+    battToHub:  `M ${C.batt.x} ${C.batt.y} L ${HE.batt.x} ${HE.batt.y}`,
+    hubToGrid:  `M ${HE.grid.x} ${HE.grid.y} L ${C.grid.x} ${C.grid.y}`,
+    gridToHub:  `M ${C.grid.x} ${C.grid.y} L ${HE.grid.x} ${HE.grid.y}`,
+  };
+
+  // Track: full bi-directional lines stopping at hub edge
+  const trackPaths = [
+    `M ${C.solar.x} ${C.solar.y} L ${HE.solar.x} ${HE.solar.y}`,
+    `M ${C.load.x}  ${C.load.y}  L ${HE.load.x}  ${HE.load.y}`,
+    `M ${C.batt.x}  ${C.batt.y}  L ${HE.batt.x}  ${HE.batt.y}`,
+    `M ${C.grid.x}  ${C.grid.y}  L ${HE.grid.x}  ${HE.grid.y}`,
+  ];
+
+  // ── Node card renderer ────────────────────────────────────────────────────────
+  const NodeCard = ({
+    label, icon, valueStr, color, active, subLabel, extra, style,
+  }: {
+    label: string;
+    icon: React.ReactNode;
+    valueStr: string;
+    color: string;
+    active: boolean;
+    subLabel?: string;
+    extra?: React.ReactNode;
+    style: React.CSSProperties;
+  }) => (
+    <div
+      style={{
+        position: 'absolute',
+        width: 80,
+        padding: '9px 7px 8px',
+        borderRadius: 13,
+        background: active
+          ? (isDark ? 'rgba(22,33,55,0.96)' : '#ffffff')
+          : (isDark ? 'rgba(15,23,42,0.75)' : 'rgba(248,250,252,0.88)'),
+        border: `1px solid ${active ? color + '4a' : isDark ? 'rgba(100,116,139,0.18)' : 'rgba(148,163,184,0.28)'}`,
+        boxShadow: active
+          ? `0 0 0 1.5px ${color}18, 0 6px 20px ${color}1a`
+          : isDark ? '0 2px 10px rgba(0,0,0,0.25)' : '0 1px 4px rgba(0,0,0,0.07)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        zIndex: 2,
+        backdropFilter: 'blur(8px)',
+        ...style,
+      }}
+    >
+      {/* Icon ring — static, no pulse (only SVG flow dots animate) */}
+      <div
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: '50%',
+          background: active
+            ? (isDark ? `${color}16` : `${color}0f`)
+            : (isDark ? 'rgba(100,116,139,0.09)' : 'rgba(148,163,184,0.1)'),
+          border: `1.5px solid ${active ? color + '55' : isDark ? 'rgba(100,116,139,0.22)' : 'rgba(148,163,184,0.3)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {icon}
+      </div>
+      {/* Label */}
+      <span style={{
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.07em',
+        textTransform: 'uppercase',
+        color: active ? color : labelColor,
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1,
+      }}>
+        {label}
+      </span>
+      {/* Value */}
+      <span style={{
+        fontSize: 13,
+        fontWeight: 700,
+        color: active ? (isDark ? '#f1f5f9' : '#0f172a') : labelColor,
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 2,
+      }}>
+        {valueStr}
+        <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.6 }}>kW</span>
+        {subLabel && active && (
+          <span style={{ fontSize: 10, fontWeight: 800, color, marginLeft: 1 }}>{subLabel}</span>
+        )}
+      </span>
+      {extra}
+    </div>
+  );
 
   return (
     <motion.div
@@ -824,13 +944,15 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         marginBottom: 16,
         borderRadius: 14,
         background: isDark ? '#0f172a' : '#ffffff',
-        border: `0.6px solid ${isDark ? 'rgba(148,163,184,0.12)' : '#a6aab3'}`,
-        boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+        border: `0.6px solid ${isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0'}`,
+        boxShadow: isDark
+          ? '0 4px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.03)'
+          : '0 1px 4px rgba(0,0,0,0.07)',
         overflow: 'hidden',
       }}
     >
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} color="#5bbd79" />
           <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: labelColor, fontFamily: 'Inter, sans-serif' }}>
@@ -846,134 +968,212 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
           <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981' }}>LIVE</span>
         </div>
       </div>
-      <p style={{ fontSize: '0.65rem', color: labelColor, fontFamily: 'Inter, sans-serif', marginBottom: 6, textAlign: 'right' }}>
-        Last updated {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </p>
 
-      {/* ── Diagram: SVG lines + absolutely positioned node divs ── */}
-      <div style={{ position: 'relative', width: '100%', height: 230 }}>
-        {/* SVG — lines & flow dots only. preserveAspectRatio="none" so SVG fills
-            the container exactly, making SVG coordinates map directly to screen pixels. */}
+      {/* ── Diagram ── */}
+      <div style={{ position: 'relative', width: '100%', height: 270 }}>
+
+        {/* SVG: gradient flow lines + animated dots */}
         <svg
-          viewBox="0 0 200 230"
+          viewBox="0 0 300 270"
           preserveAspectRatio="none"
           aria-hidden="true"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
         >
           <defs>
-            <path id={`sp-${uid}`} d={solarPath} />
-            <path id={`gp-${uid}`} d={gridPath} />
-            <filter id={`gl-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="1.5" result="b" />
+            {/* Path refs for animateMotion */}
+            {Object.entries(P).map(([k, d]) => <path key={k} id={`${k}-${uid}`} d={d} />)}
+
+            {/* Soft glow filter */}
+            <filter id={`glow-${uid}`} x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.2" result="b" />
               <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+
+            {/* Per-node gradient for active lines */}
+            <linearGradient id={`sg-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#F07522" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="#5bbd79" stopOpacity="0.95" />
+            </linearGradient>
+            <linearGradient id={`lg-${uid}`} x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.45" />
+            </linearGradient>
+            <linearGradient id={`bg-${uid}`} x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.45" />
+            </linearGradient>
+            <linearGradient id={`gg-${uid}`} x1="100%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor={gridColor} stopOpacity="0.95" />
+              <stop offset="100%" stopColor={gridColor} stopOpacity="0.45" />
+            </linearGradient>
           </defs>
 
-          {/* Track lines */}
-          <path d={solarPath} stroke={trackColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <path d={gridPath}  stroke={trackColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          {/* ── Track lines (always visible, dashed, subtle) ── */}
+          {trackPaths.map((d, i) => (
+            <path key={i} d={d} stroke={trackColor} strokeWidth={1.5} fill="none"
+              strokeLinecap="round" strokeDasharray="4 5" />
+          ))}
 
-          {/* Active solar line */}
-          {isPvActive && <path d={solarPath} stroke="#5bbd79" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" filter={`url(#gl-${uid})`} />}
-
-          {/* Active grid line — always solid (same style as solar) */}
+          {/* ── Coloured lines: full glow when flowing, dim solid when idle ── */}
+          {/* Solar */}
+          {isPvActive && (
+            <path d={P.solarToHub} stroke={`url(#sg-${uid})`} strokeWidth={2.5}
+              fill="none" strokeLinecap="round" filter={`url(#glow-${uid})`} />
+          )}
+          {/* Load */}
+          {isLoadActive && (
+            <path d={P.hubToLoad} stroke={`url(#lg-${uid})`} strokeWidth={2.5}
+              fill="none" strokeLinecap="round" filter={`url(#glow-${uid})`} />
+          )}
+          {/* Battery — glowing gradient whenever node is present */}
+          {isBattPresent && (
+            <path
+              d={isCharging ? P.hubToBatt : P.battToHub}
+              stroke={`url(#bg-${uid})`}
+              strokeWidth={2.5} fill="none" strokeLinecap="round"
+              filter={`url(#glow-${uid})`}
+            />
+          )}
+          {/* Grid — coloured whenever node is active, glowing when power flows */}
           {isGridActive && (
-            <path d={gridPath} stroke={gridStroke} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" filter={`url(#gl-${uid})`} />
+            <path d={isExporting ? P.hubToGrid : P.gridToHub} stroke={`url(#gg-${uid})`}
+              strokeWidth={2.5} fill="none" strokeLinecap="round" filter={`url(#glow-${uid})`} />
           )}
 
-          {/* Flow dots */}
-          {isPvActive && [0, 0.7].map((d, i) => (
-            <circle key={`s${i}`} r={3.5} fill="#5bbd79" opacity={0.9}>
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`}><mpath href={`#sp-${uid}`} /></animateMotion>
-            </circle>
-          ))}
-          {isExporting && [0.2, 0.9].map((d, i) => (
-            <circle key={`e${i}`} r={3.5} fill="#5bbd79" opacity={0.9}>
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`}><mpath href={`#gp-${uid}`} /></animateMotion>
-            </circle>
-          ))}
-          {isImporting && [0.2, 0.9].map((d, i) => (
-            <circle key={`i${i}`} r={3.5} fill="#3b82f6" opacity={0.9}>
-              <animateMotion dur="2s" repeatCount="indefinite" begin={`${d}s`} keyPoints="1;0" keyTimes="0;1" calcMode="linear">
-                <mpath href={`#gp-${uid}`} />
+          {/* ── Flow dots — each node mirrors exactly when its line is shown ── */}
+          {isPvActive && (
+            <circle r={3.5} fill="#5bbd79" opacity={0.92}>
+              <animateMotion dur="1.9s" repeatCount="indefinite">
+                <mpath href={`#solarToHub-${uid}`} />
               </animateMotion>
             </circle>
-          ))}
+          )}
+          {isLoadActive && (
+            <circle r={3.5} fill="#8b5cf6" opacity={0.92}>
+              <animateMotion dur="1.9s" repeatCount="indefinite">
+                <mpath href={`#hubToLoad-${uid}`} />
+              </animateMotion>
+            </circle>
+          )}
+          {isBattPresent && (
+            <circle r={3.5} fill="#f59e0b" opacity={0.92}>
+              <animateMotion dur="1.9s" repeatCount="indefinite">
+                <mpath href={isCharging ? `#hubToBatt-${uid}` : `#battToHub-${uid}`} />
+              </animateMotion>
+            </circle>
+          )}
+          {isGridActive && (
+            <circle r={3.5} fill={gridColor} opacity={0.92}>
+              <animateMotion dur="1.9s" repeatCount="indefinite">
+                <mpath href={isExporting ? `#hubToGrid-${uid}` : `#gridToHub-${uid}`} />
+              </animateMotion>
+            </circle>
+          )}
         </svg>
 
-        {/* ── Node: House — top-center. Circle center at y=71px matches SVG y=71 ── */}
-        <div style={{ position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>LOAD</span>
-          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isLoadActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{loadValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span></span>
-          <motion.div
-            animate={isLoadActive ? { boxShadow: ['0 0 0 0 rgba(139,92,246,0)', '0 0 0 10px rgba(139,92,246,0.22)', '0 0 0 0 rgba(139,92,246,0)'] } : {}}
-            transition={{ duration: 2.2, repeat: Infinity }}
-            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isLoadActive, '#8b5cf6')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Home size={28} color={iconColor(isLoadActive, '#8b5cf6')} />
-          </motion.div>
-        </div>
+        {/* ── Node: Solar — top-left ── */}
+        <NodeCard
+          label="Solar"
+          icon={<Sun size={20} color={isPvActive ? '#F07522' : (isDark ? '#475569' : '#cbd5e1')} />}
+          valueStr={pvValue.toFixed(1)}
+          color="#5bbd79"
+          active={isPvActive}
+          style={{ top: 18, left: 14 }}
+        />
 
-        {/* ── Node: Solar — bottom-left. Circle center at y=159px matches SVG y=159 ── */}
-        <div style={{ position: 'absolute', left: '25%', bottom: 0, transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <motion.div
-            animate={isPvActive ? { boxShadow: ['0 0 0 0 rgba(91,189,121,0)', '0 0 0 10px rgba(91,189,121,0.22)', '0 0 0 0 rgba(91,189,121,0)'] } : {}}
-            transition={{ duration: 2.2, repeat: Infinity }}
-            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isPvActive, '#5bbd79')}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Sun size={28} color={iconColor(isPvActive, '#F07522')} />
-          </motion.div>
-          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>SOLAR</span>
-          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isPvActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>{pvValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span></span>
-        </div>
+        {/* ── Node: Load — top-right ── */}
+        <NodeCard
+          label="Load"
+          icon={<Home size={20} color={isLoadActive ? '#8b5cf6' : (isDark ? '#475569' : '#cbd5e1')} />}
+          valueStr={loadValue.toFixed(1)}
+          color="#8b5cf6"
+          active={isLoadActive}
+          style={{ top: 18, right: 14 }}
+        />
 
-        {/* ── Node: Grid — bottom-right. Circle center at y=159px matches SVG y=159 ── */}
-        <div style={{ position: 'absolute', right: '25%', bottom: 0, transform: 'translateX(50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <motion.div
-            animate={isGridActive ? { boxShadow: [`0 0 0 0 ${gridStroke}00`, `0 0 0 10px ${gridStroke}33`, `0 0 0 0 ${gridStroke}00`] } : {}}
-            transition={{ duration: 2.2, repeat: Infinity, delay: 0.7 }}
-            style={{ width: 70, height: 70, borderRadius: '50%', background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${ringStroke(isGridActive, gridStroke)}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        {/* ── Node: Battery — bottom-left ── */}
+        <NodeCard
+          label="Battery"
+          icon={<Battery size={20} color={isBattPresent ? '#f59e0b' : (isDark ? '#475569' : '#cbd5e1')} />}
+          valueStr={battPowerValue.toFixed(1)}
+          color="#f59e0b"
+          active={isBattPresent}
+          subLabel={isBattActive ? (isCharging ? '↑' : '↓') : undefined}
+          extra={battSocValue > 0 ? (
+            <div style={{ width: '100%', padding: '0 2px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                <span style={{ fontSize: 8, color: labelColor, fontFamily: 'Inter, sans-serif' }}>SOC</span>
+                <span style={{ fontSize: 8, fontWeight: 700, color: battSocValue > 60 ? '#10b981' : battSocValue > 20 ? '#f59e0b' : '#ef4444', fontFamily: 'Inter, sans-serif' }}>
+                  {battSocValue.toFixed(0)}%
+                </span>
+              </div>
+              <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                <motion.div
+                  animate={{ width: `${battSocValue}%` }}
+                  transition={{ duration: 0.9 }}
+                  style={{ height: '100%', borderRadius: 2, background: battSocValue > 60 ? '#10b981' : battSocValue > 20 ? '#f59e0b' : '#ef4444' }}
+                />
+              </div>
+            </div>
+          ) : undefined}
+          style={{ bottom: 18, left: 14 }}
+        />
+
+        {/* ── Node: Grid — bottom-right ── */}
+        <NodeCard
+          label="Grid"
+          icon={<Activity size={20} color={isGridActive ? gridColor : (isDark ? '#475569' : '#cbd5e1')} />}
+          valueStr={gridValue.toFixed(1)}
+          color={gridColor}
+          active={isGridActive}
+          subLabel={isGridActive ? (isExporting ? '↑' : '↓') : undefined}
+          style={{ bottom: 18, right: 14 }}
+        />
+
+        {/* ── Center Hub ── */}
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 3 }}>
+          <div
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: '50%',
+              background: isDark
+                ? 'radial-gradient(circle at 38% 38%, rgba(91,189,121,0.2) 0%, rgba(10,17,35,0.97) 70%)'
+                : 'radial-gradient(circle at 38% 38%, rgba(91,189,121,0.14) 0%, rgba(248,250,252,0.99) 70%)',
+              border: `1.5px solid ${isDark ? 'rgba(91,189,121,0.38)' : 'rgba(91,189,121,0.48)'}`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              boxShadow: isDark
+                ? '0 0 24px rgba(91,189,121,0.14), inset 0 1px 0 rgba(255,255,255,0.06)'
+                : '0 0 18px rgba(91,189,121,0.12), inset 0 1px 0 rgba(255,255,255,0.9)',
+            }}
           >
-            <Activity size={28} color={iconColor(isGridActive, gridStroke)} />
-          </motion.div>
-          <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: labelColor, fontFamily: 'Inter, sans-serif' }}>GRID</span>
-          <span style={{ fontSize: 10, fontWeight: 600, color: valueColor(isGridActive), fontFamily: 'Inter, sans-serif', lineHeight: 1 }}>
-            {gridValue.toFixed(1)} <span style={{ fontSize: 7, opacity: 0.65 }}>kW</span>
-            {isGridActive && <span style={{ fontSize: 7, fontWeight: 700, color: gridStroke, marginLeft: 2 }}>{isExporting ? '↑' : '↓'}</span>}
-          </span>
+            <Zap size={19} color="#5bbd79" />
+            <span style={{ fontSize: 8, fontWeight: 800, color: '#5bbd79', letterSpacing: '0.05em', lineHeight: 1 }}>HUB</span>
+          </div>
         </div>
       </div>
 
-      {/* ── Battery row ── */}
-      {(isBattActive || battSocValue > 0) && (
+      {/* ── Status row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: `0.6px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 12px', marginTop: 4, borderRadius: 10,
-          background: isDark ? 'rgba(245,158,11,0.07)' : 'rgba(245,158,11,0.05)',
-          border: `1px solid ${isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.22)'}`,
+          width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+          background: statusOk ? 'rgba(91,189,121,0.14)' : 'rgba(245,158,11,0.12)',
+          border: `1px solid ${statusOk ? '#5bbd79' : '#f59e0b'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Battery size={15} color="#f59e0b" />
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-            <motion.div
-              animate={{ width: `${battSocValue}%` }}
-              transition={{ duration: 0.8 }}
-              style={{ height: '100%', borderRadius: 2, background: battSocValue > 30 ? '#f59e0b' : '#ef4444' }}
-            />
-          </div>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
-            {battSocValue.toFixed(0)}%{isBattActive ? ` · ${battPowerValue.toFixed(1)} kW ${isCharging ? '↑' : '↓'}` : ''}
+          <span style={{ fontSize: 9, fontWeight: 700, color: statusOk ? '#5bbd79' : '#f59e0b', lineHeight: 1 }}>
+            {statusOk ? '✓' : '!'}
           </span>
         </div>
-      )}
-
-      {/* ── Status row ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTop: `0.6px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>
-        <svg width={14} height={14} viewBox="0 0 14 14" aria-hidden="true" style={{ flexShrink: 0 }}>
-          <circle cx={7} cy={7} r={6} fill={statusOk ? 'rgba(91,189,121,0.15)' : 'rgba(245,158,11,0.12)'} stroke={statusOk ? '#5bbd79' : '#f59e0b'} strokeWidth={1.2} />
-          <text x={7} y={10.5} textAnchor="middle" fontSize={8} fontFamily="Inter" fontWeight={700} fill={statusOk ? '#5bbd79' : '#f59e0b'}>{statusOk ? '✓' : '!'}</text>
-        </svg>
         <span style={{ fontSize: '0.7rem', color: isDark ? '#64748b' : '#6b7280', fontFamily: 'Inter, sans-serif' }}>
           {statusText}
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: '0.62rem', color: labelColor, fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
     </motion.div>
@@ -1080,7 +1280,7 @@ const ForecastTable = ({ data }: { data: any[] }) => {
 };
 
 // Similar tables for History and VsActual (keeping existing, adding border radius)
-const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
+const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Inv Out (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
   const { isDark } = useTheme();
   const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
   const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
@@ -1094,6 +1294,7 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>PV (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Load (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Grid (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f43f5e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Inv Out (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : '#e5e7eb'}` }}>Batt SOC (%)</th>
           </tr>
         </thead>
@@ -1104,6 +1305,7 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Inv Out (kW)']?.toFixed(2) ?? '—'}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
             </tr>
           ))}
@@ -1144,6 +1346,60 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
   );
 };
 
+// ── Overview helper components ──────────────────────────────────────────────────
+
+const DataChip: React.FC<{
+  label: string; value: string; sub?: string; accent?: string; mono?: boolean; wide?: boolean;
+}> = ({ label, value, sub, accent, mono = true, wide = false }) => {
+  const { isDark } = useTheme();
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 1,
+      padding: '6px 10px', borderRadius: 8,
+      minWidth: wide ? 120 : 68, flexShrink: 0,
+      background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)',
+      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.07)'}`,
+    }}>
+      <span style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+      <span style={{ fontSize: '0.88rem', fontFamily: mono ? 'JetBrains Mono, monospace' : 'Poppins, sans-serif', fontWeight: 700, color: accent ?? 'var(--text-primary)', lineHeight: 1.3 }}>{value}</span>
+      {sub != null && <span style={{ fontSize: '0.62rem', fontFamily: 'Inter, sans-serif', color: 'var(--text-muted)', lineHeight: 1.25, marginTop: 1 }}>{sub}</span>}
+    </div>
+  );
+};
+
+const OverviewSection: React.FC<{
+  title: string; accent: string; accentRgb: string;
+  icon: React.ReactNode; right?: React.ReactNode;
+  badge?: React.ReactNode; children: React.ReactNode;
+}> = ({ title, accent, accentRgb, icon, right, badge, children }) => {
+  const { isDark } = useTheme();
+  return (
+    <div style={{
+      marginBottom: 12, borderRadius: 12, overflow: 'hidden',
+      border: `1px solid ${isDark ? `rgba(${accentRgb},0.22)` : `rgba(${accentRgb},0.22)`}`,
+      background: isDark ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.9)',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px',
+        background: isDark ? `rgba(${accentRgb},0.1)` : `rgba(${accentRgb},0.06)`,
+        borderBottom: `1px solid ${isDark ? `rgba(${accentRgb},0.18)` : `rgba(${accentRgb},0.14)`}`,
+      }}>
+        {icon}
+        <span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.75rem', color: accent, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</span>
+        {badge}
+        {right && <div style={{ marginLeft: 'auto' }}>{right}</div>}
+      </div>
+      <div style={{ padding: '10px 14px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const SectionDivider: React.FC<{ isDark: boolean }> = ({ isDark }) => (
+  <div style={{ width: '100%', height: 1, background: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.05)', margin: '4px 0' }} />
+);
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -1170,6 +1426,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     PV: true,
     Load: true,
     Grid: true,
+    InvOut: false,
     SOC: true,
   });
   const [showVsActualSeries, setShowVsActualSeries] = useState<Record<VsActualSeriesKey, boolean>>({
@@ -1333,10 +1590,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
 
-  const pvKw = latest ? ((latest.pv1_power_w ?? 0) + (latest.pv2_power_w ?? 0)) / 1000 : null;
+  const pvKw = latest ? (
+    (Number(latest.pv1_power_w ?? 0) + Number(latest.pv2_power_w ?? 0) + Number(latest.pv3_power_w ?? 0) + Number(latest.pv4_power_w ?? 0)) / 1000
+  ) : null;
   const batSoc = latest?.battery_soc_percent ?? null;
   const loadKw = latest ? (latest.load_power_w ?? 0) / 1000 : null;
-  const todayKwh = latest?.pv_today_kwh ?? null;
+  const todayKwh    = latest?.pv_today_kwh    ?? null;
+  const totalPvKwh  = latest?.pv_total_kwh    ?? null;
   const gridKw = latest ? (latest.grid_power_w ?? 0) / 1000 : null;
   const batPowerKw = latest ? (latest.battery_power_w ?? 0) / 1000 : null;
   const invTemp = latest?.inverter_temp_c ?? null;
@@ -1355,6 +1615,53 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const gridImporting = gridKw != null && gridKw > 0.01;
   const gridExporting = gridKw != null && gridKw < -0.01;
   const batCharging = batPowerKw != null && batPowerKw > 0.01;
+
+  // Per-phase grid data.
+  // addr 59 (run_status) is stuck at 0 on our hardware — cannot rely on run_state.
+  // Instead: show cards when any phase field is present. Mark phase data as stale
+  // when the sum of L1+L2+L3 powers deviates wildly from grid_total (stale holdover).
+  // Fall back to grid_power_w / grid_voltage_v for L1 when the per-phase
+  // DynamoDB attributes are absent (written by older backend deployments).
+  const gridL1PowerW  = latest?.grid_l1_power_w   ?? latest?.grid_power_w   ?? null;
+  const gridL2PowerW  = latest?.grid_l2_power_w   ?? null;
+  const gridL3PowerW  = latest?.grid_l3_power_w   ?? null;
+  const gridL1VoltageV = latest?.grid_l1_voltage_v ?? latest?.grid_voltage_v ?? null;
+  const gridL2VoltageV = latest?.grid_l2_voltage_v ?? null;
+  const gridL3VoltageV = latest?.grid_l3_voltage_v ?? null;
+  const gridL1CurrentA = latest?.grid_l1_current_a ?? null;
+  const gridL2CurrentA = latest?.grid_l2_current_a ?? null;
+  const gridL3CurrentA = latest?.grid_l3_current_a ?? null;
+
+  const hasPhaseData = gridL1PowerW != null || gridL2PowerW != null || gridL3PowerW != null;
+  // Stale detection: if phase sum differs from total by >3×, the registers are holdovers
+  const phaseSum = (gridL1PowerW ?? 0) + (gridL2PowerW ?? 0) + (gridL3PowerW ?? 0);
+  const gridTotalW = (gridKw ?? 0) * 1000;
+  const phaseDataStale = hasPhaseData && Math.abs(gridTotalW) < 50
+    ? Math.abs(phaseSum) > 200           // low total: any large phase sum = stale
+    : Math.abs(phaseSum - gridTotalW) > Math.abs(gridTotalW) * 3 + 200;
+
+  const gridPhases = hasPhaseData ? [
+    { label: 'L1', powerW: gridL1PowerW, voltageV: gridL1VoltageV, currentA: gridL1CurrentA },
+    { label: 'L2', powerW: gridL2PowerW, voltageV: gridL2VoltageV, currentA: gridL2CurrentA },
+    { label: 'L3', powerW: gridL3PowerW, voltageV: gridL3VoltageV, currentA: gridL3CurrentA },
+  ] : null;
+
+  // Per-phase load data (power only — no per-phase load voltage/current polled)
+  const loadL1PowerW = latest?.load_l1_power_w ?? null;
+  const loadL2PowerW = latest?.load_l2_power_w ?? null;
+  const loadL3PowerW = latest?.load_l3_power_w ?? null;
+  const hasLoadPhaseData = loadL1PowerW != null || loadL2PowerW != null || loadL3PowerW != null;
+  const loadPhases = hasLoadPhaseData ? [
+    { label: 'L1', powerW: loadL1PowerW },
+    { label: 'L2', powerW: loadL2PowerW },
+    { label: 'L3', powerW: loadL3PowerW },
+  ] : null;
+
+  // Inverter AC output power (from inv_total_power, addr 636)
+  const acOutputKw = latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
+
+  // DC transformer temperature (addr 540)
+  const dcTemp = latest?.dc_temp_c ?? null;
 
   const runStateBadge = runState != null ? (
     runState === 0 ? { label: 'Standby', color: '#9ca3af' } :
@@ -1380,9 +1687,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         : fmt(row.timestamp, dateRange);
       return {
         time: timeLabel,
-        'PV (kW)': +(((row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0)) / 1000).toFixed(2),
+        'PV (kW)': +(((row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0) + (row.pv3_power_w ?? 0) + (row.pv4_power_w ?? 0)) / 1000).toFixed(2),
         'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
         'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
+        'Inv Out (kW)': +((row.ac_output_power_w ?? 0) / 1000).toFixed(2),
         'Batt SOC (%)': row.battery_soc_percent ?? null,
       };
     });
@@ -1406,18 +1714,24 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     const data = zoomedHistoryData;
     if (!data.length) return null;
     const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24;
-    const loads = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
-    const grids = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
-    const socs = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
-    const loadTotal = loads.reduce((s, v) => s + v, 0) * intervalH;
-    const loadPeak = loads.length ? Math.max(...loads) : 0;
-    const loadAvg = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
+    const pvs     = data.map(d => d['PV (kW)'] as number).filter(v => v != null);
+    const loads   = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
+    const grids   = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
+    const invOuts = data.map(d => d['Inv Out (kW)'] as number).filter(v => v != null);
+    const socs    = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
+    const pvTotal    = pvs.reduce((s, v) => s + v, 0) * intervalH;
+    const pvPeak     = pvs.length ? Math.max(...pvs) : 0;
+    const loadTotal  = loads.reduce((s, v) => s + v, 0) * intervalH;
+    const loadPeak   = loads.length ? Math.max(...loads) : 0;
+    const loadAvg    = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
+    const invOutPeak = invOuts.length ? Math.max(...invOuts) : 0;
+    const invOutAvg  = invOuts.length ? invOuts.reduce((s, v) => s + v, 0) / invOuts.length : 0;
     const gridImport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
     const gridExport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
     const socMin = socs.length ? Math.min(...socs) : null;
     const socMax = socs.length ? Math.max(...socs) : null;
     const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
-    return { loadTotal, loadPeak, loadAvg, gridImport, gridExport, socMin, socMax, socAvg };
+    return { pvTotal, pvPeak, loadTotal, loadPeak, loadAvg, invOutPeak, invOutAvg, gridImport, gridExport, socMin, socMax, socAvg };
   }, [zoomedHistoryData, dateRange]);
 
   // ── Prediction vs Actual ────────────────────────────────────────────────────
@@ -1450,7 +1764,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       }
 
       const actualKw = nearest
-        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0)) / 1000).toFixed(3)
+        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0) + (nearest.pv3_power_w ?? 0) + (nearest.pv4_power_w ?? 0)) / 1000).toFixed(3)
         : null;
       const p50 = +Number(frow.p50_kw).toFixed(3);
       const diffPct = actualKw != null && p50 > 0
@@ -1952,14 +2266,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
-                {/* ── KPI Cards with 3D tilt ── */}
+                {/* ── KPI Cards ── */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                   <KpiCard
                     index={0}
                     label="Solar PV"
                     value={pvKw != null ? pvKw.toFixed(2) : '—'}
                     unit="kW"
-                    sub={todayKwh != null && isLatestToday ? `${todayKwh.toFixed(2)} kWh today` : undefined}
+                    sub={todayKwh != null && isLatestToday
+                      ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
+                      : undefined}
                     accent="#F07522"
                     icon={<IconSunKpi />}
                   />
@@ -1968,7 +2284,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     label="Battery"
                     value={batSoc != null ? batSoc.toFixed(0) : '—'}
                     unit="%"
-                    sub={batPowerKw != null ? `${batCharging ? 'Charging' : 'Discharging'} ${Math.abs(batPowerKw).toFixed(2)} kW` : undefined}
+                    sub={[
+                      batPowerKw != null ? `${batCharging ? 'Charging' : 'Discharging'} ${Math.abs(batPowerKw).toFixed(2)} kW` : null,
+                      latest?.battery_temp_c != null ? `${Number(latest.battery_temp_c).toFixed(0)}°C` : null,
+                    ].filter(Boolean).join(' · ') || undefined}
                     accent="#00a63e"
                     icon={<IconBattery />}
                     badge={
@@ -2009,13 +2328,24 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     label="Temp"
                     value={invTemp != null ? invTemp.toFixed(1) : '—'}
                     unit="°C"
-                    sub="Inverter"
+                    sub={dcTemp != null ? `Heat sink · DC ${dcTemp.toFixed(1)}°C` : 'Heat sink'}
                     accent={invTempColor}
                     icon={<IconThermometer />}
                   />
-                  {inverterCapacityKw != null && (
+                  {acOutputKw != null && acOutputKw > 0 && (
                     <KpiCard
                       index={5}
+                      label="AC Output"
+                      value={acOutputKw.toFixed(2)}
+                      unit="kW"
+                      sub="Inverter output"
+                      accent="#a78bfa"
+                      icon={<Zap size={iconSize} />}
+                    />
+                  )}
+                  {inverterCapacityKw != null && (
+                    <KpiCard
+                      index={6}
                       label="Inv. Capacity"
                       value={inverterCapacityKw.toFixed(1)}
                       unit="kW"
@@ -2026,7 +2356,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   )}
                   {achievedPct != null && (
                     <KpiCard
-                      index={5}
+                      index={7}
                       label="Forecast"
                       value={achievedPct.toString()}
                       unit="%"
@@ -2036,6 +2366,73 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     />
                   )}
                 </div>
+
+                {/* ── Per-Phase Grid Cards ── */}
+                {gridPhases && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                        Grid Phases (EB)
+                      </div>
+                      {phaseDataStale && (
+                        <span style={{ fontSize: '0.65rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '1px 6px', borderRadius: 4 }}>
+                          stale — inverter standby
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', opacity: phaseDataStale ? 0.45 : 1 }}>
+                      {gridPhases.map((ph, i) => {
+                        const exporting = !phaseDataStale && ph.powerW != null && ph.powerW <= -1;
+                        const importing = !phaseDataStale && ph.powerW != null && ph.powerW >= 1;
+                        const accent = phaseDataStale ? '#9ca3af' : exporting ? '#10b981' : importing ? '#3b82f6' : '#9ca3af';
+                        const powerLabel = phaseDataStale ? '—'
+                          : ph.powerW != null
+                            ? `${Math.abs(ph.powerW).toFixed(0)} W ${exporting ? '↑' : importing ? '↓' : ''}`
+                            : '—';
+                        const subParts: string[] = [];
+                        if (!phaseDataStale && ph.voltageV != null) subParts.push(`${ph.voltageV.toFixed(1)} V`);
+                        if (!phaseDataStale && ph.currentA != null) subParts.push(`${Math.abs(ph.currentA).toFixed(2)} A`);
+                        return (
+                          <KpiCard
+                            key={ph.label}
+                            index={i}
+                            label={`Phase ${ph.label}`}
+                            value={powerLabel}
+                            accent={accent}
+                            sub={subParts.join(' · ') || undefined}
+                            icon={<IconGrid />}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Per-Phase Load Cards ── */}
+                {loadPhases && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
+                      Load Phases
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {loadPhases.map((ph, i) => {
+                        const hasLoad = ph.powerW != null && ph.powerW > 1;
+                        const accent = hasLoad ? '#8b5cf6' : '#9ca3af';
+                        const powerLabel = ph.powerW != null ? `${Math.abs(ph.powerW).toFixed(0)} W` : '—';
+                        return (
+                          <KpiCard
+                            key={ph.label}
+                            index={i}
+                            label={`Phase ${ph.label}`}
+                            value={powerLabel}
+                            accent={accent}
+                            icon={<IconLoad />}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Energy breakdown ── */}
                 <EnergyBreakdownRow latest={latest} isLatestToday={isLatestToday} />
@@ -2068,6 +2465,32 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     })() : 'No data received yet'}
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {activeTab === 'details' && (
+              <motion.div
+                key="details"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 20 } }}
+                transition={tabTransition}
+              >
+                <DetailsTab
+                  telemetry={latest ?? undefined}
+                  pvKw={pvKw}
+                  loadKw={loadKw}
+                  gridKw={gridKw}
+                  batPowerKw={batPowerKw}
+                  batSoc={batSoc}
+                  todayKwh={todayKwh ?? undefined}
+                  totalPvKwh={totalPvKwh ?? undefined}
+                  invTemp={invTemp ?? undefined}
+                  runStateLabel={runStateBadge?.label}
+                  isLatestToday={isLatestToday}
+                  achievedPct={achievedPct ?? undefined}
+                />
               </motion.div>
             )}
 
@@ -2288,6 +2711,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                           {showHistorySeries.Grid && (
                             <Line yAxisId="power" type="monotone" dataKey="Grid (kW)" name="Grid" stroke="#3b82f6" strokeWidth={2} dot={false} />
                           )}
+                          {showHistorySeries.InvOut && (
+                            <Area yAxisId="power" type="monotone" dataKey="Inv Out (kW)" name="Inv Out" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.10} strokeWidth={2} strokeDasharray="4 2" />
+                          )}
                           {showHistorySeries.SOC && (
                             <Line yAxisId="soc" type="monotone" dataKey="Batt SOC (%)" name="SOC" stroke="#00a63e" strokeWidth={2} dot={false} />
                           )}
@@ -2305,9 +2731,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 {historyStatsVisible && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                     {[
+                      `☀ PV ${historyStatsVisible.pvTotal.toFixed(2)} kWh`,
+                      `☀ PV Peak ${historyStatsVisible.pvPeak.toFixed(2)} kW`,
+                      `⚡ Inv Peak ${historyStatsVisible.invOutPeak.toFixed(2)} kW`,
+                      `⚡ Inv Avg ${historyStatsVisible.invOutAvg.toFixed(2)} kW`,
                       `Load ${historyStatsVisible.loadTotal.toFixed(2)} kWh`,
-                      `Peak ${historyStatsVisible.loadPeak.toFixed(2)} kW`,
-                      `Avg ${historyStatsVisible.loadAvg.toFixed(2)} kW`,
+                      `Load Peak ${historyStatsVisible.loadPeak.toFixed(2)} kW`,
                       `Grid In ${historyStatsVisible.gridImport.toFixed(2)} kWh`,
                       `Grid Out ${historyStatsVisible.gridExport.toFixed(2)} kWh`,
                       historyStatsVisible.socAvg != null ? `SOC Avg ${historyStatsVisible.socAvg.toFixed(0)}%` : null,

@@ -1,5 +1,11 @@
 /* Font loaded in index.html */
 
+/* Tailwind v4 */
+@import "tailwindcss";
+
+/* Map project's dark-mode body class to Tailwind dark: variant */
+@custom-variant dark (&:is(.dark-mode *));
+
 * {
   margin: 0;
   padding: 0;
