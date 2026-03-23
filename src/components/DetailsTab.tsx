@@ -71,6 +71,8 @@ export interface DetailsTabTelemetry {
   fault_code_5?: number | null;
   battery_status?: number | null;
   uptime_seconds?: number | null;
+  data_source?: string | null;
+  data_stale?: boolean | null;
 }
 
 export interface DetailsTabProps {
@@ -707,6 +709,16 @@ const InverterDetails: React.FC<{
                 color={runIsActive ? '#10b981' : '#f59e0b'}
                 bgColor={isDark ? (runIsActive ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)') : (runIsActive ? 'rgba(209,250,229,0.8)' : 'rgba(254,243,199,0.8)')}
               />
+            )}
+            {t.data_source === 'deye_cloud' && (
+              <span style={{
+                fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+                background: isDark ? 'rgba(59,130,246,0.12)' : 'rgba(59,130,246,0.08)',
+                border: '1px solid rgba(59,130,246,0.35)',
+                color: '#3b82f6',
+              }}>
+                ☁️ Deye Cloud
+              </span>
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
