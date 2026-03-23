@@ -311,7 +311,7 @@ interface KpiCardProps {
 
 const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge, index }) => {
   const { isDark } = useTheme();
-  
+
   return (
     <motion.div
       custom={index}
@@ -324,7 +324,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
         flex: 1,
         minWidth: 130,
         borderRadius: 16,
-        background: isDark 
+        background: isDark
           ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.8))'
           : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
         border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
@@ -1361,6 +1361,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsSinceUpdate, setSecondsSinceUpdate] = useState<number>(0);
   const isInitialLoad = useRef(true);
@@ -1446,43 +1447,56 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       const forecastEndDt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
       const forecastEnd = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
 
-      let telemetryParams: any = {};
-      if (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
-      else if (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
-      else if (dateRange === '7d') telemetryParams = { days: 7 };
-      else if (dateRange === '30d') telemetryParams = { days: 30 };
+      // For multi-day views, fetch telemetry one day at a time to avoid DynamoDB's
+      // 1 MB page size limit silently truncating results.
+      const buildDayWindows = (start: Date, end: Date) => {
+        const windows: { start_date: string; end_date: string }[] = [];
+        const cursor = new Date(start);
+        cursor.setUTCHours(0, 0, 0, 0);
+        while (cursor < end) {
+          const dayStart = cursor.toISOString();
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+          windows.push({ start_date: dayStart, end_date: (cursor < end ? new Date(cursor) : end).toISOString() });
+        }
+        return windows;
+      };
 
-      let historyParams: { start_date: string; end_date: string } | null = null;
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-
-      if (dateRange === '7d') {
-        historyParams = { start_date: sevenDaysAgo.toISOString(), end_date: now.toISOString() };
-      } else if (dateRange === '30d') {
-        historyParams = { start_date: thirtyDaysAgo.toISOString(), end_date: now.toISOString() };
-      } else if (dateRange === 'custom' && debouncedStart && debouncedEnd) {
-        const customStart = new Date(debouncedStart);
-        const customEnd = new Date(debouncedEnd);
-        historyParams = { start_date: customStart.toISOString(), end_date: customEnd.toISOString() };
+      let telemetryRows: any[] = [];
+      if (dateRange === '24h') {
+        const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfTodayIST(), end_date: now.toISOString() });
+        telemetryRows = Array.isArray(rows) ? rows : [];
+      } else {
+        let rangeStart: Date;
+        let rangeEnd = now;
+        if (dateRange === '7d') rangeStart = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+        else if (dateRange === '30d') rangeStart = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+        else if (dateRange === 'custom' && debouncedStart && debouncedEnd) {
+          rangeStart = new Date(debouncedStart);
+          rangeEnd = new Date(debouncedEnd);
+        } else {
+          rangeStart = new Date(now.getTime() - 24 * 3600 * 1000);
+        }
+        const windows = buildDayWindows(rangeStart, rangeEnd);
+        // Fetch in parallel batches of 3 to balance speed vs backend load
+        for (let i = 0; i < windows.length; i += 3) {
+          const batch = windows.slice(i, i + 3);
+          const results = await Promise.allSettled(
+            batch.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date }))
+          );
+          for (const r of results) {
+            if (r.status === 'fulfilled' && Array.isArray(r.value)) telemetryRows.push(...r.value);
+          }
+        }
+        telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      const results = await Promise.all([
-        apiService.getSiteTelemetry(siteId, telemetryParams),
+      // Critical: forecast + weather fetched in parallel with first telemetry batch
+      const [fcst, wth] = await Promise.all([
         apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
         apiService.getSiteWeather(siteId),
-        historyParams ? apiService.getSiteHistory(siteId, historyParams) : Promise.resolve(null),
       ] as Promise<any>[]);
 
-      const [tel, fcst, wth, hist] = results;
-
-      let merged: any[] = Array.isArray(tel) ? tel : [];
-      if (Array.isArray(hist) && hist.length > 0) {
-        const tsSet = new Set(merged.map((r: any) => r.timestamp));
-        const older = (hist as any[]).filter(r => !tsSet.has(r.timestamp));
-        merged = [...older, ...merged].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
-      }
-
-      setTelemetry(merged);
+      setTelemetry(telemetryRows);
       setForecast(Array.isArray(fcst) ? fcst : []);
       setWeather(wth || null);
       setLastUpdated(new Date());
@@ -1496,15 +1510,69 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     }
   }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
+  // History fetch — S3 archive for all multi-day ranges.
+  // DynamoDB TTL may be shorter than 7 days, so S3 is the source of truth for anything
+  // more than ~2 days old. We fetch the full requested range from S3 day-by-day.
+  const fetchHistory = useCallback(async () => {
+    const now = new Date();
+    let rangeStart: Date | null = null;
+    let rangeEnd: Date = now;
+
+    if (dateRange === '7d') {
+      rangeStart = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+    } else if (dateRange === '30d') {
+      rangeStart = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+    } else if (dateRange === 'custom' && debouncedStart && debouncedEnd) {
+      rangeStart = new Date(debouncedStart);
+      rangeEnd   = new Date(debouncedEnd);
+    }
+    if (!rangeStart) { setHistoryError(null); return; }
+
+    setHistoryError(null);
+
+    // Build 6-hour windows — 1 day = 4 requests, each covering ~6 S3 hourly folders,
+    // which is well within the backend's timeout vs a full 24-folder day request.
+    const windows: { start_date: string; end_date: string }[] = [];
+    const cursor = new Date(rangeStart);
+    cursor.setUTCMinutes(0, 0, 0);
+    // snap to nearest 6h boundary
+    cursor.setUTCHours(Math.floor(cursor.getUTCHours() / 6) * 6);
+    while (cursor < rangeEnd) {
+      const windowStart = cursor.toISOString();
+      cursor.setUTCHours(cursor.getUTCHours() + 6);
+      const windowEnd = (cursor < rangeEnd ? new Date(cursor) : rangeEnd).toISOString();
+      windows.push({ start_date: windowStart, end_date: windowEnd });
+    }
+    const days = windows;
+
+    // Fetch each window sequentially — keeps each request well under the 10s timeout
+    for (const params of days) {
+      try {
+        const hist = await apiService.getSiteHistory(siteId, params);
+        if (Array.isArray(hist) && hist.length > 0) {
+          setTelemetry(prev => {
+            const tsSet = new Set(prev.map((r: any) => r.timestamp));
+            const newer = hist.filter((r: any) => !tsSet.has(r.timestamp));
+            if (newer.length === 0) return prev;
+            return [...prev, ...newer].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
+          });
+        }
+      } catch (err) {
+        // Show the error but keep going — partial history is better than none
+        setHistoryError(err instanceof Error ? err.message : 'Failed to load history');
+      }
+    }
+  }, [siteId, dateRange, debouncedStart, debouncedEnd]);
+
   // Initial load + full refresh every 5 minutes
   useEffect(() => {
     isInitialLoad.current = true;
     setLoading(true);
-    fetchAll(false);
+    fetchAll(false).then(() => fetchHistory());
     if (!autoRefresh) return;
-    const fullId = setInterval(() => fetchAll(false), 5 * 60_000);
+    const fullId = setInterval(() => fetchAll(false).then(() => fetchHistory()), 5 * 60_000);
     return () => clearInterval(fullId);
-  }, [fetchAll, autoRefresh]);
+  }, [fetchAll, fetchHistory, autoRefresh]);
 
   // Fast telemetry poll every 30 seconds (only when autoRefresh and not initial load)
   useEffect(() => {
@@ -1547,6 +1615,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const invTemp = latest?.inverter_temp_c ?? null;
   const batVoltage = latest?.battery_voltage_v ?? null;
   const runState = latest?.run_state;
+
+  // RS-485 staleness: backend sets data_stale=true when instantaneous power
+  // registers are frozen (same value for ≥5 consecutive readings).
+  // The Deye WiFi stick (used by the Deye app) reads from the internal COM port
+  // and is unaffected — only our RS-485 Modbus path can freeze.
+  const rs485Stale = latest?.data_stale === true;
 
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
@@ -2211,6 +2285,33 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
+                {/* ── RS-485 Stale Data Banner ── */}
+                {rs485Stale && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      marginBottom: 16,
+                      padding: '10px 16px',
+                      borderRadius: 10,
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      fontSize: '0.8rem',
+                      color: '#d97706',
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>⚠️</span>
+                    <div>
+                      <strong>RS-485 frozen</strong> — PV &amp; inverter readings are stale (holdover values).
+                      The Deye app shows live data via the WiFi stick which is unaffected.
+                      <span style={{ marginLeft: 8, opacity: 0.8 }}>Fix: restart the gateway or write reg 62–65.</span>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* ── KPI Cards ── */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                   <KpiCard
@@ -2218,11 +2319,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     label="Solar PV"
                     value={pvKw != null ? pvKw.toFixed(2) : '—'}
                     unit="kW"
-                    sub={todayKwh != null && isLatestToday
-                      ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
-                      : undefined}
-                    accent="#F07522"
+                    sub={rs485Stale
+                      ? 'RS-485 frozen — value unreliable'
+                      : todayKwh != null && isLatestToday
+                        ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
+                        : undefined}
+                    accent={rs485Stale ? '#9ca3af' : '#F07522'}
                     icon={<IconSunKpi />}
+                    badge={rs485Stale ? (
+                      <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                        STALE
+                      </span>
+                    ) : undefined}
                   />
                   <KpiCard
                     index={1}
@@ -2283,9 +2391,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       label="AC Output"
                       value={acOutputKw.toFixed(2)}
                       unit="kW"
-                      sub="Inverter output"
-                      accent="#a78bfa"
+                      sub={rs485Stale ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
+                      accent={rs485Stale ? '#9ca3af' : '#a78bfa'}
                       icon={<Zap size={iconSize} />}
+                      badge={rs485Stale ? (
+                        <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                          STALE
+                        </span>
+                      ) : undefined}
                     />
                   )}
                   {inverterCapacityKw != null && (
@@ -2529,6 +2642,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
+                {historyError && (
+                  <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif' }}>
+                    History unavailable: {historyError}
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {(['chart', 'table'] as const).map(mode => (

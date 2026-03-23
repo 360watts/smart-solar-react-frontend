@@ -63,6 +63,14 @@ export interface DetailsTabTelemetry {
   inv_total_power_w?: number | null;
   run_state?: number | string | null;
   rated_power_w?: number | null;
+  work_mode?: number | null;
+  fault_code_1?: number | null;
+  fault_code_2?: number | null;
+  fault_code_3?: number | null;
+  fault_code_4?: number | null;
+  fault_code_5?: number | null;
+  battery_status?: number | null;
+  uptime_seconds?: number | null;
 }
 
 export interface DetailsTabProps {
@@ -228,16 +236,21 @@ const MetricCell: React.FC<{
   accent?: string;
   isDark: boolean;
   wide?: boolean;
-}> = ({ label, value, subValue, accent, isDark, wide }) => {
+  tooltip?: string;
+}> = ({ label, value, subValue, accent, isDark, wide, tooltip }) => {
   const tok = useTokens(isDark);
   return (
-    <div style={{
-      background: tok.bgCell,
-      border: `1px solid ${tok.border}`,
-      borderRadius: 10,
-      padding: '10px 14px',
-      gridColumn: wide ? 'span 2' : undefined,
-    }}>
+    <div
+      title={tooltip}
+      style={{
+        background: tok.bgCell,
+        border: `1px solid ${tok.border}`,
+        borderRadius: 10,
+        padding: '10px 14px',
+        gridColumn: wide ? 'span 2' : undefined,
+        cursor: tooltip ? 'help' : undefined,
+      }}
+    >
       <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fontWeight: 600, color: tok.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
         {label}
       </div>
@@ -503,6 +516,24 @@ const BatteryDetails: React.FC<{
         </div>
       </div>
 
+      {/* Battery status pill */}
+      {t.battery_status != null && (() => {
+        const BAT_STATUS: Record<number, { label: string; color: string }> = {
+          0: { label: 'Standby',      color: '#94a3b8' },
+          1: { label: 'Charging',     color: '#10b981' },
+          2: { label: 'Discharging',  color: '#f59e0b' },
+          3: { label: 'Fault',        color: '#ef4444' },
+        };
+        const s = BAT_STATUS[Number(t.battery_status)] ?? { label: `Status ${t.battery_status}`, color: '#94a3b8' };
+        return (
+          <StatusPill
+            label={s.label}
+            color={s.color}
+            bgColor={isDark ? `${s.color}18` : `${s.color}22`}
+          />
+        );
+      })()}
+
       {/* Energy stats */}
       <div>
         <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700, color: tok.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
@@ -538,6 +569,7 @@ const GridDetails: React.FC<{
   const gKw = gridKw ?? (t.grid_power_w != null ? Number(t.grid_power_w) / 1000 : null);
   const exporting = (gKw ?? 0) < -0.05;
   const importing = (gKw ?? 0) > 0.05;
+  const nearZero  = !exporting && !importing && gKw != null;
   const flowColor = exporting ? '#10b981' : importing ? '#3b82f6' : tok.textSecondary;
 
   const phases = [
@@ -556,7 +588,7 @@ const GridDetails: React.FC<{
               {gKw != null ? `${Math.abs(gKw).toFixed(2)} kW` : '—'}
             </span>
             <StatusPill
-              label={exporting ? '↑ Exporting' : importing ? '↓ Importing' : 'Idle'}
+              label={exporting ? '↑ Exporting' : importing ? '↓ Importing' : nearZero ? '≈ Balanced' : 'No Data'}
               color={flowColor}
               bgColor={isDark ? 'rgba(30,41,59,0.6)' : 'rgba(241,245,249,0.8)'}
             />
@@ -732,6 +764,48 @@ const InverterDetails: React.FC<{
       {(temp == null && dcTemp == null) && (
         <MetricCell label="Heatsink Temp" value="—" isDark={isDark} />
       )}
+
+      {/* Work mode + fault codes */}
+      {(t.work_mode != null || t.fault_code_1 != null) && (() => {
+        const WORK_MODE_LABELS: Record<number, string> = {
+          0: 'Selling First', 1: 'Zero Export', 2: 'Limited Export', 3: 'Self-Use',
+        };
+        const workModeLabel = t.work_mode != null
+          ? (WORK_MODE_LABELS[Number(t.work_mode)] ?? `Mode ${t.work_mode}`)
+          : null;
+
+        const faultCodes = [t.fault_code_1, t.fault_code_2, t.fault_code_3, t.fault_code_4, t.fault_code_5];
+        const anyFault = faultCodes.some(f => f != null && Number(f) !== 0);
+        const faultSummary = anyFault
+          ? faultCodes.map((f, i) => f != null && Number(f) !== 0 ? `F${i + 1}:0x${Number(f).toString(16).toUpperCase()}` : null).filter(Boolean).join('  ')
+          : 'No active faults';
+
+        return (
+          <div>
+            <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700, color: tok.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              Mode &amp; Diagnostics
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {workModeLabel && (
+                <MetricCell
+                  label="Work Mode"
+                  value={workModeLabel}
+                  isDark={isDark}
+                  tooltip="Deye inverter operating mode (reg 168). Selling First: surplus goes to grid. Zero Export: no grid export. Limited Export: capped export. Self-Use: loads + battery priority, minimal grid."
+                />
+              )}
+              <MetricCell
+                label="Fault Codes"
+                value={faultSummary}
+                accent={anyFault ? '#ef4444' : '#10b981'}
+                isDark={isDark}
+                wide={!workModeLabel}
+                tooltip="Fault registers 103–107. Non-zero values indicate an active fault code — cross-reference with the Deye fault code table in the manual. All zeros means the inverter reports no faults."
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

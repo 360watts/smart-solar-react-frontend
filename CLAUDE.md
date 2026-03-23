@@ -77,3 +77,19 @@ Deployed on Vercel. `vercel.json` contains SPA rewrite rule (`/* → /index.html
 
 - No i18n — all text is English, India-specific units (kWh, INR, etc.)
 - Tests are sparse — primarily unit tests for utility functions
+
+---
+
+## Production Fault Log
+
+All known production bugs and their fixes are recorded in the shared log:
+
+**`/home/ubuntu/work/PRODUCTION_FAULT_LOG.md`**
+
+Relevant entries for this repo:
+
+| ID | Title | Status |
+|----|-------|--------|
+| F-001 | RS-485 register freeze — amber banner + STALE badges added to `SiteDataPanel.tsx` | Mitigated |
+
+When fixing a bug that has production impact, add an entry to that log before closing the task.
