@@ -1621,14 +1621,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // The Deye WiFi stick (used by the Deye app) reads from the internal COM port
   // and is unaffected — only our RS-485 Modbus path can freeze.
   const rs485Stale = latest?.data_stale === true;
+  const isDeyeCloud = latest?.data_source === 'deye_cloud';
 
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
     : false;
 
   // "Live" = last reading arrived within the past 10 minutes
+  // Deye Cloud data is ~5 min stale by the time the cron writes it + another 5 min until
+  // the next cron run → allow 15 min before hiding the flow block for cloud-sourced records.
+  const liveThresholdMs = isDeyeCloud ? 15 * 60 * 1000 : 10 * 60 * 1000;
   const isDataLive = latest?.timestamp
-    ? (Date.now() - new Date(latest.timestamp).getTime()) < 10 * 60 * 1000
+    ? (Date.now() - new Date(latest.timestamp).getTime()) < liveThresholdMs
     : false;
 
   const gridImporting = gridKw != null && gridKw > 0.01;
@@ -2285,8 +2289,34 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
+                {/* ── Deye Cloud Fallback Banner ── */}
+                {isDeyeCloud && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      marginBottom: 16,
+                      padding: '10px 16px',
+                      borderRadius: 10,
+                      background: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)',
+                      border: '1px solid rgba(59,130,246,0.35)',
+                      fontSize: '0.8rem',
+                      color: '#3b82f6',
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>☁️</span>
+                    <div>
+                      <strong>Deye Cloud data</strong> — RS-485 link is down; live values are being sourced from the Deye Cloud API (WiFi stick).
+                      <span style={{ marginLeft: 8, opacity: 0.75 }}>Check gateway RS-485 connection.</span>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* ── RS-485 Stale Data Banner ── */}
-                {rs485Stale && (
+                {rs485Stale && !isDeyeCloud && (
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -2319,14 +2349,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     label="Solar PV"
                     value={pvKw != null ? pvKw.toFixed(2) : '—'}
                     unit="kW"
-                    sub={rs485Stale
+                    sub={rs485Stale && !isDeyeCloud
                       ? 'RS-485 frozen — value unreliable'
                       : todayKwh != null && isLatestToday
                         ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
                         : undefined}
-                    accent={rs485Stale ? '#9ca3af' : '#F07522'}
+                    accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#F07522'}
                     icon={<IconSunKpi />}
-                    badge={rs485Stale ? (
+                    badge={rs485Stale && !isDeyeCloud ? (
                       <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
                         STALE
                       </span>
@@ -2391,10 +2421,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       label="AC Output"
                       value={acOutputKw.toFixed(2)}
                       unit="kW"
-                      sub={rs485Stale ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
-                      accent={rs485Stale ? '#9ca3af' : '#a78bfa'}
+                      sub={rs485Stale && !isDeyeCloud ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
+                      accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#a78bfa'}
                       icon={<Zap size={iconSize} />}
-                      badge={rs485Stale ? (
+                      badge={rs485Stale && !isDeyeCloud ? (
                         <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
                           STALE
                         </span>
