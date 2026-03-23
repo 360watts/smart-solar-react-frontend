@@ -770,12 +770,12 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const uid = uidRef.current;
 
   // Sign conventions:
-  //   gridKw > 0  → importing from grid
-  //   gridKw < 0  → exporting to grid
+  //   gridKw > 0  → exporting to grid
+  //   gridKw < 0  → importing from grid
   //   battKw > 0  → battery charging
   //   battKw < 0  → battery discharging
-  const isExporting   = (gridKw  ?? 0) < -0.01;
-  const isImporting   = (gridKw  ?? 0) >  0.01;
+  const isExporting   = (gridKw  ?? 0) >  0.01;
+  const isImporting   = (gridKw  ?? 0) < -0.01;
   const isCharging    = (battKw  ?? 0) >  0.01;
 
   const pvValue        = pvKw   ?? 0;
