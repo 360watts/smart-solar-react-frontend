@@ -784,10 +784,10 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const battSocValue   = battSoc ?? 0;
   const battPowerValue = Math.abs(battKw  ?? 0);
 
-  const isPvActive    = pvValue        > 0.05;
-  const isLoadActive  = loadValue      > 0.05;
-  const isGridActive  = gridValue      > 0.05;
-  const isBattActive  = battPowerValue > 0.05;
+  const isPvActive    = pvValue        > 0.01;
+  const isLoadActive  = loadValue      > 0.01;
+  const isGridActive  = gridValue      > 0.01;
+  const isBattActive  = battPowerValue > 0.01;
   const isBattPresent = isBattActive || battSocValue > 0;
 
   const gridColor  = isExporting ? '#5bbd79' : '#3b82f6';
@@ -848,13 +848,18 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
     `M ${C.grid.x}  ${C.grid.y}  L ${HE.grid.x}  ${HE.grid.y}`,
   ];
 
+  // Format kW value → "X W" below 1 kW, "X.XX kW" at 1 kW and above
+  const fmtPower = (kw: number): { valueStr: string; unit: string } =>
+    kw >= 1 ? { valueStr: kw.toFixed(2), unit: 'kW' } : { valueStr: (kw * 1000).toFixed(0), unit: 'W' };
+
   // ── Node card renderer ────────────────────────────────────────────────────────
   const NodeCard = ({
-    label, icon, valueStr, color, active, subLabel, extra, style,
+    label, icon, valueStr, unit, color, active, subLabel, extra, style,
   }: {
     label: string;
     icon: React.ReactNode;
     valueStr: string;
+    unit: string;
     color: string;
     active: boolean;
     subLabel?: string;
@@ -924,7 +929,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         gap: 2,
       }}>
         {valueStr}
-        <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.6 }}>kW</span>
+        <span style={{ fontSize: 9, fontWeight: 500, opacity: 0.6 }}>{unit}</span>
         {subLabel && active && (
           <span style={{ fontSize: 10, fontWeight: 800, color, marginLeft: 1 }}>{subLabel}</span>
         )}
@@ -1074,7 +1079,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         <NodeCard
           label="Solar"
           icon={<Sun size={20} color={isPvActive ? '#F07522' : (isDark ? '#475569' : '#cbd5e1')} />}
-          valueStr={pvValue.toFixed(1)}
+          {...fmtPower(pvValue)}
           color="#5bbd79"
           active={isPvActive}
           style={{ top: 18, left: 14 }}
@@ -1084,7 +1089,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         <NodeCard
           label="Load"
           icon={<Home size={20} color={isLoadActive ? '#8b5cf6' : (isDark ? '#475569' : '#cbd5e1')} />}
-          valueStr={loadValue.toFixed(1)}
+          {...fmtPower(loadValue)}
           color="#8b5cf6"
           active={isLoadActive}
           style={{ top: 18, right: 14 }}
@@ -1094,7 +1099,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         <NodeCard
           label="Battery"
           icon={<Battery size={20} color={isBattPresent ? '#f59e0b' : (isDark ? '#475569' : '#cbd5e1')} />}
-          valueStr={battPowerValue.toFixed(1)}
+          {...fmtPower(battPowerValue)}
           color="#f59e0b"
           active={isBattPresent}
           subLabel={isBattActive ? (isCharging ? '↑' : '↓') : undefined}
@@ -1122,7 +1127,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         <NodeCard
           label="Grid"
           icon={<Activity size={20} color={isGridActive ? gridColor : (isDark ? '#475569' : '#cbd5e1')} />}
-          valueStr={gridValue.toFixed(1)}
+          {...fmtPower(gridValue)}
           color={gridColor}
           active={isGridActive}
           subLabel={isGridActive ? (isExporting ? '↑' : '↓') : undefined}
