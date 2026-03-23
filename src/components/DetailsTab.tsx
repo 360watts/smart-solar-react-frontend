@@ -6,7 +6,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Battery, Zap, Home, Activity, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownLeft, Thermometer, BatteryCharging } from 'lucide-react';
+import { Sun, Zap, Home, Activity, BatteryCharging } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -465,7 +465,6 @@ const BatteryDetails: React.FC<{
   isDark: boolean;
 }> = ({ t, batPowerKw, batSoc, isDark }) => {
   const tok = useTokens(isDark);
-  const accent = PALETTE.battery.accent;
   const soc = batSoc ?? (t.battery_soc_percent != null ? Number(t.battery_soc_percent) : null);
   const powerKw = batPowerKw ?? (t.battery_power_w != null ? Number(t.battery_power_w) / 1000 : null);
   const isCharging = (powerKw ?? 0) > 0.05;

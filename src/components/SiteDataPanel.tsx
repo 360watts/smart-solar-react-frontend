@@ -777,7 +777,6 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const isExporting   = (gridKw  ?? 0) < -0.01;
   const isImporting   = (gridKw  ?? 0) >  0.01;
   const isCharging    = (battKw  ?? 0) >  0.01;
-  const isDischarging = (battKw  ?? 0) < -0.01;
 
   const pvValue        = pvKw   ?? 0;
   const loadValue      = loadKw ?? 0;
@@ -1345,60 +1344,6 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
     </div>
   );
 };
-
-// ── Overview helper components ──────────────────────────────────────────────────
-
-const DataChip: React.FC<{
-  label: string; value: string; sub?: string; accent?: string; mono?: boolean; wide?: boolean;
-}> = ({ label, value, sub, accent, mono = true, wide = false }) => {
-  const { isDark } = useTheme();
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 1,
-      padding: '6px 10px', borderRadius: 8,
-      minWidth: wide ? 120 : 68, flexShrink: 0,
-      background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)',
-      border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.07)'}`,
-    }}>
-      <span style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontSize: '0.88rem', fontFamily: mono ? 'JetBrains Mono, monospace' : 'Poppins, sans-serif', fontWeight: 700, color: accent ?? 'var(--text-primary)', lineHeight: 1.3 }}>{value}</span>
-      {sub != null && <span style={{ fontSize: '0.62rem', fontFamily: 'Inter, sans-serif', color: 'var(--text-muted)', lineHeight: 1.25, marginTop: 1 }}>{sub}</span>}
-    </div>
-  );
-};
-
-const OverviewSection: React.FC<{
-  title: string; accent: string; accentRgb: string;
-  icon: React.ReactNode; right?: React.ReactNode;
-  badge?: React.ReactNode; children: React.ReactNode;
-}> = ({ title, accent, accentRgb, icon, right, badge, children }) => {
-  const { isDark } = useTheme();
-  return (
-    <div style={{
-      marginBottom: 12, borderRadius: 12, overflow: 'hidden',
-      border: `1px solid ${isDark ? `rgba(${accentRgb},0.22)` : `rgba(${accentRgb},0.22)`}`,
-      background: isDark ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.9)',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 7, padding: '9px 14px',
-        background: isDark ? `rgba(${accentRgb},0.1)` : `rgba(${accentRgb},0.06)`,
-        borderBottom: `1px solid ${isDark ? `rgba(${accentRgb},0.18)` : `rgba(${accentRgb},0.14)`}`,
-      }}>
-        {icon}
-        <span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.75rem', color: accent, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{title}</span>
-        {badge}
-        {right && <div style={{ marginLeft: 'auto' }}>{right}</div>}
-      </div>
-      <div style={{ padding: '10px 14px 12px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {children}
-      </div>
-    </div>
-  );
-};
-
-const SectionDivider: React.FC<{ isDark: boolean }> = ({ isDark }) => (
-  <div style={{ width: '100%', height: 1, background: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.05)', margin: '4px 0' }} />
-);
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
