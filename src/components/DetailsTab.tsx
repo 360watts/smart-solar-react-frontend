@@ -489,8 +489,8 @@ const BatteryDetails: React.FC<{
   const tok = useTokens(isDark);
   const soc = batSoc ?? (t.battery_soc_percent != null ? Number(t.battery_soc_percent) : null);
   const powerKw = batPowerKw ?? (t.battery_power_w != null ? Number(t.battery_power_w) / 1000 : null);
-  const isCharging = (powerKw ?? 0) > 0.05;
-  const isDischarging = (powerKw ?? 0) < -0.05;
+  const isCharging = (powerKw ?? 0) < -0.05;
+  const isDischarging = (powerKw ?? 0) > 0.05;
   const socColor = soc != null ? (soc > 60 ? '#10b981' : soc > 25 ? '#f59e0b' : '#ef4444') : tok.textPrimary;
   const temp = t.battery_temp_c != null ? Number(t.battery_temp_c) : null;
 
@@ -511,7 +511,7 @@ const BatteryDetails: React.FC<{
             </span>
             {(isCharging || isDischarging) && (
               <StatusPill
-                label={isCharging ? '↑ Charging' : '↓ Discharging'}
+                label={isCharging ? '↓ Charging' : '↑ Discharging'}
                 color={isCharging ? '#10b981' : '#ef4444'}
                 bgColor={isDark ? (isCharging ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') : (isCharging ? 'rgba(209,250,229,0.8)' : 'rgba(254,226,226,0.8)')}
               />

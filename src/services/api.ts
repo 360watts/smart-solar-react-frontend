@@ -20,7 +20,8 @@ export interface AlertItem {
   status?: 'active' | 'acknowledged' | 'resolved';
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
