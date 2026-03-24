@@ -300,6 +300,13 @@ const StatusPill: React.FC<{ label: string; color: string; bgColor: string }> = 
   </div>
 );
 
+const formatEnergyKwhOrWh = (kwh: number | null | undefined, kwhDecimals = 2): string => {
+  if (kwh == null || Number.isNaN(kwh)) return '—';
+  const absKwh = Math.abs(kwh);
+  if (absKwh < 1) return `${(kwh * 1000).toFixed(0)} Wh`;
+  return `${kwh.toFixed(kwhDecimals)} kWh`;
+};
+
 // ── Phase strip ───────────────────────────────────────────────────────────────
 
 const PhaseStrip: React.FC<{
@@ -463,8 +470,8 @@ const SolarDetails: React.FC<{
 
       {/* Energy stats */}
       <EnergyRow isDark={isDark} items={[
-        { label: 'Today', value: todayKwh != null ? `${todayKwh.toFixed(2)} kWh` : '—', color: accent },
-        { label: 'Total Lifetime', value: totalPvKwh != null ? `${totalPvKwh.toFixed(1)} kWh` : '—', color: accent },
+        { label: 'Today', value: formatEnergyKwhOrWh(todayKwh, 2), color: accent },
+        { label: 'Total Lifetime', value: formatEnergyKwhOrWh(totalPvKwh, 1), color: accent },
         { label: 'Today kWp', value: todayKwh != null && maxW ? `${((todayKwh / (maxW / 1000))).toFixed(2)} h` : '—' },
       ]} />
     </div>
@@ -543,10 +550,10 @@ const BatteryDetails: React.FC<{
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
           {[
-            { label: 'Charged Today', value: t.batt_charge_today_kwh != null ? `${Number(t.batt_charge_today_kwh).toFixed(2)} kWh` : '—', color: '#10b981' },
-            { label: 'Discharged Today', value: t.batt_discharge_today_kwh != null ? `${Number(t.batt_discharge_today_kwh).toFixed(2)} kWh` : '—', color: '#ef4444' },
-            { label: 'Charged Total', value: t.batt_charge_total_kwh != null ? `${Number(t.batt_charge_total_kwh).toFixed(1)} kWh` : '—', color: '#34d399' },
-            { label: 'Discharged Total', value: t.batt_discharge_total_kwh != null ? `${Number(t.batt_discharge_total_kwh).toFixed(1)} kWh` : '—', color: '#f87171' },
+            { label: 'Charged Today', value: formatEnergyKwhOrWh(t.batt_charge_today_kwh != null ? Number(t.batt_charge_today_kwh) : null, 2), color: '#10b981' },
+            { label: 'Discharged Today', value: formatEnergyKwhOrWh(t.batt_discharge_today_kwh != null ? Number(t.batt_discharge_today_kwh) : null, 2), color: '#ef4444' },
+            { label: 'Charged Total', value: formatEnergyKwhOrWh(t.batt_charge_total_kwh != null ? Number(t.batt_charge_total_kwh) : null, 1), color: '#34d399' },
+            { label: 'Discharged Total', value: formatEnergyKwhOrWh(t.batt_discharge_total_kwh != null ? Number(t.batt_discharge_total_kwh) : null, 1), color: '#f87171' },
           ].map(item => (
             <div key={item.label} style={{ background: tok.bgCell, border: `1px solid ${tok.border}`, borderRadius: 10, padding: '10px 12px' }}>
               <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 4 }}>{item.label}</div>
@@ -616,10 +623,10 @@ const GridDetails: React.FC<{
 
       {/* Energy stats */}
       <EnergyRow isDark={isDark} items={[
-        { label: 'Bought Today', value: t.grid_buy_today_kwh != null ? `${Number(t.grid_buy_today_kwh).toFixed(2)} kWh` : '—', color: '#3b82f6' },
-        { label: 'Sold Today', value: t.grid_sell_today_kwh != null ? `${Number(t.grid_sell_today_kwh).toFixed(2)} kWh` : '—', color: '#10b981' },
-        { label: 'Bought Total', value: t.grid_buy_total_kwh != null ? `${Number(t.grid_buy_total_kwh).toFixed(1)} kWh` : '—' },
-        { label: 'Sold Total', value: t.grid_sell_total_kwh != null ? `${Number(t.grid_sell_total_kwh).toFixed(1)} kWh` : '—' },
+        { label: 'Bought Today', value: formatEnergyKwhOrWh(t.grid_buy_today_kwh != null ? Number(t.grid_buy_today_kwh) : null, 2), color: '#3b82f6' },
+        { label: 'Sold Today', value: formatEnergyKwhOrWh(t.grid_sell_today_kwh != null ? Number(t.grid_sell_today_kwh) : null, 2), color: '#10b981' },
+        { label: 'Bought Total', value: formatEnergyKwhOrWh(t.grid_buy_total_kwh != null ? Number(t.grid_buy_total_kwh) : null, 1) },
+        { label: 'Sold Total', value: formatEnergyKwhOrWh(t.grid_sell_total_kwh != null ? Number(t.grid_sell_total_kwh) : null, 1) },
       ]} />
     </div>
   );
@@ -650,7 +657,7 @@ const LoadDetails: React.FC<{
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <MetricCell label="Total Power" value={totalW != null ? `${totalW.toFixed(0)} W` : '—'} isDark={isDark} />
-            <MetricCell label="Consumed Today" value={t.load_today_kwh != null ? `${Number(t.load_today_kwh).toFixed(2)} kWh` : '—'} accent={accent} isDark={isDark} />
+            <MetricCell label="Consumed Today" value={formatEnergyKwhOrWh(t.load_today_kwh != null ? Number(t.load_today_kwh) : null, 2)} accent={accent} isDark={isDark} />
           </div>
         </div>
       </div>
@@ -937,7 +944,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({
       label: 'Solar PV',
       icon: Sun,
       value: pvKw != null ? `${pvKw.toFixed(2)} kW` : '—',
-      subValue: todayKwh != null ? `${todayKwh.toFixed(1)} kWh today` : undefined,
+      subValue: todayKwh != null ? `${formatEnergyKwhOrWh(todayKwh, 1)} today` : undefined,
     },
     {
       type: 'battery',
@@ -958,7 +965,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({
       label: 'Load',
       icon: Home,
       value: loadKw != null ? `${loadKw.toFixed(2)} kW` : '—',
-      subValue: t.load_today_kwh != null ? `${Number(t.load_today_kwh).toFixed(1)} kWh today` : undefined,
+      subValue: t.load_today_kwh != null ? `${formatEnergyKwhOrWh(Number(t.load_today_kwh), 1)} today` : undefined,
     },
     {
       type: 'inverter',

@@ -87,36 +87,6 @@ const pulseAnimation = {
   }
 };
 
-// ── Animated Number Counter ────────────────────────────────────────────────────
-
-const AnimatedNumber: React.FC<{ value: number; decimals?: number }> = ({ value, decimals = 2 }) => {
-  const [displayValue, setDisplayValue] = useState(value);
-  const prevValueRef = useRef(value);
-
-  useEffect(() => {
-    const prevValue = prevValueRef.current;
-    const diff = value - prevValue;
-    const steps = 20;
-    const increment = diff / steps;
-    let currentStep = 0;
-
-    const interval = setInterval(() => {
-      currentStep++;
-      if (currentStep >= steps) {
-        setDisplayValue(value);
-        clearInterval(interval);
-      } else {
-        setDisplayValue(prevValue + increment * currentStep);
-      }
-    }, 30);
-
-    prevValueRef.current = value;
-    return () => clearInterval(interval);
-  }, [value]);
-
-  return <>{displayValue.toFixed(decimals)}</>;
-};
-
 // ── Custom forecast tooltip ────────────────────────────────────────────────────
 
 const ForecastTooltip = ({ active, payload, label }: any) => {
@@ -300,6 +270,20 @@ const IconBattery = () => <Battery size={iconSize} />;
 const IconLoad = () => <Home size={iconSize} />;
 const IconGrid = () => <Activity size={iconSize} />;
 const IconThermometer = () => <Thermometer size={iconSize} />;
+
+const formatPowerForKpi = (kw: number | null | undefined): { value: string; unit: string } => {
+  if (kw == null || Number.isNaN(kw)) return { value: '—', unit: 'kW' };
+  const absKw = Math.abs(kw);
+  if (absKw < 1) return { value: (kw * 1000).toFixed(0), unit: 'W' };
+  return { value: kw.toFixed(2), unit: 'kW' };
+};
+
+const formatEnergyForDisplay = (kwh: number | null | undefined): { value: string; unit: string } => {
+  if (kwh == null || Number.isNaN(kwh)) return { value: '—', unit: 'kWh' };
+  const absKwh = Math.abs(kwh);
+  if (absKwh < 1) return { value: (kwh * 1000).toFixed(0), unit: 'Wh' };
+  return { value: kwh.toFixed(2), unit: 'kWh' };
+};
 
 // ── KPI Card with 3D tilt effect ───────────────────────────────────────────────
 
@@ -589,6 +573,9 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
       style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}
     >
       {items.map((e, idx) => (
+        (() => {
+          const energyDisplay = formatEnergyForDisplay(Number(e.value));
+          return (
         <motion.span
           key={e.label}
           initial={{ opacity: 0, scale: 0.8, x: -20 }}
@@ -616,11 +603,13 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
           {e.label}:&nbsp;
           <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap' }}>
             <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', fontWeight: 700 }}>
-              <AnimatedNumber value={Number(e.value)} decimals={2} />
+              {energyDisplay.value}
             </span>
-            <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>kWh</span>
+            <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>{energyDisplay.unit}</span>
           </span>
         </motion.span>
+          );
+        })()
       ))}
       <span
         style={{
@@ -769,9 +758,9 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
   const uid = uidRef.current;
 
-  // Sign conventions:
-  //   gridKw > 0  → exporting to grid
-  //   gridKw < 0  → importing from grid
+  // Sign conventions (RS-485 register 625 / Deye Cloud — same in both sources):
+  //   gridKw > 0  → exporting to grid (selling)
+  //   gridKw < 0  → importing from grid (buying)
   //   battKw > 0  → battery charging
   //   battKw < 0  → battery discharging
   const isExporting   = (gridKw  ?? 0) >  0.01;
@@ -1620,6 +1609,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const invTemp = latest?.inverter_temp_c ?? null;
   const batVoltage = latest?.battery_voltage_v ?? null;
   const runState = latest?.run_state;
+  const acOutputKw = latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
+  const pvPowerDisplay = formatPowerForKpi(pvKw);
+  const loadPowerDisplay = formatPowerForKpi(loadKw);
+  const gridPowerDisplay = formatPowerForKpi(gridKw != null ? Math.abs(gridKw) : null);
+  const acOutputPowerDisplay = formatPowerForKpi(acOutputKw);
+  const batteryPowerDisplay = formatPowerForKpi(Math.abs(batPowerKw ?? 0));
 
   // RS-485 staleness: backend sets data_stale=true when instantaneous power
   // registers are frozen (same value for ≥5 consecutive readings).
@@ -1640,8 +1635,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     ? (Date.now() - new Date(latest.timestamp).getTime()) < liveThresholdMs
     : false;
 
-  const gridImporting = gridKw != null && gridKw > 0.01;
-  const gridExporting = gridKw != null && gridKw < -0.01;
+  const gridExporting = gridKw != null && gridKw >  0.01;  // positive = export (sell)
+  const gridImporting = gridKw != null && gridKw < -0.01;  // negative = import (buy)
   const batCharging = batPowerKw != null && batPowerKw > 0.01;
 
   // Per-phase grid data.
@@ -1684,9 +1679,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     { label: 'L2', powerW: loadL2PowerW },
     { label: 'L3', powerW: loadL3PowerW },
   ] : null;
-
-  // Inverter AC output power (from inv_total_power, addr 636)
-  const acOutputKw = latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
 
   // DC transformer temperature (addr 540)
   const dcTemp = latest?.dc_temp_c ?? null;
@@ -1754,8 +1746,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     const loadAvg    = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
     const invOutPeak = invOuts.length ? Math.max(...invOuts) : 0;
     const invOutAvg  = invOuts.length ? invOuts.reduce((s, v) => s + v, 0) / invOuts.length : 0;
-    const gridImport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
-    const gridExport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
+    const gridExport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;  // positive = export
+    const gridImport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;  // negative = import
     const socMin = socs.length ? Math.min(...socs) : null;
     const socMax = socs.length ? Math.max(...socs) : null;
     const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
@@ -2352,8 +2344,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={0}
                     label="Solar PV"
-                    value={pvKw != null ? pvKw.toFixed(2) : '—'}
-                    unit="kW"
+                    value={pvPowerDisplay.value}
+                    unit={pvPowerDisplay.unit}
                     sub={rs485Stale && !isDeyeCloud
                       ? 'RS-485 frozen — value unreliable'
                       : todayKwh != null && isLatestToday
@@ -2373,7 +2365,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     value={batSoc != null ? batSoc.toFixed(0) : '—'}
                     unit="%"
                     sub={[
-                      batPowerKw != null ? `${batCharging ? 'Charging' : 'Discharging'} ${Math.abs(batPowerKw).toFixed(2)} kW` : null,
+                      batPowerKw != null ? `${batCharging ? 'Charging' : 'Discharging'} ${batteryPowerDisplay.value} ${batteryPowerDisplay.unit}` : null,
                       latest?.battery_temp_c != null ? `${Number(latest.battery_temp_c).toFixed(0)}°C` : null,
                     ].filter(Boolean).join(' · ') || undefined}
                     accent="#00a63e"
@@ -2389,16 +2381,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={2}
                     label="Load"
-                    value={loadKw != null ? loadKw.toFixed(2) : '—'}
-                    unit="kW"
+                    value={loadPowerDisplay.value}
+                    unit={loadPowerDisplay.unit}
                     accent="#8b5cf6"
                     icon={<IconLoad />}
                   />
                   <KpiCard
                     index={3}
                     label="Grid"
-                    value={gridKw != null ? Math.abs(gridKw).toFixed(2) : '—'}
-                    unit="kW"
+                    value={gridPowerDisplay.value}
+                    unit={gridPowerDisplay.unit}
                     sub={
                       gridKw != null
                         ? gridExporting
@@ -2424,8 +2416,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <KpiCard
                       index={5}
                       label="AC Output"
-                      value={acOutputKw.toFixed(2)}
-                      unit="kW"
+                      value={acOutputPowerDisplay.value}
+                      unit={acOutputPowerDisplay.unit}
                       sub={rs485Stale && !isDeyeCloud ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
                       accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#a78bfa'}
                       icon={<Zap size={iconSize} />}

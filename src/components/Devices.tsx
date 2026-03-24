@@ -74,6 +74,7 @@ interface SolarSite {
   azimuth_deg: number;
   timezone: string;
   is_active: boolean;
+  logger_serial?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -89,6 +90,7 @@ interface SolarSiteForm {
   azimuth_deg: string;
   timezone: string;
   is_active: boolean;
+  logger_serial: string;
 }
 
 // ── Register Coverage Sub-components ─────────────────────────────────────────
@@ -226,7 +228,7 @@ const Devices: React.FC = () => {
   const [siteForm, setSiteForm] = useState<SolarSiteForm>({
     site_id: '', display_name: '', latitude: '', longitude: '',
     capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180',
-    timezone: IST_TIMEZONE, is_active: true,
+    timezone: IST_TIMEZONE, is_active: true, logger_serial: '',
   });
   const [siteSaving, setSiteSaving] = useState(false);
   const [siteError, setSiteError] = useState<string | null>(null);
@@ -1117,9 +1119,10 @@ const Devices: React.FC = () => {
                     azimuth_deg: String(siteDetails.azimuth_deg),
                     timezone: siteDetails.timezone,
                     is_active: siteDetails.is_active,
+                    logger_serial: siteDetails.logger_serial != null ? String(siteDetails.logger_serial) : '',
                   });
                 } else {
-                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true });
+                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true, logger_serial: '' });
                 }
                 setSiteError(null);
                 setEditingSite(true);
@@ -1313,6 +1316,7 @@ const Devices: React.FC = () => {
                     azimuth_deg: parseFloat(siteForm.azimuth_deg),
                     timezone: siteForm.timezone.trim(),
                     is_active: siteForm.is_active,
+                    logger_serial: siteForm.logger_serial !== '' ? parseInt(siteForm.logger_serial, 10) : null,
                   };
 
                   let updated;
@@ -1563,6 +1567,38 @@ const Devices: React.FC = () => {
                         />
                         Active
                       </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Deye Cloud Logger */}
+                <div style={{ padding: '0 28px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #06b6d4, #0891b2)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#67e8f9' : '#0891b2' }}>
+                      Deye Cloud Logger
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Inverter Device Serial (Deye Cloud)</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={siteForm.logger_serial}
+                        onChange={e => setSiteForm({ ...siteForm, logger_serial: e.target.value })}
+                        placeholder="e.g. 2509273375"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#9ca3af' }}>
+                        Numeric INVERTER serial from Deye app → Device Info (not the WiFi stick serial). Used as fallback when RS-485 freezes.
+                      </span>
                     </div>
                   </div>
                 </div>
