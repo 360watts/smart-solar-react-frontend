@@ -82,14 +82,10 @@ Deployed on Vercel. `vercel.json` contains SPA rewrite rule (`/* → /index.html
 
 ## Production Fault Log
 
-All known production bugs and their fixes are recorded in the shared log:
+Faults, root causes, and fixes are recorded in [`FAULT_LOG.md`](./FAULT_LOG.md) at the repo root.
 
-**`/home/ubuntu/work/PRODUCTION_FAULT_LOG.md`**
-
-Relevant entries for this repo:
+**Workflow:** discover fault → open GitHub Issue → fix (reference issue # in commits) → append entry to `FAULT_LOG.md` → close issue.
 
 | ID | Title | Status |
 |----|-------|--------|
-| F-001 | RS-485 register freeze — amber banner + STALE badges added to `SiteDataPanel.tsx` | Mitigated |
-
-When fixing a bug that has production impact, add an entry to that log before closing the task.
+| F-001-UI | RS-485 freeze — amber/green staleness banners in `SiteDataPanel.tsx` | Fixed |
