@@ -9,6 +9,7 @@ import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonLoader } from './SkeletonLoader';
+import PageHeader from './PageHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ const Alerts: React.FC = () => {
   // ── Loading / Error ──
   if (loading) {
     return (
-      <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+      <div className="admin-container responsive-page">
         <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Bell size={26} color="white" />
@@ -177,7 +178,7 @@ const Alerts: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+      <div className="admin-container responsive-page">
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '1rem 1.25rem', color: '#EF4444' }}>
           <strong>Error loading alerts:</strong> {error}
         </div>
@@ -193,29 +194,14 @@ const Alerts: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: tok.bgPage(isDark), minHeight: '100vh' }}>
+    <div className="admin-container responsive-page">
 
-      {/* ── Page Header ── */}
-      <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 20px rgba(239,68,68,0.35)',
-          }}>
-            <Bell size={26} color="white" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: txt, letterSpacing: '-0.02em' }}>
-              System Alerts
-            </h1>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: sub }}>
-              Monitor and track alerts across your device fleet
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <PageHeader
+        icon={<Bell size={20} color="white" />}
+        title="System Alerts"
+        subtitle="Monitor and track alerts across your device fleet"
+        rightSlot={
+          <>
           {/* Live status badge */}
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -242,8 +228,9 @@ const Alerts: React.FC = () => {
           }}>
             <RefreshCw size={14} className={refreshing ? 'ota-spinner' : undefined} /> Refresh
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── KPI Row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>

@@ -7,6 +7,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService, AlertItem } from '../services/api';
 import SiteDataPanel from './SiteDataPanel';
+import PageHeader from './PageHeader';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ const Dashboard: React.FC = () => {
 
   if (sitesLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: bg }}>
+      <div className="admin-container responsive-page">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 10, color: textMute }}>
           <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
           <span style={{ fontSize: '0.875rem' }}>Loading…</span>
@@ -162,7 +163,7 @@ const Dashboard: React.FC = () => {
 
   if (sitesError || sites.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', background: bg }}>
+      <div className="admin-container responsive-page">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
           <div style={{ width: 56, height: 56, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <LayoutDashboard size={24} color={textMute} />
@@ -367,42 +368,21 @@ const Dashboard: React.FC = () => {
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, paddingBottom: 40 }}>
+    <div className="admin-container responsive-page" style={{ paddingBottom: 40 }}>
 
-      {/* ── Sticky header ── */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 40,
-        background: isDark ? 'rgba(2,6,23,0.95)' : 'rgba(240,253,244,0.95)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: `1px solid ${border}`,
-        boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.4)' : '0 2px 12px rgba(0,0,0,0.06)',
-        padding: '10px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-      }}>
-        {/* Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: 'linear-gradient(135deg, #00a63e 0%, #00843f 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,166,62,0.35)',
-          }}>
-            <LayoutDashboard size={16} color="#fff" />
-          </div>
-          <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: textMain, letterSpacing: '-0.01em' }}>
-            Dashboard
-          </h1>
-        </div>
-
-        {/* Site selector */}
-        <div style={{ position: 'relative' }}>
+      <PageHeader
+        icon={<LayoutDashboard size={20} color="white" />}
+        title="Dashboard"
+        subtitle="Site overview and live health"
+        rightSlot={
+          <div style={{ position: 'relative' }}>
           <button
             onClick={() => setDropdownOpen(o => !o)}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '6px 12px', borderRadius: 10,
               border: `1px solid ${border}`,
-              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',
+              background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
               cursor: 'pointer', color: textMain,
               fontSize: '0.8125rem', fontWeight: 500,
               userSelect: 'none', transition: 'background 150ms',
@@ -505,8 +485,9 @@ const Dashboard: React.FC = () => {
               </div>
             </>
           )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* ── Content ── */}
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>

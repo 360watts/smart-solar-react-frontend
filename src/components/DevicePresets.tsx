@@ -4,6 +4,7 @@ import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2, Layers }
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import PageHeader from './PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 interface Preset {
@@ -517,15 +518,11 @@ const DevicePresets: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 'var(--space-5)' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(16,185,129,0.35)', flexShrink: 0 }}>
-          <Layers size={20} color="white" />
-        </div>
-        <div>
-          <h1 style={{ margin: 0 }}>Device Presets</h1>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>Reusable gateway configuration templates for your devices</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Layers size={20} color="white" />}
+        title="Device Presets"
+        subtitle="Reusable gateway configuration templates for your devices"
+      />
 
       <div className="card">
         <div className="card-header">

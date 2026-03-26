@@ -16,6 +16,7 @@ import { SkeletonDashboard } from './components/SkeletonLoader';
 import { ToastProvider } from './contexts/ToastContext';
 import { ToastContainer } from './components/Toast';
 import { ThemeProvider } from './contexts/ThemeContext';
+import StaffRoute from './components/StaffRoute';
 
 // Lazy load components for better initial load performance
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -27,6 +28,10 @@ const Employees = lazy(() => import('./components/Employees'));
 const DevicePresets = lazy(() => import('./components/DevicePresets'));
 const Profile = lazy(() => import('./components/Profile'));
 const OTA = lazy(() => import('./components/OTA').then(m => ({ default: m.OTA })));
+const Equipment = lazy(() => import('./components/Equipment'));
+const Sites = lazy(() => import('./components/Sites'));
+const SiteDetail = lazy(() => import('./components/SiteDetail'));
+const CommissioningWizard = lazy(() => import('./components/CommissioningWizard'));
 
 function App() {
   return (
@@ -143,6 +148,46 @@ function App() {
                                   <OTA />
                                 </Suspense>
                               </AdminRoute>
+                            }
+                          />
+                          <Route
+                            path="/sites/commissioning"
+                            element={
+                              <StaffRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <CommissioningWizard />
+                                </Suspense>
+                              </StaffRoute>
+                            }
+                          />
+                          <Route
+                            path="/sites/:siteId"
+                            element={
+                              <StaffRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <SiteDetail />
+                                </Suspense>
+                              </StaffRoute>
+                            }
+                          />
+                          <Route
+                            path="/sites"
+                            element={
+                              <StaffRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Sites />
+                                </Suspense>
+                              </StaffRoute>
+                            }
+                          />
+                          <Route
+                            path="/equipment"
+                            element={
+                              <StaffRoute>
+                                <Suspense fallback={<SkeletonDashboard />}>
+                                  <Equipment />
+                                </Suspense>
+                              </StaffRoute>
                             }
                           />
                           <Route

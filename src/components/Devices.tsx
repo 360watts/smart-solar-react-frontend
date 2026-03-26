@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from './SiteDataPanel';
 import { EmptyState } from './EmptyState';
 import { SkeletonDeviceList } from './SkeletonLoader';
 import { AccessibleModal } from './AccessibleModal';
+import PageHeader from './PageHeader';
 import { useModal } from '../hooks';
 import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../constants';
 
@@ -33,6 +35,17 @@ interface Device {
   config_version?: string;
   is_online?: boolean;
   last_heartbeat?: string;
+  last_seen_at?: string;
+  connectivity_type?: string;
+  network_ip?: string;
+  signal_strength_dbm?: number | null;
+  device_temp_c?: number | null;
+  memory_status?: { free_heap?: number } | null;
+  heartbeat_health?: {
+    severity?: 'ok' | 'warn' | 'critical';
+    issues?: string[];
+    age_seconds?: number | null;
+  } | null;
   logs_enabled?: boolean;
   pending_config_update?: boolean;
   config_ack_ver?: number | null;
@@ -184,6 +197,8 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
 
 const Devices: React.FC = () => {
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const isStaffUser = !!user?.is_staff;
   const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<Device[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
@@ -246,31 +261,41 @@ const Devices: React.FC = () => {
   const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
-  const fetchDevices = useCallback(async (page: number = 1, search: string = '') => {
+  const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await apiService.getDevices(search || undefined, page, pageSize);
-      
+      let latestRows: Device[] = [];
+
       // Handle paginated response
       if (response.results) {
-        setDevices(response.results);
-        setFilteredDevices(response.results);
+        latestRows = response.results;
+        setDevices(latestRows);
+        setFilteredDevices(latestRows);
         setTotalCount(response.count);
         setTotalPages(response.total_pages);
         setCurrentPage(response.current_page);
       } else {
         // Fallback for non-paginated response
-        setDevices(Array.isArray(response) ? response : []);
-        setFilteredDevices(Array.isArray(response) ? response : []);
-        setTotalCount(Array.isArray(response) ? response.length : 0);
+        latestRows = Array.isArray(response) ? response : [];
+        setDevices(latestRows);
+        setFilteredDevices(latestRows);
+        setTotalCount(latestRows.length);
         setTotalPages(1);
         setCurrentPage(1);
       }
+
+      // Keep detail panel in sync with fresh heartbeat/status values.
+      setSelectedDevice((prev) => {
+        if (!prev) return prev;
+        const fresh = latestRows.find((d) => d.id === prev.id);
+        return fresh ? { ...prev, ...fresh } : prev;
+      });
       
-      setLoading(false);
+      if (!silent) setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [pageSize]);
 
@@ -374,6 +399,14 @@ const Devices: React.FC = () => {
   useEffect(() => {
     fetchDevices(currentPage, searchTerm);
   }, [currentPage, searchTerm, pageSize, fetchDevices]);
+
+  // Heartbeat/status auto-refresh so UI reflects new device heartbeats without user action.
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      fetchDevices(currentPage, searchTerm, true);
+    }, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [currentPage, searchTerm, fetchDevices]);
   
   useEffect(() => {
     const handleClickOutside = () => {
@@ -618,7 +651,11 @@ const Devices: React.FC = () => {
   if (loading) {
     return (
       <div className="admin-container responsive-page">
-        <h1>Device Management</h1>
+        <PageHeader
+          icon={<Server size={20} color="white" />}
+          title="Device Management"
+          subtitle="Monitor and manage your IoT gateway fleet"
+        />
         <div className="card">
           <div className="card-header"><h2>Devices</h2></div>
           <SkeletonDeviceList count={6} />
@@ -736,7 +773,8 @@ const Devices: React.FC = () => {
             return { display: `${Math.floor(diff / 86400)}d ago`, sub, status: 'err' };
           };
 
-          const heartbeat = fmtHeartbeat(selectedDevice.last_heartbeat);
+          const effectiveLastSeen = selectedDevice.last_seen_at || selectedDevice.last_heartbeat;
+          const heartbeat = fmtHeartbeat(effectiveLastSeen);
 
           const configStatus = !selectedDevice.config_version
             ? { display: 'Not Configured', sub: 'No preset assigned', status: 'err' as const }
@@ -777,21 +815,28 @@ const Devices: React.FC = () => {
               sub: siteDetails?.site_id || 'Not linked',
               icon: <MapPin size={22} />,
               status: (siteDetails ? 'ok' : 'err') as keyof typeof statusPalette,
+              href:
+                isStaffUser && siteDetails?.site_id
+                  ? `/sites/${encodeURIComponent(siteDetails.site_id)}`
+                  : undefined,
             },
           ];
 
           return (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-              {kpiCards.map(({ label, value, sub, icon, status }) => {
+              {kpiCards.map(({ label, value, sub, icon, status, href }) => {
                 const s = statusPalette[status];
-                return (
-                  <div key={label} style={{
-                    padding: 20, borderRadius: 14, position: 'relative', overflow: 'hidden', cursor: 'default',
-                    background: isDark ? '#0f172a' : '#ffffff',
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)'}`,
-                    boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
-                    transition: 'transform 150ms, box-shadow 150ms',
-                  }}>
+                const cardStyle: React.CSSProperties = {
+                  padding: 20, borderRadius: 14, position: 'relative', overflow: 'hidden',
+                  cursor: href ? 'pointer' : 'default',
+                  background: isDark ? '#0f172a' : '#ffffff',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)'}`,
+                  boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'transform 150ms, box-shadow 150ms',
+                  textDecoration: 'none', color: 'inherit', display: 'block',
+                };
+                const inner = (
+                  <>
                     <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
@@ -802,6 +847,15 @@ const Devices: React.FC = () => {
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
                     <div style={{ fontSize: '0.72rem', color: textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
                     <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
+                  </>
+                );
+                return href ? (
+                  <Link key={label} to={href} style={cardStyle}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={label} style={cardStyle}>
+                    {inner}
                   </div>
                 );
               })}
@@ -832,6 +886,9 @@ const Devices: React.FC = () => {
             <h2>Device Details</h2>
           </div>
           <div style={{ padding: '20px' }}>
+            {(() => {
+              const effectiveLastSeen = selectedDevice.last_seen_at || selectedDevice.last_heartbeat;
+              return (
             <div className="device-info-grid responsive-grid-2">
               {[
                 { label: 'Status', content: (
@@ -846,10 +903,39 @@ const Devices: React.FC = () => {
                     {selectedDevice.is_online ? 'Online' : 'Offline'}
                   </span>
                 )},
-                { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{selectedDevice.last_heartbeat ? new Date(selectedDevice.last_heartbeat).toLocaleString() : 'Never'}</span> },
+                { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
                 { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#475569' }}>{selectedDevice.hw_id || '—'}</span> },
                 { label: 'Model', content: <span>{selectedDevice.model || '—'}</span> },
                 { label: 'Assigned User', content: <span>{selectedDevice.user || '—'}</span> },
+                {
+                  label: 'Connectivity',
+                  content: <span>{selectedDevice.connectivity_type || 'Unknown'}</span>,
+                },
+                {
+                  label: 'Network IP',
+                  content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem' }}>{selectedDevice.network_ip || '—'}</span>,
+                },
+                {
+                  label: 'Signal',
+                  content: <span>{selectedDevice.signal_strength_dbm != null ? `${selectedDevice.signal_strength_dbm}%` : 'N/A'}</span>,
+                },
+                {
+                  label: 'Device Temp',
+                  content: <span>{selectedDevice.device_temp_c != null ? `${Number(selectedDevice.device_temp_c).toFixed(1)} C` : 'N/A'}</span>,
+                },
+                {
+                  label: 'Free Heap',
+                  content: <span>{selectedDevice.memory_status?.free_heap != null ? `${selectedDevice.memory_status.free_heap} bytes` : 'N/A'}</span>,
+                },
+                {
+                  label: 'Heartbeat Health',
+                  content: (
+                    <span style={{ textTransform: 'capitalize' }}>
+                      {selectedDevice.heartbeat_health?.severity || (selectedDevice.is_online ? 'ok' : 'critical')}
+                      {selectedDevice.heartbeat_health?.issues?.length ? ` (${selectedDevice.heartbeat_health.issues.join(', ')})` : ''}
+                    </span>
+                  ),
+                },
               ].map(({ label, content }) => (
                 <div key={label}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>{label}</div>
@@ -992,6 +1078,8 @@ const Devices: React.FC = () => {
                 </label>
               </div>
             </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -1098,81 +1186,6 @@ const Devices: React.FC = () => {
           )}
         </div>
 
-        {/* ── Site Configuration ── */}
-        <div className="card" style={{ marginTop: '32px' }}>
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sun size={16} style={{ color: '#f59e0b' }} />
-              <h2 style={{ margin: 0 }}>Site Configuration</h2>
-            </div>
-            {!siteLoading && (
-              <button className="btn" onClick={() => {
-                if (siteDetails) {
-                  setSiteForm({
-                    site_id: siteDetails.site_id,
-                    display_name: siteDetails.display_name,
-                    latitude: String(siteDetails.latitude),
-                    longitude: String(siteDetails.longitude),
-                    capacity_kw: String(siteDetails.capacity_kw),
-                    inverter_capacity_kw: siteDetails.inverter_capacity_kw != null ? String(siteDetails.inverter_capacity_kw) : '',
-                    tilt_deg: String(siteDetails.tilt_deg),
-                    azimuth_deg: String(siteDetails.azimuth_deg),
-                    timezone: siteDetails.timezone,
-                    is_active: siteDetails.is_active,
-                    logger_serial: siteDetails.logger_serial != null ? String(siteDetails.logger_serial) : '',
-                  });
-                } else {
-                  setSiteForm({ site_id: '', display_name: '', latitude: '', longitude: '', capacity_kw: '', inverter_capacity_kw: '', tilt_deg: '18', azimuth_deg: '180', timezone: IST_TIMEZONE, is_active: true, logger_serial: '' });
-                }
-                setSiteError(null);
-                setEditingSite(true);
-              }}>
-                {siteDetails ? 'Edit Site' : 'Add Site'}
-              </button>
-            )}
-          </div>
-          <div style={{ padding: '20px' }}>
-            {siteLoading ? (
-              <p style={{ color: 'var(--text-muted)' }}>Loading site details…</p>
-            ) : !siteDetails ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No site configured for this device yet.</p>
-            ) : (
-              <div className="grid-cols-3 responsive-grid-3">
-                {[
-                  { label: 'Site ID', value: siteDetails.site_id, mono: true, accent: true },
-                  { label: 'Display Name', value: siteDetails.display_name || '—', mono: false },
-                  { label: 'Status', value: null, badge: { active: siteDetails.is_active } },
-                  { label: 'Latitude', value: `${siteDetails.latitude}°`, mono: true },
-                  { label: 'Longitude', value: `${siteDetails.longitude}°`, mono: true },
-                  { label: 'Timezone', value: siteDetails.timezone, mono: false },
-                  { label: 'PV Capacity', value: `${siteDetails.capacity_kw} kW`, mono: true },
-                  { label: 'Inverter Capacity', value: siteDetails.inverter_capacity_kw != null ? `${siteDetails.inverter_capacity_kw} kW` : '—', mono: true },
-                  { label: 'Tilt', value: `${siteDetails.tilt_deg}°`, mono: true },
-                  { label: 'Azimuth', value: `${siteDetails.azimuth_deg}°`, mono: true },
-                ].map(({ label, value, mono, accent, badge }) => (
-                  <div key={label}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>{label}</div>
-                    {badge ? (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '2px 9px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600,
-                        background: badge.active ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                        color: badge.active ? '#10b981' : '#ef4444',
-                        border: badge.active ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(239,68,68,0.2)',
-                      }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: badge.active ? '#10b981' : '#ef4444', display: 'inline-block' }} />
-                        {badge.active ? 'Active' : 'Inactive'}
-                      </span>
-                    ) : (
-                      <div style={{ fontSize: '0.875rem', fontFamily: mono ? 'JetBrains Mono, monospace' : undefined, color: accent ? '#00a63e' : isDark ? '#e2e8f0' : '#1e293b', fontWeight: mono ? 500 : 400 }}>{value}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* ── Device Logs ── */}
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
           <div className="card-header">
@@ -1248,7 +1261,7 @@ const Devices: React.FC = () => {
         </div>
 
         {/* ── Site edit modal ── */}
-        {editingSite && ReactDOM.createPortal(
+        {false && editingSite && ReactDOM.createPortal(
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
@@ -1305,6 +1318,10 @@ const Devices: React.FC = () => {
                 setSiteSaving(true);
                 setSiteError(null);
                 try {
+                  const selectedId = selectedDevice?.id;
+                  if (!selectedId) {
+                    throw new Error('No device selected');
+                  }
                   const payload = {
                     site_id: siteForm.site_id.trim(),
                     display_name: siteForm.display_name.trim(),
@@ -1321,9 +1338,9 @@ const Devices: React.FC = () => {
 
                   let updated;
                   if (siteDetails) {
-                    updated = await apiService.updateDeviceSite(selectedDevice.id, payload);
+                    updated = await apiService.updateDeviceSite(selectedId, payload);
                   } else {
-                    updated = await apiService.createDeviceSite(selectedDevice.id, payload);
+                    updated = await apiService.createDeviceSite(selectedId, payload);
                   }
 
                   if (!updated || !updated.site_id) {
@@ -1337,7 +1354,7 @@ const Devices: React.FC = () => {
                   // Re-fetch after creation to get server-assigned fields
                   if (!siteDetails) {
                     setTimeout(() => {
-                      apiService.getDeviceSite(selectedDevice.id)
+                      apiService.getDeviceSite(selectedId)
                         .then(data => { if (data) setSiteDetails(data); })
                         .catch(err => console.error('Failed to re-fetch site:', err));
                     }, 500);
@@ -2139,15 +2156,11 @@ const Devices: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '20px' }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #00a63e, #007a55)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,166,62,0.3)', flexShrink: 0 }}>
-          <Server size={20} color="white" />
-        </div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700 }}>Device Management</h1>
-          <p style={{ margin: 0, fontSize: '0.8rem', color: isDark ? '#64748b' : '#94a3b8' }}>Monitor and manage your IoT gateway fleet</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Server size={20} color="white" />}
+        title="Device Management"
+        subtitle="Monitor and manage your IoT gateway fleet"
+      />
 
       <div className="card">
         <div className="card-header">
@@ -2210,6 +2223,7 @@ const Devices: React.FC = () => {
               <th style={{ textAlign: 'center' }}>Model</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
+              <th style={{ textAlign: 'center' }}>Last Seen</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
               <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
@@ -2217,7 +2231,7 @@ const Devices: React.FC = () => {
           <tbody className="stagger-children">
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
                     description={searchTerm ? 'Try a different search term.' : 'Register a device to get started.'}
@@ -2261,6 +2275,14 @@ const Devices: React.FC = () => {
                 <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{device.model || <span style={{ color: 'var(--text-muted, #9ca3af)' }}>—</span>}</td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
                 <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const ts = device.last_seen_at || device.last_heartbeat;
+                    if (!ts) return 'Never';
+                    const date = new Date(ts);
+                    return isNaN(date.getTime()) ? 'Unknown' : date.toLocaleTimeString();
+                  })()}
+                </td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
                     if (!device.provisioned_at) return 'N/A';

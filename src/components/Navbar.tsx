@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, ArrowLeft, LogOut, Moon, Sun, X, Menu,
+  Server, Building2,
   ChevronDown, User,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,6 +39,8 @@ const ADMIN_NAV = [
 ];
 
 const STAFF_NAV = [
+  { path: '/sites', label: 'Sites', icon: <Building2 {...iconProps} /> },
+  { path: '/equipment', label: 'Equipment', icon: <Server {...iconProps} /> },
   { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
 ];
 

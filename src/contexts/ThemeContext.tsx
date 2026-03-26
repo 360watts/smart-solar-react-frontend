@@ -13,6 +13,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   useEffect(() => {
+    document.documentElement.classList.toggle('dark-mode', isDark);
+    // Keep body in sync for legacy selectors during migration.
     document.body.classList.toggle('dark-mode', isDark);
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);

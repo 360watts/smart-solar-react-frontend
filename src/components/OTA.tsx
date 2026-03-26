@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import PageHeader from './PageHeader';
 import '../App.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -585,35 +586,21 @@ export const OTA: React.FC = () => {
 
   // ── Render ──
   return (
-    <div style={{ padding: '1.75rem', maxWidth: 1440, margin: '0 auto', background: bg, minHeight: '100vh' }}>
+    <div className="admin-container responsive-page">
 
-      {/* ── Page Header ── */}
-      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: 'linear-gradient(135deg, #6366F1 0%, #22C55E 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 20px rgba(99,102,241,0.4)',
-          }}>
-            <Package size={26} color="white" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: txt, letterSpacing: '-0.02em' }}>
-              OTA Firmware Management
-            </h1>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: sub }}>
-              Upload, deploy, and monitor firmware across your device fleet
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => { loadFirmwareData(); loadDevices(); loadDeployments(); }}
-          style={{ ...btnBase, background: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9', color: sub, border: `1px solid ${bdr}` }}
-        >
-          <RefreshCw size={15} /> Refresh
-        </button>
-      </div>
+      <PageHeader
+        icon={<Package size={20} color="white" />}
+        title="OTA Firmware Management"
+        subtitle="Upload, deploy, and monitor firmware across your device fleet"
+        rightSlot={
+          <button
+            onClick={() => { loadFirmwareData(); loadDevices(); loadDeployments(); }}
+            style={{ ...btnBase, background: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9', color: sub, border: `1px solid ${bdr}` }}
+          >
+            <RefreshCw size={15} /> Refresh
+          </button>
+        }
+      />
 
       {/* ── Fleet Overview KPIs ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>

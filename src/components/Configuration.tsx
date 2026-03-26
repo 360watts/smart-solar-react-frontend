@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { Pencil, Trash2, AlertTriangle, X, CheckCircle2, Cpu } from 'lucide-react';
 import { apiService } from '../services/api';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import PageHeader from './PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 interface GatewayConfig {
@@ -210,15 +211,11 @@ const Configuration: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 'var(--space-5)' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)', flexShrink: 0 }}>
-          <Cpu size={20} color="white" />
-        </div>
-        <div>
-          <h1 style={{ margin: 0 }}>Slave Configuration</h1>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>Configure Modbus slave devices and their register mappings</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Cpu size={20} color="white" />}
+        title="Slave Configuration"
+        subtitle="Configure Modbus slave devices and their register mappings"
+      />
 
       {!creatingSlave && !editingSlave && error && (
         <div className="alert alert-error" style={{ marginBottom: '20px' }}>

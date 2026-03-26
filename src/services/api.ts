@@ -508,8 +508,113 @@ class ApiService {
     });
   }
 
+  async getSitesList(opts?: { includeInactive?: boolean }): Promise<any[]> {
+    const q = opts?.includeInactive ? '?include_inactive=1' : '';
+    return this.request(`/sites/${q}`);
+  }
+
+  /** Operational sites only (commissioning + active) unless staff passes includeInactive. */
   async getAllSites(): Promise<any[]> {
-    return this.request('/sites/');
+    return this.getSitesList();
+  }
+
+  async getSiteStaffDetail(siteId: string): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    return this.request(`/sites/${enc}/detail/`);
+  }
+
+  async createSiteStaff(data: Record<string, unknown>): Promise<any> {
+    const result = await this.request('/sites/create/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  async patchSiteStaff(siteId: string, data: Record<string, unknown>): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  async siteLifecycle(siteId: string, toStatus: string): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/lifecycle/`, {
+      method: 'POST',
+      body: JSON.stringify({ to_status: toStatus }),
+    });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  async siteAttachDevice(siteId: string, devicePk: number): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/devices/${devicePk}/attach/`, { method: 'POST' });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  async siteDetachDevice(siteId: string, devicePk: number): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/devices/${devicePk}/detach/`, { method: 'POST' });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  async siteMoveDevice(siteId: string, devicePk: number, fromSiteId: string): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/devices/${devicePk}/move/`, {
+      method: 'POST',
+      body: JSON.stringify({ from_site_id: fromSiteId }),
+    });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  // Equipment
+  async getSiteEquipment(siteId: string): Promise<{ inverters: any[]; batteries: any[]; panels: any[] }> {
+    return this.request(`/sites/${siteId}/equipment/`);
+  }
+
+  async createInverter(siteId: string, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/inverters/`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  async updateInverter(siteId: string, pk: number, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/inverters/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+  async deleteInverter(siteId: string, pk: number): Promise<any> {
+    return this.request(`/sites/${siteId}/inverters/${pk}/delete/`, { method: 'DELETE' });
+  }
+
+  async createBattery(siteId: string, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/batteries/`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  async updateBattery(siteId: string, pk: number, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/batteries/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+  async deleteBattery(siteId: string, pk: number): Promise<any> {
+    return this.request(`/sites/${siteId}/batteries/${pk}/delete/`, { method: 'DELETE' });
+  }
+
+  async createPanel(siteId: string, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/panels/`, { method: 'POST', body: JSON.stringify(data) });
+  }
+  async updatePanel(siteId: string, pk: number, data: any): Promise<any> {
+    return this.request(`/sites/${siteId}/panels/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+  async deletePanel(siteId: string, pk: number): Promise<any> {
+    return this.request(`/sites/${siteId}/panels/${pk}/delete/`, { method: 'DELETE' });
   }
 
   async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): Promise<any> {

@@ -65,6 +65,39 @@ All API calls go through `src/services/`. Base URL from `VITE_API_BASE_URL`. Cal
 
 Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code colors — use Tailwind tokens or CSS variables.
 
+### UI Theme + Select Migration Status (2026-03-26)
+
+Current implementation status for the unified theme/token migration:
+
+- Canonical dark selector is now root-based: `html.dark-mode` (kept backward-compatible with `body.dark-mode` during transition).
+- `src/ui/chart.tsx` dark selector was aligned from `.dark` to `.dark-mode`.
+- Hardcoded `body` dark colors in `src/index.css` and `body.dark-mode` hard overrides in `src/App.css` were neutralized so token values drive theme behavior.
+- Conflicting native select rule `color-scheme: light !important` was removed from `src/App.css`.
+
+Batch 1 component status (completed):
+
+- `src/components/Sites.tsx` — inline select `colorScheme` and styled `<option>` overrides removed.
+- `src/components/CommissioningWizard.tsx` — inline select `colorScheme` and styled `<option>` overrides removed.
+- `src/components/SiteDetail.tsx` — reviewed in Batch 1 scope and retained for next primitive migration step.
+
+Additional components verified to still use native `<select>` (next migration waves):
+
+- `src/components/Devices.tsx`
+- `src/components/Users.tsx`
+- `src/components/Equipment.tsx`
+- `src/components/SiteDataPanel.tsx`
+- `src/components/SlaveConfigModal.tsx`
+- `src/components/Employees.tsx`
+- `src/components/DevicePresets.tsx`
+- `src/components/Configuration.tsx`
+- `src/components/OTA.tsx`
+
+Guidance for remaining waves:
+
+- Keep payload parity checks when migrating owner/user selects (`owner_user_id` must remain numeric).
+- Prefer headless primitives (Radix + portal rendering) for `BaseSelect`/`SearchableSelect`.
+- Keep each wave small and independently revertible.
+
 ### Live Data
 
 Socket.io client connects to backend for real-time telemetry updates on the Dashboard. Socket URL matches `VITE_API_BASE_URL` host.

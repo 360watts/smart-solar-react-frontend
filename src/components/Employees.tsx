@@ -6,6 +6,7 @@ import { cacheService } from '../services/cacheService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import AuditTrail from './AuditTrail';
+import PageHeader from './PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -201,8 +202,12 @@ const Employees: React.FC = () => {
   }
 
   return (
-    <div>
-      <h1>Employee Management</h1>
+    <div className="admin-container responsive-page">
+      <PageHeader
+        icon={<UsersIcon size={20} color="white" />}
+        title="Employee Management"
+        subtitle="Manage staff accounts, roles, and status"
+      />
 
       <div className="card">
         <div className="card-header">

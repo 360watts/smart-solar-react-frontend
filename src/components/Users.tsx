@@ -6,6 +6,7 @@ import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonTableRow } from './SkeletonLoader';
+import PageHeader from './PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -218,7 +219,11 @@ const Users: React.FC = () => {
   if (loading) {
     return (
       <div className="admin-container responsive-page">
-        <h1>User Management</h1>
+        <PageHeader
+          icon={<UsersIcon size={20} color="white" />}
+          title="User Management"
+          subtitle="Manage portal users and their assigned devices"
+        />
         <div className="card">
           <div className="card-header"><h2>Users</h2></div>
           <div className="table-responsive">
@@ -244,16 +249,19 @@ const Users: React.FC = () => {
   if (selectedUser) {
     return (
       <div className="admin-container responsive-page">
-        <div className="page-title-row" style={{ marginBottom: '20px' }}>
-          <button
-            onClick={handleBackToList}
-            className="btn btn-secondary"
-            style={{ marginRight: '15px' }}
-          >
-            ← Back to Users
-          </button>
-          <h1 style={{ margin: 0 }}>{selectedUser.first_name} {selectedUser.last_name}'s Dashboard</h1>
-        </div>
+        <PageHeader
+          icon={<UsersIcon size={20} color="white" />}
+          title={`${selectedUser.first_name} ${selectedUser.last_name}'s Dashboard`}
+          subtitle={`@${selectedUser.username}`}
+          rightSlot={
+            <button
+              onClick={handleBackToList}
+              className="btn btn-secondary"
+            >
+              ← Back to Users
+            </button>
+          }
+        />
 
         {/* User Information */}
         <div className="card" style={{ marginBottom: '20px' }}>
@@ -573,7 +581,11 @@ const Users: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page">
-      <h1>User Management</h1>
+      <PageHeader
+        icon={<UsersIcon size={20} color="white" />}
+        title="User Management"
+        subtitle="Manage portal users and their assigned devices"
+      />
 
       <div className="card">
         <div className="card-header">
@@ -807,7 +819,7 @@ const Users: React.FC = () => {
                     {editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}
                   </div>
                   <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
-                    {editingUser ? 'Update user account details' : 'Create a new customer account'}
+                    {editingUser ? 'Update user account details' : 'Create a new user account'}
                   </div>
                 </div>
               </div>
@@ -1025,7 +1037,7 @@ const Users: React.FC = () => {
                   background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                   color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                   boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-                }}>{editingUser ? 'Save Changes' : 'Create Customer'}</button>
+                }}>{editingUser ? 'Save Changes' : 'Create user'}</button>
               </div>
             </form>
           </div>
