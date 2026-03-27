@@ -523,6 +523,10 @@ class ApiService {
     return this.request(`/sites/${enc}/detail/`);
   }
 
+  async getNextSiteId(): Promise<{ site_id: string }> {
+    return this.request('/sites/next-id/');
+  }
+
   async createSiteStaff(data: Record<string, unknown>): Promise<any> {
     const result = await this.request('/sites/create/', {
       method: 'POST',

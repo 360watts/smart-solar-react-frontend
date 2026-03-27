@@ -45,7 +45,9 @@ export default function SiteDetail() {
   const [editingDetails, setEditingDetails] = useState(false);
   const [ownerUsers, setOwnerUsers] = useState<OwnerUser[]>([]);
   const [usersBusy, setUsersBusy] = useState(false);
-  
+  const [calcBusy, setCalcBusy] = useState(false);
+  const [calcNote, setCalcNote] = useState<string | null>(null);
+
   // Form State
   const [devicePk, setDevicePk] = useState('');
   const [moveTarget, setMoveTarget] = useState('');
@@ -199,6 +201,40 @@ export default function SiteDetail() {
     setLatitude(site?.latitude != null ? String(site.latitude) : '');
     setLongitude(site?.longitude != null ? String(site.longitude) : '');
     setOwnerUserId(site?.owner_user != null ? String(site.owner_user) : '');
+    setCalcNote(null);
+  };
+
+  const calcCapacityFromEquipment = async () => {
+    setCalcBusy(true); setCalcNote(null);
+    try {
+      const eq = await apiService.getSiteEquipment(siteId);
+      // toPanelWp: old rows may store kWp-style values, so n<=20 → ×1000
+      const toPanelWp = (raw: string | null | undefined) => {
+        const n = Number(raw); if (!Number.isFinite(n) || n <= 0) return 0;
+        return n <= 20 ? n * 1000 : n;
+      };
+      const activePanels = (eq.panels ?? []).filter((p: any) => p.is_active !== false);
+      const totalPanelWp = activePanels.reduce((s: number, p: any) => s + toPanelWp(p.capacity_wp), 0);
+      if (totalPanelWp > 0) {
+        const kWp = +(totalPanelWp / 1000).toFixed(2);
+        setCapacityKw(String(kWp));
+        setCalcNote(`${activePanels.length} panel${activePanels.length !== 1 ? 's' : ''} → ${kWp} kWp`);
+        return;
+      }
+      const activeInverters = (eq.inverters ?? []).filter((i: any) => i.is_active !== false);
+      const totalKva = activeInverters.reduce((s: number, i: any) => s + (Number(i.capacity_kva) || 0), 0);
+      if (totalKva > 0) {
+        const kva = +totalKva.toFixed(2);
+        setCapacityKw(String(kva));
+        setCalcNote(`${activeInverters.length} inverter${activeInverters.length !== 1 ? 's' : ''} → ${kva} kVA`);
+        return;
+      }
+      setCalcNote('No equipment found for this site.');
+    } catch {
+      setCalcNote('Failed to fetch equipment.');
+    } finally {
+      setCalcBusy(false);
+    }
   };
 
   const saveSiteDetails = async () => {
@@ -357,15 +393,48 @@ export default function SiteDetail() {
                     </div>
                     <div>
                       <label style={labelStyle}>Capacity (kW)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={capacityKw}
-                        onChange={e => setCapacityKw(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. 5.5"
-                        disabled={!editingDetails || busy}
-                      />
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        border: `1px solid ${inputBorder}`, borderRadius: 8,
+                        background: inputBg, opacity: editingDetails ? 1 : 0.8,
+                        overflow: 'hidden',
+                      }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={capacityKw}
+                          onChange={e => { setCapacityKw(e.target.value); setCalcNote(null); }}
+                          style={{
+                            flex: 1, padding: '10px 14px', border: 'none', background: 'transparent',
+                            color: textMain, fontSize: '0.85rem', outline: 'none', minWidth: 0,
+                          }}
+                          placeholder="e.g. 5.5"
+                          disabled={!editingDetails || busy}
+                        />
+                        {editingDetails && (
+                          <button
+                            type="button"
+                            onClick={calcCapacityFromEquipment}
+                            disabled={calcBusy || busy}
+                            title="Calculate from equipment"
+                            style={{
+                              padding: '0 12px', height: '100%', border: 'none',
+                              borderLeft: `1px solid ${inputBorder}`,
+                              background: 'transparent', color: textSub,
+                              cursor: calcBusy ? 'not-allowed' : 'pointer',
+                              fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap',
+                              opacity: calcBusy ? 0.5 : 1, transition: 'opacity 150ms',
+                            }}
+                          >
+                            {calcBusy ? '…' : '⚡ Calc'}
+                          </button>
+                        )}
+                      </div>
+                      {calcNote && (
+                        <div style={{ fontSize: '0.72rem', color: calcNote.startsWith('No') || calcNote.startsWith('Failed') ? '#f59e0b' : primary, marginTop: 4 }}>
+                          {calcNote}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label style={labelStyle}>Latitude</label>

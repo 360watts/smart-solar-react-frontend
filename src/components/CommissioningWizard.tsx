@@ -36,7 +36,7 @@ export default function CommissioningWizard() {
   const [displayName, setDisplayName] = useState('');
   const [latitude, setLatitude] = useState('11.0');
   const [longitude, setLongitude] = useState('77.0');
-  const [capacityKw, setCapacityKw] = useState('5');
+  const [capacityKw, setCapacityKw] = useState('');
   const [inverterCapacityKw, setInverterCapacityKw] = useState('');
   const [tiltDeg, setTiltDeg] = useState('');
   const [azimuthDeg, setAzimuthDeg] = useState('');
@@ -48,6 +48,7 @@ export default function CommissioningWizard() {
   const [busy, setBusy] = useState(false);
   const [createdSiteId, setCreatedSiteId] = useState<string | null>(null);
   const [usersBusy, setUsersBusy] = useState(false);
+  const [idBusy, setIdBusy] = useState(false);
 
   // ── Tokens ──
   const bg          = isDark ? '#020617' : '#f0fdf4';
@@ -85,21 +86,37 @@ export default function CommissioningWizard() {
     boxShadow: isSecondary ? 'none' : '0 4px 12px rgba(0,166,62,0.25)'
   });
 
+  const fetchNextSiteId = async () => {
+    setIdBusy(true);
+    try {
+      const res = await apiService.getNextSiteId();
+      setSiteId(res.site_id);
+    } catch { /* leave field as-is */ } finally {
+      setIdBusy(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    const loadUsers = async () => {
+    const init = async () => {
       setUsersBusy(true);
+      setIdBusy(true);
       try {
-        const response = await apiService.getUsers();
-        const users = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : [];
-        if (mounted) setOwnerUsers(users);
+        const [usersResp, idResp] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getNextSiteId(),
+        ]);
+        if (!mounted) return;
+        const users = Array.isArray(usersResp?.results) ? usersResp.results : Array.isArray(usersResp) ? usersResp : [];
+        setOwnerUsers(users);
+        setSiteId(idResp.site_id);
       } catch {
         if (mounted) setOwnerUsers([]);
       } finally {
-        if (mounted) setUsersBusy(false);
+        if (mounted) { setUsersBusy(false); setIdBusy(false); }
       }
     };
-    loadUsers();
+    init();
     return () => { mounted = false; };
   }, []);
 
@@ -131,23 +148,25 @@ export default function CommissioningWizard() {
       const owner = parseInt(ownerUserId, 10);
       const lat = parseFloat(latitude);
       const lon = parseFloat(longitude);
-      const cap = parseFloat(capacityKw);
+      const cap = capacityKw.trim() === '' ? undefined : parseFloat(capacityKw);
       const invCap = inverterCapacityKw.trim() === '' ? undefined : parseFloat(inverterCapacityKw);
       const tilt = tiltDeg.trim() === '' ? undefined : parseFloat(tiltDeg);
       const azimuth = azimuthDeg.trim() === '' ? undefined : parseFloat(azimuthDeg);
       const logger = loggerSerial.trim() === '' ? undefined : parseInt(loggerSerial, 10);
-      
+
       if (!siteId.trim() || !owner || Number.isNaN(owner)) throw new Error('Site ID and Owner User ID are required');
-      if (Number.isNaN(lat) || Number.isNaN(lon) || Number.isNaN(cap)) throw new Error('Invalid coordinates or capacity');
+      if (Number.isNaN(lat) || Number.isNaN(lon)) throw new Error('Invalid coordinates');
+      if (cap !== undefined && Number.isNaN(cap)) throw new Error('Invalid capacity');
       if (invCap !== undefined && Number.isNaN(invCap)) throw new Error('Invalid inverter capacity');
       if (tilt !== undefined && Number.isNaN(tilt)) throw new Error('Invalid tilt angle');
       if (azimuth !== undefined && Number.isNaN(azimuth)) throw new Error('Invalid azimuth angle');
       if (logger !== undefined && Number.isNaN(logger)) throw new Error('Invalid logger serial');
-      
+
       const payload: Record<string, unknown> = {
         site_id: siteId.trim(), owner_user_id: owner, display_name: displayName.trim(),
-        latitude: lat, longitude: lon, capacity_kw: cap,
+        latitude: lat, longitude: lon,
       };
+      if (cap !== undefined) payload.capacity_kw = cap;
       if (invCap !== undefined) payload.inverter_capacity_kw = invCap;
       if (tilt !== undefined) payload.tilt_deg = tilt;
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
@@ -288,7 +307,33 @@ export default function CommissioningWizard() {
                 <div style={{ display: 'grid', gap: 20 }}>
                   <div>
                     <label style={labelStyle}><Server size={12} /> Site ID</label>
-                    <input value={siteId} onChange={e => setSiteId(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g., SITE-1001" />
+                    <div style={{
+                      display: 'flex', alignItems: 'center', marginTop: 6,
+                      border: `1px solid ${inputBorder}`, borderRadius: 8,
+                      background: inputBg, overflow: 'hidden',
+                    }}>
+                      <input
+                        value={siteId}
+                        onChange={e => setSiteId(e.target.value)}
+                        style={{ flex: 1, padding: '10px 14px', border: 'none', background: 'transparent', color: textMain, fontSize: '0.85rem', outline: 'none' }}
+                        placeholder={idBusy ? 'Generating…' : 'e.g., SS-00001'}
+                        disabled={idBusy}
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchNextSiteId}
+                        disabled={idBusy || busy}
+                        title="Generate new ID"
+                        style={{
+                          padding: '0 12px', height: '100%', border: 'none',
+                          borderLeft: `1px solid ${inputBorder}`,
+                          background: 'transparent', color: textSub,
+                          cursor: idBusy ? 'not-allowed' : 'pointer',
+                          fontSize: '1rem', opacity: idBusy ? 0.4 : 1,
+                          transition: 'opacity 150ms',
+                        }}
+                      >↻</button>
+                    </div>
                   </div>
                   
                   <div>
@@ -340,8 +385,8 @@ export default function CommissioningWizard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Capacity (kW)</label>
-                    <input value={capacityKw} onChange={e => setCapacityKw(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="Total PV Capacity" />
+                    <label style={labelStyle}>Capacity (kW) <span style={{ fontWeight: 400, textTransform: 'none', opacity: 0.6 }}>— optional</span></label>
+                    <input value={capacityKw} onChange={e => setCapacityKw(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 5.5 (can be set later)" />
                   </div>
 
                   <div style={{ borderTop: `1px solid ${border}`, paddingTop: 16 }}>

@@ -1475,6 +1475,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         return windows;
       };
 
+      // Kick off forecast + weather immediately — runs in parallel with all telemetry fetches
+      const forecastWeatherPromise = Promise.all([
+        apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
+        apiService.getSiteWeather(siteId),
+      ] as Promise<any>[]);
+
       let telemetryRows: any[] = [];
       if (dateRange === '24h') {
         const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfTodayIST(), end_date: now.toISOString() });
@@ -1504,11 +1510,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      // Critical: forecast + weather fetched in parallel with first telemetry batch
-      const [fcst, wth] = await Promise.all([
-        apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
-        apiService.getSiteWeather(siteId),
-      ] as Promise<any>[]);
+      const [fcst, wth] = await forecastWeatherPromise;
 
       setTelemetry(telemetryRows);
       setForecast(Array.isArray(fcst) ? fcst : []);
@@ -1621,7 +1623,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     (Number(latest.pv1_power_w ?? 0) + Number(latest.pv2_power_w ?? 0) + Number(latest.pv3_power_w ?? 0) + Number(latest.pv4_power_w ?? 0)) / 1000
   ) : null;
   const batSoc = latest?.battery_soc_percent ?? null;
-  const loadKw = latest ? (latest.load_power_w ?? 0) / 1000 : null;
+  const loadKwRaw = latest ? (latest.load_power_w ?? 0) / 1000 : null;
   const todayKwh    = latest?.pv_today_kwh    ?? null;
   const totalPvKwh  = latest?.pv_total_kwh    ?? null;
   const gridKw = latest ? (latest.grid_power_w ?? 0) / 1000 : null;
@@ -1631,7 +1633,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const runState = latest?.run_state;
   const acOutputKw = latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
   const pvPowerDisplay = formatPowerForKpi(pvKw);
-  const loadPowerDisplay = formatPowerForKpi(loadKw);
   const gridPowerDisplay = formatPowerForKpi(gridKw != null ? Math.abs(gridKw) : null);
   const acOutputPowerDisplay = formatPowerForKpi(acOutputKw);
   const batteryPowerDisplay = formatPowerForKpi(Math.abs(batPowerKw ?? 0));
@@ -1694,6 +1695,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const loadL2PowerW = latest?.load_l2_power_w ?? null;
   const loadL3PowerW = latest?.load_l3_power_w ?? null;
   const hasLoadPhaseData = loadL1PowerW != null || loadL2PowerW != null || loadL3PowerW != null;
+  const loadPhaseSumW = hasLoadPhaseData ? (loadL1PowerW ?? 0) + (loadL2PowerW ?? 0) + (loadL3PowerW ?? 0) : null;
+  // Prefer per-phase summed load when available so Energy Flow "Home Load"
+  // matches Phase L1/L2/L3 cards. Fall back to aggregate register otherwise.
+  const loadKw = loadPhaseSumW != null ? loadPhaseSumW / 1000 : loadKwRaw;
+  const loadPowerDisplay = formatPowerForKpi(loadKw);
   const loadPhases = hasLoadPhaseData ? [
     { label: 'L1', powerW: loadL1PowerW },
     { label: 'L2', powerW: loadL2PowerW },
@@ -2430,8 +2436,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     label="Load"
                     value={loadPowerDisplay.value}
                     unit={loadPowerDisplay.unit}
-                    accent="#8b5cf6"
+                    sub={rs485Stale && !isDeyeCloud
+                      ? 'RS-485 frozen — value unreliable'
+                      : latest?.load_today_kwh != null && isLatestToday
+                        ? `${Number(latest.load_today_kwh).toFixed(2)} kWh today`
+                        : undefined}
+                    accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#8b5cf6'}
                     icon={<IconLoad />}
+                    badge={rs485Stale && !isDeyeCloud ? (
+                      <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                        STALE
+                      </span>
+                    ) : undefined}
                   />
                   <KpiCard
                     index={3}

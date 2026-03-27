@@ -709,7 +709,21 @@ const PanelSection: React.FC<{
                 <FormField label="Model Name" value={form.model_name} onChange={v => f('model_name', v)} isDark={isDark} placeholder="e.g., TOPCon 560" />
                 <FormField label="Serial Number" value={form.serial_number} onChange={v => f('serial_number', v)} isDark={isDark} required placeholder="e.g., PAN-2026-0001" />
                 <FormField label="Capacity (Wp)" value={form.capacity_wp} onChange={v => f('capacity_wp', v)} type="number" isDark={isDark} required placeholder="e.g., 560" />
-                <FormField label="Technology" value={form.technology} onChange={v => f('technology', v)} isDark={isDark} placeholder="e.g., TOPCon" />
+                <div>
+                  <label style={labelStyle(isDark)}>Technology</label>
+                  <select value={form.technology} onChange={e => f('technology', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
+                    <option value="">— Select —</option>
+                    <option value="Mono PERC">Mono PERC</option>
+                    <option value="Mono PERC Half-Cut">Mono PERC Half-Cut</option>
+                    <option value="TOPCon">TOPCon</option>
+                    <option value="Bifacial TOPCon">Bifacial TOPCon</option>
+                    <option value="Bifacial PERC">Bifacial PERC</option>
+                    <option value="HJT">HJT (Heterojunction)</option>
+                    <option value="Polycrystalline">Polycrystalline</option>
+                    <option value="CIGS">CIGS</option>
+                    <option value="Amorphous">Amorphous</option>
+                  </select>
+                </div>
               </div>
               <div style={{ marginTop: -4, fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>
                 Enter <strong>per-panel</strong> capacity in Wp (not total array capacity).
