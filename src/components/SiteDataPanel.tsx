@@ -1660,6 +1660,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const gridImporting = gridKw != null && gridKw < -0.01;  // negative = import (buy)
   const batCharging = batPowerKw != null && batPowerKw < -0.01;
 
+  // Data age for battery KPI badge — show when last reading is older than 30 min
+  const batDataAgeMs = latest?.timestamp ? Date.now() - new Date(latest.timestamp).getTime() : null;
+  const BAT_STALE_THRESHOLD_MS = 30 * 60 * 1000;
+  const batDataStale = batDataAgeMs != null && batDataAgeMs > BAT_STALE_THRESHOLD_MS;
+  const batDataAgeLabel = (() => {
+    if (batDataAgeMs == null) return null;
+    const min = Math.floor(batDataAgeMs / 60000);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    return `${Math.floor(hr / 24)}d ago`;
+  })();
+
   // Per-phase grid data.
   // addr 59 (run_status) is stuck at 0 on our hardware — cannot rely on run_state.
   // Instead: show cards when any phase field is present. Mark phase data as stale
@@ -2424,7 +2437,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     accent="#00a63e"
                     icon={<IconBattery />}
                     badge={
-                      batVoltage != null ? (
+                      batDataStale && batDataAgeLabel ? (
+                        <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
+                          {batDataAgeLabel}
+                        </span>
+                      ) : batVoltage != null ? (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
                           {batVoltage.toFixed(1)} V
                         </span>

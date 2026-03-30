@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 
 interface AccessibleModalProps {
   open: boolean;
@@ -43,7 +44,7 @@ export const AccessibleModal: React.FC<AccessibleModalProps> = ({
 
   if (!open) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="modal"
       role="dialog"
@@ -57,6 +58,7 @@ export const AccessibleModal: React.FC<AccessibleModalProps> = ({
         <h3 id={id}>{title}</h3>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -663,6 +663,20 @@ class ApiService {
     });
   }
 
+  async muteDeviceAlerts(deviceId: number, hours: number | null): Promise<any> {
+    const body = hours === null ? { indefinite: true } : { hours };
+    return this.request(`/devices/${deviceId}/mute-alerts/`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async unmuteDeviceAlerts(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/unmute-alerts/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getDeviceLogs(deviceId: number, limit: number = 100, offset: number = 0): Promise<any> {
     return this.request(`/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`);
   }

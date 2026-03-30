@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
@@ -55,6 +55,7 @@ interface Device {
   created_at?: string;
   updated_by_username?: string;
   updated_at?: string;
+  alerts_muted_until?: string | null;
 }
 
 interface Preset {
@@ -257,6 +258,8 @@ const Devices: React.FC = () => {
   // Modern modal states
   const rebootModal = useModal<Device>();
   const deleteModal = useModal<Device>();
+  const muteAlertsModal = useModal<Device>();
+  const [muteHours, setMuteHours] = useState<number | null>(4);
   const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -531,6 +534,39 @@ const Devices: React.FC = () => {
     }
   };
 
+  const handleMuteAlerts = (device: any) => {
+    muteAlertsModal.openModal(device);
+  };
+
+  const confirmMuteAlerts = async () => {
+    if (!muteAlertsModal.data) return;
+    const deviceId = muteAlertsModal.data.id;
+    const serial = muteAlertsModal.data.device_serial;
+    try {
+      const result = await apiService.muteDeviceAlerts(deviceId, muteHours);
+      muteAlertsModal.closeModal();
+      const durationLabel = muteHours === null ? 'indefinitely' : `for ${muteHours} hour${muteHours !== 1 ? 's' : ''}`;
+      setSuccessModal({ show: true, message: `Alerts muted for ${serial} ${durationLabel}.` });
+      const mutedUntil = result?.alerts_muted_until ?? '9999-12-31T23:59:59Z';
+      setSelectedDevice(prev => prev?.id === deviceId ? { ...prev, alerts_muted_until: mutedUntil } : prev);
+      fetchDevices(currentPage, searchTerm, true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mute alerts');
+      muteAlertsModal.closeModal();
+    }
+  };
+
+  const handleUnmuteAlerts = async (device: any) => {
+    try {
+      await apiService.unmuteDeviceAlerts(device.id);
+      setSuccessModal({ show: true, message: `Alerts re-enabled for ${device.device_serial}.` });
+      setSelectedDevice(prev => prev?.id === device.id ? { ...prev, alerts_muted_until: null } : prev);
+      fetchDevices(currentPage, searchTerm, true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unmute alerts');
+    }
+  };
+
   const handleHardReset = async (device: any) => {
     setHardResetModal({ show: true, device });
   };
@@ -729,6 +765,17 @@ const Devices: React.FC = () => {
               { label: 'Edit', icon: <Pencil size={14} />, onClick: () => handleEdit(selectedDevice), color: 'default', title: 'Edit device configuration' },
               { label: 'Reboot', icon: <RotateCcw size={14} />, onClick: () => handleReboot(selectedDevice), color: 'amber', title: 'Queue reboot command' },
               { label: 'Hard Reset', icon: <AlertTriangle size={14} />, onClick: () => handleHardReset(selectedDevice), color: 'amber', title: 'Queue hard reset (erases config)' },
+              ...(selectedDevice.alerts_muted_until && new Date(selectedDevice.alerts_muted_until) > new Date()
+                ? [{
+                    label: 'Unmute',
+                    icon: <Bell size={14} />,
+                    onClick: () => handleUnmuteAlerts(selectedDevice),
+                    color: 'default',
+                    title: new Date(selectedDevice.alerts_muted_until!).getFullYear() >= 9999
+                      ? 'Alerts muted indefinitely'
+                      : `Alerts muted until ${new Date(selectedDevice.alerts_muted_until!).toLocaleString()}`,
+                  }]
+                : [{ label: 'Mute Alerts', icon: <BellOff size={14} />, onClick: () => handleMuteAlerts(selectedDevice), color: 'default', title: 'Suppress fault alerts for this device' }]),
               { label: 'Delete', icon: <Trash2 size={14} />, onClick: () => handleDeleteDevice(selectedDevice), color: 'red', title: 'Permanently delete device' },
             ].map(({ label, icon, onClick, color, title }) => (
               <button
@@ -1964,6 +2011,43 @@ const Devices: React.FC = () => {
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={rebootModal.closeModal}>Cancel</button>
                 <button type="button" className="btn-primary" onClick={confirmReboot}>Confirm Reboot</button>
+              </div>
+            </div>
+          )}
+        </AccessibleModal>
+
+        {/* Mute Alerts Modal */}
+        <AccessibleModal
+          open={muteAlertsModal.open}
+          onClose={muteAlertsModal.closeModal}
+          title="Mute Alerts"
+          id="mute-alerts-modal-title"
+        >
+          {muteAlertsModal.data && (
+            <div className="modal-reboot-content">
+              <p className="modal-reboot-message">
+                Suppress fault alert creation for <strong>{muteAlertsModal.data.device_serial}</strong>. Select duration:
+              </p>
+              <div className="mute-duration-pills">
+                {([1, 2, 4, 8, 24, 72, null] as (number | null)[]).map(h => (
+                  <button
+                    key={h ?? 'indefinite'}
+                    type="button"
+                    onClick={() => setMuteHours(h)}
+                    className={`mute-duration-pill${muteHours === h ? ' mute-duration-pill--selected' : ''}`}
+                  >
+                    {h === null ? 'Indefinitely' : `${h}h`}
+                  </button>
+                ))}
+              </div>
+              <div className="modal-warning-box modal-reboot-note">
+                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Info size={16} strokeWidth={2} /> Note:</strong> Existing active alerts are unaffected. Faults will still auto-resolve when conditions clear.
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={muteAlertsModal.closeModal}>Cancel</button>
+                <button type="button" className="btn-primary" onClick={confirmMuteAlerts}>
+                  {muteHours === null ? 'Mute Indefinitely' : `Mute for ${muteHours}h`}
+                </button>
               </div>
             </div>
           )}
