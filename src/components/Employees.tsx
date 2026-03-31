@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import PhoneInput from './PhoneInput';
 import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon, ShieldCheck, ShieldOff } from 'lucide-react';
 import { apiService } from '../services/api';
 import { cacheService } from '../services/cacheService';
@@ -515,12 +516,11 @@ const Employees: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Mobile Number</label>
-                      <input
-                        type="tel"
+                      <PhoneInput
                         value={editingEmployee ? editForm.mobile_number : createForm.mobile_number}
-                        onChange={(e) => editingEmployee ? setEditForm({...editForm, mobile_number: e.target.value}) : setCreateForm({...createForm, mobile_number: e.target.value})}
-                        autoComplete="off" placeholder="+1 (555) 000-0000"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        onChange={(v) => editingEmployee ? setEditForm({...editForm, mobile_number: v}) : setCreateForm({...createForm, mobile_number: v})}
+                        isDark={isDark}
+                        inlineStyle
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

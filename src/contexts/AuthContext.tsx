@@ -24,6 +24,8 @@ interface AuthContextType {
   user: User | null;
   tokens: AuthTokens | null;
   login: (username: string, password: string) => Promise<boolean>;
+  requestOtp: (mobileNumber: string) => Promise<void>;
+  verifyOtp: (mobileNumber: string, otp: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -68,6 +70,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
     setLoading(false);
+  }, []);
+
+  const requestOtp = useCallback(async (mobileNumber: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile_number: mobileNumber }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Failed to send OTP');
+  }, []);
+
+  const verifyOtp = useCallback(async (mobileNumber: string, otp: string): Promise<boolean> => {
+    const response = await fetch(`${API_BASE_URL}/auth/otp/verify/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile_number: mobileNumber, otp }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user);
+      setTokens(data.tokens);
+      localStorage.setItem('authTokens', JSON.stringify(data.tokens));
+      localStorage.setItem('authUser', JSON.stringify(data.user));
+      if (data.site_id) localStorage.setItem('siteId', data.site_id);
+      return true;
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'OTP verification failed');
   }, []);
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
@@ -120,12 +151,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     tokens,
     login,
+    requestOtp,
+    verifyOtp,
     logout,
     updateUser,
     isAuthenticated: !!user && !!tokens,
     isAdmin: !!(user && user.is_superuser),
     loading,
-  }), [user, tokens, login, logout, updateUser, loading]);
+  }), [user, tokens, login, requestOtp, verifyOtp, logout, updateUser, loading]);
 
   return (
     <AuthContext.Provider value={value}>

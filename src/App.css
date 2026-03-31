@@ -2358,6 +2358,126 @@ input[type="checkbox"]:disabled {
   gap: 4px;
 }
 
+/* ── OTP Login Styles ── */
+.otp-info {
+  text-align: center;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.otp-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.otp-box {
+  width: 44px;
+  height: 52px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  caret-color: transparent;
+}
+
+.otp-box:focus {
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+.otp-box--filled {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+/* Auth divider "or" */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.15);
+}
+
+/* Alt sign-in button (OTP / Password toggle) */
+.auth-alt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.auth-alt-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: var(--text-primary);
+}
+.auth-alt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.otp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.otp-back-btn,
+.otp-resend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.otp-back-btn {
+  color: var(--text-muted);
+}
+.otp-back-btn:hover:not(:disabled) { color: var(--text-primary); }
+
+.otp-resend-btn {
+  color: var(--accent-primary, #6366f1);
+  font-weight: 500;
+  margin-left: auto;
+}
+.otp-resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.otp-resend-btn:hover:not(:disabled) { opacity: 0.8; }
+
 /* Auth Form Input Refinements */
 .auth-form .form-group {
   margin-bottom: var(--space-4);

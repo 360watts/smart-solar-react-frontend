@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import PhoneInput from './PhoneInput';
 import { apiService } from '../services/api';
 
 interface ProfileData {
@@ -247,7 +248,10 @@ const Profile: React.FC = () => {
                 </div>
                 <div className="form-group">
                   <label>Mobile Number</label>
-                  <input type="tel" value={editForm.mobile_number} onChange={(e) => setEditForm({ ...editForm, mobile_number: e.target.value })} placeholder="+91 98765 43210" />
+                  <PhoneInput
+                    value={editForm.mobile_number}
+                    onChange={(v) => setEditForm({ ...editForm, mobile_number: v })}
+                  />
                 </div>
                 <div className="form-group full-width">
                   <label>Address</label>
