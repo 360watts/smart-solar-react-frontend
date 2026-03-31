@@ -31,3 +31,17 @@ dist-ssr
 .env.production
 # Build output
 build/
+
+#Secret environment variables
+.env
+.env.development.local
+.env.production.local
+.env.test.local
+.env.test.local.example
+.env.production.local.example
+.env.development.local.example
+.env.test.local.example
+.env.production.local.example
+.env.development.local.example
+.env.test.local.example
+.env.production.local.example
