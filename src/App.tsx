@@ -39,7 +39,7 @@ function App() {
       <ThemeProvider>
       <ToastProvider>
       <AuthProvider>
-        <NavigationProvider>
+<NavigationProvider>
           <Router
             future={{
               v7_startTransition: true,

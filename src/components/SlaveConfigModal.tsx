@@ -8,7 +8,7 @@
  */
 import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import * as XLSX from 'xlsx';
+// xlsx loaded on-demand — only when user uploads an .xlsx file
 import { useTheme } from '../contexts/ThemeContext';
 import { 
   X, 
@@ -388,6 +388,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     };
 
     if (file.name.endsWith('.xlsx')) {
+      const XLSX = await import('xlsx');
       const buffer = await file.arrayBuffer();
       const wb = XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];

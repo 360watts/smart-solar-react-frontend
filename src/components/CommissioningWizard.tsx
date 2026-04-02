@@ -42,6 +42,7 @@ export default function CommissioningWizard() {
   const [azimuthDeg, setAzimuthDeg] = useState('');
   const [timezoneValue, setTimezoneValue] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
+  const [dataLoggerSerial, setDataLoggerSerial] = useState('');
   const [devicePk, setDevicePk] = useState('');
   
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +154,7 @@ export default function CommissioningWizard() {
       const tilt = tiltDeg.trim() === '' ? undefined : parseFloat(tiltDeg);
       const azimuth = azimuthDeg.trim() === '' ? undefined : parseFloat(azimuthDeg);
       const logger = loggerSerial.trim() === '' ? undefined : parseInt(loggerSerial, 10);
+      const dataLogger = dataLoggerSerial.trim() === '' ? undefined : dataLoggerSerial.trim();
 
       if (!siteId.trim() || !owner || Number.isNaN(owner)) throw new Error('Site ID and Owner User ID are required');
       if (Number.isNaN(lat) || Number.isNaN(lon)) throw new Error('Invalid coordinates');
@@ -171,7 +173,8 @@ export default function CommissioningWizard() {
       if (tilt !== undefined) payload.tilt_deg = tilt;
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
       if (timezoneValue.trim()) payload.timezone = timezoneValue.trim();
-      if (logger !== undefined) payload.logger_serial = logger;
+      if (logger !== undefined) payload.deye_station_id = logger;
+      if (dataLogger !== undefined) payload.logger_serial = dataLogger;
 
       const res = await apiService.createSiteStaff(payload);
       
@@ -399,8 +402,12 @@ export default function CommissioningWizard() {
                         <input value={inverterCapacityKw} onChange={e => setInverterCapacityKw(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g., 8" />
                       </div>
                       <div>
+                        <label style={labelStyle}>Deye Station ID</label>
+                        <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 12616 (from Deye Cloud portal)" />
+                      </div>
+                      <div>
                         <label style={labelStyle}>Logger Serial</label>
-                        <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="Numeric logger serial" />
+                        <input value={dataLoggerSerial} onChange={e => setDataLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 2509273375 (SolarmanV5/LSW3 dongle)" />
                       </div>
                       <div>
                         <label style={labelStyle}>Tilt (deg)</label>

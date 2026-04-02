@@ -57,6 +57,9 @@ export default function SiteDetail() {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [ownerUserId, setOwnerUserId] = useState('');
+  const [deyeStationId, setDeyeStationId] = useState('');
+  const [loggerSerial, setLoggerSerial] = useState('');
+  const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
 
   // ── Design Tokens ──
   const bg          = isDark ? '#020617' : '#f0fdf4';
@@ -123,6 +126,8 @@ export default function SiteDetail() {
       setLongitude(data.longitude != null ? String(data.longitude) : '');
       setOwnerUserId(data.owner_user != null ? String(data.owner_user) : '');
       setLifecycleTo(data.site_status || 'active');
+      setDeyeStationId(data.deye_station_id != null ? String(data.deye_station_id) : '');
+      setLoggerSerial(data.logger_serial ?? '');
     } catch (e) {
       setSite(null);
       setError(e instanceof Error ? e.message : 'Failed to load site');
@@ -258,6 +263,35 @@ export default function SiteDetail() {
       setEditingDetails(false);
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed'); } 
     finally { setBusy(false); }
+  };
+
+  const resetDeyeSettingsForm = () => {
+    setDeyeStationId(site?.deye_station_id != null ? String(site.deye_station_id) : '');
+    setLoggerSerial(site?.logger_serial ?? '');
+  };
+
+  const saveDeyeSettings = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const parsedStation = deyeStationId.trim() === '' ? null : Number(deyeStationId);
+      if (parsedStation !== null && Number.isNaN(parsedStation)) {
+        throw new Error('Invalid Deye Station ID');
+      }
+
+      const payload: Record<string, unknown> = {
+        deye_station_id: parsedStation,
+        logger_serial: loggerSerial.trim() === '' ? null : loggerSerial.trim(),
+      };
+
+      const data = await apiService.patchSiteStaff(siteId, payload);
+      setSite(data);
+      setEditingDeyeSettings(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const gw = site?.gateway_device;
@@ -565,6 +599,57 @@ export default function SiteDetail() {
                       </div>
                     </div>
                   )}
+
+                  {/* Deye Cloud settings */}
+                  <div style={{ marginTop: 20, padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Wifi size={18} color={primary} />
+                        <div>
+                          <div style={{ fontWeight: 700, color: textMain }}>Deye Cloud Settings</div>
+                          <div style={{ fontSize: '0.8rem', color: textSub }}>Used for Deye Cloud fallback /device/latest rich payloads.</div>
+                        </div>
+                      </div>
+                      {!editingDeyeSettings ? (
+                        <button type="button" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(true); }} style={buttonStyle(true)}>
+                          <Settings size={14} /> Edit
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(false); }} style={buttonStyle(true)}>
+                            Cancel
+                          </button>
+                          <button type="button" disabled={busy} onClick={saveDeyeSettings} style={buttonStyle()}>
+                            <Save size={14} /> Save
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 16 }}>
+                      <div>
+                        <label style={labelStyle}>Deye Station ID</label>
+                        <input
+                          type="number"
+                          value={deyeStationId}
+                          onChange={e => setDeyeStationId(e.target.value)}
+                          disabled={!editingDeyeSettings || busy}
+                          style={{ ...inputStyle, background: surface, opacity: !editingDeyeSettings ? 0.8 : 1 }}
+                          placeholder="e.g. 12616 (from Deye Cloud portal)"
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Logger Serial</label>
+                        <input
+                          value={loggerSerial}
+                          onChange={e => setLoggerSerial(e.target.value)}
+                          disabled={!editingDeyeSettings || busy}
+                          style={{ ...inputStyle, background: surface, opacity: !editingDeyeSettings ? 0.8 : 1 }}
+                          placeholder="e.g. 2509273375 (SolarmanV5/LSW3 dongle)"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}

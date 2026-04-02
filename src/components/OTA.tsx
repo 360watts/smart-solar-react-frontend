@@ -145,6 +145,19 @@ const sectionPill = (color: string): React.CSSProperties => ({
 
 // ─── Status badge config ──────────────────────────────────────────────────────
 
+const mapLogStatus = (s: string | null): DeviceStatus['status'] => {
+  switch (s?.toLowerCase()) {
+    case 'pending':    return 'idle';
+    case 'checking':
+    case 'available':  return 'trial';
+    case 'downloading':return 'downloading';
+    case 'completed':  return 'healthy';
+    case 'failed':     return 'failed';
+    case 'skipped':    return 'idle';
+    default:           return 'idle';
+  }
+};
+
 const STATUS_CONFIG: Record<DeviceStatus['status'], { label: string; bg: string; text: string; dot: string }> = {
   idle:       { label: 'Idle',        bg: 'rgba(100,116,139,0.15)', text: '#94A3B8', dot: '#64748B' },
   downloading:{ label: 'Downloading', bg: 'rgba(6,182,212,0.15)',   text: '#06B6D4', dot: '#06B6D4' },
@@ -288,11 +301,13 @@ export const OTA: React.FC = () => {
     show: false, firmware: '', deviceCount: 0, dataTransfer: '',
   });
   const [isDeploying, setIsDeploying] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const [devices, setDevices] = useState<DeviceStatus[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus['status']>('all');
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [loadingFirmwares, setLoadingFirmwares] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeDeployment, setActiveDeployment] = useState<any>(null);
 
   const [rollbackForm, setRollbackForm] = useState({ selectedDevices: [] as string[], reason: '' });
@@ -312,9 +327,8 @@ export const OTA: React.FC = () => {
 
   // ── Data loading ──
   useEffect(() => {
-    loadFirmwareData();
-    loadDevices();
-    loadDeployments();
+    // Run all three independent loads in parallel — previously sequential
+    Promise.all([loadFirmwareData(), loadDevices(), loadDeployments()]);
     const interval = setInterval(() => { loadDeployments(); }, 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,6 +337,7 @@ export const OTA: React.FC = () => {
   const loadFirmwareData = async () => {
     try {
       setLoadingFirmwares(true);
+      setLoadError(null);
       const response = await apiService.getFirmwareVersions(false);
       const transformed: FirmwareVersion[] = (response.results || response || []).map((fw: any) => ({
         id: fw.id,
@@ -339,27 +354,40 @@ export const OTA: React.FC = () => {
         uploadDate: fw.created_at || new Date().toISOString(),
       }));
       setFirmwares(transformed);
-    } catch { setFirmwares([]); }
+      setLoadError(null);
+    } catch (err: any) {
+      setFirmwares([]);
+      if (err?.name === 'AbortError') {
+        setLoadError('warming-up');
+        setTimeout(() => Promise.all([loadFirmwareData(), loadDevices(), loadDeployments()]), 5000);
+      }
+    }
     finally { setLoadingFirmwares(false); }
   };
 
   const loadDevices = async () => {
     try {
       setLoadingDevices(true);
-      const response = await apiService.getDevices('', 1, 1000);
-      const realDevices = response.results || response;
-      const transformed: DeviceStatus[] = (Array.isArray(realDevices) ? realDevices : []).map((d: any) => ({
-        deviceId: d.device_serial || d.serial || `DEV${d.id}`,
-        currentVersion: d.firmware_version || d.config_version || 'v1.0.0',
-        targetVersion: 'N/A',
-        activeSlot: Math.random() > 0.5 ? 'A' : 'B' as 'A' | 'B',
-        status: 'idle' as DeviceStatus['status'],
-        bootCount: d.boot_count || 0,
-        lastError: '',
+      const otaDevices: any[] = await apiService.getOTADevices();
+      const transformed: DeviceStatus[] = (Array.isArray(otaDevices) ? otaDevices : []).map((d: any) => ({
+        deviceId: d.device_serial,
+        currentVersion: d.current_firmware || 'unknown',
+        targetVersion: d.target_firmware_version || 'N/A',
+        activeSlot: 'A' as 'A' | 'B',
+        status: mapLogStatus(d.log_status),
+        bootCount: 0,
+        lastError: d.log_error || '',
         progress: undefined,
+        lastCheckedAt: d.log_last_checked_at || undefined,
       }));
       setDevices(transformed);
-    } catch { setDevices([]); }
+    } catch (err: any) {
+      setDevices([]);
+      if (err?.name === 'AbortError') {
+        setLoadError('warming-up');
+        setTimeout(() => Promise.all([loadFirmwareData(), loadDevices(), loadDeployments()]), 5000);
+      }
+    }
     finally { setLoadingDevices(false); }
   };
 
@@ -377,28 +405,23 @@ export const OTA: React.FC = () => {
     try {
       const dep = deployment || activeDeployment;
       if (!dep) return;
-      const campaignDetail = await apiService.getTargetedUpdate(dep.id);
+      let campaignDetail: any;
+      try {
+        campaignDetail = await apiService.getTargetedUpdate(dep.id);
+      } catch {
+        // Campaign no longer exists — clear stale state
+        setActiveDeployment(null);
+        return;
+      }
       const targetedDevices: any[] = campaignDetail.device_targets || [];
       if (targetedDevices.length === 0) return;
       const firmwareSize: number = campaignDetail.target_firmware?.size || 0;
       const targetVersion: string = campaignDetail.target_firmware?.version || '';
-      const mapStatus = (s: string | null): DeviceStatus['status'] => {
-        switch (s?.toLowerCase()) {
-          case 'pending':     return 'idle';
-          case 'checking':
-          case 'available':   return 'trial';
-          case 'downloading': return 'downloading';
-          case 'completed':   return 'healthy';
-          case 'failed':      return 'failed';
-          case 'skipped':     return 'idle';
-          default:            return 'idle';
-        }
-      };
       const updateMap = new Map<string, Partial<DeviceStatus>>(
         targetedDevices.map((dt: any) => {
           const serial: string = dt.device?.device_serial;
           if (!serial) return null;
-          const mapped = mapStatus(dt.log_status);
+          const mapped = mapLogStatus(dt.log_status);
           const bytes: number = dt.log_bytes_downloaded || 0;
           const progress = mapped === 'downloading' && firmwareSize > 0
             ? Math.round((bytes / firmwareSize) * 100) : undefined;
@@ -445,15 +468,20 @@ export const OTA: React.FC = () => {
       formData.append('description', uploadForm.name);
       formData.append('release_notes', uploadForm.releaseNotes);
       formData.append('is_active', 'false');
-      const response = await apiService.uploadFirmwareVersion(formData);
+      setUploadProgress(0);
+      const response = await apiService.uploadFirmwareVersion(formData, setUploadProgress);
+      setUploadProgress(null);
+      const storageLabel = response.storage_backend === 's3' ? 'S3 (persistent)' : 'Local filesystem (ephemeral — re-upload with S3 enabled!)';
+      const warningLine = response.storage_warning ? `\n\n⚠️ ${response.storage_warning}` : '';
       setSuccessModal({
         show: true,
-        message: `Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: S3`,
+        message: `Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: ${storageLabel}${warningLine}`,
       });
       setUploadForm({ name: '', version: '', deviceModel: 'ESP32-S3', minBootloader: '1.0.0', releaseNotes: '', file: null });
       if (fileInputRef.current) fileInputRef.current.value = '';
       await loadFirmwareData();
     } catch (error: any) {
+      setUploadProgress(null);
       setErrorModal({ show: true, message: `Upload failed: ${error.message || 'Unknown error'}` });
     }
   };
@@ -530,7 +558,10 @@ export const OTA: React.FC = () => {
       await loadDeployments();
     } catch (error: any) {
       setIsDeploying(false);
-      setErrorModal({ show: true, message: `Deployment failed: ${error.message || 'Unknown error'}` });
+      const msg = error?.name === 'AbortError'
+        ? 'Server is warming up — please wait a moment and try again.'
+        : `Deployment failed: ${error.message || 'Unknown error'}`;
+      setErrorModal({ show: true, message: msg });
     }
   };
 
@@ -594,13 +625,20 @@ export const OTA: React.FC = () => {
         subtitle="Upload, deploy, and monitor firmware across your device fleet"
         rightSlot={
           <button
-            onClick={() => { loadFirmwareData(); loadDevices(); loadDeployments(); }}
+            onClick={() => { setLoadError(null); Promise.all([loadFirmwareData(), loadDevices(), loadDeployments()]); }}
             style={{ ...btnBase, background: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9', color: sub, border: `1px solid ${bdr}` }}
           >
             <RefreshCw size={15} /> Refresh
           </button>
         }
       />
+
+      {loadError === 'warming-up' && (
+        <div style={{ marginBottom: '1rem', padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(251,191,36,0.1)' : '#fffbeb', border: '1px solid rgba(251,191,36,0.4)', color: isDark ? '#fcd34d' : '#92400e', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Loader2 size={15} className="ota-spinner" style={{ flexShrink: 0 }} />
+          Server is warming up — retrying automatically…
+        </div>
+      )}
 
       {/* ── Fleet Overview KPIs ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
@@ -725,14 +763,33 @@ export const OTA: React.FC = () => {
               )}
             </div>
 
-            <button type="submit" style={{
+            {uploadProgress !== null && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 4 }}>
+                  <span>{uploadProgress < 100 ? 'Uploading…' : 'Processing…'}</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: isDark ? '#1E293B' : '#E2E8F0', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    borderRadius: 999,
+                    background: 'linear-gradient(90deg, #6366F1, #8B5CF6)',
+                    width: `${uploadProgress}%`,
+                    transition: 'width 0.2s ease',
+                  }} />
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={uploadProgress !== null} style={{
               ...btnBase,
-              background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-              color: 'white',
-              boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+              background: uploadProgress !== null ? (isDark ? '#334155' : '#CBD5E1') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+              color: uploadProgress !== null ? (isDark ? '#64748B' : '#94A3B8') : 'white',
+              boxShadow: uploadProgress !== null ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
               justifyContent: 'center',
+              cursor: uploadProgress !== null ? 'not-allowed' : 'pointer',
             }}>
-              <Upload size={16} /> Upload to S3
+              <Upload size={16} /> {uploadProgress !== null ? `Uploading ${uploadProgress}%` : 'Upload to S3'}
             </button>
           </form>
 

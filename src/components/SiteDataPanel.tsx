@@ -763,12 +763,12 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
   const uid = uidRef.current;
 
   // Sign conventions (RS-485 register 625 / Deye Cloud — same in both sources):
-  //   gridKw > 0  → exporting to grid (selling)
-  //   gridKw < 0  → importing from grid (buying)
+  //   gridKw < 0  → exporting to grid (selling)
+  //   gridKw > 0  → importing from grid (buying)
   //   battKw > 0  → battery discharging
   //   battKw < 0  → battery charging
-  const isExporting   = (gridKw  ?? 0) >  0.01;
-  const isImporting   = (gridKw  ?? 0) < -0.01;
+  const isExporting   = (gridKw  ?? 0) < -0.01;
+  const isImporting   = (gridKw  ?? 0) >  0.01;
   const isCharging    = (battKw  ?? 0) < -0.01;
 
   const pvValue        = pvKw   ?? 0;
@@ -1656,8 +1656,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     ? (Date.now() - new Date(latest.timestamp).getTime()) < liveThresholdMs
     : false;
 
-  const gridExporting = gridKw != null && gridKw >  0.01;  // positive = export (sell)
-  const gridImporting = gridKw != null && gridKw < -0.01;  // negative = import (buy)
+  const gridExporting = gridKw != null && gridKw < -0.01;  // negative = export (sell)
+  const gridImporting = gridKw != null && gridKw >  0.01;  // positive = import (buy)
   const batCharging = batPowerKw != null && batPowerKw < -0.01;
 
   // Data age for battery KPI badge — show when last reading is older than 30 min
@@ -1785,8 +1785,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     const loadAvg    = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
     const invOutPeak = invOuts.length ? Math.max(...invOuts) : 0;
     const invOutAvg  = invOuts.length ? invOuts.reduce((s, v) => s + v, 0) / invOuts.length : 0;
-    const gridExport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;  // positive = export
-    const gridImport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;  // negative = import
+    const gridExport = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;  // negative = export
+    const gridImport = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;  // positive = import
     const socMin = socs.length ? Math.min(...socs) : null;
     const socMax = socs.length ? Math.max(...socs) : null;
     const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;

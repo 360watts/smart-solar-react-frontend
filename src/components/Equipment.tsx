@@ -750,6 +750,7 @@ const PanelSection: React.FC<{
   );
 };
 
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 const Equipment: React.FC = () => {
@@ -764,14 +765,29 @@ const Equipment: React.FC = () => {
 
   useEffect(() => {
     const fromQuery = (searchParams.get('site') || searchParams.get('site_id') || '').trim();
-    apiService.getAllSites().then(data => {
-      setSites(data);
-      if (fromQuery && data.some((s: Site) => s.site_id === fromQuery)) {
-        setSelectedSiteId(fromQuery);
-      } else if (data.length > 0) {
-        setSelectedSiteId(data[0].site_id);
-      }
-    }).finally(() => setLoadingSites(false));
+    // If site_id is already known from URL, fire sites + equipment in parallel
+    if (fromQuery) {
+      Promise.all([
+        apiService.getAllSites(),
+        apiService.getSiteEquipment(fromQuery).catch(() => null),
+      ]).then(([sitesData, equipData]) => {
+        setSites(sitesData);
+        const valid = sitesData.some((s: Site) => s.site_id === fromQuery);
+        setSelectedSiteId(valid ? fromQuery : sitesData[0]?.site_id ?? '');
+        if (equipData) {
+          setBundle({
+            inverters: Array.isArray(equipData.inverters) ? equipData.inverters : [],
+            batteries: Array.isArray(equipData.batteries) ? equipData.batteries : [],
+            panels: Array.isArray(equipData.panels) ? equipData.panels : [],
+          });
+        }
+      }).finally(() => setLoadingSites(false));
+    } else {
+      apiService.getAllSites().then(data => {
+        setSites(data);
+        if (data.length > 0) setSelectedSiteId(data[0].site_id);
+      }).finally(() => setLoadingSites(false));
+    }
   }, [searchParams]);
 
   const refreshEquipment = useCallback(async () => {
@@ -797,6 +813,7 @@ const Equipment: React.FC = () => {
     refreshEquipment();
   }, [refreshEquipment]);
 
+  const selectedSite = sites.find(s => s.site_id === selectedSiteId) ?? null;
   const panels = bundle?.panels ?? [];
   const panelTotal = panels.length;
   const panelActive = panels.filter(p => p.is_active).length;

@@ -24,6 +24,8 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
 
 class ApiService {
+  private refreshTokenPromise: Promise<boolean> | null = null;
+
   private getAuthHeaders(): HeadersInit {
     const tokens = localStorage.getItem('authTokens');
     if (tokens) {
@@ -59,13 +61,23 @@ class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
 
-    let response = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
+    // Abort after 40 s — Railway cold starts can take up to ~35 s.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
+      40000,
+    );
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: { ...headers, ...options.headers },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (response.status === 401) {
       // Try to refresh token
@@ -73,13 +85,20 @@ class ApiService {
       if (refreshSuccess) {
         // Retry with new token
         headers = this.getAuthHeaders();
-        response = await fetch(url, {
-          ...options,
-          headers: {
-            ...headers,
-            ...options.headers,
-          },
-        });
+        const retryController = new AbortController();
+        const retryTimeoutId = setTimeout(
+          () => retryController.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
+          40000,
+        );
+        try {
+          response = await fetch(url, {
+            ...options,
+            headers: { ...headers, ...options.headers },
+            signal: retryController.signal,
+          });
+        } finally {
+          clearTimeout(retryTimeoutId);
+        }
       }
     }
 
@@ -101,6 +120,17 @@ class ApiService {
   }
 
   private async refreshToken(): Promise<boolean> {
+    // Singleton: if a refresh is already in flight, all callers share the same promise.
+    // This prevents refresh token rotation failures when Promise.all fires multiple
+    // simultaneous 401s — without this each caller would consume the rotated token.
+    if (this.refreshTokenPromise) return this.refreshTokenPromise;
+    this.refreshTokenPromise = this._doRefreshToken().finally(() => {
+      this.refreshTokenPromise = null;
+    });
+    return this.refreshTokenPromise;
+  }
+
+  private async _doRefreshToken(): Promise<boolean> {
     const tokens = localStorage.getItem('authTokens');
     if (!tokens) return false;
 
@@ -744,55 +774,43 @@ class ApiService {
     return this.request(`/ota/firmware/?${params.toString()}`);
   }
 
-  async uploadFirmwareVersion(formData: FormData): Promise<any> {
+  async uploadFirmwareVersion(formData: FormData, onProgress?: (pct: number) => void): Promise<any> {
     const url = `${API_BASE_URL}/ota/firmware/create/`;
     const tokens = localStorage.getItem('authTokens');
-    
-    if (!tokens) {
-      throw new Error('Authentication required');
-    }
-    
+    if (!tokens) throw new Error('Authentication required');
     const parsedTokens = JSON.parse(tokens);
-    let headers: HeadersInit = {
-      'Authorization': `Bearer ${parsedTokens.access}`,
-    };
-    // Don't set Content-Type - let browser set it with boundary for multipart/form-data
-    
-    let response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
 
-    // Handle 401 with token refresh
-    if (response.status === 401) {
-      const refreshSuccess = await this.refreshToken();
-      if (refreshSuccess) {
-        const newTokens = JSON.parse(localStorage.getItem('authTokens') || '{}');
-        headers = {
-          'Authorization': `Bearer ${newTokens.access}`,
-        };
-        response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: formData,
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${parsedTokens.access}`);
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
         });
       }
-    }
 
-    if (response.status === 401) {
-      localStorage.removeItem('authTokens');
-      localStorage.removeItem('authUser');
-      window.location.href = '/login';
-      throw new Error('Authentication required');
-    }
+      xhr.onload = () => {
+        if (xhr.status === 401) {
+          localStorage.removeItem('authTokens');
+          localStorage.removeItem('authUser');
+          window.location.href = '/login';
+          return reject(new Error('Authentication required'));
+        }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          return reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText}`));
+        }
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error('Invalid response from server'));
+        }
+      };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    return response.json();
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(formData);
+    });
   }
 
   async updateFirmwareVersion(firmwareId: number, data: any): Promise<any> {
@@ -850,6 +868,10 @@ class ApiService {
 
   async listTargetedUpdates(): Promise<any> {
     return this.request(`/ota/updates/`);
+  }
+
+  async getOTADevices(): Promise<any[]> {
+    return this.request(`/ota/devices/status/`);
   }
 
   async getTargetedUpdate(updateId: number): Promise<any> {
