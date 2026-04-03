@@ -566,7 +566,7 @@ export const OTA: React.FC = () => {
   };
 
   const handleSelectAllDevices = () => {
-    setDeploymentConfig(c => ({ ...c, targetDevices: devices.filter(d => d.status === 'idle' || d.status === 'healthy').map(d => d.deviceId) }));
+    setDeploymentConfig(c => ({ ...c, targetDevices: devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').map(d => d.deviceId) }));
   };
 
   // ── Rollback ──
@@ -951,7 +951,7 @@ export const OTA: React.FC = () => {
               ...btnBase, background: 'rgba(245,158,11,0.12)', color: '#F59E0B',
               border: '1px solid rgba(245,158,11,0.3)', padding: '5px 12px', fontSize: '0.75rem',
             }}>
-              Select All Available ({devices.filter(d => d.status === 'idle' || d.status === 'healthy').length})
+              Select All Available ({devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').length})
             </button>
           </div>
 
@@ -962,10 +962,10 @@ export const OTA: React.FC = () => {
           }}>
             {loadingDevices ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>Loading devices…</div>
-            ) : devices.filter(d => d.status === 'idle' || d.status === 'healthy').length === 0 ? (
+            ) : devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').length === 0 ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>No devices available</div>
             ) : (
-              devices.filter(d => (d.status === 'idle' || d.status === 'healthy') && (!idleDeviceSearch.trim() || d.deviceId.toLowerCase().includes(idleDeviceSearch.toLowerCase()))).map(device => (
+              devices.filter(d => (d.status === 'idle' || d.status === 'healthy' || d.status === 'failed') && (!idleDeviceSearch.trim() || d.deviceId.toLowerCase().includes(idleDeviceSearch.toLowerCase()))).map(device => (
                 <label key={device.deviceId} style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0',
                   cursor: 'pointer', fontSize: '0.875rem', color: txt,
@@ -982,6 +982,7 @@ export const OTA: React.FC = () => {
                   />
                   <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{device.deviceId}</code>
                   <span style={{ color: sub, fontSize: '0.75rem' }}>({device.currentVersion})</span>
+                  {device.status === 'failed' && <span style={{ fontSize: '0.65rem', color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>FAILED</span>}
                 </label>
               ))
             )}
