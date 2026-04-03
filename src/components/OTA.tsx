@@ -371,7 +371,7 @@ export const OTA: React.FC = () => {
       const otaDevices: any[] = await apiService.getOTADevices();
       const transformed: DeviceStatus[] = (Array.isArray(otaDevices) ? otaDevices : []).map((d: any) => ({
         deviceId: d.device_serial,
-        currentVersion: d.current_firmware || 'unknown',
+        currentVersion: d.current_firmware || 'Not reported',
         targetVersion: d.target_firmware_version || 'N/A',
         activeSlot: 'A' as 'A' | 'B',
         status: mapLogStatus(d.log_status),
