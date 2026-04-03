@@ -874,6 +874,10 @@ class ApiService {
     return this.request(`/ota/devices/status/`);
   }
 
+  async cancelTargetedUpdate(updateId: number): Promise<any> {
+    return this.request(`/ota/updates/${updateId}/cancel/`, { method: 'POST' });
+  }
+
   async getTargetedUpdate(updateId: number): Promise<any> {
     return this.request(`/ota/updates/${updateId}/`);
   }

@@ -565,8 +565,31 @@ export const OTA: React.FC = () => {
     }
   };
 
+  const handleCancelDeployment = () => {
+    if (!activeDeployment) return;
+    setDangerModal({
+      show: true,
+      title: 'Cancel Deployment',
+      message: `Cancel deployment #${activeDeployment.id} (${activeDeployment.target_firmware?.version || 'N/A'})?`,
+      warningText: 'This will stop the update for all devices that haven\'t completed yet. Devices already updated will not be rolled back.',
+      confirmLabel: 'Cancel Deployment',
+      accentColor: '#EF4444',
+      icon: <AlertTriangle size={18} color="white" />,
+      onConfirm: async () => {
+        try {
+          await apiService.cancelTargetedUpdate(activeDeployment.id);
+          setSuccessModal({ show: true, message: 'Deployment cancelled.' });
+          setActiveDeployment(null);
+          await Promise.all([loadDevices(), loadDeployments()]);
+        } catch (err: any) {
+          setErrorModal({ show: true, message: `Failed to cancel: ${err.message || 'Unknown error'}` });
+        }
+      },
+    });
+  };
+
   const handleSelectAllDevices = () => {
-    setDeploymentConfig(c => ({ ...c, targetDevices: devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').map(d => d.deviceId) }));
+    setDeploymentConfig(c => ({ ...c, targetDevices: devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed' || d.status === 'trial').map(d => d.deviceId) }));
   };
 
   // ── Rollback ──
@@ -951,7 +974,7 @@ export const OTA: React.FC = () => {
               ...btnBase, background: 'rgba(245,158,11,0.12)', color: '#F59E0B',
               border: '1px solid rgba(245,158,11,0.3)', padding: '5px 12px', fontSize: '0.75rem',
             }}>
-              Select All Available ({devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').length})
+              Select All Available ({devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed' || d.status === 'trial').length})
             </button>
           </div>
 
@@ -962,10 +985,10 @@ export const OTA: React.FC = () => {
           }}>
             {loadingDevices ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>Loading devices…</div>
-            ) : devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed').length === 0 ? (
+            ) : devices.filter(d => d.status === 'idle' || d.status === 'healthy' || d.status === 'failed' || d.status === 'trial').length === 0 ? (
               <div style={{ padding: '1rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>No devices available</div>
             ) : (
-              devices.filter(d => (d.status === 'idle' || d.status === 'healthy' || d.status === 'failed') && (!idleDeviceSearch.trim() || d.deviceId.toLowerCase().includes(idleDeviceSearch.toLowerCase()))).map(device => (
+              devices.filter(d => (d.status === 'idle' || d.status === 'healthy' || d.status === 'failed' || d.status === 'trial') && (!idleDeviceSearch.trim() || d.deviceId.toLowerCase().includes(idleDeviceSearch.toLowerCase()))).map(device => (
                 <label key={device.deviceId} style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0',
                   cursor: 'pointer', fontSize: '0.875rem', color: txt,
@@ -983,6 +1006,7 @@ export const OTA: React.FC = () => {
                   <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{device.deviceId}</code>
                   <span style={{ color: sub, fontSize: '0.75rem' }}>({device.currentVersion})</span>
                   {device.status === 'failed' && <span style={{ fontSize: '0.65rem', color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>FAILED</span>}
+                  {device.status === 'trial' && <span style={{ fontSize: '0.65rem', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>AWAITING</span>}
                 </label>
               ))
             )}
@@ -1053,9 +1077,19 @@ export const OTA: React.FC = () => {
                     {activeDeployment.status === 'in_progress' ? 'Active Campaign' : 'Deployment Complete'}
                   </span>
                 </div>
-                <code style={{ fontSize: '0.75rem', color: sub, background: tok.bgMuted(isDark), padding: '2px 8px', borderRadius: 6 }}>
-                  ID #{activeDeployment.id}
-                </code>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <code style={{ fontSize: '0.75rem', color: sub, background: tok.bgMuted(isDark), padding: '2px 8px', borderRadius: 6 }}>
+                    ID #{activeDeployment.id}
+                  </code>
+                  {activeDeployment.status === 'in_progress' && (
+                    <button onClick={handleCancelDeployment} style={{
+                      ...btnBase, background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                      border: '1px solid rgba(239,68,68,0.3)', padding: '3px 10px', fontSize: '0.7rem',
+                    }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
                 {[
