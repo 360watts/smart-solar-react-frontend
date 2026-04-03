@@ -160,7 +160,8 @@ const ChartTooltip = ({ active, payload, label, unitResolver }: { active?: boole
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {payload.map((entry: any, idx: number) => {
           const unit = getUnit(entry);
-          const val = entry.value != null ? Number(entry.value).toFixed(3) : '—';
+          const decimals = unit === '%' ? 0 : 3;
+          const val = entry.value != null ? Number(entry.value).toFixed(decimals) : '—';
           return (
             <motion.div
               key={entry.name}
@@ -1107,6 +1108,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
           {...fmtPower(battPowerValue)}
           color="#f59e0b"
           active={isBattPresent}
+          subLabel={isBattActive ? (isCharging ? '↑ Charging' : '↓ Discharging') : undefined}
           style={getPos(C.batt)}
         />
 
@@ -1156,11 +1158,11 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
             backdropFilter: 'blur(8px)',
           }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-              Power Hub
+              Load Power
             </span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
               <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', lineHeight: 1 }}>
-                {((pvValue + loadValue + gridValue + battPowerValue) / 2).toFixed(1)}
+                {loadValue.toFixed(2)}
               </span>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#6366f1', opacity: 0.8 }}>
                 kW
@@ -1723,11 +1725,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const dcTemp = latest?.dc_temp_c ?? null;
 
   const runStateBadge = runState != null ? (
-    runState === 0 ? { label: 'Standby', color: '#9ca3af' } :
-    runState === 1 ? { label: 'Starting', color: '#60a5fa' } :
-    runState === 2 ? { label: 'Normal', color: '#00a63e' } :
-    runState === 3 ? { label: 'Fault', color: '#ef4444' } :
-    runState === 4 ? { label: 'Fault', color: '#ef4444' } :
+    runState === 0 ? { label: 'Standby',    color: '#9ca3af' } :
+    runState === 1 ? { label: 'Self-Check', color: '#60a5fa' } :
+    runState === 2 ? { label: 'Normal',     color: '#00a63e' } :
+    runState === 3 ? { label: 'Alarm',      color: '#f59e0b' } :
+    runState === 4 ? { label: 'Fault',      color: '#ef4444' } :
+    runState === 5 ? { label: 'Activating', color: '#a78bfa' } :
       { label: `State ${runState}`, color: '#6b7280' }
   ) : null;
 
@@ -1986,17 +1989,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         fcastP50UpToNow += (points[i].p50! + points[i + 1].p50!) / 2 * h;
     }
 
-    console.debug('[achievedPct]', {
-      lastReadingAt: latest.timestamp,
-      nowMs: new Date(nowMs).toISOString(),
-      todayKwh,
-      forecastPointsTotal: forecast.length,
-      forecastPointsToday: todayForecast.length,
-      forecastPointsBeforeNow: beforeNow.length,
-      fcastP50UpToNow: +fcastP50UpToNow.toFixed(4),
-      result: fcastP50UpToNow > 0 ? Math.min(999, Math.round((todayKwh / fcastP50UpToNow) * 100)) : null,
-    });
-
     return fcastP50UpToNow > 0
       ? Math.min(999, Math.round((todayKwh / fcastP50UpToNow) * 100))
       : null;
@@ -2249,10 +2241,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             border: '1px dashed rgba(0, 166, 62, 0.2)',
           }}
         >
-          No data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> in the{' '}
-          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'last 7 days' : dateRange === '30d' ? 'last 30 days' : 'selected date range'}
+          No data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> for{' '}
+          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'the last 7 days' : dateRange === '30d' ? 'the last 30 days' : 'the selected date range'}
           .<br />
-          <span style={{ fontSize: '0.8rem' }}>Data is written by the ML forecast scheduler when the device is actively posting telemetry.</span>
+          <span style={{ fontSize: '0.8rem' }}>Telemetry is posted by the gateway device. Forecast and weather data load once telemetry is available.</span>
         </motion.div>
       ) : (
         <>
