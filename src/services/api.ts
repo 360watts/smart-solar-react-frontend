@@ -21,7 +21,7 @@ export interface AlertItem {
 }
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
+  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend-production.up.railway.app/api';
 
 class ApiService {
   private refreshTokenPromise: Promise<boolean> | null = null;
@@ -61,11 +61,11 @@ class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
 
-    // Abort after 40 s — Railway cold starts can take up to ~35 s.
+    // Abort after 60 s — Railway cold starts can take up to ~50 s.
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
-      40000,
+      60000,
     );
 
     let response: Response;
@@ -127,7 +127,7 @@ class ApiService {
     this.refreshTokenPromise = this._doRefreshToken().finally(() => {
       this.refreshTokenPromise = null;
     });
-    return this.refreshTokenPromise;
+    return this.refreshTokenPromise!;
   }
 
   private async _doRefreshToken(): Promise<boolean> {
@@ -671,6 +671,13 @@ class ApiService {
   async updateDevice(deviceId: number, data: any): Promise<any> {
     return this.request(`/devices/${deviceId}/`, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async patchDevice(deviceId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/devices/${deviceId}/`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }

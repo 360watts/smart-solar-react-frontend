@@ -47,6 +47,7 @@ interface Device {
     age_seconds?: number | null;
   } | null;
   logs_enabled?: boolean;
+  auto_reboot_enabled?: boolean;
   pending_config_update?: boolean;
   config_ack_ver?: number | null;
   config_downloaded_at?: string | null;
@@ -597,6 +598,17 @@ const Devices: React.FC = () => {
     }
   };
 
+  const handleToggleAutoReboot = async (device: any, enabled: boolean) => {
+    try {
+      await apiService.patchDevice(device.id, { auto_reboot_enabled: enabled });
+      setSelectedDevice({ ...device, auto_reboot_enabled: enabled });
+      fetchDevices();
+    } catch (err) {
+      console.error('Toggle auto reboot error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to toggle auto reboot');
+    }
+  };
+
   const handleSelectDevice = (deviceId: number) => {
     const newSelected = new Set(selectedDevices);
     if (newSelected.has(deviceId)) {
@@ -1099,6 +1111,20 @@ const Devices: React.FC = () => {
                   <strong>Enable Device Logs</strong>
                   <span style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#9ca3af' }}>
                     (Device will send logs when enabled)
+                  </span>
+                </label>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedDevice.auto_reboot_enabled || false}
+                    onChange={(e) => handleToggleAutoReboot(selectedDevice, e.target.checked)}
+                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                  />
+                  <strong>Auto Reboot</strong>
+                  <span style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#9ca3af' }}>
+                    (Automatically reboot device when RS-485 registers freeze)
                   </span>
                 </label>
               </div>
