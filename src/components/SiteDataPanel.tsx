@@ -8,11 +8,12 @@
  *  - Forecast: P10/P50/P90 + physics baseline, regime tags, % achieved
  */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useSpring as useMotionSpring } from 'framer-motion';
 import {
-  AreaChart, Area, Line,
+  AreaChart, Area, Line, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea,
 } from 'recharts';
-import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap, Layers, BarChart2, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'weather',   label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
   { id: 'history',   label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
   { id: 'forecast',  label: 'Forecast',  icon: <Sun size={tabIconSize} /> },
+  { id: 'phase-load', label: 'Phase Load', icon: <Layers size={tabIconSize} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -1361,6 +1363,539 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
   );
 };
 
+// ── ForecastAccuracySubTab ─────────────────────────────────────────────────────
+
+const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
+  const panelBg: React.CSSProperties = {
+    padding: 20, borderRadius: 20, marginBottom: 16,
+    background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+  };
+
+  if (!accuracy || (!accuracy.hourly?.length && !accuracy.daily?.length)) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}
+      >
+        <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.65, maxWidth: 340, margin: '0 auto' }}>Accuracy scores are computed nightly. Data will appear tomorrow after the first overnight run.</div>
+      </motion.div>
+    );
+  }
+
+  const summary = accuracy.overall ?? accuracy.summary ?? {};
+  const hourly: any[] = accuracy.hourly ?? [];
+
+  // Color each bar by MAE severity
+  const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
+  const chartData = hourly.map((h: any) => {
+    const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(3) : null;
+    const ratio = mae != null ? mae / maxMae : 0;
+    const barColor = ratio < 0.33 ? '#00a63e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
+    return {
+      hour: `${String(h.hour_utc).padStart(2, '0')}:00`,
+      mae, barColor,
+      errorPct: (h.mean_error_pct ?? h.error_pct) != null ? +Number(h.mean_error_pct ?? h.error_pct).toFixed(1) : null,
+    };
+  });
+
+  const summaryCards = [
+    { label: 'MAE', value: summary.mae_kw != null ? `${Number(summary.mae_kw).toFixed(3)} kW` : '—', accent: '#00a63e', sub: 'Mean absolute error' },
+    { label: 'RMSE', value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(3)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
+    { label: 'Avg Error', value: (summary.mean_abs_error_pct ?? summary.avg_error_pct) != null ? `${Number(summary.mean_abs_error_pct ?? summary.avg_error_pct).toFixed(1)}%` : '—', accent: '#f59e0b', sub: 'Of P50 forecast' },
+    { label: 'Days', value: String(summary.days_computed ?? '—'), accent: '#8b5cf6', sub: 'Days computed' },
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      {/* Summary metric cards — premium animated with radial glow */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14, marginBottom: 20 }}>
+        {summaryCards.map((c, idx) => (
+          <motion.div
+            key={c.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25, delay: idx * 0.08 }}
+            whileHover={{ y: -4, boxShadow: `0 16px 32px ${c.accent}25` }}
+            style={{
+              position: 'relative', overflow: 'hidden', padding: '18px 16px', borderRadius: 18,
+              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${c.accent}25`,
+              boxShadow: isDark ? `0 6px 24px rgba(0,0,0,0.35), 0 0 0 1px ${c.accent}18` : `0 6px 24px rgba(0,0,0,0.08), 0 0 0 1px ${c.accent}15`,
+            }}
+          >
+            <div style={{ position: 'absolute', inset: 0, opacity: 0.1, background: `radial-gradient(circle at top right, ${c.accent}, transparent 65%)`, pointerEvents: 'none' }} />
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 8 }}>
+              {c.label}
+            </div>
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.5rem',
+              background: `linear-gradient(135deg, ${c.accent}, ${c.accent}cc)`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>
+              {c.value}
+            </div>
+            <div style={{ fontSize: '0.62rem', opacity: 0.45, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginTop: 4 }}>{c.sub}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Hourly MAE bar chart — color-coded by severity */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={panelBg}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>MAE by Hour of Day (UTC)</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: c as string, display: 'inline-block' }} />{l}
+              </span>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} />
+            <XAxis dataKey="hour" stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 10, fontFamily: 'Poppins, sans-serif' }} interval={2} height={24} />
+            <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} width={46} tickFormatter={(v: number) => `${v.toFixed(2)}`} />
+            <Tooltip
+              cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
+              contentStyle={{ background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)', border: '1px solid rgba(0,166,62,0.2)', borderRadius: 10, backdropFilter: 'blur(20px)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}
+              formatter={(v: any) => [`${Number(v).toFixed(3)} kW`, 'MAE']}
+              labelStyle={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600 }}
+            />
+            <Bar dataKey="mae" name="MAE (kW)" radius={[5, 5, 0, 0]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={entry.barColor} fillOpacity={0.88} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </motion.div>
+
+      {/* Error % area chart */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ ...panelBg, marginBottom: 0 }}>
+        <h3 style={{ margin: '0 0 14px', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>Error % by Hour of Day</h3>
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 20 }}>
+            <defs>
+              <linearGradient id="fca-err-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.6} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.04} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} />
+            <XAxis dataKey="hour" stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 10, fontFamily: 'Poppins, sans-serif' }} interval={2} height={24} />
+            <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} width={40} tickFormatter={(v: number) => `${v}%`} />
+            <Tooltip
+              contentStyle={{ background: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, backdropFilter: 'blur(20px)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}
+              formatter={(v: any) => [`${Number(v).toFixed(1)}%`, 'Error %']}
+              labelStyle={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600 }}
+            />
+            <Area type="monotone" dataKey="errorPct" name="Error %" stroke="#3b82f6" strokeWidth={2.2} fill="url(#fca-err-grad)" dot={false} filter="drop-shadow(0 0 6px #3b82f680)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ── WeatherAccuracySubTab ──────────────────────────────────────────────────────
+
+const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
+  const records: any[] = accuracy?.records ?? [];
+  const summary = accuracy?.summary ?? {};
+
+  if (!records.length) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          padding: 40, textAlign: 'center', color: 'var(--text-muted)',
+          borderRadius: 16, fontSize: '0.875rem',
+          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
+          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+        }}
+      >
+        <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No weather accuracy data yet</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Needs WEATHER_FCST# and WEATHER_OBS# records for the same hours. Data accumulates as forecasts are verified.</div>
+      </motion.div>
+    );
+  }
+
+  const chartData = records.slice(-48).map((d: any) => ({
+    time: new Date(d.timestamp).toLocaleTimeString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }),
+    ghiErr: d.ghi_error_wm2 != null ? +Math.abs(Number(d.ghi_error_wm2)).toFixed(1) : null,
+    tempErr: d.temp_error_c != null ? +Math.abs(Number(d.temp_error_c)).toFixed(2) : null,
+    cloudErr: d.cloud_error_pct != null ? +Math.abs(Number(d.cloud_error_pct)).toFixed(1) : null,
+  }));
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      {/* Summary chips */}
+      {(summary.ghi_mae_wm2 != null || summary.temp_mae_c != null) && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          {[
+            { label: 'GHI MAE', value: summary.ghi_mae_wm2 != null ? `${Number(summary.ghi_mae_wm2).toFixed(1)} W/m²` : '—', color: '#eab308' },
+            { label: 'Temp MAE', value: summary.temp_mae_c != null ? `${Number(summary.temp_mae_c).toFixed(2)}°C` : '—', color: '#ef4444' },
+            { label: 'Cloud MAE', value: summary.cloud_mae_pct != null ? `${Number(summary.cloud_mae_pct).toFixed(1)}%` : '—', color: '#3b82f6' },
+            { label: 'Hours', value: summary.hours_compared ?? '—', color: '#8b5cf6' },
+          ].map(c => (
+            <div key={c.label} style={{ padding: '10px 14px', borderRadius: 12, background: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.95)', border: `1px solid ${c.color}30` }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', marginBottom: 3 }}>{c.label}</div>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.1rem', color: c.color }}>{c.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{
+        padding: 16, borderRadius: 16,
+        background: isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)',
+        border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+        marginBottom: 16,
+      }}>
+        <p style={{ margin: '0 0 12px', fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          GHI Error (W/m²) — Forecast vs Observed
+        </p>
+        <div style={{ width: '100%', height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.18)' : '#e5e7eb'} />
+              <XAxis dataKey="time" tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 9 }} interval={5} height={24} />
+              <YAxis width={44} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} />
+              <Tooltip
+                formatter={(v: any) => [`${Number(v).toFixed(1)} W/m²`, 'GHI error']}
+                contentStyle={{ background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: 8, fontSize: '0.8rem' }}
+              />
+              <Bar dataKey="ghiErr" name="GHI error" fill="#eab308" radius={[4, 4, 0, 0]} fillOpacity={0.85} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div style={{
+        padding: 16, borderRadius: 16,
+        background: isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)',
+        border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+      }}>
+        <p style={{ margin: '0 0 12px', fontSize: '0.78rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Temperature Error (°C) — Forecast vs Observed
+        </p>
+        <div style={{ width: '100%', height: 180 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(148,163,184,0.18)' : '#e5e7eb'} />
+              <XAxis dataKey="time" tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 9 }} interval={5} height={24} />
+              <YAxis width={40} tick={{ fill: isDark ? '#cbd5e1' : '#374151', fontSize: 11 }} tickFormatter={(v: number) => `${v}°`} />
+              <Tooltip
+                formatter={(v: any) => [`${Number(v).toFixed(2)}°C`, 'Temp error']}
+                contentStyle={{ background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: '0.8rem' }}
+              />
+              <Area type="monotone" dataKey="tempErr" stroke="#ef4444" fill="#ef4444" fillOpacity={0.12} strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ── PhaseLoadTab ───────────────────────────────────────────────────────────────
+
+const PHASE_COLORS = { L1: '#3b82f6', L2: '#f59e0b', L3: '#8b5cf6' };
+
+// Animated spring counter card for each phase — from Magic MCP design
+interface PhaseKpiCardProps {
+  phase: 'L1' | 'L2' | 'L3';
+  watts: number | null;
+  volts: number | null;
+  amps: number | null;
+  color: string;
+  isDark: boolean;
+  index: number;
+}
+
+const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts, amps, color, isDark, index }) => {
+  const [dW, setDW] = useState(0);
+  const [dV, setDV] = useState(0);
+  const [dA, setDA] = useState(0);
+
+  useEffect(() => {
+    const tw = setTimeout(() => setDW(watts ?? 0), 100 * index);
+    const tv = setTimeout(() => setDV(volts ?? 0), 150 * index);
+    const ta = setTimeout(() => setDA(Math.abs(amps ?? 0)), 200 * index);
+    return () => { clearTimeout(tw); clearTimeout(tv); clearTimeout(ta); };
+  }, [watts, volts, amps, index]);
+
+  const wSpring = useMotionSpring(dW, { stiffness: 100, damping: 20 });
+  const vSpring = useMotionSpring(dV, { stiffness: 100, damping: 20 });
+  const aSpring = useMotionSpring(dA, { stiffness: 100, damping: 20 });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25, delay: index * 0.1 }}
+      whileHover={{ y: -6, boxShadow: `0 20px 40px ${color}30` }}
+      style={{
+        position: 'relative', overflow: 'hidden', flex: 1, minWidth: 150,
+        borderRadius: 20, padding: '22px 20px',
+        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${color}25`,
+        boxShadow: isDark
+          ? `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${color}20`
+          : `0 8px 32px rgba(0,0,0,0.1), 0 0 0 1px ${color}15`,
+      }}
+    >
+      {/* Radial glow background */}
+      <div style={{
+        position: 'absolute', inset: 0, opacity: 0.12,
+        background: `radial-gradient(circle at top right, ${color}, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>
+            Phase {phase}
+          </span>
+          <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, boxShadow: `0 0 14px ${color}` }} />
+        </div>
+
+        {/* Watts — large spring counter */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.55, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 3 }}>
+            Power
+          </div>
+          <motion.div style={{
+            fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '2rem',
+            background: `linear-gradient(135deg, ${color}, ${color}cc)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>
+            {watts != null ? `${wSpring.get().toFixed(0)} W` : '—'}
+          </motion.div>
+        </div>
+
+        {/* Volts + Amps */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.55, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 2 }}>Voltage</div>
+            <motion.div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, fontSize: '1rem', color: isDark ? '#e2e8f0' : '#334155' }}>
+              {volts != null ? `${vSpring.get().toFixed(1)} V` : '—'}
+            </motion.div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.55, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 2 }}>Current</div>
+            <motion.div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, fontSize: '1rem', color: isDark ? '#e2e8f0' : '#334155' }}>
+              {amps != null ? `${aSpring.get().toFixed(2)} A` : '—'}
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const PhaseLoadTab: React.FC<{
+  phaseLoad: any[];
+  loadForecast: any[];
+  latest: any;
+  isDark: boolean;
+  hours: number;
+  onHoursChange: (h: number) => void;
+}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange }) => {
+  const chartData = useMemo(() => {
+    if (!phaseLoad.length) return [];
+    return phaseLoad.map((row: any) => {
+      const d = new Date(row.hour || row.timestamp);
+      return {
+        time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+        L1: row.load_l1_kw != null ? +Number(row.load_l1_kw).toFixed(3) : null,
+        L2: row.load_l2_kw != null ? +Number(row.load_l2_kw).toFixed(3) : null,
+        L3: row.load_l3_kw != null ? +Number(row.load_l3_kw).toFixed(3) : null,
+        total: row.load_total_kw != null ? +Number(row.load_total_kw).toFixed(3) : null,
+      };
+    });
+  }, [phaseLoad]);
+
+  // Live values — try load_l*_power_w first, fall back to overview phase cards
+  const liveW1 = latest?.load_l1_power_w ?? null;
+  const liveW2 = latest?.load_l2_power_w ?? null;
+  const liveW3 = latest?.load_l3_power_w ?? null;
+  const liveV1 = latest?.grid_l1_voltage_v ?? latest?.grid_phase_l1_voltage_v ?? null;
+  const liveV2 = latest?.grid_l2_voltage_v ?? latest?.grid_phase_l2_voltage_v ?? null;
+  const liveV3 = latest?.grid_l3_voltage_v ?? latest?.grid_phase_l3_voltage_v ?? null;
+  const liveA1 = latest?.grid_l1_current_a ?? null;
+  const liveA2 = latest?.grid_l2_current_a ?? null;
+  const liveA3 = latest?.grid_l3_current_a ?? null;
+  const hasLive = liveW1 != null || liveW2 != null || liveW3 != null;
+
+  const panelBg: React.CSSProperties = {
+    padding: 20, borderRadius: 20,
+    background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+
+      {/* ── Header row with hours selector ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>
+            Three Phase Load Monitoring
+          </h2>
+          <p style={{ margin: '2px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem', opacity: 0.55, color: isDark ? '#e2e8f0' : '#475569' }}>
+            Real-time per-phase load analysis and 7-day forecast
+          </p>
+        </div>
+        <select
+          value={hours}
+          onChange={e => onHoursChange(Number(e.target.value))}
+          style={{
+            background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem',
+            color: isDark ? '#e2e8f0' : '#334155',
+            cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          <option value={6}>6 hours</option>
+          <option value={12}>12 hours</option>
+          <option value={24}>24 hours</option>
+          <option value={48}>48 hours</option>
+        </select>
+      </div>
+
+      {/* ── Phase KPI Cards ── */}
+      {hasLive && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 20 }}>
+          <PhaseKpiCard phase="L1" watts={liveW1} volts={liveV1} amps={liveA1} color={PHASE_COLORS.L1} isDark={isDark} index={0} />
+          <PhaseKpiCard phase="L2" watts={liveW2} volts={liveV2} amps={liveA2} color={PHASE_COLORS.L2} isDark={isDark} index={1} />
+          <PhaseKpiCard phase="L3" watts={liveW3} volts={liveV3} amps={liveA3} color={PHASE_COLORS.L3} isDark={isDark} index={2} />
+        </div>
+      )}
+
+      {/* ── Stacked area chart with glow strokes ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{ ...panelBg, marginBottom: 16 }}
+      >
+        <h3 style={{ margin: '0 0 16px', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>
+          Hourly Load Distribution
+        </h3>
+        {chartData.length === 0 ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
+            <Layers size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
+            <div>No phase load data for this period.</div>
+            <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Per-phase registers (load_l1_power, load_l2_power, load_l3_power) must be mapped in the device config.</div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <defs>
+                {(['L1', 'L2', 'L3'] as const).map(ph => (
+                  <linearGradient key={ph} id={`plg-${ph}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={PHASE_COLORS[ph]} stopOpacity={0.75} />
+                    <stop offset="95%" stopColor={PHASE_COLORS[ph]} stopOpacity={0.08} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} />
+              <XAxis dataKey="time" stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11, fontFamily: 'Poppins, sans-serif' }} interval={3} height={28} />
+              <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} width={44} tickFormatter={(v: number) => `${v.toFixed(1)}`} />
+              <Tooltip
+                contentStyle={{
+                  background: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.97)',
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                  borderRadius: 10, backdropFilter: 'blur(20px)',
+                  fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem',
+                }}
+                formatter={(v: any, name: string) => [`${Number(v).toFixed(3)} kW`, name]}
+                labelStyle={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ fontSize: '0.72rem', fontFamily: 'Poppins, sans-serif' }} />
+              {(['L1', 'L2', 'L3'] as const).map(ph => (
+                <Area
+                  key={ph} type="monotone" dataKey={ph} name={`Phase ${ph}`}
+                  stackId="stack" stroke={PHASE_COLORS[ph]} strokeWidth={2.2}
+                  fill={`url(#plg-${ph})`} dot={false}
+                  filter={`drop-shadow(0 0 6px ${PHASE_COLORS[ph]}80)`}
+                />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </motion.div>
+
+      {/* ── 7-Day Load Forecast ── */}
+      {loadForecast.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          style={panelBg}
+        >
+          <h3 style={{ margin: '0 0 16px', fontFamily: 'Poppins, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>
+            7-Day Load Forecast
+            <span style={{ marginLeft: 10, fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.5 }}>Weighted Historical Avg</span>
+          </h3>
+          <ResponsiveContainer width="100%" height={230}>
+            <AreaChart
+              data={loadForecast.map((r: any) => {
+                const d = new Date(r.forecast_for);
+                return {
+                  time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+                  load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(3) : null,
+                };
+              })}
+              margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+            >
+              <defs>
+                <linearGradient id="plg-forecast" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.75} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.06} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} />
+              <XAxis dataKey="time" stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 10, fontFamily: 'Poppins, sans-serif' }} interval={11} height={24} />
+              <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }} width={44} />
+              <Tooltip
+                contentStyle={{
+                  background: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.97)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: 10, backdropFilter: 'blur(20px)',
+                  fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem',
+                }}
+                formatter={(v: any) => [`${Number(v).toFixed(3)} kW`, 'Forecast Load']}
+                labelStyle={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600 }}
+              />
+              <Area type="monotone" dataKey="load" name="Load Forecast" stroke="#ef4444" strokeWidth={2.2}
+                fill="url(#plg-forecast)" dot={false}
+                filter="drop-shadow(0 0 8px #ef444480)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -1427,6 +1962,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [vsActualIsSelecting, setVsActualIsSelecting] = useState(false);
   const [vsActualZoomStart, setVsActualZoomStart] = useState<string | null>(null);
   const [vsActualZoomEnd, setVsActualZoomEnd] = useState<string | null>(null);
+
+  // Analytics data
+  const [phaseLoad, setPhaseLoad] = useState<any[]>([]);
+  const [forecastAccuracy, setForecastAccuracy] = useState<any>(null);
+  const [loadForecast, setLoadForecast] = useState<any[]>([]);
+  const [weatherAccuracy, setWeatherAccuracy] = useState<any>(null);
+  const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
+  const [weatherSubTab, setWeatherSubTab] = useState<'current' | 'accuracy'>('current');
+  const [phaseLoadHours, setPhaseLoadHours] = useState(24);
 
   // ── Fetch latest telemetry only (silent, no loading flash) ──────────────────
   const fetchLatestTelemetry = useCallback(async () => {
@@ -1520,6 +2064,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       setLastUpdated(new Date());
       setSecondsSinceUpdate(0);
       setError(null);
+
+      // Analytics — fire-and-forget (non-blocking, won't break on error)
+      Promise.allSettled([
+        apiService.getPhaseLoad(siteId, phaseLoadHours, 'hourly'),
+        apiService.getForecastAccuracy(siteId, 30),
+        apiService.getLoadForecast(siteId, 7),
+        apiService.getWeatherAccuracy(siteId, 7),
+      ]).then(([pl, fa, lf, wa]) => {
+        if (pl.status === 'fulfilled') setPhaseLoad(Array.isArray(pl.value) ? pl.value : []);
+        if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
+        if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);
+        if (wa.status === 'fulfilled') setWeatherAccuracy(wa.value ?? null);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load site data');
     } finally {
@@ -1617,6 +2174,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     setHistoryZoomStart(null);
     setHistoryZoomEnd(null);
   }, [dateRange]);
+
+  // Re-fetch phase load when hours selector changes
+  useEffect(() => {
+    apiService.getPhaseLoad(siteId, phaseLoadHours, 'hourly')
+      .then(data => setPhaseLoad(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [siteId, phaseLoadHours]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
@@ -2164,7 +2728,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 )}
               </>
             )}
-            {activeTab === 'forecast' && (
+            {activeTab === 'forecast' && forecastSubTab === 'chart' && (
               <select
                 value={forecastWindow}
                 onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '7d')}
@@ -2639,6 +3203,37 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
+                {/* Weather Sub-tab toggle */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  {([
+                    { id: 'current', label: 'Current', icon: <CloudSun size={13} /> },
+                    { id: 'accuracy', label: 'Accuracy', icon: <BarChart2 size={13} /> },
+                  ] as const).map(st => (
+                    <motion.button
+                      key={st.id}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setWeatherSubTab(st.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        border: `1px solid ${weatherSubTab === st.id ? '#00a63e' : 'rgba(0,166,62,0.2)'}`,
+                        background: weatherSubTab === st.id ? 'rgba(0, 166, 62, 0.12)' : 'transparent',
+                        color: weatherSubTab === st.id ? '#00a63e' : 'var(--text-muted)',
+                        borderRadius: 8, padding: '6px 14px',
+                        fontSize: '0.75rem', fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                      }}
+                    >
+                      {st.icon}{st.label}
+                    </motion.button>
+                  ))}
+                </div>
+
+                {weatherSubTab === 'accuracy' ? (
+                  <WeatherAccuracySubTab accuracy={weatherAccuracy} isDark={isDark} />
+                ) : (
+                <>
                 {weather?.current ? (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -2699,6 +3294,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   >
                     No hourly weather forecast available.
                   </motion.div>
+                )}
+                </> /* end weatherSubTab current */
                 )}
               </motion.div>
             )}
@@ -2912,6 +3509,37 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
+                {/* Sub-tab toggle */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  {([
+                    { id: 'chart', label: 'Forecast', icon: <Sun size={13} /> },
+                    { id: 'accuracy', label: 'Accuracy', icon: <Target size={13} /> },
+                  ] as const).map(st => (
+                    <motion.button
+                      key={st.id}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setForecastSubTab(st.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        border: `1px solid ${forecastSubTab === st.id ? '#00a63e' : 'rgba(0,166,62,0.2)'}`,
+                        background: forecastSubTab === st.id ? 'rgba(0, 166, 62, 0.12)' : 'transparent',
+                        color: forecastSubTab === st.id ? '#00a63e' : 'var(--text-muted)',
+                        borderRadius: 8, padding: '6px 14px',
+                        fontSize: '0.75rem', fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                      }}
+                    >
+                      {st.icon}{st.label}
+                    </motion.button>
+                  ))}
+                </div>
+
+                {forecastSubTab === 'accuracy' ? (
+                  <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
+                ) : (
+                <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {(['chart', 'table'] as const).map(mode => (
@@ -3234,6 +3862,29 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <VsActualTable data={zoomedVsActualData} />
                   )}
                 </div>
+                </> /* end forecastSubTab chart branch */
+                )} {/* end forecastSubTab === 'accuracy' ternary */}
+              </motion.div>
+            )}
+
+            {/* ── Phase Load Tab ── */}
+            {activeTab === 'phase-load' && (
+              <motion.div
+                key="phase-load"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 20 } }}
+                transition={tabTransition}
+              >
+                <PhaseLoadTab
+                  phaseLoad={phaseLoad}
+                  loadForecast={loadForecast}
+                  latest={latest}
+                  isDark={isDark}
+                  hours={phaseLoadHours}
+                  onHoursChange={setPhaseLoadHours}
+                />
               </motion.div>
             )}
           </AnimatePresence>

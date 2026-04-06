@@ -389,6 +389,46 @@ class ApiService {
     return data;
   }
 
+  async getPhaseLoad(siteId: string, hours: number = 24, aggregate: string = 'hourly'): Promise<any[]> {
+    const enc = encodeURIComponent(siteId);
+    const cacheKey = `phase_load_${siteId}_${hours}_${aggregate}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${enc}/phase-load/?hours=${hours}&aggregate=${aggregate}`);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
+    return data;
+  }
+
+  async getForecastAccuracy(siteId: string, days: number = 30): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const cacheKey = `forecast_accuracy_${siteId}_${days}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${enc}/forecast-accuracy/?days=${days}`);
+    cacheService.set(cacheKey, data, 30 * 60 * 1000);
+    return data;
+  }
+
+  async getLoadForecast(siteId: string, days: number = 7): Promise<any[]> {
+    const enc = encodeURIComponent(siteId);
+    const cacheKey = `load_forecast_${siteId}_${days}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${enc}/load-forecast/?days=${days}`);
+    cacheService.set(cacheKey, data, 15 * 60 * 1000);
+    return data;
+  }
+
+  async getWeatherAccuracy(siteId: string, days: number = 7): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const cacheKey = `weather_accuracy_${siteId}_${days}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${enc}/weather-accuracy/?days=${days}`);
+    cacheService.set(cacheKey, data, 30 * 60 * 1000);
+    return data;
+  }
+
   async updateUser(userId: number, data: any): Promise<any> {
     const result = await this.request(`/users/${userId}/`, {
       method: 'PUT',

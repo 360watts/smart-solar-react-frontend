@@ -33,7 +33,7 @@ const tabVariants = {
 
 export default function SiteDetail() {
   const { siteId: siteIdParam } = useParams<{ siteId: string }>();
-  const siteId = siteIdParam ? decodeURIComponent(siteIdParam) : '';
+  const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const { isDark } = useTheme();
 
   // ── State ──
