@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend.vercel.app/api';
+  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django.up.railway.app/api';
 
 interface User {
   id: number;

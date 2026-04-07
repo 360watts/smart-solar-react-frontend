@@ -21,7 +21,7 @@ export interface AlertItem {
 }
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django-backend-production.up.railway.app/api';
+  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django.up.railway.app/api';
 
 class ApiService {
   private refreshTokenPromise: Promise<boolean> | null = null;
