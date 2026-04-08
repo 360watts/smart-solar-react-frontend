@@ -3172,8 +3172,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   >
                     <span style={{ fontSize: '1rem' }}>☁️</span>
                     <div>
-                      <strong>Deye Cloud data</strong> — RS-485 link is down; live values are being sourced from the Deye Cloud API (WiFi stick).
-                      <span style={{ marginLeft: 8, opacity: 0.75 }}>Check gateway RS-485 connection.</span>
+                      <strong>Deye Cloud data</strong> — RS-485 readings are frozen or unavailable; live values are being sourced from the Deye Cloud API (WiFi stick).
+                      <span style={{ marginLeft: 8, opacity: 0.75 }}>RS-485 link may be frozen or the gateway may be offline.</span>
                     </div>
                   </motion.div>
                 )}
