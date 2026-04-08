@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle, AlertCircle, Info, Bell,
   CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
-  Shield, Activity,
+  Shield, Activity, ChevronDown, ChevronRight, BookOpen, TrendingUp,
 } from 'lucide-react';
-import { apiService } from '../services/api';
+import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse } from '../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
@@ -90,6 +90,29 @@ const btnBase: React.CSSProperties = {
   padding: '8px 14px',
 };
 
+// ─── Analytics helpers ────────────────────────────────────────────────────────
+
+const CATALOGUE_GROUPS: Record<string, string[]> = {
+  'Connectivity': ['device_offline', 'rs485_stale', 'rs485_auto_reboot', 'deye_cloud_unavailable'],
+  'Solar (PV)':   ['PV-002', 'PV-005', 'PV-006'],
+  'Inverter':     ['INV-003', 'INV-006'],
+  'Battery':      ['BAT-001', 'BAT-002', 'BAT-003', 'BAT-008'],
+  'Grid':         ['GRID-001', 'GRID-002', 'GRID-003', 'GRID-004'],
+};
+
+const fmtTTR = (s: number | null): string => {
+  if (s == null) return '—';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
+const fmtDate = (iso: string): string =>
+  new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+const fmtDateShort = (iso: string): string =>
+  new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const Alerts: React.FC = () => {
@@ -103,11 +126,31 @@ const Alerts: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState<AlertAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [lookbackDays, setLookbackDays] = useState<7 | 30 | 90 | 180>(90);
+  const [expandedFaultCode, setExpandedFaultCode] = useState<string | null>(null);
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  const [catalogueExpandedCode, setCatalogueExpandedCode] = useState<string | null>(null);
+  const [hoveredTimelineDay, setHoveredTimelineDay] = useState<number | null>(null);
+
   useEffect(() => {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    apiService.getAlertsAnalytics(lookbackDays)
+      .then(setAnalyticsData)
+      .catch(err => setAnalyticsError(err instanceof Error ? err.message : 'Failed to load analytics'))
+      .finally(() => setAnalyticsLoading(false));
+  }, [activeTab, lookbackDays]);
 
   const fetchAlerts = async () => {
     try {
@@ -474,6 +517,23 @@ const Alerts: React.FC = () => {
                 );
               })}
             </div>
+            {/* Status pills */}
+            <div style={{ display: 'flex', gap: 5 }}>
+              {(['all', 'active', 'acknowledged', 'resolved'] as const).map(s => {
+                const active = filterStatus === s;
+                const cfg = s !== 'all' ? STATUS_CONFIG[s] : null;
+                return (
+                  <button key={s} onClick={() => setFilterStatus(s)} style={{
+                    ...btnBase, padding: '4px 10px', fontSize: '0.75rem',
+                    background: active ? (cfg ? cfg.bg : 'rgba(99,102,241,0.15)') : tok.bgMuted(isDark),
+                    color: active ? (cfg ? cfg.color : '#818CF8') : sub,
+                    border: `1px solid ${active ? (cfg ? `${cfg.dot}55` : 'rgba(99,102,241,0.35)') : bdr}`,
+                  }}>
+                    {s === 'all' ? 'All Status' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: sub }} />
@@ -585,118 +645,293 @@ const Alerts: React.FC = () => {
 
       {/* ══════════════════════ TAB: Analytics ══════════════════════ */}
       {activeTab === 'analytics' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-          {/* By Severity */}
-          <div style={cardStyle(isDark, { padding: 0 })}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertTriangle size={17} color="white" />
-              </div>
-              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>By Severity</div>
-            </div>
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { label: 'Critical', count: criticalCount, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
-                { label: 'Warning',  count: warningCount,  color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-                { label: 'Info',     count: infoCount,     color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
-              ].map(item => (
-                <div key={item.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: item.color }}>{item.label}</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: item.color, fontFamily: 'monospace' }}>{item.count}</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
-                    <div style={{
-                      width: alerts.length > 0 ? `${Math.round((item.count / alerts.length) * 100)}%` : '0%',
-                      height: '100%', background: item.color, borderRadius: 6, transition: 'width 0.5s',
-                    }} />
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: sub, marginTop: 3 }}>
-                    {alerts.length > 0 ? Math.round((item.count / alerts.length) * 100) : 0}% of total
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* ── Lookback selector ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: sub }}>Lookback:</span>
+            {([7, 30, 90, 180] as const).map(d => (
+              <button key={d} onClick={() => setLookbackDays(d)} style={{
+                ...btnBase,
+                padding: '6px 14px',
+                background: lookbackDays === d ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : tok.bgMuted(isDark),
+                color: lookbackDays === d ? 'white' : sub,
+                border: lookbackDays === d ? 'none' : `1px solid ${bdr}`,
+                fontSize: '0.8125rem',
+              }}>{d}d</button>
+            ))}
           </div>
 
-          {/* By Status */}
-          <div style={cardStyle(isDark, { padding: 0 })}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle2 size={17} color="white" />
-              </div>
-              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>By Status</div>
+          {/* ── Loading / Error ── */}
+          {analyticsLoading && <SkeletonLoader rows={6} height="28px" />}
+          {analyticsError && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '1rem 1.25rem', color: '#EF4444' }}>
+              <strong>Error loading analytics:</strong> {analyticsError}
             </div>
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { label: 'Resolved',     count: resolvedCount, color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
-                { label: 'Active',       count: alerts.filter(a => ((!a.resolved && a.status === 'active') || (!a.status && !a.resolved))).length, color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
-                { label: 'Acknowledged', count: alerts.filter(a => a.status === 'acknowledged').length, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-              ].map(item => (
-                <div key={item.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: item.color }}>{item.label}</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: item.color, fontFamily: 'monospace' }}>{item.count}</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
-                    <div style={{
-                      width: alerts.length > 0 ? `${Math.round((item.count / alerts.length) * 100)}%` : '0%',
-                      height: '100%', background: item.color, borderRadius: 6, transition: 'width 0.5s',
-                    }} />
-                  </div>
-                </div>
-              ))}
-              {/* Big resolution rate */}
-              <div style={{
-                marginTop: 8, padding: '14px', borderRadius: 10,
-                background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <span style={{ fontSize: '0.875rem', color: sub }}>Resolution Rate</span>
-                <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#22C55E', fontFamily: 'monospace' }}>{resolutionPct}%</span>
-              </div>
-            </div>
-          </div>
+          )}
 
-          {/* Device breakdown */}
-          <div style={cardStyle(isDark, { padding: 0 })}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BarChart3 size={17} color="white" />
-              </div>
-              <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Top Devices</div>
-            </div>
-            <div style={{ padding: '16px 20px' }}>
-              {(() => {
-                const deviceCounts = alerts.reduce((acc: Record<string, number>, a) => {
-                  acc[a.device_id] = (acc[a.device_id] || 0) + 1;
-                  return acc;
-                }, {});
-                const sorted = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
-                const max = sorted[0]?.[1] || 1;
-                return sorted.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: sub, padding: '2rem' }}>No device data</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {sorted.map(([deviceId, count]) => (
-                      <div key={deviceId}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <code style={{ fontSize: '0.8125rem', fontFamily: 'monospace', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{deviceId}</code>
-                          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#818CF8', fontFamily: 'monospace' }}>{count}</span>
+          {analyticsData && !analyticsLoading && (() => {
+            const totalOccurrences = analyticsData.fault_summaries.reduce((s, f) => s + f.total_occurrences, 0);
+            const totalActive = analyticsData.fault_summaries.reduce((s, f) => s + f.active_count, 0);
+            const mostFrequent = analyticsData.fault_summaries.reduce<AlertAnalyticsFaultSummary | null>(
+              (best, f) => !best || f.total_occurrences > best.total_occurrences ? f : best, null
+            );
+            const resolvedFaults = analyticsData.fault_summaries.filter(f => f.avg_resolution_seconds != null);
+            const avgTTR = resolvedFaults.length > 0
+              ? resolvedFaults.reduce((s, f) => s + f.avg_resolution_seconds!, 0) / resolvedFaults.length
+              : null;
+            const catalogueByCode = Object.fromEntries(analyticsData.rule_catalogue.map(r => [r.fault_code, r]));
+            const timelineDays = analyticsData.timeline.slice(-30);
+            const maxDayCount = Math.max(1, ...timelineDays.map(d => d.faults.reduce((s, f) => s + f.count, 0)));
+
+            return (
+              <>
+                {/* ── A. Summary cards ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  {[
+                    { label: 'Total Occurrences', value: totalOccurrences.toString(), sub: `in last ${analyticsData.lookback_days}d`, color: '#6366F1', icon: <BarChart3 size={17} /> },
+                    { label: 'Active Now', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear' : 'Needs attention', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
+                    { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${mostFrequent.title}` : 'No faults', color: mostFrequent ? SEVERITY_CONFIG[mostFrequent.severity].color : sub, icon: <AlertTriangle size={17} /> },
+                    { label: 'Avg Time to Resolve', value: fmtTTR(avgTTR), sub: resolvedFaults.length > 0 ? `across ${resolvedFaults.length} fault type${resolvedFaults.length > 1 ? 's' : ''}` : 'No resolved faults', color: '#F59E0B', icon: <Clock size={17} /> },
+                  ].map(card => (
+                    <div key={card.label} style={{ ...cardStyle(isDark), padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${card.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>{card.icon}</div>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, lineHeight: 1, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.value}</div>
+                      <div style={{ fontSize: '0.75rem', color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.sub}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── B. Fault frequency table ── */}
+                {analyticsData.fault_summaries.length > 0 ? (
+                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <TrendingUp size={17} color="white" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Fault Frequency</div>
+                        <div style={{ fontSize: '0.8125rem', color: sub }}>{analyticsData.fault_summaries.length} fault type{analyticsData.fault_summaries.length !== 1 ? 's' : ''} in period</div>
+                      </div>
+                    </div>
+                    {/* Header */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 110px 70px 60px 120px 110px 110px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <span>Fault Code</span><span>Title</span><span>Severity</span><span>Count</span><span>Active</span><span>Avg Resolve</span><span>First Seen</span><span>Last Seen</span>
+                    </div>
+                    {[...analyticsData.fault_summaries].sort((a, b) => b.total_occurrences - a.total_occurrences).map(f => {
+                      const sevCfg = SEVERITY_CONFIG[f.severity];
+                      const isExpanded = expandedFaultCode === f.fault_code;
+                      const instances = analyticsData.recent_instances[f.fault_code] ?? [];
+                      const catEntry = catalogueByCode[f.fault_code];
+                      return (
+                        <div key={f.fault_code} style={{ borderBottom: `1px solid ${bdr}` }}>
+                          <div onClick={() => setExpandedFaultCode(isExpanded ? null : f.fault_code)} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 110px 70px 60px 120px 110px 110px', gap: '0 12px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', background: isExpanded ? tok.bgSub(isDark) : 'transparent', transition: 'background 0.15s' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {isExpanded ? <ChevronDown size={13} style={{ color: sub, flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: sub, flexShrink: 0 }} />}
+                              <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: sevCfg.color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.fault_code}</code>
+                            </div>
+                            <span style={{ fontSize: '0.875rem', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.title}</span>
+                            <div>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>
+                                {sevCfg.icon} {sevCfg.label}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: txt, fontFamily: 'monospace' }}>{f.total_occurrences}</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: f.active_count > 0 ? 700 : 400, color: f.active_count > 0 ? '#EF4444' : sub, fontFamily: 'monospace' }}>{f.active_count}</span>
+                            <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{fmtTTR(f.avg_resolution_seconds)}</span>
+                            <span style={{ fontSize: '0.75rem', color: sub }}>{fmtDateShort(f.first_seen)}</span>
+                            <span style={{ fontSize: '0.75rem', color: sub }}>{fmtDateShort(f.last_seen)}</span>
+                          </div>
+                          {isExpanded && (
+                            <div style={{ padding: '16px 24px 20px', background: tok.bgSub(isDark), borderTop: `1px solid ${bdr}`, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Reason</div>
+                                  <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{f.reason}</div>
+                                </div>
+                                {catEntry?.fix_guidance && (
+                                  <div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Fix Guidance</div>
+                                    <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{catEntry.fix_guidance}</div>
+                                  </div>
+                                )}
+                              </div>
+                              {instances.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Recent Instances ({instances.length})</div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {instances.map(inst => {
+                                      const durationSec = inst.resolved_at
+                                        ? (new Date(inst.resolved_at).getTime() - new Date(inst.triggered_at).getTime()) / 1000
+                                        : null;
+                                      const stCfg = STATUS_CONFIG[inst.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.active;
+                                      return (
+                                        <div key={inst.id} style={{ background: tok.bgCard(isDark), border: `1px solid ${bdr}`, borderRadius: 10, padding: '12px 14px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                                            <div style={{ fontSize: '0.8125rem', color: txt, flex: 1 }}>{inst.message}</div>
+                                            <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: stCfg.bg, color: stCfg.color }}>{stCfg.label}</span>
+                                          </div>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: '0.75rem', color: sub }}>
+                                            <span><code style={{ fontFamily: 'monospace', color: txt }}>{inst.device_serial}</code></span>
+                                            <span>Triggered: {fmtDate(inst.triggered_at)}</span>
+                                            {inst.resolved_at && <span>Resolved: {fmtDate(inst.resolved_at)}</span>}
+                                            {durationSec != null && <span>Duration: {fmtTTR(durationSec)}</span>}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div style={{ height: 4, borderRadius: 4, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
-                          <div style={{ width: `${(count / max) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #6366F1, #8B5CF6)', borderRadius: 4, transition: 'width 0.5s' }} />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ ...cardStyle(isDark), padding: '2.5rem', textAlign: 'center', color: sub }}>
+                    No faults recorded in the last {lookbackDays} days.
+                  </div>
+                )}
+
+                {/* ── C. Timeline chart ── */}
+                {timelineDays.length > 0 && (
+                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Activity size={17} color="white" />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Daily Timeline</div>
+                          <div style={{ fontSize: '0.8125rem', color: sub }}>Fault counts per day</div>
                         </div>
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        {(['critical', 'warning', 'info'] as const).map(sev => (
+                          <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <div style={{ width: 10, height: 10, borderRadius: 2, background: SEVERITY_CONFIG[sev].color }} />
+                            <span style={{ fontSize: '0.75rem', color: sub }}>{SEVERITY_CONFIG[sev].label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ padding: '20px 20px 12px', overflowX: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, minWidth: `${timelineDays.length * 22}px`, height: 160 }}>
+                        {timelineDays.map((day, i) => {
+                          const byCrit = day.faults.filter(f => f.severity === 'critical').reduce((s, f) => s + f.count, 0);
+                          const byWarn = day.faults.filter(f => f.severity === 'warning').reduce((s, f) => s + f.count, 0);
+                          const byInfo = day.faults.filter(f => f.severity === 'info').reduce((s, f) => s + f.count, 0);
+                          const total = byCrit + byWarn + byInfo;
+                          const barH = Math.round((total / maxDayCount) * 140);
+                          const critH = total > 0 ? Math.round((byCrit / total) * barH) : 0;
+                          const warnH = total > 0 ? Math.round((byWarn / total) * barH) : 0;
+                          const infoH = barH - critH - warnH;
+                          const isHov = hoveredTimelineDay === i;
+                          return (
+                            <div key={day.date} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', cursor: total > 0 ? 'pointer' : 'default', position: 'relative' }}
+                              onMouseEnter={() => setHoveredTimelineDay(i)}
+                              onMouseLeave={() => setHoveredTimelineDay(null)}
+                            >
+                              {isHov && total > 0 && (
+                                <div style={{ position: 'absolute', bottom: barH + 8, left: '50%', transform: 'translateX(-50%)', background: isDark ? '#1E293B' : '#0F172A', color: 'white', borderRadius: 8, padding: '8px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.3)', pointerEvents: 'none' }}>
+                                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{fmtDateShort(day.date)}</div>
+                                  {byCrit > 0 && <div style={{ color: '#EF4444' }}>Critical: {byCrit}</div>}
+                                  {byWarn > 0 && <div style={{ color: '#F59E0B' }}>Warning: {byWarn}</div>}
+                                  {byInfo > 0 && <div style={{ color: '#3B82F6' }}>Info: {byInfo}</div>}
+                                  <div style={{ color: '#94A3B8', borderTop: '1px solid rgba(255,255,255,0.15)', marginTop: 4, paddingTop: 4 }}>Total: {total}</div>
+                                </div>
+                              )}
+                              <div style={{ display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden' }}>
+                                {critH > 0 && <div style={{ height: critH, background: '#EF4444', opacity: isHov ? 1 : 0.85 }} />}
+                                {warnH > 0 && <div style={{ height: warnH, background: '#F59E0B', opacity: isHov ? 1 : 0.85 }} />}
+                                {infoH > 0 && <div style={{ height: infoH, background: '#3B82F6', opacity: isHov ? 1 : 0.85 }} />}
+                                {total === 0 && <div style={{ height: 2, background: tok.bgMuted(isDark), borderRadius: 1 }} />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.7rem', color: sub }}>
+                        <span>{fmtDateShort(timelineDays[0].date)}</span>
+                        {timelineDays.length > 2 && <span>{fmtDateShort(timelineDays[Math.floor(timelineDays.length / 2)].date)}</span>}
+                        <span>{fmtDateShort(timelineDays[timelineDays.length - 1].date)}</span>
+                      </div>
+                    </div>
                   </div>
-                );
-              })()}
-            </div>
-          </div>
+                )}
+
+                {/* ── E. Rule Catalogue ── */}
+                <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                  <button onClick={() => setCatalogueOpen(o => !o)} style={{ width: '100%', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: catalogueOpen ? `1px solid ${bdr}` : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <BookOpen size={17} color="white" />
+                      </div>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Rule Catalogue</div>
+                        <div style={{ fontSize: '0.8125rem', color: sub }}>{analyticsData.rule_catalogue.length} fault rules defined</div>
+                      </div>
+                    </div>
+                    {catalogueOpen ? <ChevronDown size={18} style={{ color: sub }} /> : <ChevronRight size={18} style={{ color: sub }} />}
+                  </button>
+                  {catalogueOpen && (
+                    <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      {Object.entries(CATALOGUE_GROUPS).map(([groupName, codes]) => {
+                        const entries = codes.map(code => catalogueByCode[code]).filter(Boolean);
+                        if (entries.length === 0) return null;
+                        return (
+                          <div key={groupName}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{groupName}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {entries.map(entry => {
+                                const sevCfg = SEVERITY_CONFIG[entry.severity];
+                                const isExp = catalogueExpandedCode === entry.fault_code;
+                                return (
+                                  <div key={entry.fault_code} style={{ border: `1px solid ${isExp ? sevCfg.border : bdr}`, borderRadius: 10, background: isExp ? sevCfg.bg : 'transparent', overflow: 'hidden', transition: 'all 0.15s' }}>
+                                    <button onClick={() => setCatalogueExpandedCode(isExp ? null : entry.fault_code)} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                                      {isExp ? <ChevronDown size={13} style={{ color: sub, flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: sub, flexShrink: 0 }} />}
+                                      <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem', fontWeight: 700, color: sevCfg.color, minWidth: 100 }}>{entry.fault_code}</code>
+                                      <span style={{ fontSize: '0.875rem', color: txt, flex: 1 }}>{entry.title}</span>
+                                      <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>{sevCfg.label}</span>
+                                    </button>
+                                    {isExp && (
+                                      <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        <div>
+                                          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Reason</div>
+                                          <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{entry.reason}</div>
+                                        </div>
+                                        {entry.fix_guidance && (
+                                          <div>
+                                            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Fix Guidance</div>
+                                            <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{entry.fix_guidance}</div>
+                                          </div>
+                                        )}
+                                        {entry.cooldown_hours != null && (
+                                          <div style={{ fontSize: '0.8125rem', color: sub }}>Cooldown: {entry.cooldown_hours}h</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
+
     </div>
   );
 };

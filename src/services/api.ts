@@ -1,6 +1,62 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
+// ─── Alerts Analytics ────────────────────────────────────────────────────────
+
+export interface AlertAnalyticsFaultSummary {
+  fault_code: string;
+  alert_type: string;
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  reason: string;
+  total_occurrences: number;
+  active_count: number;
+  resolved_count: number;
+  first_seen: string;
+  last_seen: string;
+  avg_resolution_seconds: number | null;
+}
+
+export interface AlertAnalyticsTimelineEntry {
+  fault_code: string;
+  severity: 'critical' | 'warning' | 'info';
+  count: number;
+}
+
+export interface AlertAnalyticsTimelineDay {
+  date: string;
+  faults: AlertAnalyticsTimelineEntry[];
+}
+
+export interface AlertAnalyticsRecentInstance {
+  id: number;
+  triggered_at: string;
+  resolved_at: string | null;
+  status: string;
+  message: string;
+  device_serial: string;
+  site_id: string;
+}
+
+export interface AlertAnalyticsRuleCatalogueEntry {
+  fault_code: string;
+  title: string;
+  severity: 'critical' | 'warning' | 'info';
+  reason: string;
+  cooldown_hours: number | null;
+  fix_guidance: string;
+}
+
+export interface AlertAnalyticsResponse {
+  lookback_days: number;
+  fault_summaries: AlertAnalyticsFaultSummary[];
+  timeline: AlertAnalyticsTimelineDay[];
+  recent_instances: Record<string, AlertAnalyticsRecentInstance[]>;
+  rule_catalogue: AlertAnalyticsRuleCatalogueEntry[];
+}
+
+// ─── Alert item ───────────────────────────────────────────────────────────────
+
 /** Combined alert item returned by GET /api/alerts/ */
 export interface AlertItem {
   id: string;
@@ -21,7 +77,7 @@ export interface AlertItem {
 }
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://smart-solar-django.up.railway.app/api';
+  import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
 class ApiService {
   private refreshTokenPromise: Promise<boolean> | null = null;
@@ -204,11 +260,27 @@ class ApiService {
   }
 
   async getAlerts(): Promise<AlertItem[]> {
-    const cacheKey = 'alerts';
+    const cacheKey = 'alerts_manage';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.request('/alerts/');
+    // /alerts/manage/ returns all statuses (active, acknowledged, resolved)
+    // /alerts/ only returned active alerts
+    const raw: any[] = await this.request('/alerts/manage/');
+
+    // Normalize field differences between /alerts/ and /alerts/manage/ responses
+    const data: AlertItem[] = raw.map(a => ({
+      ...a,
+      // /alerts/manage/ uses alert_type; component expects type
+      type: a.type ?? a.alert_type ?? '',
+      // /alerts/manage/ uses triggered_at; component expects timestamp
+      timestamp: a.timestamp ?? a.triggered_at ?? '',
+      // /alerts/manage/ uses device_serial; component expects device_id
+      device_id: a.device_id ?? a.device_serial ?? a.metadata?.device_serial ?? '',
+      // normalise resolved boolean from status field
+      resolved: a.resolved ?? (a.status === 'resolved'),
+    }));
+
     cacheService.set(cacheKey, data, DEFAULT_TTL);
     return data;
   }
@@ -927,6 +999,13 @@ class ApiService {
 
   async getTargetedUpdate(updateId: number): Promise<any> {
     return this.request(`/ota/updates/${updateId}/`);
+  }
+
+  async getAlertsAnalytics(days = 90, device?: string, site?: string): Promise<AlertAnalyticsResponse> {
+    const params = new URLSearchParams({ days: String(days) });
+    if (device) params.set('device', device);
+    if (site) params.set('site', site);
+    return this.request(`/alerts/analytics/?${params}`);
   }
 }
 
