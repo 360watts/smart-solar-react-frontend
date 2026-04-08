@@ -159,6 +159,7 @@ const Alerts: React.FC = () => {
   const [chartMetric, setChartMetric] = useState<'total' | 'critical' | 'warning' | 'info'>('total');
   const [showBrush, setShowBrush] = useState(false);
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Chart data transformation
   const getChartData = () => {
@@ -170,6 +171,9 @@ const Alerts: React.FC = () => {
       const byWarn = day.faults.filter(f => f.severity === 'warning').reduce((s, f) => s + f.count, 0);
       const byInfo = day.faults.filter(f => f.severity === 'info').reduce((s, f) => s + f.count, 0);
       const total = byCrit + byWarn + byInfo;
+      const visibleTotal = (chartSeverityFilter.has('critical') ? byCrit : 0)
+        + (chartSeverityFilter.has('warning') ? byWarn : 0)
+        + (chartSeverityFilter.has('info') ? byInfo : 0);
 
       return {
         date: day.date,
@@ -177,7 +181,8 @@ const Alerts: React.FC = () => {
         critical: chartSeverityFilter.has('critical') ? byCrit : 0,
         warning: chartSeverityFilter.has('warning') ? byWarn : 0,
         info: chartSeverityFilter.has('info') ? byInfo : 0,
-        total: total,
+        visibleTotal,
+        total,
         // For composed chart
         criticalLine: byCrit,
         warningLine: byWarn,
@@ -200,8 +205,8 @@ const Alerts: React.FC = () => {
   const exportChartData = () => {
     const data = getChartData();
     const csvContent = [
-      ['Date', 'Critical', 'Warning', 'Info', 'Total'].join(','),
-      ...data.map(row => [row.date, row.critical, row.warning, row.info, row.total].join(','))
+      ['Date', 'Critical', 'Warning', 'Info', 'Visible Total', 'Total'].join(','),
+      ...data.map(row => [row.date, row.critical, row.warning, row.info, row.visibleTotal, row.total].join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -214,6 +219,33 @@ const Alerts: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  useEffect(() => {
+    if (!analyticsData) return;
+    const latest = analyticsData.timeline.slice(-1)[0];
+    if (latest) {
+      setSelectedDate(latest.date);
+    }
+  }, [analyticsData]);
+
+  const selectedChartDay = React.useMemo(() => {
+    const data = getChartData();
+    return selectedDate ? data.find(day => day.date === selectedDate) : data[data.length - 1];
+  }, [selectedDate, analyticsData, chartSeverityFilter]);
+
+  const handleChartHover = (state: any) => {
+    if (!state?.activePayload?.[0]?.payload) return;
+    const payload = state.activePayload[0].payload;
+    if (payload?.date) {
+      setSelectedDate(payload.date);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedChartDay && analyticsData?.timeline.length) {
+      setSelectedDate(analyticsData.timeline.slice(-1)[0].date);
+    }
+  }, [selectedChartDay, analyticsData]);
 
   useEffect(() => {
     fetchAlerts();
@@ -980,7 +1012,12 @@ const Alerts: React.FC = () => {
                     <div style={{ padding: '20px', height: 400 }}>
                       <ResponsiveContainer width="100%" height="100%">
                         {chartType === 'bar' && (
-                          <RechartsBarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <RechartsBarChart
+                            data={getChartData()}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            onMouseMove={handleChartHover}
+                            onClick={handleChartHover}
+                          >
                             <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
@@ -1007,6 +1044,7 @@ const Alerts: React.FC = () => {
                               wrapperStyle={{ color: sub }}
                               iconType="rect"
                             />
+                            {selectedChartDay && <ReferenceLine x={selectedChartDay.dateShort} stroke={tok.textSecondary(isDark)} strokeDasharray="4 4" />}
                             {chartSeverityFilter.has('critical') && <Bar dataKey="critical" stackId="a" fill="#EF4444" name="Critical" />}
                             {chartSeverityFilter.has('warning') && <Bar dataKey="warning" stackId="a" fill="#F59E0B" name="Warning" />}
                             {chartSeverityFilter.has('info') && <Bar dataKey="info" stackId="a" fill="#3B82F6" name="Info" />}
@@ -1015,7 +1053,12 @@ const Alerts: React.FC = () => {
                         )}
 
                         {chartType === 'line' && (
-                          <RechartsLineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <RechartsLineChart
+                            data={getChartData()}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            onMouseMove={handleChartHover}
+                            onClick={handleChartHover}
+                          >
                             <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
@@ -1039,6 +1082,7 @@ const Alerts: React.FC = () => {
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />
+                            {selectedChartDay && <ReferenceLine x={selectedChartDay.dateShort} stroke={tok.textSecondary(isDark)} strokeDasharray="4 4" />}
                             {chartSeverityFilter.has('critical') && <Line type="monotone" dataKey="critical" stroke="#EF4444" strokeWidth={2} name="Critical" dot={{ r: 3 }} />}
                             {chartSeverityFilter.has('warning') && <Line type="monotone" dataKey="warning" stroke="#F59E0B" strokeWidth={2} name="Warning" dot={{ r: 3 }} />}
                             {chartSeverityFilter.has('info') && <Line type="monotone" dataKey="info" stroke="#3B82F6" strokeWidth={2} name="Info" dot={{ r: 3 }} />}
@@ -1047,7 +1091,12 @@ const Alerts: React.FC = () => {
                         )}
 
                         {chartType === 'area' && (
-                          <RechartsAreaChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <RechartsAreaChart
+                            data={getChartData()}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            onMouseMove={handleChartHover}
+                            onClick={handleChartHover}
+                          >
                             <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
@@ -1071,6 +1120,7 @@ const Alerts: React.FC = () => {
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />
+                            {selectedChartDay && <ReferenceLine x={selectedChartDay.dateShort} stroke={tok.textSecondary(isDark)} strokeDasharray="4 4" />}
                             {chartSeverityFilter.has('critical') && <Area type="monotone" dataKey="critical" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Critical" />}
                             {chartSeverityFilter.has('warning') && <Area type="monotone" dataKey="warning" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name="Warning" />}
                             {chartSeverityFilter.has('info') && <Area type="monotone" dataKey="info" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="Info" />}
@@ -1079,7 +1129,12 @@ const Alerts: React.FC = () => {
                         )}
 
                         {chartType === 'composed' && (
-                          <ComposedChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <ComposedChart
+                            data={getChartData()}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            onMouseMove={handleChartHover}
+                            onClick={handleChartHover}
+                          >
                             <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
@@ -1103,6 +1158,7 @@ const Alerts: React.FC = () => {
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />
+                            {selectedChartDay && <ReferenceLine x={selectedChartDay.dateShort} stroke={tok.textSecondary(isDark)} strokeDasharray="4 4" />}
                             {chartSeverityFilter.has('critical') && <Bar dataKey="critical" fill="#EF4444" name="Critical" />}
                             {chartSeverityFilter.has('warning') && <Bar dataKey="warning" fill="#F59E0B" name="Warning" />}
                             {chartSeverityFilter.has('info') && <Bar dataKey="info" fill="#3B82F6" name="Info" />}
@@ -1113,33 +1169,29 @@ const Alerts: React.FC = () => {
                       </ResponsiveContainer>
                     </div>
 
-                    {/* Chart Summary */}
-                    <div style={{ padding: '12px 20px', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: sub }}>
+                    <div style={{ padding: '18px 20px', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', fontSize: '0.75rem', color: sub }}>
                       <div>
-                        Showing {chartSeverityFilter.size} severity level{chartSeverityFilter.size !== 1 ? 's' : ''} •
-                        Total faults: {getChartData().reduce((sum, day) => sum + day.total, 0)} •
-                        Peak day: {(() => {
-                          const peak = getChartData().reduce((max, day) => day.total > max.total ? day : max);
-                          return `${peak.dateShort} (${peak.total} faults)`;
-                        })()}
+                        {selectedChartDay ? (
+                          <div style={{ display: 'grid', gap: 4 }}>
+                            <div style={{ fontWeight: 700, color: txt }}>Selected day: {fmtDateShort(selectedChartDay.date)}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                              <span>Critical: <strong>{selectedChartDay.critical}</strong></span>
+                              <span>Warning: <strong>{selectedChartDay.warning}</strong></span>
+                              <span>Info: <strong>{selectedChartDay.info}</strong></span>
+                              <span>Visible total: <strong>{selectedChartDay.visibleTotal}</strong></span>
+                              <span>Total actual: <strong>{selectedChartDay.total}</strong></span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>Hover or click a point to inspect that day.</div>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        {chartSeverityFilter.size > 0 && (
-                          <button
-                            onClick={() => setChartSeverityFilter(new Set())}
-                            style={{ ...btnBase, padding: '2px 8px', fontSize: '0.7rem', color: '#EF4444', background: 'transparent', border: 'none' }}
-                          >
-                            <X size={10} /> Clear filters
-                          </button>
-                        )}
-                        {chartSeverityFilter.size === 0 && (
-                          <button
-                            onClick={() => setChartSeverityFilter(new Set(['critical', 'warning', 'info']))}
-                            style={{ ...btnBase, padding: '2px 8px', fontSize: '0.7rem', color: '#10B981', background: 'transparent', border: 'none' }}
-                          >
-                            Show all
-                          </button>
-                        )}
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end', color: sub }}>
+                        <div>Visible faults: <strong>{getChartData().reduce((sum, day) => sum + day.visibleTotal, 0)}</strong></div>
+                        <div>Peak day: <strong>{(() => {
+                          const peak = getChartData().reduce((max, day) => day.visibleTotal > max.visibleTotal ? day : max, getChartData()[0] || { dateShort: '', visibleTotal: 0 });
+                          return `${peak.dateShort} (${peak.visibleTotal} faults)`;
+                        })()}</strong></div>
                       </div>
                     </div>
                   </div>
