@@ -3,6 +3,7 @@ import {
   AlertTriangle, AlertCircle, Info, Bell,
   CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
   Shield, Activity, ChevronDown, ChevronRight, BookOpen, TrendingUp,
+  Download, Filter, X, BarChart, LineChart, AreaChart,
 } from 'lucide-react';
 import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse } from '../services/api';
 import AuditTrail from './AuditTrail';
@@ -10,6 +11,23 @@ import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonLoader } from './SkeletonLoader';
 import PageHeader from './PageHeader';
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+  AreaChart as RechartsAreaChart,
+  Area,
+  ComposedChart,
+  Brush,
+  ReferenceLine,
+} from 'recharts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +144,6 @@ const Alerts: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AlertAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
@@ -135,6 +152,68 @@ const Alerts: React.FC = () => {
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [catalogueExpandedCode, setCatalogueExpandedCode] = useState<string | null>(null);
   const [hoveredTimelineDay, setHoveredTimelineDay] = useState<number | null>(null);
+
+  // Chart interactivity state
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'composed'>('bar');
+  const [chartSeverityFilter, setChartSeverityFilter] = useState<Set<'critical' | 'warning' | 'info'>>(new Set(['critical', 'warning', 'info']));
+  const [chartMetric, setChartMetric] = useState<'total' | 'critical' | 'warning' | 'info'>('total');
+  const [showBrush, setShowBrush] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+
+  // Chart data transformation
+  const getChartData = () => {
+    if (!analyticsData) return [];
+
+    const timelineDays = analyticsData.timeline.slice(-30);
+    return timelineDays.map(day => {
+      const byCrit = day.faults.filter(f => f.severity === 'critical').reduce((s, f) => s + f.count, 0);
+      const byWarn = day.faults.filter(f => f.severity === 'warning').reduce((s, f) => s + f.count, 0);
+      const byInfo = day.faults.filter(f => f.severity === 'info').reduce((s, f) => s + f.count, 0);
+      const total = byCrit + byWarn + byInfo;
+
+      return {
+        date: day.date,
+        dateShort: fmtDateShort(day.date),
+        critical: chartSeverityFilter.has('critical') ? byCrit : 0,
+        warning: chartSeverityFilter.has('warning') ? byWarn : 0,
+        info: chartSeverityFilter.has('info') ? byInfo : 0,
+        total: total,
+        // For composed chart
+        criticalLine: byCrit,
+        warningLine: byWarn,
+        infoLine: byInfo,
+        totalLine: total,
+      };
+    });
+  };
+
+  const toggleSeverityFilter = (severity: 'critical' | 'warning' | 'info') => {
+    const newFilter = new Set(chartSeverityFilter);
+    if (newFilter.has(severity)) {
+      newFilter.delete(severity);
+    } else {
+      newFilter.add(severity);
+    }
+    setChartSeverityFilter(newFilter);
+  };
+
+  const exportChartData = () => {
+    const data = getChartData();
+    const csvContent = [
+      ['Date', 'Critical', 'Warning', 'Info', 'Total'].join(','),
+      ...data.map(row => [row.date, row.critical, row.warning, row.info, row.total].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `alerts-timeline-${lookbackDays}d.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     fetchAlerts();
@@ -798,68 +877,269 @@ const Alerts: React.FC = () => {
                   </div>
                 )}
 
-                {/* ── C. Timeline chart ── */}
+                {/* ── C. Interactive Timeline Chart ── */}
                 {timelineDays.length > 0 && (
                   <div style={{ ...cardStyle(isDark), padding: 0 }}>
-                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Activity size={17} color="white" />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Daily Timeline</div>
-                          <div style={{ fontSize: '0.8125rem', color: sub }}>Fault counts per day</div>
+                          <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Interactive Timeline</div>
+                          <div style={{ fontSize: '0.8125rem', color: sub }}>Fault counts per day • {timelineDays.length} days</div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        {(['critical', 'warning', 'info'] as const).map(sev => (
-                          <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: 2, background: SEVERITY_CONFIG[sev].color }} />
-                            <span style={{ fontSize: '0.75rem', color: sub }}>{SEVERITY_CONFIG[sev].label}</span>
-                          </div>
-                        ))}
+
+                      {/* Chart Controls */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {/* Chart Type Selector */}
+                        <div style={{ display: 'flex', gap: 2, background: tok.bgMuted(isDark), padding: 2, borderRadius: 6 }}>
+                          {[
+                            { type: 'bar' as const, icon: BarChart, label: 'Bar' },
+                            { type: 'line' as const, icon: LineChart, label: 'Line' },
+                            { type: 'area' as const, icon: AreaChart, label: 'Area' },
+                            { type: 'composed' as const, icon: TrendingUp, label: 'Mixed' },
+                          ].map(({ type, icon: Icon, label }) => (
+                            <button
+                              key={type}
+                              onClick={() => setChartType(type)}
+                              style={{
+                                ...btnBase,
+                                padding: '6px 10px',
+                                background: chartType === type ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
+                                color: chartType === type ? 'white' : sub,
+                                border: 'none',
+                                fontSize: '0.75rem',
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Icon size={12} /> {label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Severity Filter */}
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {(['critical', 'warning', 'info'] as const).map(severity => {
+                            const cfg = SEVERITY_CONFIG[severity];
+                            const isActive = chartSeverityFilter.has(severity);
+                            return (
+                              <button
+                                key={severity}
+                                onClick={() => toggleSeverityFilter(severity)}
+                                style={{
+                                  ...btnBase,
+                                  padding: '4px 8px',
+                                  background: isActive ? cfg.bg : tok.bgMuted(isDark),
+                                  color: isActive ? cfg.color : sub,
+                                  border: `1px solid ${isActive ? cfg.border : bdr}`,
+                                  fontSize: '0.7rem',
+                                  borderRadius: 4,
+                                  opacity: isActive ? 1 : 0.6,
+                                }}
+                              >
+                                {cfg.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Additional Controls */}
+                        <button
+                          onClick={() => setShowBrush(!showBrush)}
+                          style={{
+                            ...btnBase,
+                            padding: '6px 10px',
+                            background: showBrush ? 'linear-gradient(135deg, #10B981, #059669)' : tok.bgMuted(isDark),
+                            color: showBrush ? 'white' : sub,
+                            border: `1px solid ${bdr}`,
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          <Filter size={12} /> Zoom
+                        </button>
+
+                        <button
+                          onClick={exportChartData}
+                          style={{
+                            ...btnBase,
+                            padding: '6px 10px',
+                            background: tok.bgMuted(isDark),
+                            color: sub,
+                            border: `1px solid ${bdr}`,
+                            fontSize: '0.75rem',
+                          }}
+                        >
+                          <Download size={12} /> Export
+                        </button>
                       </div>
                     </div>
-                    <div style={{ padding: '20px 20px 12px', overflowX: 'auto' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, minWidth: `${timelineDays.length * 22}px`, height: 160 }}>
-                        {timelineDays.map((day, i) => {
-                          const byCrit = day.faults.filter(f => f.severity === 'critical').reduce((s, f) => s + f.count, 0);
-                          const byWarn = day.faults.filter(f => f.severity === 'warning').reduce((s, f) => s + f.count, 0);
-                          const byInfo = day.faults.filter(f => f.severity === 'info').reduce((s, f) => s + f.count, 0);
-                          const total = byCrit + byWarn + byInfo;
-                          const barH = Math.round((total / maxDayCount) * 140);
-                          const critH = total > 0 ? Math.round((byCrit / total) * barH) : 0;
-                          const warnH = total > 0 ? Math.round((byWarn / total) * barH) : 0;
-                          const infoH = barH - critH - warnH;
-                          const isHov = hoveredTimelineDay === i;
-                          return (
-                            <div key={day.date} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', cursor: total > 0 ? 'pointer' : 'default', position: 'relative' }}
-                              onMouseEnter={() => setHoveredTimelineDay(i)}
-                              onMouseLeave={() => setHoveredTimelineDay(null)}
-                            >
-                              {isHov && total > 0 && (
-                                <div style={{ position: 'absolute', bottom: barH + 8, left: '50%', transform: 'translateX(-50%)', background: isDark ? '#1E293B' : '#0F172A', color: 'white', borderRadius: 8, padding: '8px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.3)', pointerEvents: 'none' }}>
-                                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{fmtDateShort(day.date)}</div>
-                                  {byCrit > 0 && <div style={{ color: '#EF4444' }}>Critical: {byCrit}</div>}
-                                  {byWarn > 0 && <div style={{ color: '#F59E0B' }}>Warning: {byWarn}</div>}
-                                  {byInfo > 0 && <div style={{ color: '#3B82F6' }}>Info: {byInfo}</div>}
-                                  <div style={{ color: '#94A3B8', borderTop: '1px solid rgba(255,255,255,0.15)', marginTop: 4, paddingTop: 4 }}>Total: {total}</div>
-                                </div>
-                              )}
-                              <div style={{ display: 'flex', flexDirection: 'column-reverse', borderRadius: '3px 3px 0 0', overflow: 'hidden' }}>
-                                {critH > 0 && <div style={{ height: critH, background: '#EF4444', opacity: isHov ? 1 : 0.85 }} />}
-                                {warnH > 0 && <div style={{ height: warnH, background: '#F59E0B', opacity: isHov ? 1 : 0.85 }} />}
-                                {infoH > 0 && <div style={{ height: infoH, background: '#3B82F6', opacity: isHov ? 1 : 0.85 }} />}
-                                {total === 0 && <div style={{ height: 2, background: tok.bgMuted(isDark), borderRadius: 1 }} />}
-                              </div>
-                            </div>
-                          );
-                        })}
+
+                    {/* Chart */}
+                    <div style={{ padding: '20px', height: 400 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        {chartType === 'bar' && (
+                          <RechartsBarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
+                            <XAxis
+                              dataKey="dateShort"
+                              stroke={sub}
+                              fontSize={12}
+                              tick={{ fill: sub }}
+                            />
+                            <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: tok.bgCard(isDark),
+                                border: `1px solid ${bdr}`,
+                                borderRadius: 8,
+                                color: txt,
+                              }}
+                              labelStyle={{ color: txt }}
+                              formatter={(value: number, name: string) => [
+                                `${value} faults`,
+                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
+                              ]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <Legend
+                              wrapperStyle={{ color: sub }}
+                              iconType="rect"
+                            />
+                            {chartSeverityFilter.has('critical') && <Bar dataKey="critical" stackId="a" fill="#EF4444" name="Critical" />}
+                            {chartSeverityFilter.has('warning') && <Bar dataKey="warning" stackId="a" fill="#F59E0B" name="Warning" />}
+                            {chartSeverityFilter.has('info') && <Bar dataKey="info" stackId="a" fill="#3B82F6" name="Info" />}
+                            {showBrush && <Brush dataKey="dateShort" height={30} stroke={tok.textSecondary(isDark)} />}
+                          </RechartsBarChart>
+                        )}
+
+                        {chartType === 'line' && (
+                          <RechartsLineChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
+                            <XAxis
+                              dataKey="dateShort"
+                              stroke={sub}
+                              fontSize={12}
+                              tick={{ fill: sub }}
+                            />
+                            <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: tok.bgCard(isDark),
+                                border: `1px solid ${bdr}`,
+                                borderRadius: 8,
+                                color: txt,
+                              }}
+                              labelStyle={{ color: txt }}
+                              formatter={(value: number, name: string) => [
+                                `${value} faults`,
+                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
+                              ]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <Legend wrapperStyle={{ color: sub }} />
+                            {chartSeverityFilter.has('critical') && <Line type="monotone" dataKey="critical" stroke="#EF4444" strokeWidth={2} name="Critical" dot={{ r: 3 }} />}
+                            {chartSeverityFilter.has('warning') && <Line type="monotone" dataKey="warning" stroke="#F59E0B" strokeWidth={2} name="Warning" dot={{ r: 3 }} />}
+                            {chartSeverityFilter.has('info') && <Line type="monotone" dataKey="info" stroke="#3B82F6" strokeWidth={2} name="Info" dot={{ r: 3 }} />}
+                            {showBrush && <Brush dataKey="dateShort" height={30} stroke={tok.textSecondary(isDark)} />}
+                          </RechartsLineChart>
+                        )}
+
+                        {chartType === 'area' && (
+                          <RechartsAreaChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
+                            <XAxis
+                              dataKey="dateShort"
+                              stroke={sub}
+                              fontSize={12}
+                              tick={{ fill: sub }}
+                            />
+                            <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: tok.bgCard(isDark),
+                                border: `1px solid ${bdr}`,
+                                borderRadius: 8,
+                                color: txt,
+                              }}
+                              labelStyle={{ color: txt }}
+                              formatter={(value: number, name: string) => [
+                                `${value} faults`,
+                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
+                              ]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <Legend wrapperStyle={{ color: sub }} />
+                            {chartSeverityFilter.has('critical') && <Area type="monotone" dataKey="critical" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Critical" />}
+                            {chartSeverityFilter.has('warning') && <Area type="monotone" dataKey="warning" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.6} name="Warning" />}
+                            {chartSeverityFilter.has('info') && <Area type="monotone" dataKey="info" stackId="1" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} name="Info" />}
+                            {showBrush && <Brush dataKey="dateShort" height={30} stroke={tok.textSecondary(isDark)} />}
+                          </RechartsAreaChart>
+                        )}
+
+                        {chartType === 'composed' && (
+                          <ComposedChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
+                            <XAxis
+                              dataKey="dateShort"
+                              stroke={sub}
+                              fontSize={12}
+                              tick={{ fill: sub }}
+                            />
+                            <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: tok.bgCard(isDark),
+                                border: `1px solid ${bdr}`,
+                                borderRadius: 8,
+                                color: txt,
+                              }}
+                              labelStyle={{ color: txt }}
+                              formatter={(value: number, name: string) => [
+                                `${value} faults`,
+                                name.includes('Line') ? name.replace('Line', '') : name
+                              ]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <Legend wrapperStyle={{ color: sub }} />
+                            {chartSeverityFilter.has('critical') && <Bar dataKey="critical" fill="#EF4444" name="Critical" />}
+                            {chartSeverityFilter.has('warning') && <Bar dataKey="warning" fill="#F59E0B" name="Warning" />}
+                            {chartSeverityFilter.has('info') && <Bar dataKey="info" fill="#3B82F6" name="Info" />}
+                            <Line type="monotone" dataKey="totalLine" stroke="#6366F1" strokeWidth={3} name="Total Trend" dot={false} />
+                            {showBrush && <Brush dataKey="dateShort" height={30} stroke={tok.textSecondary(isDark)} />}
+                          </ComposedChart>
+                        )}
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Chart Summary */}
+                    <div style={{ padding: '12px 20px', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: sub }}>
+                      <div>
+                        Showing {chartSeverityFilter.size} severity level{chartSeverityFilter.size !== 1 ? 's' : ''} •
+                        Total faults: {getChartData().reduce((sum, day) => sum + day.total, 0)} •
+                        Peak day: {(() => {
+                          const peak = getChartData().reduce((max, day) => day.total > max.total ? day : max);
+                          return `${peak.dateShort} (${peak.total} faults)`;
+                        })()}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.7rem', color: sub }}>
-                        <span>{fmtDateShort(timelineDays[0].date)}</span>
-                        {timelineDays.length > 2 && <span>{fmtDateShort(timelineDays[Math.floor(timelineDays.length / 2)].date)}</span>}
-                        <span>{fmtDateShort(timelineDays[timelineDays.length - 1].date)}</span>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        {chartSeverityFilter.size > 0 && (
+                          <button
+                            onClick={() => setChartSeverityFilter(new Set())}
+                            style={{ ...btnBase, padding: '2px 8px', fontSize: '0.7rem', color: '#EF4444', background: 'transparent', border: 'none' }}
+                          >
+                            <X size={10} /> Clear filters
+                          </button>
+                        )}
+                        {chartSeverityFilter.size === 0 && (
+                          <button
+                            onClick={() => setChartSeverityFilter(new Set(['critical', 'warning', 'info']))}
+                            style={{ ...btnBase, padding: '2px 8px', fontSize: '0.7rem', color: '#10B981', background: 'transparent', border: 'none' }}
+                          >
+                            Show all
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
