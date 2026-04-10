@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiService } from '../../services/api';
 import { RefreshCw, Search, X, Settings, CheckCircle, XCircle } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { cn } from '@/lib/utils';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SlaveDevice {
   id: number;
@@ -19,86 +17,16 @@ interface SlaveDevice {
   registers?: { enabled?: boolean }[];
 }
 
-// ── KPI tile ──────────────────────────────────────────────────────────────────
-
-const KpiTile: React.FC<{ label: string; value: number; tone?: 'success' | 'muted' | 'default' }> = ({ label, value, tone = 'default' }) => {
-  const toneClass = {
-    success: 'bg-emerald-100/70 dark:bg-emerald-900/30 ring-1 ring-emerald-200/60 dark:ring-emerald-800/60',
-    muted:   'bg-muted ring-1 ring-border',
-    default: 'bg-muted ring-1 ring-border',
-  }[tone];
-  return (
-    <div className={cn('rounded-xl p-3 text-center shadow-sm', toneClass)}>
-      <div className="text-xl font-bold tracking-tight">{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
-    </div>
-  );
-};
-
-// ── Slave card ────────────────────────────────────────────────────────────────
-
-const SlaveCard: React.FC<{ slave: SlaveDevice }> = ({ slave }) => {
-  const enabled   = slave.enabled !== false;
-  const name      = slave.deviceName ?? slave.name ?? `Slave ${slave.slaveId ?? slave.slave_id}`;
-  const slaveId   = slave.slaveId ?? slave.slave_id;
-  const polling   = slave.pollingIntervalMs ?? slave.polling_interval_ms;
-  const timeout   = slave.timeoutMs ?? slave.timeout_ms;
-  const regs      = slave.registers ?? [];
-  const activeRegs = regs.filter(r => r.enabled !== false).length;
-
-  const fmtMs = (ms?: number) => {
-    if (ms == null) return '—';
-    return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
-  };
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-sm truncate">{name}</div>
-            {slaveId != null && <div className="text-[11px] text-muted-foreground mt-0.5">Slave ID: {slaveId}</div>}
-          </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              'ml-2 flex-shrink-0 flex items-center gap-1',
-              enabled
-                ? 'border-emerald-300/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                : 'border-slate-300/50 bg-slate-500/10 text-slate-500'
-            )}
-          >
-            {enabled ? <CheckCircle size={10} /> : <XCircle size={10} />}
-            {enabled ? 'Enabled' : 'Disabled'}
-          </Badge>
-        </div>
-
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-          {polling != null && (
-            <span className="text-[11px] text-muted-foreground">
-              Poll <span className="text-foreground/70 font-medium">{fmtMs(polling)}</span>
-            </span>
-          )}
-          {timeout != null && (
-            <span className="text-[11px] text-muted-foreground">
-              Timeout <span className="text-foreground/70 font-medium">{fmtMs(timeout)}</span>
-            </span>
-          )}
-          {regs.length > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Settings size={11} />
-              <span className="text-foreground/70 font-medium">{activeRegs}/{regs.length}</span> registers
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// ── Component ─────────────────────────────────────────────────────────────────
-
 const MobileConfiguration: React.FC = () => {
+  const { isDark } = useTheme();
+
+  const bg       = isDark ? '#020617' : '#f0fdf4';
+  const surface  = isDark ? '#0f172a' : '#ffffff';
+  const border   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,166,62,0.15)';
+  const textMain = isDark ? '#f1f5f9' : '#0f172a';
+  const textMute = isDark ? '#64748b' : '#94a3b8';
+  const textSub  = isDark ? '#94a3b8' : '#475569';
+
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -114,80 +42,131 @@ const MobileConfiguration: React.FC = () => {
 
   useEffect(() => { fetchSlaves(); }, [fetchSlaves]);
 
-  const counts = {
-    total:    slaves.length,
-    enabled:  slaves.filter(s => s.enabled !== false).length,
-    disabled: slaves.filter(s => s.enabled === false).length,
-  };
-
   const filtered = slaves.filter(s => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    const n = (s.deviceName ?? s.name ?? '').toLowerCase();
+    const name = (s.deviceName ?? s.name ?? '').toLowerCase();
     const id = String(s.slaveId ?? s.slave_id ?? '');
-    return n.includes(q) || id.includes(q);
+    return name.includes(q) || id.includes(q);
   });
+
+  const card = (extra?: React.CSSProperties): React.CSSProperties => ({
+    background: surface, border: `1px solid ${border}`, borderRadius: 14, ...extra,
+  });
+
+  const fmtMs = (ms?: number) => {
+    if (ms == null) return '—';
+    return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-dvh gap-3 text-muted-foreground">
-        <RefreshCw size={18} className="animate-spin" />
-        <span className="text-sm">Loading…</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: textMute }}>
+        <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ fontSize: '0.875rem' }}>Loading…</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh pb-24 bg-background">
+    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
 
       {/* Header */}
-      <div className="bg-card border-b border-border px-4 py-4 flex items-center justify-between">
+      <div style={{ background: surface, borderBottom: `1px solid ${border}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 className="text-lg font-bold">Configuration</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{counts.total} slave device{counts.total !== 1 ? 's' : ''}</p>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: textMain }}>Configuration</div>
+          <div style={{ fontSize: '0.72rem', color: textMute, marginTop: 2 }}>
+            {slaves.length} slave device{slaves.length !== 1 ? 's' : ''}
+          </div>
         </div>
-        <button
-          onClick={() => { setRefreshing(true); fetchSlaves(true); }}
-          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-        >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+        <button onClick={() => { setRefreshing(true); fetchSlaves(true); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMute, display: 'flex', padding: 8 }}>
+          <RefreshCw size={16} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
         </button>
       </div>
 
-      <div className="p-3 space-y-3">
+      <div style={{ padding: '12px 12px 0' }}>
 
-        {/* KPI tiles */}
-        <div className="grid grid-cols-3 gap-2">
-          <KpiTile label="Total"    value={counts.total}    />
-          <KpiTile label="Enabled"  value={counts.enabled}  tone="success" />
-          <KpiTile label="Disabled" value={counts.disabled} tone="muted"   />
+        {/* Summary */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+          {[
+            { label: 'Total',    value: slaves.length,                                    color: textMain  },
+            { label: 'Enabled',  value: slaves.filter(s => s.enabled !== false).length,  color: '#10b981' },
+            { label: 'Disabled', value: slaves.filter(s => s.enabled === false).length,  color: '#64748b' },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={card({ padding: '10px 8px', textAlign: 'center' })}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color }}>{value}</div>
+              <div style={{ fontSize: '0.65rem', color: textMute, marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
-          <Search size={14} className="text-muted-foreground flex-shrink-0" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, background: surface, border: `1px solid ${border}`, borderRadius: 10, padding: '8px 12px' }}>
+          <Search size={14} color={textMute} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or slave ID…"
-            className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: textMain }}
           />
-          {search && (
-            <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground">
-              <X size={13} />
-            </button>
-          )}
+          {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}><X size={13} color={textMute} /></button>}
         </div>
 
         {/* Slave list */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{filtered.length} {filtered.length === 1 ? 'slave' : 'slaves'}</p>
-          {filtered.length === 0
-            ? <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">No slave devices found</CardContent></Card>
-            : filtered.map(s => <SlaveCard key={s.id} slave={s} />)
-          }
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filtered.length === 0 ? (
+            <div style={card({ padding: '40px 20px', textAlign: 'center' })}>
+              <div style={{ fontSize: '0.875rem', color: textMute }}>No slave devices found</div>
+            </div>
+          ) : filtered.map(slave => {
+            const enabled    = slave.enabled !== false;
+            const name       = slave.deviceName ?? slave.name ?? `Slave ${slave.slaveId ?? slave.slave_id}`;
+            const slaveId    = slave.slaveId ?? slave.slave_id;
+            const polling    = slave.pollingIntervalMs ?? slave.polling_interval_ms;
+            const timeout    = slave.timeoutMs ?? slave.timeout_ms;
+            const regs       = slave.registers ?? [];
+            const activeRegs = regs.filter(r => r.enabled !== false).length;
 
+            return (
+              <div key={slave.id} style={card({ padding: '14px' })}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                    {slaveId != null && <div style={{ fontSize: '0.7rem', color: textMute, marginTop: 2 }}>Slave ID: {slaveId}</div>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: enabled ? 'rgba(16,185,129,0.1)' : 'rgba(100,116,139,0.1)', border: `1px solid ${enabled ? 'rgba(16,185,129,0.25)' : 'rgba(100,116,139,0.2)'}` }}>
+                    {enabled ? <CheckCircle size={11} color="#10b981" /> : <XCircle size={11} color="#64748b" />}
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: enabled ? '#10b981' : '#64748b' }}>
+                      {enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {polling != null && (
+                    <div style={{ fontSize: '0.7rem' }}>
+                      <span style={{ color: textMute }}>Poll </span>
+                      <span style={{ color: textSub, fontWeight: 500 }}>{fmtMs(polling)}</span>
+                    </div>
+                  )}
+                  {timeout != null && (
+                    <div style={{ fontSize: '0.7rem' }}>
+                      <span style={{ color: textMute }}>Timeout </span>
+                      <span style={{ color: textSub, fontWeight: 500 }}>{fmtMs(timeout)}</span>
+                    </div>
+                  )}
+                  {regs.length > 0 && (
+                    <div style={{ fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Settings size={11} color={textMute} />
+                      <span style={{ color: textSub, fontWeight: 500 }}>{activeRegs}/{regs.length} registers</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
