@@ -424,10 +424,10 @@ const formatEnergyForDisplay = (kwh: number | null | undefined): { value: string
 interface KpiCardProps {
   label: string; value: string; unit?: string; sub?: string;
   accent: string; icon: React.ReactNode; badge?: React.ReactNode;
-  index: number;
+  index: number; noHover?: boolean;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge, index }) => {
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon, badge, index, noHover }) => {
   const { isDark } = useTheme();
 
   return (
@@ -436,7 +436,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
       variants={kpiCardVariants as any}
       initial="initial"
       animate="animate"
-      whileHover="hover"
+      whileHover={noHover ? undefined : 'hover'}
       style={{
         padding: '20px',
         flex: 1,
@@ -2134,6 +2134,13 @@ interface Props {
 
 const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterCapacityKw }) => {
   const { isDark } = useTheme();
+  const [isTouch, setIsTouch] = useState(() => window.matchMedia('(hover: none)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: none)');
+    const handler = (e: MediaQueryListEvent) => setIsTouch(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const [telemetry, setTelemetry] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any[]>([]);
@@ -3096,6 +3103,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               background: isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(249, 250, 251, 0.5)',
               borderRadius: '12px 12px 0 0',
               padding: '0 8px',
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {TABS.map(tab => {
@@ -3128,6 +3138,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     letterSpacing: '0.02em',
                     borderRadius: '8px 8px 0 0',
                     boxShadow: isActive ? '0 -2px 10px rgba(0, 166, 62, 0.2)' : 'none',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                    WebkitTapHighlightColor: 'transparent',
                   }}
                 >
                   <span>{tab.icon}</span>
@@ -3237,6 +3250,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={0}
                     label="Solar PV"
+                    noHover={isTouch}
                     value={pvPowerDisplay.value}
                     unit={pvPowerDisplay.unit}
                     sub={rs485Stale && !isDeyeCloud
@@ -3255,6 +3269,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={1}
                     label="Battery"
+                    noHover={isTouch}
                     value={batSoc != null ? batSoc.toFixed(0) : '—'}
                     unit="%"
                     sub={[
@@ -3278,6 +3293,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={2}
                     label="Load"
+                    noHover={isTouch}
                     value={loadPowerDisplay.value}
                     unit={loadPowerDisplay.unit}
                     sub={rs485Stale && !isDeyeCloud
@@ -3296,6 +3312,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={3}
                     label="Grid"
+                    noHover={isTouch}
                     value={gridPowerDisplay.value}
                     unit={gridPowerDisplay.unit}
                     sub={
@@ -3313,6 +3330,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   <KpiCard
                     index={4}
                     label="Temp"
+                    noHover={isTouch}
                     value={invTemp != null ? invTemp.toFixed(1) : '—'}
                     unit="°C"
                     sub={dcTemp != null ? `Heat sink · DC ${dcTemp.toFixed(1)}°C` : 'Heat sink'}
@@ -3323,6 +3341,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <KpiCard
                       index={5}
                       label="AC Output"
+                      noHover={isTouch}
                       value={acOutputPowerDisplay.value}
                       unit={acOutputPowerDisplay.unit}
                       sub={rs485Stale && !isDeyeCloud ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
@@ -3339,6 +3358,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <KpiCard
                       index={6}
                       label="Inv. Capacity"
+                      noHover={isTouch}
                       value={inverterCapacityKw.toFixed(1)}
                       unit="kW"
                       sub="Rated output"
@@ -3350,6 +3370,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <KpiCard
                       index={7}
                       label="Forecast"
+                      noHover={isTouch}
                       value={achievedPct.toString()}
                       unit="%"
                       sub="Actual vs P50 so far"
@@ -3393,6 +3414,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                             accent={accent}
                             sub={subParts.join(' · ') || undefined}
                             icon={<IconGrid />}
+                            noHover={isTouch}
                           />
                         );
                       })}
@@ -3419,6 +3441,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                             value={powerLabel}
                             accent={accent}
                             icon={<IconLoad />}
+                            noHover={isTouch}
                           />
                         );
                       })}

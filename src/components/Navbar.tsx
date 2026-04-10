@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, ArrowLeft, LogOut, Moon, Sun, X, Menu,
   Server, Building2,
-  ChevronDown, User,
+  ChevronDown, User, MoreHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -44,6 +44,14 @@ const STAFF_NAV = [
   { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
 ];
 
+// ─── Bottom nav primary items (always visible on mobile) ────────────────────
+const BOTTOM_NAV_PRIMARY = [
+  { path: '/dashboard',     label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { path: '/devices',       label: 'Devices',   icon: <Monitor size={20} /> },
+  { path: '/alerts',        label: 'Alerts',    icon: <Bell size={20} /> },
+  { path: '/configuration', label: 'Config',    icon: <Settings size={20} /> },
+];
+
 // ─── Main component ───────────────────────────────────────────────────────────
 const Navbar: React.FC = () => {
   const location = useLocation();
@@ -55,7 +63,19 @@ const Navbar: React.FC = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches);
+  const [isTouch, setIsTouch] = useState(() => window.matchMedia('(hover: none)').matches);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)');
+    const tq = window.matchMedia('(hover: none)');
+    const onMq = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const onTq = (e: MediaQueryListEvent) => setIsTouch(e.matches);
+    mq.addEventListener('change', onMq);
+    tq.addEventListener('change', onTq);
+    return () => { mq.removeEventListener('change', onMq); tq.removeEventListener('change', onTq); };
+  }, []);
 
   const allNavItems = [
     ...MAIN_NAV,
@@ -438,7 +458,7 @@ const Navbar: React.FC = () => {
         </div>
       </header>
 
-      {/* ── Mobile overlay + slide-down menu ──────────────────────────── */}
+      {/* ── Mobile overlay + slide-down "More" menu ───────────────────── */}
       {mobileOpen && (
         <>
           <div
@@ -446,44 +466,48 @@ const Navbar: React.FC = () => {
             style={{
               position: 'fixed', inset: 0, zIndex: 999,
               background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)',
-              top: 64,
             }}
           />
           <div style={{
-            position: 'fixed', top: 64, left: 0, right: 0,
+            position: 'fixed', bottom: 64, left: 0, right: 0,
             zIndex: 1001,
             background: tok.mobileBg(isDark),
-            borderBottom: `1px solid ${tok.border(isDark)}`,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+            borderTop: `1px solid ${tok.border(isDark)}`,
+            boxShadow: '0 -8px 24px rgba(0,0,0,0.2)',
             overflowY: 'auto',
-            maxHeight: 'calc(100dvh - 60px)',
+            maxHeight: 'calc(100dvh - 128px)',
+            borderRadius: '16px 16px 0 0',
           }}>
             <div style={{ padding: '10px 12px' }}>
-              {allNavItems.map(item => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => { if (!isActive) handleNavigation(item.path); setMobileOpen(false); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '11px 14px', borderRadius: 10,
-                      textDecoration: 'none', marginBottom: 2,
-                      background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
-                      color: isActive ? '#22C55E' : tok.text(isDark),
-                      fontWeight: isActive ? 600 : 450,
-                      fontSize: 14,
-                      borderLeft: isActive ? '3px solid #22C55E' : '3px solid transparent',
-                    }}
-                  >
-                    <span style={{ color: isActive ? '#22C55E' : tok.muted(isDark), display: 'flex' }}>{item.icon}</span>
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {/* Overflow nav items not in bottom bar */}
+              {allNavItems
+                .filter(item => !BOTTOM_NAV_PRIMARY.some(p => p.path === item.path))
+                .map(item => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => { if (!isActive) handleNavigation(item.path); setMobileOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '13px 14px', borderRadius: 10,
+                        textDecoration: 'none', marginBottom: 2,
+                        minHeight: 48,
+                        background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
+                        color: isActive ? '#22C55E' : tok.text(isDark),
+                        fontWeight: isActive ? 600 : 450,
+                        fontSize: 14,
+                        borderLeft: isActive ? '3px solid #22C55E' : '3px solid transparent',
+                      }}
+                    >
+                      <span style={{ color: isActive ? '#22C55E' : tok.muted(isDark), display: 'flex' }}>{item.icon}</span>
+                      {item.label}
+                    </Link>
+                  );
+                })}
 
-              {/* Mobile footer controls */}
+              {/* Footer controls */}
               <div style={{
                 borderTop: `1px solid ${tok.border(isDark)}`,
                 marginTop: 8, paddingTop: 10,
@@ -493,7 +517,7 @@ const Navbar: React.FC = () => {
                   onClick={() => { toggleTheme(); setMobileOpen(false); }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '11px 14px', borderRadius: 10,
+                    padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     background: 'transparent', border: 'none',
                     color: tok.text(isDark), fontSize: 14, fontWeight: 450,
                     cursor: 'pointer', textAlign: 'left', width: '100%',
@@ -507,7 +531,7 @@ const Navbar: React.FC = () => {
                   onClick={() => setMobileOpen(false)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '11px 14px', borderRadius: 10,
+                    padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     textDecoration: 'none',
                     color: tok.text(isDark), fontSize: 14, fontWeight: 450,
                   }}
@@ -519,7 +543,7 @@ const Navbar: React.FC = () => {
                   onClick={handleLogout}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '11px 14px', borderRadius: 10,
+                    padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     background: 'transparent', border: 'none',
                     color: '#EF4444', fontSize: 14, fontWeight: 500,
                     cursor: 'pointer', textAlign: 'left', width: '100%',
@@ -532,6 +556,81 @@ const Navbar: React.FC = () => {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Bottom Navigation Bar — mobile only (≤900px) ──────────────── */}
+      {isMobile && (
+        <nav
+          aria-label="Mobile navigation"
+          style={{
+            position: 'fixed',
+            bottom: 0, left: 0, right: 0,
+            height: 64,
+            zIndex: 998,
+            background: tok.bg(isDark),
+            borderTop: `1px solid ${tok.border(isDark)}`,
+            boxShadow: isDark
+              ? '0 -1px 0 rgba(255,255,255,0.04), 0 -4px 16px rgba(0,0,0,0.3)'
+              : '0 -1px 0 #e4e7eb, 0 -4px 16px rgba(0,0,0,0.06)',
+            display: 'flex',
+            alignItems: 'stretch',
+          }}
+        >
+          {BOTTOM_NAV_PRIMARY.map(item => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => { setMobileOpen(false); if (!isActive) handleNavigation(item.path); }}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  textDecoration: 'none',
+                  color: isActive ? '#22C55E' : tok.muted(isDark),
+                  background: 'transparent',
+                  borderTop: `2px solid ${isActive ? '#22C55E' : 'transparent'}`,
+                  transition: 'color 0.15s',
+                  minWidth: 48,
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                {item.icon}
+                <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em' }}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* More button */}
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label="More navigation options"
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 3,
+              background: 'transparent',
+              border: 'none',
+              borderTop: `2px solid ${mobileOpen ? '#22C55E' : 'transparent'}`,
+              color: mobileOpen ? '#22C55E' : tok.muted(isDark),
+              cursor: 'pointer',
+              minWidth: 48,
+              WebkitTapHighlightColor: 'transparent',
+            }}
+          >
+            <MoreHorizontal size={20} />
+            <span style={{ fontSize: 10, fontWeight: mobileOpen ? 700 : 500, letterSpacing: '0.02em' }}>More</span>
+          </button>
+        </nav>
       )}
     </>
   );

@@ -16,6 +16,7 @@ import { SkeletonDashboard } from './components/SkeletonLoader';
 import { ToastProvider } from './contexts/ToastContext';
 import { ToastContainer } from './components/Toast';
 import { ThemeProvider } from './contexts/ThemeContext';
+import AiChat from './components/AiChat';
 import StaffRoute from './components/StaffRoute';
 
 // Lazy load components for better initial load performance
@@ -208,6 +209,7 @@ function App() {
               />
             </Routes>
             <ToastContainer />
+            <AiChat />
           </div>
         </Router>
       </NavigationProvider>

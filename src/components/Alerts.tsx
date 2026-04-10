@@ -106,6 +106,7 @@ const btnBase: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'opacity 0.15s',
   padding: '8px 14px',
+  minHeight: 44,
 };
 
 // ─── Analytics helpers ────────────────────────────────────────────────────────
@@ -828,6 +829,9 @@ const Alerts: React.FC = () => {
                         <div style={{ fontSize: '0.8125rem', color: sub }}>{analyticsData.fault_summaries.length} fault type{analyticsData.fault_summaries.length !== 1 ? 's' : ''} in period</div>
                       </div>
                     </div>
+                    {/* Scrollable table wrapper */}
+                    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <div style={{ minWidth: 730 }}>
                     {/* Header */}
                     <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 110px 70px 60px 120px 110px 110px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       <span>Fault Code</span><span>Title</span><span>Severity</span><span>Count</span><span>Active</span><span>Avg Resolve</span><span>First Seen</span><span>Last Seen</span>
@@ -858,7 +862,7 @@ const Alerts: React.FC = () => {
                           </div>
                           {isExpanded && (
                             <div style={{ padding: '16px 24px 20px', background: tok.bgSub(isDark), borderTop: `1px solid ${bdr}`, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
                                 <div>
                                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Reason</div>
                                   <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{f.reason}</div>
@@ -902,6 +906,8 @@ const Alerts: React.FC = () => {
                         </div>
                       );
                     })}
+                    </div>{/* end minWidth wrapper */}
+                    </div>{/* end overflow wrapper */}
                   </div>
                 ) : (
                   <div style={{ ...cardStyle(isDark), padding: '2.5rem', textAlign: 'center', color: sub }}>

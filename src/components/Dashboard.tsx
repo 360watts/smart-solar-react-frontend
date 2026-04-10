@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { apiService, AlertItem } from '../services/api';
 import SiteDataPanel from './SiteDataPanel';
 import PageHeader from './PageHeader';
+import MobileDashboard from './MobileDashboard';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -40,6 +42,7 @@ function siteIsOnline(site: Site): boolean {
 // ── Component ────────────────────────────────────────────────────────────────
 
 const Dashboard: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
 
   // Sites
@@ -147,6 +150,9 @@ const Dashboard: React.FC = () => {
     warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
     err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
   };
+
+  // ── Mobile handoff ───────────────────────────────────────────────────────
+  if (isMobile) return <MobileDashboard />;
 
   // ── Loading / error ──────────────────────────────────────────────────────
 

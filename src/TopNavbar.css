@@ -51,6 +51,10 @@ body.sidebar-collapsed .modal-overlay {
   .topnav-hamburger {
     display: flex !important;
   }
+  /* Reserve space for bottom nav bar */
+  .main-content {
+    padding-bottom: 72px !important;
+  }
 }
 
 /* ── Icon button hover state ─────────────────────────────────────────────── */
