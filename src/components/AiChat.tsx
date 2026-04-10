@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, X, Send, ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,6 +31,7 @@ const SUGGESTED = [
 
 const AiChat: React.FC = () => {
   const { isDark } = useTheme();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -138,7 +140,7 @@ const AiChat: React.FC = () => {
       <button
         onClick={() => setOpen(o => !o)}
         style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 9000,
+          position: 'fixed', bottom: isMobile ? 80 : 24, right: isMobile ? 16 : 24, zIndex: 9000,
           width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
           background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
           boxShadow: '0 4px 20px rgba(99,102,241,0.45)',
@@ -156,8 +158,8 @@ const AiChat: React.FC = () => {
       {open && (
         <div
           style={{
-            position: 'fixed', bottom: 88, right: 24, zIndex: 9000,
-            width: 380, height: 560,
+            position: 'fixed', bottom: isMobile ? 144 : 88, right: isMobile ? 8 : 24, zIndex: 9000,
+            width: isMobile ? 'calc(100vw - 16px)' : 380, height: isMobile ? 'calc(100dvh - 220px)' : 560,
             background: bg,
             borderRadius: 16,
             border: `1px solid ${border}`,

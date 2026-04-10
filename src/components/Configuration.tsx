@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { MobileConfiguration } from './mobile';
+import { useIsMobile } from '../hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { Pencil, Trash2, AlertTriangle, X, CheckCircle2, Cpu } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -33,6 +35,7 @@ interface SlaveDevice {
 }
 
 const Configuration: React.FC = () => {
+  const isMobile = useIsMobile();
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,6 +209,8 @@ const Configuration: React.FC = () => {
       setDeleteModal({ show: false, slave: null });
     }
   };
+
+  if (isMobile) return <MobileConfiguration />;
 
   if (loading) return <div className="loading">Loading configuration...</div>;
 

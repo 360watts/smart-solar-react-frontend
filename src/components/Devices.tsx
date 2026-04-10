@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { MobileDevices } from './mobile';
+import { useIsMobile } from '../hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell } from 'lucide-react';
@@ -185,6 +187,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Devices: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
   const { user } = useAuth();
   const isStaffUser = !!user?.is_staff;
@@ -741,6 +744,8 @@ const Devices: React.FC = () => {
     setSelectedDevice(null);
     setSiteDetails(null);
   };
+
+  if (isMobile) return <MobileDevices />;
 
   if (loading) {
     return (

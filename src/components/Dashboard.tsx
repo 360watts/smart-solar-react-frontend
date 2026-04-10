@@ -8,7 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { apiService, AlertItem } from '../services/api';
 import SiteDataPanel from './SiteDataPanel';
 import PageHeader from './PageHeader';
-import MobileDashboard from './MobileDashboard';
+import { MobileDashboard } from './mobile';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────

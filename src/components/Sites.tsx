@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { MobileSites } from './mobile';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Archive, ArrowRight, CircleAlert, CircleCheck, 
@@ -123,6 +125,7 @@ function mapRowToSite(row: SiteRow, fallbackIndex: number): SiteCardModel {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Sites() {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
 
   // ── Design Tokens ──
@@ -330,6 +333,8 @@ export default function Sites() {
       </motion.div>
     );
   };
+
+  if (isMobile) return <MobileSites />;
 
   // ── Main Render ───────────────────────────────────────────────────────────
 

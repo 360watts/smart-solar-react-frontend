@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { MobileAlerts } from './mobile';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   AlertTriangle, AlertCircle, Info, Bell,
   CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
@@ -135,6 +137,7 @@ const fmtDateShort = (iso: string): string =>
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const Alerts: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -312,6 +315,8 @@ const Alerts: React.FC = () => {
     if (alert.status === 'acknowledged') return 'acknowledged';
     return 'active';
   };
+
+  if (isMobile) return <MobileAlerts />;
 
   // ── Loading / Error ──
   if (loading) {
