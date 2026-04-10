@@ -34,12 +34,12 @@ const AiChat: React.FC = () => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const tokenBufferRef = useRef('');
-  const rafRef = useRef<number | null>(null);
+  const isStreamingRef = useRef(false);
 
   const bg = isDark ? '#111827' : '#ffffff';
   const surface = isDark ? '#1f2937' : '#f8fafc';
@@ -47,8 +47,14 @@ const AiChat: React.FC = () => {
   const textPrimary = isDark ? '#f1f5f9' : '#0f172a';
   const textMuted = isDark ? '#94a3b8' : '#64748b';
 
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isStreamingRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' } as any);
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -59,19 +65,14 @@ const AiChat: React.FC = () => {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
 
+    // Capture current messages synchronously before any state update
     const userMessage: Message = { role: 'user', content: trimmed };
-    let updatedMessages: Message[] = [];
-    setMessages(prev => {
-      updatedMessages = [...prev, userMessage];
-      return [...updatedMessages, { role: 'assistant', content: '' }];
-    });
+    const updatedMessages = [...(messagesRef.current), userMessage];
+
+    setMessages([...updatedMessages, { role: 'assistant', content: '' }]);
     setInput('');
     setStreaming(true);
-    tokenBufferRef.current = '';
-    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-
-    // small delay to let setMessages flush so updatedMessages is populated
-    await new Promise(r => setTimeout(r, 0));
+    isStreamingRef.current = true;
 
     try {
       const response = await fetch(`${API_BASE_URL}/ai/chat/`, {
@@ -103,6 +104,10 @@ const AiChat: React.FC = () => {
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
+
+        // Collect all tokens from this chunk, then do ONE setMessages
+        let chunkText = '';
+        let hasError = false;
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const token = line.slice(6);
@@ -113,32 +118,29 @@ const AiChat: React.FC = () => {
               next[next.length - 1] = { role: 'assistant', content: token.slice(8) };
               return next;
             });
+            hasError = true;
             break;
           }
-          tokenBufferRef.current += token;
-          if (rafRef.current === null) {
-            rafRef.current = requestAnimationFrame(() => {
-              const chunk = tokenBufferRef.current;
-              tokenBufferRef.current = '';
-              rafRef.current = null;
-              setMessages(prev => {
-                const next = [...prev];
-                const last = next[next.length - 1];
-                next[next.length - 1] = { ...last, content: last.content + chunk };
-                return next;
-              });
-            });
-          }
+          chunkText += token.replace(/\\n/g, '\n');
+        }
+        if (!hasError && chunkText) {
+          setMessages(prev => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            next[next.length - 1] = { ...last, content: last.content + chunkText };
+            return next;
+          });
         }
       }
-    } catch (err: any) {
+    } catch {
       setMessages(prev => {
         const next = [...prev];
-        next[next.length - 1] = { role: 'assistant', content: `Failed to connect to AI service.` };
+        next[next.length - 1] = { role: 'assistant', content: 'Failed to connect to AI service.' };
         return next;
       });
     } finally {
       setStreaming(false);
+      isStreamingRef.current = false;
     }
   }, [streaming]);
 
