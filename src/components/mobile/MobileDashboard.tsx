@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible';
 import { useTheme } from '../../contexts/ThemeContext';
+import { IST_TIMEZONE } from '../../constants';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, Filler, Tooltip,
@@ -37,10 +38,8 @@ function siteIsOnline(site: Site) { return site.devices.some(d => d.is_online); 
 function fmtKW(w: number | null | undefined) { return w != null ? `${(Math.abs(w) / 1000).toFixed(1)}` : '—'; }
 function fmtKWh(k: number | null | undefined) { return k != null ? `${k.toFixed(1)} kWh` : '—'; }
 function startOfTodayIST(): string {
-  const now = new Date();
-  const istMs = now.getTime() + (5.5 * 60 - now.getTimezoneOffset()) * 60_000;
-  const d = new Date(istMs).toISOString().slice(0, 10);
-  return new Date(`${d}T00:00:00+05:30`).toISOString();
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: IST_TIMEZONE });
+  return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
 }
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────

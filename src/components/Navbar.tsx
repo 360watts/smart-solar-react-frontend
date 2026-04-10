@@ -284,7 +284,7 @@ const Navbar: React.FC = () => {
           </nav>
 
           {/* ── Right controls ── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <div className="topnav-right" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
             {/* Back button */}
             {navigationHistory.length > 1 && (

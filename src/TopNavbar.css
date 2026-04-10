@@ -47,9 +47,13 @@ body.sidebar-collapsed .modal-overlay {
   .topnav-brand-text {
     display: none;
   }
-  /* Show hamburger */
+  /* Hide hamburger — bottom nav bar handles navigation on mobile */
   .topnav-hamburger {
-    display: flex !important;
+    display: none !important;
+  }
+  /* Push profile avatar to the far right */
+  .topnav-right {
+    margin-left: auto;
   }
   /* Reserve space for bottom nav bar */
   .main-content {
