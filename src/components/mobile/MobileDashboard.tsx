@@ -198,8 +198,8 @@ const MobileDashboard: React.FC = () => {
 
         {pickerOpen && (
           <>
-            <div className="fixed inset-0 z-18" onClick={() => setPickerOpen(false)} />
-            <div className="absolute top-full left-0 right-0 z-19 bg-card border-b border-border max-h-64 overflow-y-auto shadow-lg">
+            <div className="fixed inset-0 z-[18]" onClick={() => setPickerOpen(false)} />
+            <div className="absolute top-full left-0 right-0 z-[19] bg-card border-b border-border max-h-64 overflow-y-auto shadow-lg">
               {sites.map(site => {
                 const sel = site.site_id === selectedSiteId;
                 const on = siteIsOnline(site);
@@ -255,10 +255,14 @@ const MobileDashboard: React.FC = () => {
 
           {/* Grid pill */}
           {gridW != null && (
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${isExporting ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : isImporting ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'}`}>
-              {isExporting ? <TrendingUp size={15} /> : isImporting ? <TrendingDown size={15} /> : <Zap size={15} />}
-              Grid: {isExporting ? `Exporting ${fmtKW(gridW)} kW` : isImporting ? `Importing ${fmtKW(gridW)} kW` : 'Balanced'}
-            </div>
+            <Card>
+              <CardContent className="py-3 px-4">
+                <div className={`flex items-center justify-center gap-2 text-sm font-semibold ${isExporting ? 'text-emerald-600 dark:text-emerald-400' : isImporting ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                  {isExporting ? <TrendingUp size={15} /> : isImporting ? <TrendingDown size={15} /> : <Zap size={15} />}
+                  Grid: {isExporting ? `Exporting ${fmtKW(gridW)} kW` : isImporting ? `Importing ${fmtKW(gridW)} kW` : 'Balanced'}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Collapsible alerts */}
@@ -334,7 +338,7 @@ const MobileDashboard: React.FC = () => {
           </Card>
 
           {/* Site info chips */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
             {[
               { icon: <MapPin size={10} />, text: `${selectedSite.latitude}°N ${selectedSite.longitude}°E` },
               { icon: <Globe size={10} />, text: selectedSite.timezone },

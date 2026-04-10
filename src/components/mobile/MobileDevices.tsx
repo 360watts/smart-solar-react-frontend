@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiService } from '../../services/api';
-import { Wifi, WifiOff, RefreshCw, Thermometer, Signal, AlertTriangle, Search, X } from 'lucide-react';
+import {
+  Wifi, WifiOff, RefreshCw, Thermometer, Signal, AlertTriangle,
+  Search, X, ChevronDown, ChevronUp, FileText, Loader2,
+} from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,6 +22,14 @@ interface Device {
   heartbeat_health?: { severity?: 'ok' | 'warn' | 'critical'; issues?: string[] } | null;
   pending_config_update?: boolean;
   auto_reboot_enabled?: boolean;
+  logs_enabled?: boolean;
+}
+
+interface LogEntry {
+  id: number;
+  timestamp: string;
+  log_level: string;
+  message: string;
 }
 
 // ── KPI tile ──────────────────────────────────────────────────────────────────
@@ -69,18 +80,90 @@ function signalColor(dbm: number | null | undefined) {
   return dbm > -60 ? 'text-emerald-500' : dbm > -75 ? 'text-amber-500' : 'text-red-500';
 }
 
+function logLevelColor(level: string) {
+  const l = level.toUpperCase();
+  if (l === 'ERROR' || l === 'CRITICAL') return 'text-red-500';
+  if (l === 'WARNING' || l === 'WARN')   return 'text-amber-500';
+  return 'text-muted-foreground';
+}
+
+// ── Log panel ─────────────────────────────────────────────────────────────────
+
+const LogPanel: React.FC<{ deviceId: number }> = ({ deviceId }) => {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    apiService.getDeviceLogs(deviceId, 50).then(res => {
+      if (cancelled) return;
+      const entries: LogEntry[] = Array.isArray(res) ? res : (res?.results ?? []);
+      setLogs(entries);
+    }).catch(() => {
+      if (!cancelled) setError('Failed to load logs');
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [deviceId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-4 justify-center text-muted-foreground text-xs">
+        <Loader2 size={13} className="animate-spin" /> Loading logs…
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="py-3 text-center text-xs text-red-500">{error}</div>;
+  }
+  if (logs.length === 0) {
+    return <div className="py-3 text-center text-xs text-muted-foreground">No log entries found</div>;
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/40 overflow-hidden">
+      <div className="max-h-56 overflow-y-auto divide-y divide-border/50">
+        {logs.map(entry => (
+          <div key={entry.id} className="px-3 py-2 flex gap-2">
+            <div className="flex-shrink-0 pt-0.5 min-w-[38px]">
+              <span className={cn('text-[9px] font-bold uppercase tracking-wide', logLevelColor(entry.log_level))}>
+                {entry.log_level.slice(0, 4)}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] leading-snug break-words text-foreground/80">{entry.message}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {new Date(entry.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ── Device card ───────────────────────────────────────────────────────────────
 
 const DeviceCard: React.FC<{ device: Device }> = ({ device }) => {
+  const [expanded, setExpanded] = useState(false);
+
   const health = device.heartbeat_health;
   const hasIssues = health && health.severity !== 'ok' && (health.issues?.length ?? 0) > 0;
-  const issueBg = health?.severity === 'critical' ? 'bg-red-500/10 border border-red-500/20 text-red-500' : 'bg-amber-500/10 border border-amber-500/20 text-amber-500';
+  const issueBg = health?.severity === 'critical'
+    ? 'bg-red-500/10 border border-red-500/20 text-red-500'
+    : 'bg-amber-500/10 border border-amber-500/20 text-amber-500';
   const sigClass = signalColor(device.signal_strength_dbm);
   const hotTemp = (device.device_temp_c ?? 0) > 70;
 
   return (
     <Card>
       <CardContent className="p-4">
+        {/* Top row */}
         <div className="flex items-start justify-between mb-3">
           <div className="min-w-0">
             <div className="font-mono text-sm font-bold tracking-wide truncate">{device.device_serial}</div>
@@ -100,6 +183,7 @@ const DeviceCard: React.FC<{ device: Device }> = ({ device }) => {
           </Badge>
         </div>
 
+        {/* Meta row */}
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
           <span className="text-[11px] text-muted-foreground">
             Last seen <span className="text-foreground/70 font-medium">{fmtLastSeen(device.last_seen_at ?? device.last_heartbeat)}</span>
@@ -121,6 +205,7 @@ const DeviceCard: React.FC<{ device: Device }> = ({ device }) => {
           )}
         </div>
 
+        {/* Health issues */}
         {hasIssues && (
           <div className={cn('mt-3 rounded-lg px-3 py-2', issueBg)}>
             {health!.issues!.map((issue, i) => (
@@ -128,6 +213,22 @@ const DeviceCard: React.FC<{ device: Device }> = ({ device }) => {
             ))}
           </div>
         )}
+
+        {/* Logs toggle */}
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="mt-3 w-full flex items-center justify-between rounded-lg bg-muted/60 hover:bg-muted px-3 py-2 transition-colors"
+        >
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+            <FileText size={12} /> Device Logs
+            {device.logs_enabled === false && (
+              <span className="text-[9px] font-normal">(disabled)</span>
+            )}
+          </span>
+          {expanded ? <ChevronUp size={13} className="text-muted-foreground" /> : <ChevronDown size={13} className="text-muted-foreground" />}
+        </button>
+
+        {expanded && <LogPanel deviceId={device.id} />}
       </CardContent>
     </Card>
   );

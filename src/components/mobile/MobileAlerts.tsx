@@ -3,9 +3,7 @@ import { apiService, AlertItem } from '../../services/api';
 import { RefreshCw, XCircle, AlertTriangle, AlertCircle, Info, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useTheme } from '../../contexts/ThemeContext';
 
 type FilterStatus   = 'all' | 'active' | 'acknowledged' | 'resolved';
 type FilterSeverity = 'all' | 'critical' | 'warning' | 'info';
@@ -180,22 +178,18 @@ const MobileAlerts: React.FC = () => {
         </div>
 
         {/* Status filters */}
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 pb-1">
-            {(['all', 'active', 'acknowledged', 'resolved'] as FilterStatus[]).map(s => (
-              <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterStatus === s} onClick={() => setFilterStatus(s)} />
-            ))}
-          </div>
-        </ScrollArea>
+        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+          {(['all', 'active', 'acknowledged', 'resolved'] as FilterStatus[]).map(s => (
+            <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterStatus === s} onClick={() => setFilterStatus(s)} />
+          ))}
+        </div>
 
         {/* Severity filters */}
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 pb-1">
-            {(['all', 'critical', 'warning', 'info'] as FilterSeverity[]).map(s => (
-              <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterSeverity === s} onClick={() => setFilterSeverity(s)} />
-            ))}
-          </div>
-        </ScrollArea>
+        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+          {(['all', 'critical', 'warning', 'info'] as FilterSeverity[]).map(s => (
+            <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterSeverity === s} onClick={() => setFilterSeverity(s)} />
+          ))}
+        </div>
 
         {/* Alert list */}
         <div className="space-y-2">
