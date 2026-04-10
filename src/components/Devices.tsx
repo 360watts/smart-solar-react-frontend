@@ -212,19 +212,18 @@ const Devices: React.FC = () => {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [deviceLogs, setDeviceLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logSearch, setLogSearch] = useState('');
-  const [logLevelFilter, setLogLevelFilter] = useState('ALL');
-  const [logDateFrom, setLogDateFrom] = useState('');
-  const [logDateTo, setLogDateTo] = useState('');
-  const [logTab, setLogTab] = useState<'live' | 'session'>('live');
   const [deviceLogFiles, setDeviceLogFiles] = useState<any[]>([]);
   const [logFilesLoading, setLogFilesLoading] = useState(false);
+  const [logFilesTotal, setLogFilesTotal] = useState(0);
+  const [logFilesPage, setLogFilesPage] = useState(0);
   const [viewingFileContent, setViewingFileContent] = useState<string | null>(null);
   const [viewingFileId, setViewingFileId] = useState<number | null>(null);
+  const [viewingFileName, setViewingFileName] = useState<string>('');
+  const [viewingFileLoading, setViewingFileLoading] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
   const [fileFilterFrom, setFileFilterFrom] = useState('');
   const [fileFilterTo, setFileFilterTo] = useState('');
+  const LOG_FILES_PAGE_SIZE = 20;
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -315,46 +314,44 @@ const Devices: React.FC = () => {
   };
 
 
-  const fetchDeviceLogs = useCallback(async (deviceId: number, start?: string, end?: string) => {
-    setLogsLoading(true);
-    try {
-      const response = await apiService.getDeviceLogs(deviceId, 500, 0, start, end);
-      setDeviceLogs(response.logs || []);
-    } catch (err) {
-      console.error('Failed to fetch device logs:', err);
-      setDeviceLogs([]);
-    } finally {
-      setLogsLoading(false);
-    }
-  }, []);
-
-  const fetchDeviceLogFiles = useCallback(async (deviceId: number) => {
+  const fetchDeviceLogFiles = useCallback(async (deviceId: number, page = 0, start?: string, end?: string) => {
     setLogFilesLoading(true);
     try {
-      const response = await apiService.getDeviceLogFiles(deviceId);
+      const response = await apiService.getDeviceLogFiles(deviceId, 20, page * 20, start, end);
       setDeviceLogFiles(response.files || []);
+      setLogFilesTotal(response.total || 0);
+      setLogFilesPage(page);
     } catch (err) {
       console.error('Failed to fetch log files:', err);
       setDeviceLogFiles([]);
+      setLogFilesTotal(0);
     } finally {
       setLogFilesLoading(false);
     }
   }, []);
 
-  const handleViewLogFile = async (fileId: number) => {
+  const handleViewLogFile = async (fileId: number, filename: string) => {
     if (viewingFileId === fileId) {
       setViewingFileContent(null);
       setViewingFileId(null);
+      setViewingFileName('');
       return;
     }
+    setViewingFileLoading(true);
+    setViewingFileId(fileId);
+    setViewingFileName(filename);
+    setViewingFileContent(null);
     try {
       const { url } = await apiService.getDeviceLogFileDownloadUrl(selectedDevice!.id, fileId);
       const res = await fetch(url);
       const text = await res.text();
       setViewingFileContent(text);
-      setViewingFileId(fileId);
     } catch (err) {
       console.error('Failed to load log file', err);
+      setViewingFileId(null);
+      setViewingFileName('');
+    } finally {
+      setViewingFileLoading(false);
     }
   };
 
@@ -367,19 +364,29 @@ const Devices: React.FC = () => {
     }
   };
 
+  const handleBulkDownload = async () => {
+    setBulkDownloading(true);
+    try {
+      await apiService.bulkDownloadLogFiles(selectedDevice!.id, fileFilterFrom || undefined, fileFilterTo || undefined);
+    } catch (err) {
+      console.error('Bulk download failed', err);
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
+
   const handleViewDevice = useCallback((device: Device) => {
     setSelectedDevice(device);
     setSiteDetails(null);
     setSiteLoading(true);
-    setDeviceLogs([]);
-    setLogSearch('');
-    setLogLevelFilter('ALL');
-    setLogDateFrom('');
-    setLogDateTo('');
-    setLogTab('live');
     setDeviceLogFiles([]);
+    setLogFilesTotal(0);
+    setLogFilesPage(0);
     setViewingFileContent(null);
     setViewingFileId(null);
+    setViewingFileName('');
+    setViewingFileLoading(false);
+    setBulkDownloading(false);
     setFileFilterFrom('');
     setFileFilterTo('');
     setRegCoverage(null);
@@ -401,7 +408,6 @@ const Devices: React.FC = () => {
           console.error('Failed to fetch site for device', device.id, ':', err);
           setSiteDetails(null);
         }),
-      fetchDeviceLogs(device.id),
       fetchDeviceLogFiles(device.id),
       apiService.getRegisterCoverage(device.id)
         .then(data => setRegCoverage(data))
@@ -420,7 +426,7 @@ const Devices: React.FC = () => {
       setSiteLoading(false);
       setRegCoverageLoading(false);
     });
-  }, [fetchDeviceLogs, fetchDeviceLogFiles, presets]);
+  }, [fetchDeviceLogFiles, presets]);
 
   useEffect(() => {
     fetchUsers();
@@ -659,18 +665,6 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleDownloadLogs = (logs: any[]) => {
-    const lines = logs.map(log =>
-      `[${new Date(log.timestamp).toLocaleString()}] [${log.level}] ${log.message}`
-    ).join('\n');
-    const blob = new Blob([lines], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `logs_${selectedDevice?.device_serial}_${new Date().toISOString().slice(0,10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const handleToggleAutoReboot = async (device: any, enabled: boolean) => {
     try {
@@ -1311,32 +1305,21 @@ const Devices: React.FC = () => {
           )}
         </div>
 
-        {/* ── Device Logs ── */}
+        {/* ── Session Logs ── */}
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ScrollText size={16} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
-              <h2 style={{ margin: 0 }}>Device Logs</h2>
-              {selectedDevice.logs_enabled && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 600, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                  Live
-                </span>
+              <h2 style={{ margin: 0 }}>Session Logs</h2>
+              {logFilesTotal > 0 && (
+                <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#94a3b8' }}>{logFilesTotal} files</span>
               )}
             </div>
-            {/* Tab switcher */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {(['live', 'session'] as const).map(tab => (
-                <button key={tab} onClick={() => setLogTab(tab)} style={{
-                  padding: '5px 14px', borderRadius: 999, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                  border: logTab === tab ? 'none' : isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)',
-                  background: logTab === tab ? '#3b82f6' : 'transparent',
-                  color: logTab === tab ? '#fff' : isDark ? '#94a3b8' : '#64748b',
-                }}>
-                  {tab === 'live' ? 'Live Logs' : 'Session Logs'}
-                </button>
-              ))}
-            </div>
+            <button onClick={() => fetchDeviceLogFiles(selectedDevice.id, 0, fileFilterFrom || undefined, fileFilterTo || undefined)} disabled={logFilesLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', fontSize: '0.8rem', fontWeight: 500, cursor: logFilesLoading ? 'not-allowed' : 'pointer', opacity: logFilesLoading ? 0.6 : 1 }}>
+              <RefreshCw size={13} style={{ animation: logFilesLoading ? 'spin 1s linear infinite' : 'none' }} />
+              {logFilesLoading ? 'Loading…' : 'Refresh'}
+            </button>
           </div>
           <div style={{ padding: '16px 20px 20px' }}>
             {!selectedDevice.logs_enabled && (
@@ -1347,162 +1330,88 @@ const Devices: React.FC = () => {
                 </p>
               </div>
             )}
+            {/* Date filter + fetch + bulk download */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              <input type="datetime-local" value={fileFilterFrom} onChange={e => setFileFilterFrom(e.target.value)} title="From"
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
+              <input type="datetime-local" value={fileFilterTo} onChange={e => setFileFilterTo(e.target.value)} title="To"
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
+              <button onClick={() => { setLogFilesPage(0); fetchDeviceLogFiles(selectedDevice.id, 0, fileFilterFrom || undefined, fileFilterTo || undefined); }} disabled={logFilesLoading}
+                style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: logFilesLoading ? 'not-allowed' : 'pointer', border: 'none', background: '#3b82f6', color: '#fff', opacity: logFilesLoading ? 0.6 : 1 }}>
+                Fetch
+              </button>
+              <button onClick={handleBulkDownload} disabled={bulkDownloading || logFilesTotal === 0}
+                title="Download all files in the selected range as a single .txt"
+                style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: (bulkDownloading || logFilesTotal === 0) ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: (bulkDownloading || logFilesTotal === 0) ? 0.5 : 1 }}>
+                {bulkDownloading ? 'Downloading…' : 'Download All'}
+              </button>
+            </div>
 
-            {/* ── Live Logs tab ── */}
-            {logTab === 'live' && (
-              <>
-                {/* Controls row */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                  <input type="datetime-local" value={logDateFrom} onChange={e => setLogDateFrom(e.target.value)} title="From"
-                    style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-                  <input type="datetime-local" value={logDateTo} onChange={e => setLogDateTo(e.target.value)} title="To"
-                    style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-                  <button onClick={() => fetchDeviceLogs(selectedDevice.id, logDateFrom || undefined, logDateTo || undefined)} disabled={logsLoading}
-                    style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: logsLoading ? 'not-allowed' : 'pointer', border: 'none', background: '#3b82f6', color: '#fff', opacity: logsLoading ? 0.6 : 1 }}>
-                    <RefreshCw size={12} style={{ display: 'inline', marginRight: 4, animation: logsLoading ? 'spin 1s linear infinite' : 'none' }} />
-                    {logsLoading ? 'Loading…' : 'Fetch'}
-                  </button>
-                  <input type="text" placeholder="Search logs…" value={logSearch} onChange={e => setLogSearch(e.target.value)}
-                    style={{ flex: 1, minWidth: 140, padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-                  <select value={logLevelFilter} onChange={e => setLogLevelFilter(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', cursor: 'pointer' }}>
-                    <option value="ALL">All levels</option>
-                    <option value="DEBUG">DEBUG</option>
-                    <option value="INFO">INFO</option>
-                    <option value="WARNING">WARNING</option>
-                    <option value="ERROR">ERROR</option>
-                    <option value="CRITICAL">CRITICAL</option>
-                  </select>
-                  {deviceLogs.length > 0 && (
-                    <button onClick={() => { const f = deviceLogs.filter(l => (logLevelFilter === 'ALL' || l.level === logLevelFilter) && (!logSearch || l.message.toLowerCase().includes(logSearch.toLowerCase()))); handleDownloadLogs(f); }}
-                      style={{ padding: '6px 12px', borderRadius: 7, fontSize: '0.82rem', cursor: 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b' }}>
-                      Download
-                    </button>
-                  )}
-                </div>
-                {!logsLoading && deviceLogs.length === 0 && (
-                  <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>No logs available yet.</p>
-                )}
-                {(() => {
-                  const filtered = deviceLogs.filter(log =>
-                    (logLevelFilter === 'ALL' || log.level === logLevelFilter) &&
-                    (!logSearch || log.message.toLowerCase().includes(logSearch.toLowerCase()))
-                  );
-                  if (deviceLogs.length === 0 || filtered.length === 0) return null;
-                  return (
-                    <div style={{ maxHeight: '420px', overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', background: '#0d1117', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', padding: '4px 0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
-                          <span style={{ fontSize: '0.68rem', color: '#4b5563', marginLeft: 6 }}>live logs — {selectedDevice.device_serial}</span>
-                        </div>
-                        <span style={{ fontSize: '0.68rem', color: '#4b5563' }}>{filtered.length} / {deviceLogs.length} entries</span>
-                      </div>
-                      {filtered.map((log) => {
-                        const levelColor = log.level === 'ERROR' || log.level === 'CRITICAL' ? '#f87171' : log.level === 'WARNING' ? '#fbbf24' : log.level === 'INFO' ? '#60a5fa' : '#94a3b8';
-                        const levelBg = log.level === 'ERROR' || log.level === 'CRITICAL' ? 'rgba(248,113,113,0.1)' : log.level === 'WARNING' ? 'rgba(251,191,36,0.08)' : 'transparent';
-                        return (
-                          <div key={log.id} style={{ display: 'flex', gap: 10, padding: '5px 14px', background: levelBg, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                            <span style={{ color: '#4b5563', whiteSpace: 'nowrap', flexShrink: 0, fontSize: '0.73rem' }}>{new Date(log.timestamp).toLocaleTimeString()}</span>
-                            <span style={{ color: levelColor, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, minWidth: 64, fontSize: '0.73rem' }}>[{log.level}]</span>
-                            <span style={{ color: '#d1d5db', wordBreak: 'break-all' }}>{log.message}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </>
+            {logFilesLoading && <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>Loading…</p>}
+            {!logFilesLoading && deviceLogFiles.length === 0 && (
+              <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>No log files found.</p>
             )}
 
-            {/* ── Session Logs tab ── */}
-            {logTab === 'session' && (
+            {deviceLogFiles.length > 0 && (
               <>
-                {/* Date filter for file list */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                  <input type="datetime-local" value={fileFilterFrom} onChange={e => setFileFilterFrom(e.target.value)} title="From"
-                    style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-                  <input type="datetime-local" value={fileFilterTo} onChange={e => setFileFilterTo(e.target.value)} title="To"
-                    style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-                  <button onClick={() => fetchDeviceLogFiles(selectedDevice.id)} disabled={logFilesLoading}
-                    style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: logFilesLoading ? 'not-allowed' : 'pointer', border: 'none', background: '#3b82f6', color: '#fff', opacity: logFilesLoading ? 0.6 : 1 }}>
-                    <RefreshCw size={12} style={{ display: 'inline', marginRight: 4, animation: logFilesLoading ? 'spin 1s linear infinite' : 'none' }} />
-                    {logFilesLoading ? 'Loading…' : 'Refresh'}
-                  </button>
+                <div style={{ borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: 12 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
+                        {['Filename', 'Size', 'Uploaded', ''].map(h => (
+                          <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deviceLogFiles.map((f: any) => (
+                        <tr key={f.id} style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
+                          <td style={{ padding: '8px 14px', color: isDark ? '#e2e8f0' : '#1e293b', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
+                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
+                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString()}</td>
+                          <td style={{ padding: '8px 14px' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => handleViewLogFile(f.id, f.filename)}
+                                style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: '#3b82f6', color: '#fff' }}>
+                                View
+                              </button>
+                              <button onClick={() => handleDownloadLogFile(f.id)}
+                                style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b' }}>
+                                Download
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                {logFilesLoading && <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>Loading files…</p>}
-                {!logFilesLoading && deviceLogFiles.length === 0 && (
-                  <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>No log files uploaded yet.</p>
-                )}
-                {(() => {
-                  const filteredFiles = deviceLogFiles.filter(f => {
-                    const ts = new Date(f.uploaded_at).getTime();
-                    if (fileFilterFrom && ts < new Date(fileFilterFrom).getTime()) return false;
-                    if (fileFilterTo && ts > new Date(fileFilterTo).getTime()) return false;
-                    return true;
-                  });
-                  if (filteredFiles.length === 0) return null;
-                  return (
-                    <div style={{ borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: 16 }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                        <thead>
-                          <tr style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
-                            {['Filename', 'Size', 'Uploaded', ''].map(h => (
-                              <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredFiles.map((f: any) => (
-                            <tr key={f.id} style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)', background: viewingFileId === f.id ? (isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)') : 'transparent' }}>
-                              <td style={{ padding: '8px 14px', color: isDark ? '#e2e8f0' : '#1e293b', fontFamily: 'JetBrains Mono, monospace' }}>{f.filename}</td>
-                              <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
-                              <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString()}</td>
-                              <td style={{ padding: '8px 14px' }}>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                  <button onClick={() => handleViewLogFile(f.id)}
-                                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: viewingFileId === f.id ? '#64748b' : '#3b82f6', color: '#fff' }}>
-                                    {viewingFileId === f.id ? 'Close' : 'View'}
-                                  </button>
-                                  <button onClick={() => handleDownloadLogFile(f.id)}
-                                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b' }}>
-                                    Download
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+
+                {/* Pagination */}
+                {logFilesTotal > LOG_FILES_PAGE_SIZE && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <span style={{ fontSize: '0.8rem', color: isDark ? '#64748b' : '#94a3b8' }}>
+                      {logFilesPage * LOG_FILES_PAGE_SIZE + 1}–{Math.min((logFilesPage + 1) * LOG_FILES_PAGE_SIZE, logFilesTotal)} of {logFilesTotal}
+                    </span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => fetchDeviceLogFiles(selectedDevice.id, logFilesPage - 1, fileFilterFrom || undefined, fileFilterTo || undefined)}
+                        disabled={logFilesPage === 0 || logFilesLoading}
+                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: logFilesPage === 0 ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: logFilesPage === 0 ? 0.4 : 1 }}>
+                        ← Prev
+                      </button>
+                      <button
+                        onClick={() => fetchDeviceLogFiles(selectedDevice.id, logFilesPage + 1, fileFilterFrom || undefined, fileFilterTo || undefined)}
+                        disabled={(logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal || logFilesLoading}
+                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 0.4 : 1 }}>
+                        Next →
+                      </button>
                     </div>
-                  );
-                })()}
-                {/* Inline file viewer */}
-                {viewingFileContent !== null && (
-                  <div style={{ maxHeight: '420px', overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', background: '#0d1117', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', padding: '4px 0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
-                        <span style={{ fontSize: '0.68rem', color: '#4b5563', marginLeft: 6 }}>{deviceLogFiles.find((f: any) => f.id === viewingFileId)?.filename ?? 'log file'}</span>
-                      </div>
-                      <span style={{ fontSize: '0.68rem', color: '#4b5563' }}>{viewingFileContent.split('\n').filter(Boolean).length} lines</span>
-                    </div>
-                    {viewingFileContent.split('\n').filter(Boolean).map((line, i) => {
-                      const isError = /error|exception|fail/i.test(line);
-                      const isWarn = /warn/i.test(line);
-                      const lineColor = isError ? '#f87171' : isWarn ? '#fbbf24' : '#d1d5db';
-                      const lineBg = isError ? 'rgba(248,113,113,0.08)' : 'transparent';
-                      return (
-                        <div key={i} style={{ display: 'flex', gap: 10, padding: '4px 14px', background: lineBg, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                          <span style={{ color: '#374151', flexShrink: 0, fontSize: '0.7rem', minWidth: 28, textAlign: 'right' }}>{i + 1}</span>
-                          <span style={{ color: lineColor, wordBreak: 'break-all' }}>{line}</span>
-                        </div>
-                      );
-                    })}
                   </div>
                 )}
               </>
             )}
+
           </div>
         </div>
 
@@ -2448,6 +2357,64 @@ const Devices: React.FC = () => {
                 >
                   Got it!
                 </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* ── Log file viewer modal ── */}
+        {viewingFileId !== null && ReactDOM.createPortal(
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}
+            onClick={() => { setViewingFileContent(null); setViewingFileId(null); setViewingFileName(''); }}
+          >
+            <div
+              style={{ background: '#0d1117', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', width: '100%', maxWidth: 900, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: '#6b7280', marginLeft: 6 }}>{viewingFileName}</span>
+                  {viewingFileContent && (
+                    <span style={{ fontSize: '0.72rem', color: '#4b5563', marginLeft: 4 }}>— {viewingFileContent.split('\n').filter(Boolean).length} lines</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleDownloadLogFile(viewingFileId)}
+                    style={{ padding: '4px 12px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8' }}>
+                    Download
+                  </button>
+                  <button
+                    onClick={() => { setViewingFileContent(null); setViewingFileId(null); setViewingFileName(''); }}
+                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8' }}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+              {/* Modal body */}
+              <div style={{ overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', flex: 1 }}>
+                {viewingFileLoading && (
+                  <p style={{ color: '#4b5563', padding: '20px 16px', margin: 0 }}>Loading…</p>
+                )}
+                {!viewingFileLoading && viewingFileContent === null && (
+                  <p style={{ color: '#ef4444', padding: '20px 16px', margin: 0 }}>Failed to load file.</p>
+                )}
+                {viewingFileContent !== null && viewingFileContent.split('\n').filter(Boolean).map((line, i) => {
+                  const isError = /error|exception|fail/i.test(line);
+                  const isWarn = /warn/i.test(line);
+                  const lineColor = isError ? '#f87171' : isWarn ? '#fbbf24' : '#d1d5db';
+                  const lineBg = isError ? 'rgba(248,113,113,0.07)' : 'transparent';
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: 12, padding: '3px 16px', background: lineBg, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                      <span style={{ color: '#374151', flexShrink: 0, fontSize: '0.7rem', minWidth: 32, textAlign: 'right', userSelect: 'none' }}>{i + 1}</span>
+                      <span style={{ color: lineColor, wordBreak: 'break-all' }}>{line}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>,

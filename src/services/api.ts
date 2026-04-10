@@ -833,8 +833,34 @@ class ApiService {
     return this.request(url);
   }
 
-  async getDeviceLogFiles(deviceId: number): Promise<any> {
-    return this.request(`/devices/${deviceId}/logs/files/`);
+  async getDeviceLogFiles(deviceId: number, limit = 20, offset = 0, start?: string, end?: string): Promise<any> {
+    let url = `/devices/${deviceId}/logs/files/?limit=${limit}&offset=${offset}`;
+    if (start) url += `&start=${encodeURIComponent(start)}`;
+    if (end) url += `&end=${encodeURIComponent(end)}`;
+    return this.request(url);
+  }
+
+  async bulkDownloadLogFiles(deviceId: number, start?: string, end?: string): Promise<void> {
+    let url = `${API_BASE_URL}/devices/${deviceId}/logs/files/bulk-download/`;
+    const params: string[] = [];
+    if (start) params.push(`start=${encodeURIComponent(start)}`);
+    if (end) params.push(`end=${encodeURIComponent(end)}`);
+    if (params.length) url += `?${params.join('&')}`;
+    const response = await fetch(url, { headers: this.getAuthHeaders() });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Bulk download failed: ${response.status}`);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `logs_${deviceId}.txt`;
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(objUrl);
   }
 
   async getDeviceLogFileDownloadUrl(deviceId: number, fileId: number): Promise<{ url: string; filename: string }> {
