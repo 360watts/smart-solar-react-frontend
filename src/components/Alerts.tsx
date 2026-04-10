@@ -1026,20 +1026,29 @@ const Alerts: React.FC = () => {
                               tick={{ fill: sub }}
                             />
                             <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: tok.bgCard(isDark),
-                                border: `1px solid ${bdr}`,
-                                borderRadius: 8,
-                                color: txt,
-                              }}
-                              labelStyle={{ color: txt }}
-                              formatter={(value: number, name: string) => [
-                                `${value} faults`,
-                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
-                              ]}
-                              labelFormatter={(label) => `Date: ${label}`}
-                            />
+                             <Tooltip
+                               contentStyle={{
+                                 backgroundColor: tok.bgCard(isDark),
+                                 border: `1px solid ${bdr}`,
+                                 borderRadius: 12,
+                                 color: txt,
+                                 padding: '12px 16px',
+                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                 backdropFilter: isDark ? 'blur(4px)' : 'none',
+                                 WebkitBackdropFilter: isDark ? 'blur(4px)' : 'none',
+                               }}
+                               labelStyle={{ 
+                                 color: txt,
+                                 fontWeight: 600,
+                                 fontSize: '14px'
+                               }}
+                                formatter={(value: number | undefined, name: string | undefined) => {
+                                  if (value === undefined || name === undefined) return '';
+                                  const severityLabel = SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name;
+                                  return `${value} faults · ${severityLabel}`;
+                                }}
+                               labelFormatter={(label) => `Date: ${label}`}
+                             />
                             <Legend
                               wrapperStyle={{ color: sub }}
                               iconType="rect"
@@ -1075,10 +1084,11 @@ const Alerts: React.FC = () => {
                                 color: txt,
                               }}
                               labelStyle={{ color: txt }}
-                              formatter={(value: number, name: string) => [
-                                `${value} faults`,
-                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
-                              ]}
+                                formatter={(value: number | undefined, name: string | undefined) => {
+                                  if (value === undefined || name === undefined) return '';
+                                  const severityLabel = SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name;
+                                  return `${value} faults · ${severityLabel}`;
+                                }}
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />
@@ -1113,10 +1123,11 @@ const Alerts: React.FC = () => {
                                 color: txt,
                               }}
                               labelStyle={{ color: txt }}
-                              formatter={(value: number, name: string) => [
-                                `${value} faults`,
-                                SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name
-                              ]}
+                                formatter={(value: number | undefined, name: string | undefined) => {
+                                  if (value === undefined || name === undefined) return '';
+                                  const severityLabel = SEVERITY_CONFIG[name as keyof typeof SEVERITY_CONFIG]?.label || name;
+                                  return `${value} faults · ${severityLabel}`;
+                                }}
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />
@@ -1151,10 +1162,10 @@ const Alerts: React.FC = () => {
                                 color: txt,
                               }}
                               labelStyle={{ color: txt }}
-                              formatter={(value: number, name: string) => [
-                                `${value} faults`,
-                                name.includes('Line') ? name.replace('Line', '') : name
-                              ]}
+                                formatter={(value: number | undefined, name: string | undefined) => {
+                                  if (value === undefined || name === undefined) return '';
+                                  return [`${value} faults`, name.includes('Line') ? name.replace('Line', '') : name];
+                                }}
                               labelFormatter={(label) => `Date: ${label}`}
                             />
                             <Legend wrapperStyle={{ color: sub }} />

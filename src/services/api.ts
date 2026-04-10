@@ -826,9 +826,21 @@ class ApiService {
     });
   }
 
-  async getDeviceLogs(deviceId: number, limit: number = 100, offset: number = 0): Promise<any> {
-    return this.request(`/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`);
+  async getDeviceLogs(deviceId: number, limit: number = 500, offset: number = 0, start?: string, end?: string): Promise<any> {
+    let url = `/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`;
+    if (start) url += `&start=${encodeURIComponent(start)}`;
+    if (end) url += `&end=${encodeURIComponent(end)}`;
+    return this.request(url);
   }
+
+  async getDeviceLogFiles(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/logs/files/`);
+  }
+
+  async getDeviceLogFileDownloadUrl(deviceId: number, fileId: number): Promise<{ url: string; filename: string }> {
+    return this.request(`/devices/${deviceId}/logs/files/${fileId}/download/`);
+  }
+
 
   async getRegisterCoverage(deviceId: number): Promise<any> {
     return this.request(`/devices/${deviceId}/register-coverage/`);
