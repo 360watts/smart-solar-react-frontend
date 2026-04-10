@@ -38,6 +38,8 @@ const AiChat: React.FC = () => {
   const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const tokenBufferRef = useRef('');
+  const rafRef = useRef<number | null>(null);
 
   const bg = isDark ? '#111827' : '#ffffff';
   const surface = isDark ? '#1f2937' : '#f8fafc';
@@ -58,13 +60,18 @@ const AiChat: React.FC = () => {
     if (!trimmed || streaming) return;
 
     const userMessage: Message = { role: 'user', content: trimmed };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    let updatedMessages: Message[] = [];
+    setMessages(prev => {
+      updatedMessages = [...prev, userMessage];
+      return [...updatedMessages, { role: 'assistant', content: '' }];
+    });
     setInput('');
     setStreaming(true);
+    tokenBufferRef.current = '';
+    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
-    // Append empty assistant message that we'll fill via streaming
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+    // small delay to let setMessages flush so updatedMessages is populated
+    await new Promise(r => setTimeout(r, 0));
 
     try {
       const response = await fetch(`${API_BASE_URL}/ai/chat/`, {
@@ -108,12 +115,20 @@ const AiChat: React.FC = () => {
             });
             break;
           }
-          setMessages(prev => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            next[next.length - 1] = { ...last, content: last.content + token };
-            return next;
-          });
+          tokenBufferRef.current += token;
+          if (rafRef.current === null) {
+            rafRef.current = requestAnimationFrame(() => {
+              const chunk = tokenBufferRef.current;
+              tokenBufferRef.current = '';
+              rafRef.current = null;
+              setMessages(prev => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                next[next.length - 1] = { ...last, content: last.content + chunk };
+                return next;
+              });
+            });
+          }
         }
       }
     } catch (err: any) {
@@ -125,7 +140,7 @@ const AiChat: React.FC = () => {
     } finally {
       setStreaming(false);
     }
-  }, [messages, streaming]);
+  }, [streaming]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
