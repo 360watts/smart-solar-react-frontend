@@ -1,119 +1,41 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiService, AlertItem } from '../../services/api';
-import { RefreshCw, XCircle, AlertTriangle, AlertCircle, Info, CheckCircle } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { cn } from '@/lib/utils';
+import {
+  RefreshCw, XCircle, AlertTriangle, Info,
+  CheckCircle, AlertCircle, Filter, Clock, Cpu, BarChart2,
+  ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type FilterStatus   = 'all' | 'active' | 'acknowledged' | 'resolved';
 type FilterSeverity = 'all' | 'critical' | 'warning' | 'info';
 
-// ── KPI tile ──────────────────────────────────────────────────────────────────
-
-const KpiTile: React.FC<{ label: string; value: number; tone?: 'danger' | 'warning' | 'success' | 'default' }> = ({ label, value, tone = 'default' }) => {
-  const toneClass = {
-    danger:  'bg-red-100/70 dark:bg-red-900/30 ring-1 ring-red-200/60 dark:ring-red-800/60',
-    warning: 'bg-amber-100/70 dark:bg-amber-900/30 ring-1 ring-amber-200/60 dark:ring-amber-800/60',
-    success: 'bg-emerald-100/70 dark:bg-emerald-900/30 ring-1 ring-emerald-200/60 dark:ring-emerald-800/60',
-    default: 'bg-muted ring-1 ring-border',
-  }[tone];
-  return (
-    <div className={cn('rounded-xl p-3 text-center shadow-sm', toneClass)}>
-      <div className="text-xl font-bold tracking-tight">{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
-    </div>
-  );
+const SEV_CFG = {
+  critical: { Icon: XCircle,       color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
+  warning:  { Icon: AlertTriangle, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  info:     { Icon: Info,          color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
 };
-
-// ── Alert card ────────────────────────────────────────────────────────────────
-
-const AlertCard: React.FC<{ alert: AlertItem }> = ({ alert }) => {
-  const sevConfig = {
-    critical: { Icon: XCircle,       color: 'text-red-500',   bg: 'bg-red-500/10',   dot: 'bg-red-500'   },
-    warning:  { Icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', dot: 'bg-amber-500' },
-    info:     { Icon: Info,          color: 'text-blue-500',  bg: 'bg-blue-500/10',  dot: 'bg-blue-500'  },
-  };
-  const statusDot = {
-    active:       'bg-red-500',
-    acknowledged: 'bg-amber-500',
-    resolved:     'bg-emerald-500',
-  };
-
-  const cfg = sevConfig[alert.severity] ?? sevConfig.info;
-  const { Icon } = cfg;
-  const isResolved = alert.resolved || alert.status === 'resolved';
-  const dotColor = statusDot[alert.status as keyof typeof statusDot] ?? (isResolved ? 'bg-emerald-500' : 'bg-red-500');
-
-  return (
-    <Card className={cn('transition-opacity', isResolved && 'opacity-60')}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={cn('rounded-full p-2 flex-shrink-0', cfg.bg)}>
-            <Icon className={cn('h-4 w-4', cfg.color)} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              {alert.fault_code && (
-                <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">{alert.fault_code}</Badge>
-              )}
-              <span className={cn('w-2 h-2 rounded-full flex-shrink-0', dotColor)} />
-              <span className="text-[10px] font-semibold uppercase text-muted-foreground">
-                {alert.status ?? (isResolved ? 'resolved' : 'active')}
-              </span>
-            </div>
-            <p className="text-sm font-medium leading-snug">{alert.message}</p>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Device {alert.device_id} · {new Date(alert.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+const STATUS_COLOR: Record<string, string> = {
+  active: '#ef4444', acknowledged: '#f59e0b', resolved: '#22c55e',
 };
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-const EmptyState: React.FC = () => (
-  <div className="flex flex-col items-center justify-center py-16 px-4">
-    <div className="flex gap-2 mb-6">
-      {[{ icon: <CheckCircle />, rot: '-rotate-6' }, { icon: <AlertCircle />, rot: '' }, { icon: <Info />, rot: 'rotate-6' }].map(({ icon, rot }, i) => (
-        <div key={i} className={cn('w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground', rot)}>
-          {React.cloneElement(icon as React.ReactElement, { size: 22 })}
-        </div>
-      ))}
-    </div>
-    <h3 className="text-base font-semibold mb-1">No alerts found</h3>
-    <p className="text-sm text-muted-foreground text-center">All clear — no alerts match your current filter.</p>
-  </div>
-);
-
-// ── Filter pill ───────────────────────────────────────────────────────────────
-
-const FilterPill: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      'rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0',
-      active
-        ? 'bg-foreground text-background'
-        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-    )}
-  >
-    {label}
-  </button>
-);
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 const MobileAlerts: React.FC = () => {
-  useTheme(); // keep theme context active
+  const { isDark } = useTheme();
 
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const bg      = isDark ? '#060d18' : '#f0fdf4';
+  const surface = isDark ? '#0d1829' : '#ffffff';
+  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
+  const text    = isDark ? '#f1f5f9' : '#0f172a';
+  const muted   = isDark ? '#64748b' : '#94a3b8';
+  const sub     = isDark ? '#94a3b8' : '#475569';
+  const accent  = '#00a63e';
+
+  const [alerts,     setAlerts]     = useState<AlertItem[]>([]);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus,   setFilterStatus]   = useState<FilterStatus>('all');
   const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('all');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   const fetchAlerts = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -125,79 +47,204 @@ const MobileAlerts: React.FC = () => {
 
   useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
-  const filtered = alerts.filter(a => {
+  const counts = useMemo(() => ({
+    total:        alerts.length,
+    active:       alerts.filter(a => !a.resolved && a.status === 'active').length,
+    acknowledged: alerts.filter(a => a.status === 'acknowledged').length,
+    critical:     alerts.filter(a => !a.resolved && a.severity === 'critical').length,
+    warning:      alerts.filter(a => !a.resolved && a.severity === 'warning').length,
+    resolved:     alerts.filter(a => a.resolved || a.status === 'resolved').length,
+  }), [alerts]);
+
+  const filtered = useMemo(() => alerts.filter(a => {
     const isResolved = a.status === 'resolved' || a.resolved;
     if (filterStatus === 'active'       && (isResolved || a.status === 'acknowledged')) return false;
-    if (filterStatus === 'acknowledged' && a.status !== 'acknowledged') return false;
-    if (filterStatus === 'resolved'     && !isResolved) return false;
-    if (filterSeverity !== 'all' && a.severity !== filterSeverity) return false;
+    if (filterStatus === 'acknowledged' && a.status !== 'acknowledged')                 return false;
+    if (filterStatus === 'resolved'     && !isResolved)                                 return false;
+    if (filterSeverity !== 'all' && a.severity !== filterSeverity)                      return false;
     return true;
+  }), [alerts, filterStatus, filterSeverity]);
+
+  const card = (extra?: React.CSSProperties): React.CSSProperties => ({
+    background: surface, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', ...extra,
   });
 
-  const counts = {
-    total:    alerts.length,
-    active:   alerts.filter(a => !a.resolved && a.status === 'active').length,
-    critical: alerts.filter(a => !a.resolved && a.severity === 'critical').length,
-    resolved: alerts.filter(a => a.resolved || a.status === 'resolved').length,
-  };
+  const pill = (active: boolean, color = accent): React.CSSProperties => ({
+    padding: '5px 12px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600,
+    cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0,
+    background: active ? `${color}22` : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
+    color: active ? color : sub,
+  });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-dvh gap-3 text-muted-foreground">
-        <RefreshCw size={18} className="animate-spin" />
-        <span className="text-sm">Loading…</span>
-      </div>
-    );
-  }
+  const toggleExpand = (id: number) => setExpanded(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
+      <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+      <span style={{ fontSize: '0.875rem' }}>Loading…</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-dvh pb-24 bg-background">
+    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
 
       {/* Header */}
-      <div className="bg-card border-b border-border px-4 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold">Alerts</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{counts.active} active · {counts.critical} critical</p>
-        </div>
-        <button
-          onClick={() => { setRefreshing(true); fetchAlerts(true); }}
-          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
-        >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
-      <div className="p-3 space-y-3">
-
-        {/* KPI tiles */}
-        <div className="grid grid-cols-4 gap-2">
-          <KpiTile label="Total"    value={counts.total}    tone="default" />
-          <KpiTile label="Active"   value={counts.active}   tone="warning" />
-          <KpiTile label="Critical" value={counts.critical} tone="danger"  />
-          <KpiTile label="Resolved" value={counts.resolved} tone="success" />
+      <div style={{ background: 'linear-gradient(135deg, #004d1e, #006b2b)', padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginTop: 1 }}>
+              {counts.active} active · {counts.critical} critical
+            </div>
+          </div>
+          <button onClick={() => { setRefreshing(true); fetchAlerts(true); }}
+            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, cursor: 'pointer', color: '#fff', padding: '6px 8px', display: 'flex' }}>
+            <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
         </div>
 
-        {/* Status filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
-          {(['all', 'active', 'acknowledged', 'resolved'] as FilterStatus[]).map(s => (
-            <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterStatus === s} onClick={() => setFilterStatus(s)} />
+        {/* KPI */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+          {[
+            { label: 'Total',    value: counts.total,    bg: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.9)' },
+            { label: 'Active',   value: counts.active,   bg: 'rgba(239,68,68,0.25)',  color: '#fca5a5' },
+            { label: 'Critical', value: counts.critical, bg: 'rgba(239,68,68,0.35)',  color: '#fca5a5' },
+            { label: 'Resolved', value: counts.resolved, bg: 'rgba(34,197,94,0.2)',   color: '#86efac' },
+          ].map(({ label, value, bg: kBg, color }) => (
+            <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, color }}>{value}</div>
+              <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{label}</div>
+            </div>
           ))}
         </div>
+      </div>
 
-        {/* Severity filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+      <div style={{ padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* Severity breakdown card */}
+        <div style={card({ padding: '10px 14px' })}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BarChart2 size={14} color={accent} />
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {[
+                { label: 'Critical',     val: counts.critical,     color: '#ef4444' },
+                { label: 'Warning',      val: counts.warning,      color: '#f59e0b' },
+                { label: 'Acknowledged', val: counts.acknowledged, color: '#8b5cf6' },
+              ].map(({ label, val, color }) => (
+                <div key={label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{val}</div>
+                  <div style={{ fontSize: '0.58rem', color: muted }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Filter size={13} color={muted} style={{ flexShrink: 0 }} />
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            {(['all', 'active', 'acknowledged', 'resolved'] as FilterStatus[]).map(s => (
+              <button key={s} style={pill(filterStatus === s, STATUS_COLOR[s] ?? accent)} onClick={() => setFilterStatus(s)}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
           {(['all', 'critical', 'warning', 'info'] as FilterSeverity[]).map(s => (
-            <FilterPill key={s} label={s.charAt(0).toUpperCase() + s.slice(1)} active={filterSeverity === s} onClick={() => setFilterSeverity(s)} />
+            <button key={s} style={pill(filterSeverity === s, SEV_CFG[s as keyof typeof SEV_CFG]?.color ?? accent)} onClick={() => setFilterSeverity(s)}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
           ))}
         </div>
 
-        {/* Alert list */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{filtered.length} {filtered.length === 1 ? 'alert' : 'alerts'}</p>
-          {filtered.length === 0 ? <EmptyState /> : filtered.map(a => <AlertCard key={a.id} alert={a} />)}
+        <div style={{ fontSize: '0.7rem', color: muted }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</div>
+
+        {/* Empty state */}
+        {filtered.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 20px', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[CheckCircle, AlertCircle, Info].map((Icon, i) => (
+                <div key={i} style={{ width: 44, height: 44, borderRadius: 12, background: surface, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: i === 0 ? 'rotate(-6deg)' : i === 2 ? 'rotate(6deg)' : 'none' }}>
+                  <Icon size={20} color={muted} />
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: text }}>No alerts found</div>
+            <div style={{ fontSize: '0.75rem', color: muted }}>All clear — no alerts match your filter.</div>
+          </div>
+        )}
+
+        {/* Alert cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {filtered.map(a => {
+            const isResolved = a.status === 'resolved' || a.resolved;
+            const cfg = SEV_CFG[a.severity as keyof typeof SEV_CFG] ?? SEV_CFG.info;
+            const { Icon } = cfg;
+            const isExp = expanded.has(a.id);
+            return (
+              <div key={a.id} style={{ ...card(), opacity: isResolved ? 0.65 : 1 }}>
+                <button onClick={() => toggleExpand(a.id)}
+                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={16} color={cfg.color} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: 4 }}>
+                      {a.fault_code && <span style={{ fontSize: '0.6rem', fontWeight: 700, fontFamily: 'monospace', padding: '1px 6px', borderRadius: 4, background: cfg.bg, color: cfg.color }}>{a.fault_code}</span>}
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLOR[a.status ?? ''] ?? cfg.color, display: 'inline-block' }} />
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', color: STATUS_COLOR[a.status ?? ''] ?? muted }}>{a.status ?? (isResolved ? 'resolved' : 'active')}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: text, lineHeight: 1.35 }}>{a.message}</div>
+                    <div style={{ fontSize: '0.66rem', color: muted, marginTop: 3 }}>
+                      Device {a.device_id} · {new Date(a.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0, color: muted }}>
+                    {isExp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </div>
+                </button>
+
+                {isExp && (
+                  <div style={{ padding: '10px 12px 12px', borderTop: `1px solid ${border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Device</div>
+                        <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 600, color: sub }}>{a.device_id}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Alert ID</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: sub }}><Cpu size={11} color={muted} />#{a.id}</div>
+                      </div>
+                      {a.site_id && (
+                        <div>
+                          <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Site</div>
+                          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 600, color: sub }}>{a.site_id}</div>
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Triggered</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Clock size={11} color={muted} />{new Date(a.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                    </div>
+                    {(a.resolved || a.status === 'resolved') && a.resolved_at && (
+                      <div style={{ fontSize: '0.7rem', color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <CheckCircle size={12} /> Resolved {new Date(a.resolved_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
