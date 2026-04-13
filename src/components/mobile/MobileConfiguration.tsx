@@ -63,6 +63,8 @@ const MobileConfiguration: React.FC = () => {
   const [filter,     setFilter]     = useState<'all' | 'enabled' | 'disabled'>('all');
   const [expanded,   setExpanded]   = useState<Set<number>>(new Set());
   const [regsOpen,   setRegsOpen]   = useState<Set<number>>(new Set());
+  const [page,       setPage]       = useState(1);
+  const PAGE_SIZE = 10;
 
   const fetchSlaves = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -82,17 +84,23 @@ const MobileConfiguration: React.FC = () => {
     activeRegs: slaves.reduce((a, s) => a + (s.registers?.filter(r => r.enabled !== false).length ?? 0), 0),
   }), [slaves]);
 
-  const filtered = useMemo(() => slaves.filter(s => {
-    if (filter === 'enabled'  && s.enabled === false) return false;
-    if (filter === 'disabled' && s.enabled !== false) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const nm = (s.deviceName ?? s.name ?? '').toLowerCase();
-      const id = String(s.slaveId ?? s.slave_id ?? '');
-      return nm.includes(q) || id.includes(q);
-    }
-    return true;
-  }), [slaves, search, filter]);
+  const filtered = useMemo(() => {
+    setPage(1);
+    return slaves.filter(s => {
+      if (filter === 'enabled'  && s.enabled === false) return false;
+      if (filter === 'disabled' && s.enabled !== false) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const nm = (s.deviceName ?? s.name ?? '').toLowerCase();
+        const id = String(s.slaveId ?? s.slave_id ?? '');
+        return nm.includes(q) || id.includes(q);
+      }
+      return true;
+    });
+  }, [slaves, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const toggle = (set: Set<number>, setFn: React.Dispatch<React.SetStateAction<Set<number>>>, id: number) => {
     setFn(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -180,7 +188,10 @@ const MobileConfiguration: React.FC = () => {
           ))}
         </div>
 
-        <div style={{ fontSize: '0.7rem', color: muted }}>{filtered.length} slave device{filtered.length !== 1 ? 's' : ''}</div>
+        <div style={{ fontSize: '0.7rem', color: muted }}>
+          {filtered.length} slave device{filtered.length !== 1 ? 's' : ''}
+          {totalPages > 1 && <span style={{ color: accent }}> · page {page}/{totalPages}</span>}
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.length === 0 ? (
@@ -188,7 +199,7 @@ const MobileConfiguration: React.FC = () => {
               <Settings size={28} color={border} style={{ margin: '0 auto 8px' }} />
               <div style={{ fontSize: '0.875rem', color: muted }}>No slave devices found</div>
             </div>
-          ) : filtered.map(slave => {
+          ) : paginated.map(slave => {
             const enabled   = slave.enabled !== false;
             const name      = slave.deviceName ?? slave.name ?? `Slave ${slave.slaveId ?? slave.slave_id}`;
             const slaveId   = slave.slaveId ?? slave.slave_id;
@@ -320,6 +331,28 @@ const MobileConfiguration: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 0 4px' }}>
+            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+              style={{ padding: '6px 16px', background: page > 1 ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 8, cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? accent : muted, fontSize: '0.75rem', fontWeight: 600 }}>
+              Prev
+            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => setPage(p)}
+                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${p === page ? accent : border}`, background: p === page ? `${accent}22` : 'transparent', cursor: 'pointer', color: p === page ? accent : muted, fontSize: '0.72rem', fontWeight: 700 }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+              style={{ padding: '6px 16px', background: page < totalPages ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 8, cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? accent : muted, fontSize: '0.75rem', fontWeight: 600 }}>
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

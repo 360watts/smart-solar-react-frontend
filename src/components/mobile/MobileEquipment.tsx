@@ -64,7 +64,7 @@ const MobileEquipment: React.FC = () => {
       setSites(list);
       const fromQuery = searchParams.get('site');
       if (fromQuery) { setSiteId(fromQuery); }
-      else if (list.length > 0) { setSiteId(String(list[0].id)); }
+      else if (list.length > 0) { setSiteId(list[0].site_id); }
     }).catch(() => {}).finally(() => setSitesLoading(false));
   }, []);
 
@@ -150,7 +150,7 @@ const MobileEquipment: React.FC = () => {
   const sectionIcon = { inverters: <Zap size={14}/>, batteries: <Battery size={14}/>, panels: <Sun size={14}/> };
   const sectionColor = { inverters: '#f59e0b', batteries: '#a78bfa', panels: '#f97316' };
 
-  const siteObj = sites.find(s => String(s.id) === siteId);
+  const siteObj = sites.find(s => s.site_id === siteId);
 
   // Summary stats
   const totalKva  = bundle?.inverters.filter(i=>i.is_active).reduce((s,i)=>s+(Number(i.capacity_kva)||0),0) ?? 0;
@@ -178,7 +178,7 @@ const MobileEquipment: React.FC = () => {
         <select value={siteId} onChange={e => setSiteId(e.target.value)}
           style={{ width:'100%', background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'8px 10px', color:'#fff', fontSize:'0.8rem', outline:'none' }}>
           {sitesLoading ? <option>Loading…</option> : sites.map(s => (
-            <option key={s.id} value={String(s.id)} style={{ background:isDark?'#0d1829':'#fff', color:text }}>{s.display_name} ({s.site_id})</option>
+            <option key={s.site_id} value={s.site_id} style={{ background:isDark?'#0d1829':'#fff', color:text }}>{s.display_name} ({s.site_id})</option>
           ))}
         </select>
         {/* KPI */}
