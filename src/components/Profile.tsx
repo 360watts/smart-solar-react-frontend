@@ -3,6 +3,8 @@ import { User, Mail, Phone, MapPin, Calendar, Shield, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext';
 import PhoneInput from './PhoneInput';
 import { apiService } from '../services/api';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileProfile } from './mobile';
 
 interface ProfileData {
   id: number;
@@ -38,6 +40,8 @@ const getInitials = (first: string, last: string, username: string) => {
 };
 
 const Profile: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileProfile />;
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);

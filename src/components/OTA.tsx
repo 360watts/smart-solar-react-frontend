@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileOTA } from './mobile';
 import PageHeader from './PageHeader';
 import '../App.css';
 
@@ -282,6 +284,8 @@ const Modal: React.FC<{
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const OTA: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileOTA />;
   const { isDark } = useTheme();
 
   // ── State ──

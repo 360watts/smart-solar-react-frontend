@@ -4,6 +4,8 @@ import PhoneInput from './PhoneInput';
 import { useNavigate } from 'react-router-dom';
 import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileUsers } from './mobile';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonTableRow } from './SkeletonLoader';
@@ -53,6 +55,8 @@ interface Device {
 }
 
 const Users: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileUsers />;
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);

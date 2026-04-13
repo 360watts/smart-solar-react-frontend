@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileSiteDetail } from './mobile';
 import { 
   ArrowLeft, Battery, Cpu, Server, Wifi, Activity, 
   Settings, Save, AlertTriangle, Link as LinkIcon, 
@@ -32,6 +34,8 @@ const tabVariants = {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function SiteDetail() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileSiteDetail />;
   const { siteId: siteIdParam } = useParams<{ siteId: string }>();
   const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const { isDark } = useTheme();

@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import PhoneInput from './PhoneInput';
 import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon, ShieldCheck, ShieldOff } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileEmployees } from './mobile';
 import { cacheService } from '../services/cacheService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -49,6 +51,8 @@ interface Employee {
 }
 
 const Employees: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileEmployees />;
   const { isDark } = useTheme();
   const { isAdmin, user: currentUser } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);

@@ -4,6 +4,8 @@ import ReactDOM from 'react-dom';
 import { Plus, Pencil, Trash2, X, Zap, Battery, Sun, ChevronDown, Server } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { MobileEquipment } from './mobile';
 import { EmptyState } from './EmptyState';
 import PageHeader from './PageHeader';
 
@@ -754,6 +756,8 @@ const PanelSection: React.FC<{
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 const Equipment: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileEquipment />;
   const { isDark } = useTheme();
   const [searchParams] = useSearchParams();
   const [sites, setSites] = useState<Site[]>([]);
