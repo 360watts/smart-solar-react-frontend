@@ -294,7 +294,11 @@ const Alerts: React.FC = () => {
     }
     if (alertSearch.trim()) {
       const q = alertSearch.toLowerCase();
-      return alert.message.toLowerCase().includes(q) || alert.device_id.toLowerCase().includes(q) || alert.type.toLowerCase().includes(q);
+      return alert.message.toLowerCase().includes(q)
+        || getAlertDisplayMessage(alert).toLowerCase().includes(q)
+        || alert.device_id.toLowerCase().includes(q)
+        || alert.type.toLowerCase().includes(q)
+        || (alert.fault_code?.toLowerCase().includes(q) ?? false);
     }
     return true;
   });
@@ -314,6 +318,16 @@ const Alerts: React.FC = () => {
     if (alert.status === 'resolved' || alert.resolved) return 'resolved';
     if (alert.status === 'acknowledged') return 'acknowledged';
     return 'active';
+  };
+
+  const getAlertDisplayMessage = (alert: Alert) => {
+    if (alert.fault_code === 'rs485_stale') {
+      return 'RS-485 missing data detected: device firmware reported all register values as zero.';
+    }
+    if (alert.fault_code === 'rs485_auto_reboot') {
+      return 'Auto-reboot queued after consecutive RS-485 missing-data verdicts (all-registers-zero condition).';
+    }
+    return alert.message;
   };
 
   if (isMobile) return <MobileAlerts />;
@@ -585,7 +599,7 @@ const Alerts: React.FC = () => {
                           {alert.type.replace(/_/g, ' ')}
                         </div>
                         <div style={{ fontSize: '0.8125rem', color: sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {alert.message}
+                          {getAlertDisplayMessage(alert)}
                         </div>
                       </div>
                       <span style={{
@@ -654,7 +668,7 @@ const Alerts: React.FC = () => {
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: sub }} />
-              <input placeholder="Search message, device, type…" value={alertSearch} onChange={e => setAlertSearch(e.target.value)}
+              <input placeholder="Search message, device, type, code…" value={alertSearch} onChange={e => setAlertSearch(e.target.value)}
                 style={{ ...inputStyle(isDark, { paddingLeft: 28, width: 240 }) }} />
             </div>
           </div>
@@ -726,7 +740,7 @@ const Alerts: React.FC = () => {
 
                       {/* Message */}
                       <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.55, paddingLeft: 40 }}>
-                        {alert.message}
+                        {getAlertDisplayMessage(alert)}
                       </div>
 
                       {/* Footer */}

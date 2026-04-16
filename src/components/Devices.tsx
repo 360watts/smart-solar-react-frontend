@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MobileDevices } from './mobile';
 import { useIsMobile } from '../hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell } from 'lucide-react';
-import { apiService } from '../services/api';
+import { apiService, AlertItem } from '../services/api';
 import { useDebouncedCallback } from '../hooks/useDebounce';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -247,6 +247,8 @@ const Devices: React.FC = () => {
   const [regCoverage, setRegCoverage] = useState<any | null>(null);
   const [regCoverageLoading, setRegCoverageLoading] = useState(false);
   const [regCoverageExpanded, setRegCoverageExpanded] = useState(false);
+  const [deviceAlerts, setDeviceAlerts] = useState<AlertItem[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
   
   // Modern modal states
   const rebootModal = useModal<Device>();
@@ -314,6 +316,42 @@ const Devices: React.FC = () => {
     } finally {
       setPresetsLoading(false);
     }
+  };
+
+  const fetchAlerts = useCallback(async (silent: boolean = false) => {
+    try {
+      if (!silent) setAlertsLoading(true);
+      const data = await apiService.getAlerts();
+      setDeviceAlerts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch alerts for devices view:', err);
+    } finally {
+      if (!silent) setAlertsLoading(false);
+    }
+  }, []);
+
+  const activeAlerts = useMemo(() => {
+    return deviceAlerts.filter((a) => a.status !== 'resolved' && !a.resolved);
+  }, [deviceAlerts]);
+
+  const activeAlertsByDevice = useMemo(() => {
+    const map = new Map<string, AlertItem[]>();
+    for (const alert of activeAlerts) {
+      const key = alert.device_id || '';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(alert);
+    }
+    return map;
+  }, [activeAlerts]);
+
+  const getAlertDisplayMessage = (alert: AlertItem) => {
+    if (alert.fault_code === 'rs485_stale') {
+      return 'RS-485 missing data: all register values reported as zero by device firmware.';
+    }
+    if (alert.fault_code === 'rs485_auto_reboot') {
+      return 'Auto-reboot queued after consecutive RS-485 missing-data verdicts.';
+    }
+    return alert.message;
   };
 
 
@@ -434,7 +472,8 @@ const Devices: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchPresets();
-  }, []);
+    fetchAlerts();
+  }, [fetchAlerts]);
 
   useEffect(() => {
     const deviceIdParam = searchParams.get('deviceId');
@@ -457,9 +496,10 @@ const Devices: React.FC = () => {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       fetchDevices(currentPage, searchTerm, true);
+      fetchAlerts(true);
     }, 15000);
     return () => window.clearInterval(intervalId);
-  }, [currentPage, searchTerm, fetchDevices]);
+  }, [currentPage, searchTerm, fetchDevices, fetchAlerts]);
   
   useEffect(() => {
     const handleClickOutside = () => {
@@ -969,6 +1009,133 @@ const Devices: React.FC = () => {
                   </div>
                 );
               })}
+            </div>
+          );
+        })()}
+
+        {/* ── Device Alerts Panel ── */}
+        {(() => {
+          const selectedAlerts = activeAlertsByDevice.get(selectedDevice.device_serial) || [];
+          const critical = selectedAlerts.filter(a => a.severity === 'critical').length;
+          const warning = selectedAlerts.filter(a => a.severity === 'warning').length;
+          const info = selectedAlerts.filter(a => a.severity === 'info').length;
+          return (
+            <div style={{
+              marginBottom: 24,
+              borderRadius: 14,
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,166,62,0.15)'}`,
+              background: isDark ? '#0f172a' : '#fff',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                padding: '14px 18px',
+                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.1)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Bell size={16} style={{ color: '#f59e0b' }} />
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#111827' }}>
+                    Active Alerts
+                  </span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '2px 9px',
+                    borderRadius: 999,
+                    background: selectedAlerts.length > 0 ? 'rgba(245,158,11,0.15)' : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
+                    color: selectedAlerts.length > 0 ? '#f59e0b' : (isDark ? '#94a3b8' : '#64748b'),
+                  }}>
+                    {selectedAlerts.length}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {[
+                    { label: 'Critical', value: critical, color: '#ef4444' },
+                    { label: 'Warning', value: warning, color: '#f59e0b' },
+                    { label: 'Info', value: info, color: '#3b82f6' },
+                  ].map(chip => (
+                    <span key={chip.label} style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: 999,
+                      background: `${chip.color}1a`,
+                      color: chip.color,
+                      border: `1px solid ${chip.color}4d`,
+                    }}>
+                      {chip.label}: {chip.value}
+                    </span>
+                  ))}
+                  <Link to="/alerts" style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: isDark ? '#93c5fd' : '#2563eb',
+                    textDecoration: 'none',
+                  }}>
+                    Open full alerts
+                  </Link>
+                </div>
+              </div>
+
+              <div style={{ padding: '12px 18px 14px' }}>
+                {alertsLoading ? (
+                  <div style={{ fontSize: '0.85rem', color: isDark ? '#64748b' : '#94a3b8' }}>Loading alerts…</div>
+                ) : selectedAlerts.length === 0 ? (
+                  <div style={{ fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    No active alerts for this device.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedAlerts.slice(0, 5).map(alert => (
+                      <div key={`${alert.id}-${alert.timestamp}`} style={{
+                        borderRadius: 10,
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                        background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+                        padding: '10px 12px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            color: alert.severity === 'critical' ? '#ef4444' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6',
+                          }}>
+                            {alert.severity}
+                          </span>
+                          {alert.fault_code && (
+                            <code style={{
+                              fontSize: '0.72rem',
+                              fontFamily: 'JetBrains Mono, monospace',
+                              padding: '2px 6px',
+                              borderRadius: 5,
+                              background: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)',
+                              color: '#818cf8',
+                            }}>
+                              {alert.fault_code}
+                            </code>
+                          )}
+                          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: isDark ? '#64748b' : '#94a3b8' }}>
+                            {new Date(alert.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.83rem', color: isDark ? '#e2e8f0' : '#1f2937', lineHeight: 1.45 }}>
+                          {getAlertDisplayMessage(alert)}
+                        </div>
+                      </div>
+                    ))}
+                    {selectedAlerts.length > 5 && (
+                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                        Showing latest 5 of {selectedAlerts.length} active alerts.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })()}
@@ -2498,6 +2665,7 @@ const Devices: React.FC = () => {
               <th style={{ textAlign: 'center' }}>Model</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
               <th style={{ textAlign: 'center' }}>Config Version</th>
+              <th style={{ textAlign: 'center' }}>Alerts</th>
               <th style={{ textAlign: 'center' }}>Last Seen</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
               <th style={{ textAlign: 'center' }}>Actions</th>
@@ -2506,7 +2674,7 @@ const Devices: React.FC = () => {
           <tbody className="stagger-children">
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={11} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
                     description={searchTerm ? 'Try a different search term.' : 'Register a device to get started.'}
@@ -2550,6 +2718,31 @@ const Devices: React.FC = () => {
                 <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{device.model || <span style={{ color: 'var(--text-muted, #9ca3af)' }}>—</span>}</td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
                 <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const count = (activeAlertsByDevice.get(device.device_serial) || []).length;
+                    if (count === 0) {
+                      return <span style={{ color: isDark ? '#64748b' : '#94a3b8' }}>—</span>;
+                    }
+                    return (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '3px 9px',
+                        borderRadius: 999,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        background: 'rgba(245,158,11,0.15)',
+                        color: '#f59e0b',
+                        border: '1px solid rgba(245,158,11,0.3)',
+                      }}>
+                        <AlertTriangle size={12} />
+                        {count}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
                     const ts = device.last_seen_at || device.last_heartbeat;
