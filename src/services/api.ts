@@ -64,6 +64,7 @@ export interface AlertItem {
   severity: 'critical' | 'warning' | 'info';
   message: string;
   device_id: string;
+  device_serial?: string;
   timestamp: string;
   resolved: boolean;
   created_by_username?: string;
@@ -74,6 +75,43 @@ export interface AlertItem {
   fault_code?: string;
   /** 'active' | 'acknowledged' | 'resolved' — present on fault alerts */
   status?: 'active' | 'acknowledged' | 'resolved';
+  /** AI diagnostic report */
+  metadata?: {
+    diagnostic?: {
+      root_cause: string;
+      severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+      recommendation: string;
+      llm_model?: string;
+      call_duration_ms?: number;
+      timestamp?: string;
+      parse_error?: string;
+    };
+  };
+}
+
+/** Per-alert result from POST /api/alerts/diagnose-batch/ */
+export interface AlertDiagnosticResult {
+  alert_id: number;
+  fault_code: string;
+  device_serial: string | null;
+  triggered_at: string | null;
+  queue_status?: 'queued' | 'done';
+  diagnostic: {
+    root_cause: string;
+    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    recommendation: string;
+    llm_model?: string;
+    call_duration_ms?: number;
+    timestamp?: string;
+    parse_error?: string;
+  } | null;
+}
+
+export interface DiagnoseBatchResponse {
+  queued: number;
+  skipped: number;
+  no_api_key: boolean;
+  results: AlertDiagnosticResult[];
 }
 
 const API_BASE_URL =
@@ -283,6 +321,10 @@ class ApiService {
 
     cacheService.set(cacheKey, data, DEFAULT_TTL);
     return data;
+  }
+
+  async diagnoseBatch(): Promise<DiagnoseBatchResponse> {
+    return this.request('/alerts/diagnose-batch/', { method: 'POST' });
   }
 
   async getSystemHealth(): Promise<any> {

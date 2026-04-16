@@ -4,10 +4,12 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import {
   AlertTriangle, AlertCircle, Info, Bell,
   CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
-  Shield, Activity, ChevronDown, ChevronRight, BookOpen, TrendingUp,
+  Shield, Activity, ChevronDown, ChevronRight, ChevronLeft, BookOpen, TrendingUp,
   Download, Filter, X, BarChart, LineChart, AreaChart,
+  Brain, ChevronUp,
 } from 'lucide-react';
-import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse } from '../services/api';
+import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse, AlertItem } from '../services/api';
+import type { DiagnoseBatchResponse, AlertDiagnosticResult } from '../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
@@ -39,6 +41,7 @@ interface Alert {
   severity: 'critical' | 'warning' | 'info';
   message: string;
   device_id: string;
+  device_serial?: string;
   timestamp: string;
   resolved: boolean;
   created_by_username?: string;
@@ -46,6 +49,17 @@ interface Alert {
   generated?: boolean;
   fault_code?: string;
   status?: 'active' | 'acknowledged' | 'resolved';
+  metadata?: {
+    diagnostic?: {
+      root_cause: string;
+      severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+      recommendation: string;
+      llm_model?: string;
+      call_duration_ms?: number;
+      timestamp?: string;
+      parse_error?: string;
+    };
+  };
 }
 
 // ─── Design tokens (shared with OTA page) ────────────────────────────────────
@@ -134,6 +148,22 @@ const fmtDate = (iso: string): string =>
 const fmtDateShort = (iso: string): string =>
   new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
+const normalizeFaultTitle = (faultCode: string, title?: string): string => {
+  if (faultCode === 'rs485_stale') return 'RS-485 Missing Data';
+  if (faultCode === 'rs485_auto_reboot') return 'RS-485 Missing Data: Auto-Reboot Queued';
+  return title || faultCode;
+};
+
+const normalizeFaultReason = (faultCode: string, reason?: string): string => {
+  if (faultCode === 'rs485_stale') {
+    return 'RS-485 missing data detected: device reported all register values as zero.';
+  }
+  if (faultCode === 'rs485_auto_reboot') {
+    return 'Consecutive all-registers-zero stale verdicts reached the reboot threshold; device was commanded to reboot.';
+  }
+  return reason || '';
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const Alerts: React.FC = () => {
@@ -148,6 +178,10 @@ const Alerts: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
   const [refreshing, setRefreshing] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
   const [analyticsData, setAnalyticsData] = useState<AlertAnalyticsResponse | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
@@ -156,6 +190,11 @@ const Alerts: React.FC = () => {
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [catalogueExpandedCode, setCatalogueExpandedCode] = useState<string | null>(null);
   const [hoveredTimelineDay, setHoveredTimelineDay] = useState<number | null>(null);
+
+  const [diagRunning, setDiagRunning] = useState(false);
+  const [diagResults, setDiagResults] = useState<DiagnoseBatchResponse | null>(null);
+  const [diagPanelOpen, setDiagPanelOpen] = useState(false);
+  const [selectedAlertForDiag, setSelectedAlertForDiag] = useState<string | null>(null);
 
   // Chart interactivity state
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'composed'>('bar');
@@ -302,6 +341,17 @@ const Alerts: React.FC = () => {
     }
     return true;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAlerts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAlerts = filteredAlerts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterSeverity, filterStatus, alertSearch]);
 
   const unresolvedAlerts = alerts.filter(a => !a.resolved && a.status !== 'resolved');
   const criticalCount  = alerts.filter(a => a.severity === 'critical').length;
@@ -623,7 +673,7 @@ const Alerts: React.FC = () => {
         <div style={cardStyle(isDark, { padding: 0 })}>
           {/* Toolbar */}
           <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Bell size={17} color="white" />
               </div>
@@ -674,12 +724,180 @@ const Alerts: React.FC = () => {
           </div>
 
           {/* Alert list */}
-          <div style={{ padding: '16px 20px' }}>
+            <div style={{ padding: '0 20px 16px' }}>
+
+              {/* ── AI Diagnostics button + results panel ── */}
+              <div style={{ padding: '14px 0 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  disabled={diagRunning}
+                  onClick={async () => {
+                    setDiagRunning(true);
+                    setDiagPanelOpen(true);
+                    try {
+                      const res = await apiService.diagnoseBatch();
+                      setDiagResults(res);
+                      // Async diagnostics are queued server-side; refresh alerts shortly after queueing
+                      // so completed results appear in the list/modal without manual reload.
+                      setTimeout(() => { fetchAlerts(); }, 6000);
+                      setTimeout(() => { fetchAlerts(); }, 14000);
+                    } catch (err: any) {
+                      setDiagResults({ queued: 0, skipped: 0, no_api_key: false, results: [] });
+                    } finally {
+                      setDiagRunning(false);
+                    }
+                  }}
+                  style={{
+                    ...btnBase,
+                    background: diagRunning
+                      ? tok.bgMuted(isDark)
+                      : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                    color: diagRunning ? sub : 'white',
+                    border: diagRunning ? `1px solid ${bdr}` : 'none',
+                    opacity: diagRunning ? 0.7 : 1,
+                  }}
+                >
+                  <Brain size={14} className={diagRunning ? 'ota-spinner' : undefined} />
+                  {diagRunning ? 'Analysing…' : 'Run AI Diagnostics'}
+                </button>
+                {diagResults && !diagRunning && (
+                  <button onClick={() => setDiagPanelOpen(p => !p)} style={{
+                    ...btnBase,
+                    background: tok.bgMuted(isDark), color: sub, border: `1px solid ${bdr}`,
+                    padding: '6px 12px', fontSize: '0.8rem',
+                  }}>
+                    {diagPanelOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {diagPanelOpen ? 'Hide' : 'Show'} results ({diagResults.results.length})
+                  </button>
+                )}
+              </div>
+
+              {diagPanelOpen && (
+                <div style={{
+                  marginBottom: 14,
+                  borderRadius: 12,
+                  border: `1px solid rgba(99,102,241,0.3)`,
+                  background: isDark ? 'rgba(99,102,241,0.07)' : 'rgba(99,102,241,0.04)',
+                  overflow: 'hidden',
+                }}>
+                  {/* Panel header */}
+                  <div style={{
+                    padding: '12px 16px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    borderBottom: `1px solid rgba(99,102,241,0.2)`,
+                  }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                      background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Brain size={14} color="white" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontWeight: 700, color: txt, fontSize: '0.9rem' }}>AI Diagnostic Results</span>
+                      {diagResults && (
+                        <span style={{ marginLeft: 10, fontSize: '0.75rem', color: sub }}>
+                          {diagResults.queued} analysed · {diagResults.skipped} already had results
+                        </span>
+                      )}
+                    </div>
+                    <button onClick={() => setDiagPanelOpen(false)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: sub, padding: 4, borderRadius: 4,
+                      display: 'flex', alignItems: 'center',
+                    }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {/* Loading placeholder */}
+                  {diagRunning && (
+                    <div style={{ padding: '18px 16px', color: sub, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Brain size={16} className="ota-spinner" style={{ color: '#818CF8' }} />
+                      Calling AI for each active alert — may take up to 45s per alert…
+                    </div>
+                  )}
+
+                  {/* Empty state */}
+                  {!diagRunning && diagResults && diagResults.results.length === 0 && (
+                    <div style={{ padding: '18px 16px', color: sub, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <CheckCircle2 size={16} style={{ color: '#10B981' }} />
+                      No active alerts with devices found — nothing to diagnose.
+                    </div>
+                  )}
+
+                  {/* Per-alert diagnostic cards */}
+                  {!diagRunning && diagResults && diagResults.results.map((r, idx) => {
+                    const diag = r.diagnostic;
+                    const sevColor: Record<string, string> = {
+                      CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
+                    };
+                    const col = diag ? (sevColor[diag.severity] ?? '#6366F1') : sub;
+                    return (
+                      <div key={r.alert_id} style={{
+                        padding: '14px 16px',
+                        borderTop: idx === 0 ? 'none' : `1px solid rgba(99,102,241,0.15)`,
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: 12, alignItems: 'start',
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <code style={{
+                              fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700,
+                              padding: '2px 8px', borderRadius: 5,
+                              background: 'rgba(99,102,241,0.12)', color: '#818CF8',
+                              border: '1px solid rgba(99,102,241,0.3)',
+                            }}>{r.fault_code}</code>
+                            <span style={{ fontSize: '0.8rem', color: sub }}>{r.device_serial ?? '—'}</span>
+                            {r.triggered_at && (
+                              <span style={{ fontSize: '0.7rem', color: tok.textMuted(isDark) }}>
+                                {new Date(r.triggered_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {r.queue_status === 'queued' && !diag ? (
+                            <div style={{ fontSize: '0.8125rem', color: '#6366F1', fontStyle: 'italic' }}>
+                              Diagnostic queued. Results will appear in a few seconds.
+                            </div>
+                          ) : diag ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.55 }}>
+                                <span style={{ fontWeight: 600, color: col }}>Root cause: </span>
+                                {diag.root_cause}
+                              </div>
+                              <div style={{ fontSize: '0.8125rem', color: sub, lineHeight: 1.55 }}>
+                                <span style={{ fontWeight: 600, color: txt }}>Recommendation: </span>
+                                {diag.recommendation}
+                              </div>
+                              {diag.llm_model && (
+                                <div style={{ fontSize: '0.7rem', color: tok.textMuted(isDark), marginTop: 2 }}>
+                                  via {diag.llm_model}{diag.call_duration_ms ? ` · ${(diag.call_duration_ms / 1000).toFixed(1)}s` : ''}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.8125rem', color: sub, fontStyle: 'italic' }}>No diagnostic available</div>
+                          )}
+                        </div>
+                        {diag && (
+                          <span style={{
+                            padding: '3px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
+                            background: `${col}18`, color: col, border: `1px solid ${col}44`,
+                            whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2,
+                          }}>
+                            {diag.severity}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             {filteredAlerts.length === 0 ? (
               <EmptyState title="No alerts" description="No alerts match your current filters." />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {filteredAlerts.map(alert => {
+                {paginatedAlerts.map(alert => {
                   const sevCfg = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.info;
                   const alertStatus = getAlertStatus(alert);
                   const stsCfg = STATUS_CONFIG[alertStatus];
@@ -719,6 +937,30 @@ const Alerts: React.FC = () => {
                             background: 'rgba(99,102,241,0.12)', color: '#818CF8',
                             border: '1px solid rgba(99,102,241,0.3)',
                           }}>{alert.fault_code}</code>
+                        )}
+                        {/* Diagnostic badge */}
+                        {alert.metadata?.diagnostic && (
+                          <button
+                            onClick={() => setSelectedAlertForDiag(alert.id)}
+                            style={{
+                              ...btnBase,
+                              padding: '4px 8px',
+                              borderRadius: 6,
+                              background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))',
+                              color: '#818CF8',
+                              border: '1px solid rgba(99,102,241,0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                            title="View diagnostic report"
+                          >
+                            <Brain size={12} />
+                            Diagnostic
+                          </button>
                         )}
                         {/* Device */}
                         <span style={{ fontSize: '0.8125rem', color: sub, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -770,9 +1012,242 @@ const Alerts: React.FC = () => {
                 })}
               </div>
             )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ padding: '16px 20px', borderTop: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: '0.8125rem', color: sub }}>
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredAlerts.length)} of {filteredAlerts.length} alerts
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: '0.75rem', color: sub }}>Show:</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      style={{ ...inputStyle(isDark, { padding: '4px 8px', fontSize: '0.75rem', width: 'auto', minWidth: 60 }) }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      ...btnBase,
+                      padding: '6px 12px',
+                      background: currentPage === 1 ? tok.bgMuted(isDark) : tok.bgSub(isDark),
+                      color: currentPage === 1 ? sub : txt,
+                      border: `1px solid ${bdr}`,
+                      opacity: currentPage === 1 ? 0.5 : 1,
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <ChevronLeft size={14} style={{ marginRight: 4 }} />
+                    Previous
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                      if (pageNum > totalPages) return null;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          style={{
+                            ...btnBase,
+                            padding: '6px 10px',
+                            minWidth: 36,
+                            background: currentPage === pageNum ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : tok.bgMuted(isDark),
+                            color: currentPage === pageNum ? 'white' : sub,
+                            border: currentPage === pageNum ? 'none' : `1px solid ${bdr}`,
+                            fontSize: '0.8125rem',
+                            fontWeight: currentPage === pageNum ? 700 : 500,
+                          }}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      ...btnBase,
+                      padding: '6px 12px',
+                      background: currentPage === totalPages ? tok.bgMuted(isDark) : tok.bgSub(isDark),
+                      color: currentPage === totalPages ? sub : txt,
+                      border: `1px solid ${bdr}`,
+                      opacity: currentPage === totalPages ? 0.5 : 1,
+                      cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Next
+                    <ChevronRight size={14} style={{ marginLeft: 4 }} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+      {/* ══════════════════════ DIAGNOSTIC DETAIL MODAL ══════════════════════ */}
+      {selectedAlertForDiag !== null && (() => {
+        const alert = paginatedAlerts.find((a: AlertItem) => a.id === selectedAlertForDiag);
+        if (!alert || !alert.metadata?.diagnostic) return null;
+        const diag = alert.metadata.diagnostic;
+        const sevColor: Record<string, string> = {
+          CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
+        };
+        const col = sevColor[diag.severity] ?? '#6366F1';
+        
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: 20,
+          }}>
+            <div style={{
+              borderRadius: 16, background: tok.bgCard(isDark), border: `1px solid ${bdr}`,
+              maxWidth: 700, width: '100%', maxHeight: '80vh', overflow: 'auto',
+              padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Brain size={20} color="white" />
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: txt }}>
+                      AI Diagnostic Report
+                    </h3>
+                  </div>
+                  {alert.fault_code && (
+                    <code style={{
+                      fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 700,
+                      padding: '4px 10px', borderRadius: 6,
+                      background: 'rgba(99,102,241,0.12)', color: '#818CF8',
+                      border: '1px solid rgba(99,102,241,0.3)', display: 'inline-block',
+                    }}>
+                      {alert.fault_code}
+                    </code>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedAlertForDiag(null)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: sub,
+                    padding: 8, borderRadius: 6, display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Alert info section */}
+              <div style={{
+                padding: 16, borderRadius: 12,
+                background: tok.bgSub(isDark), border: `1px solid ${bdr}`,
+                marginBottom: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Device
+                  </span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', fontWeight: 600, color: txt }}>
+                    {alert.device_serial ?? alert.device_id ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Triggered
+                  </span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', fontWeight: 600, color: txt }}>
+                    {new Date(alert.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Root Cause */}
+              <div style={{ marginBottom: 20 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontSize: '0.875rem', fontWeight: 700, color: col, marginBottom: 8,
+                }}>
+                  <AlertTriangle size={16} />
+                  Root Cause
+                </span>
+                <p style={{
+                  margin: 0, fontSize: '0.95rem', color: txt, lineHeight: 1.65,
+                  padding: 12, borderRadius: 8, background: `${col}12`, border: `1px solid ${col}30`,
+                }}>
+                  {diag.root_cause || 'No root cause available'}
+                </p>
+              </div>
+
+              {/* Recommendation */}
+              <div style={{ marginBottom: 20 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontSize: '0.875rem', fontWeight: 700, color: '#10B981', marginBottom: 8,
+                }}>
+                  <CheckCircle2 size={16} />
+                  Recommendation
+                </span>
+                <p style={{
+                  margin: 0, fontSize: '0.95rem', color: txt, lineHeight: 1.65,
+                  padding: 12, borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                }}>
+                  {diag.recommendation || 'No recommendation available'}
+                </p>
+              </div>
+
+              {/* Metadata footer */}
+              <div style={{
+                paddingTop: 16, borderTop: `1px solid ${bdr}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{
+                    padding: '4px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
+                    background: `${col}18`, color: col, border: `1px solid ${col}44`,
+                  }}>
+                    {diag.severity || 'UNKNOWN'}
+                  </span>
+                  {diag.llm_model && (
+                    <span style={{ fontSize: '0.75rem', color: tok.textMuted(isDark) }}>
+                      via {diag.llm_model}
+                    </span>
+                  )}
+                </div>
+                {diag.call_duration_ms && (
+                  <span style={{ fontSize: '0.75rem', color: tok.textMuted(isDark) }}>
+                    Analysis time: {(diag.call_duration_ms / 1000).toFixed(1)}s
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ══════════════════════ TAB: Analytics ══════════════════════ */}
       {activeTab === 'analytics' && (
@@ -822,7 +1297,7 @@ const Alerts: React.FC = () => {
                   {[
                     { label: 'Total Occurrences', value: totalOccurrences.toString(), sub: `in last ${analyticsData.lookback_days}d`, color: '#6366F1', icon: <BarChart3 size={17} /> },
                     { label: 'Active Now', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear' : 'Needs attention', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
-                    { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${mostFrequent.title}` : 'No faults', color: mostFrequent ? SEVERITY_CONFIG[mostFrequent.severity].color : sub, icon: <AlertTriangle size={17} /> },
+                    { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${normalizeFaultTitle(mostFrequent.fault_code, mostFrequent.title)}` : 'No faults', color: mostFrequent ? SEVERITY_CONFIG[mostFrequent.severity].color : sub, icon: <AlertTriangle size={17} /> },
                     { label: 'Avg Time to Resolve', value: fmtTTR(avgTTR), sub: resolvedFaults.length > 0 ? `across ${resolvedFaults.length} fault type${resolvedFaults.length > 1 ? 's' : ''}` : 'No resolved faults', color: '#F59E0B', icon: <Clock size={17} /> },
                   ].map(card => (
                     <div key={card.label} style={{ ...cardStyle(isDark), padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -867,7 +1342,7 @@ const Alerts: React.FC = () => {
                               {isExpanded ? <ChevronDown size={13} style={{ color: sub, flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: sub, flexShrink: 0 }} />}
                               <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: sevCfg.color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.fault_code}</code>
                             </div>
-                            <span style={{ fontSize: '0.875rem', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.title}</span>
+                            <span style={{ fontSize: '0.875rem', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{normalizeFaultTitle(f.fault_code, f.title)}</span>
                             <div>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>
                                 {sevCfg.icon} {sevCfg.label}
@@ -884,7 +1359,7 @@ const Alerts: React.FC = () => {
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
                                 <div>
                                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Reason</div>
-                                  <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{f.reason}</div>
+                                  <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{normalizeFaultReason(f.fault_code, f.reason)}</div>
                                 </div>
                                 {catEntry?.fix_guidance && (
                                   <div>
@@ -1264,14 +1739,14 @@ const Alerts: React.FC = () => {
                                     <button onClick={() => setCatalogueExpandedCode(isExp ? null : entry.fault_code)} style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                                       {isExp ? <ChevronDown size={13} style={{ color: sub, flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: sub, flexShrink: 0 }} />}
                                       <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem', fontWeight: 700, color: sevCfg.color, minWidth: 100 }}>{entry.fault_code}</code>
-                                      <span style={{ fontSize: '0.875rem', color: txt, flex: 1 }}>{entry.title}</span>
+                                      <span style={{ fontSize: '0.875rem', color: txt, flex: 1 }}>{normalizeFaultTitle(entry.fault_code, entry.title)}</span>
                                       <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>{sevCfg.label}</span>
                                     </button>
                                     {isExp && (
                                       <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                                         <div>
                                           <div style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Reason</div>
-                                          <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{entry.reason}</div>
+                                          <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{normalizeFaultReason(entry.fault_code, entry.reason)}</div>
                                         </div>
                                         {entry.fix_guidance && (
                                           <div>
