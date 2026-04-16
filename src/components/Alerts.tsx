@@ -195,6 +195,7 @@ const Alerts: React.FC = () => {
   const [diagResults, setDiagResults] = useState<DiagnoseBatchResponse | null>(null);
   const [diagPanelOpen, setDiagPanelOpen] = useState(false);
   const [selectedAlertForDiag, setSelectedAlertForDiag] = useState<string | null>(null);
+  const [diagRunStartedAt, setDiagRunStartedAt] = useState<string | null>(null);
 
   // Chart interactivity state
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'composed'>('bar');
@@ -355,6 +356,7 @@ const Alerts: React.FC = () => {
 
   const unresolvedAlerts = alerts.filter(a => !a.resolved && a.status !== 'resolved');
   const criticalCount  = alerts.filter(a => a.severity === 'critical').length;
+  const unresolvedCriticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved && a.status !== 'resolved');
   const warningCount   = alerts.filter(a => a.severity === 'warning').length;
   const infoCount      = alerts.filter(a => a.severity === 'info').length;
   const resolvedCount  = alerts.filter(a => a.resolved || a.status === 'resolved').length;
@@ -626,18 +628,18 @@ const Alerts: React.FC = () => {
                 <div style={{ fontSize: '0.8125rem', color: sub }}>Latest critical issues requiring attention</div>
               </div>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
-                {criticalCount} critical
+                {unresolvedCriticalAlerts.length} critical
               </span>
             </div>
             <div style={{ padding: '16px 20px' }}>
-              {criticalCount === 0 ? (
+              {unresolvedCriticalAlerts.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: sub }}>
                   <CheckCircle2 size={36} style={{ marginBottom: 10, color: '#22C55E', opacity: 0.6 }} />
                   <div style={{ fontWeight: 600 }}>No critical alerts — system is stable</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {alerts.filter(a => a.severity === 'critical').slice(0, 6).map(alert => (
+                  {unresolvedCriticalAlerts.slice(0, 6).map(alert => (
                     <div key={alert.id} style={{
                       display: 'flex', alignItems: 'center', gap: 12,
                       padding: '10px 14px', borderRadius: 10,
@@ -733,6 +735,7 @@ const Alerts: React.FC = () => {
                   onClick={async () => {
                     setDiagRunning(true);
                     setDiagPanelOpen(true);
+                    setDiagRunStartedAt(new Date().toISOString());
                     try {
                       const res = await apiService.diagnoseBatch();
                       setDiagResults(res);
@@ -831,6 +834,12 @@ const Alerts: React.FC = () => {
                       CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
                     };
                     const col = diag ? (sevColor[diag.severity] ?? '#6366F1') : sub;
+                    const completedThisRun = Boolean(
+                      diag
+                      && diag.timestamp
+                      && diagRunStartedAt
+                      && new Date(diag.timestamp).getTime() >= new Date(diagRunStartedAt).getTime()
+                    );
                     return (
                       <div key={r.alert_id} style={{
                         padding: '14px 16px',
@@ -851,6 +860,30 @@ const Alerts: React.FC = () => {
                             {r.triggered_at && (
                               <span style={{ fontSize: '0.7rem', color: tok.textMuted(isDark) }}>
                                 {new Date(r.triggered_at).toLocaleString()}
+                              </span>
+                            )}
+                            {r.queue_status === 'queued' && (
+                              <span style={{
+                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(99,102,241,0.12)', color: '#6366F1', border: '1px solid rgba(99,102,241,0.28)',
+                              }}>
+                                Queued
+                              </span>
+                            )}
+                            {r.queue_status !== 'queued' && completedThisRun && (
+                              <span style={{
+                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.28)',
+                              }}>
+                                Completed This Run
+                              </span>
+                            )}
+                            {r.queue_status === 'done' && !completedThisRun && (
+                              <span style={{
+                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(148,163,184,0.12)', color: '#64748B', border: '1px solid rgba(148,163,184,0.28)',
+                              }}>
+                                Historical
                               </span>
                             )}
                           </div>
