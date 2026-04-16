@@ -62,6 +62,8 @@ interface Alert {
   };
 }
 
+type AlertDiagnostic = NonNullable<NonNullable<Alert['metadata']>['diagnostic']>;
+
 // ─── Design tokens (shared with OTA page) ────────────────────────────────────
 
 const tok = {
@@ -357,6 +359,8 @@ const Alerts: React.FC = () => {
   const unresolvedAlerts = alerts.filter(a => !a.resolved && a.status !== 'resolved');
   const criticalCount  = alerts.filter(a => a.severity === 'critical').length;
   const unresolvedCriticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved && a.status !== 'resolved');
+  const unresolvedWarningAlerts = alerts.filter(a => a.severity === 'warning' && !a.resolved && a.status !== 'resolved');
+  const unresolvedInfoAlerts = alerts.filter(a => a.severity === 'info' && !a.resolved && a.status !== 'resolved');
   const warningCount   = alerts.filter(a => a.severity === 'warning').length;
   const infoCount      = alerts.filter(a => a.severity === 'info').length;
   const resolvedCount  = alerts.filter(a => a.resolved || a.status === 'resolved').length;
@@ -380,6 +384,19 @@ const Alerts: React.FC = () => {
       return 'Auto-reboot queued after consecutive RS-485 missing-data verdicts (all-registers-zero condition).';
     }
     return alert.message;
+  };
+
+  const isRetryableDiagnostic = (diagnostic?: AlertDiagnostic) => {
+    if (!diagnostic) return false;
+    const rootCause = String(diagnostic.root_cause || '');
+    const recommendation = String(diagnostic.recommendation || '');
+    const parseError = String((diagnostic as any).parse_error || '');
+    return rootCause.startsWith('LLM response unparseable:')
+      || rootCause.includes('LLM call failed')
+      || rootCause.includes('No LLM response received')
+      || recommendation.includes('Could not reach LLM service')
+      || recommendation.includes('Could not parse LLM response')
+      || Boolean(parseError);
   };
 
   if (isMobile) return <MobileAlerts />;
@@ -463,9 +480,9 @@ const Alerts: React.FC = () => {
         {[
           { label: 'Total',       value: alerts.length,    color: '#6366F1', icon: <Bell size={17} /> },
           { label: 'Unresolved',  value: unresolvedAlerts.length, color: '#EF4444', icon: <AlertCircle size={17} /> },
-          { label: 'Critical',    value: criticalCount,    color: '#DC2626', icon: <AlertCircle size={17} /> },
-          { label: 'Warnings',    value: warningCount,     color: '#F59E0B', icon: <AlertTriangle size={17} /> },
-          { label: 'Info',        value: infoCount,        color: '#3B82F6', icon: <Info size={17} /> },
+          { label: 'Critical',    value: unresolvedCriticalAlerts.length,    color: '#DC2626', icon: <AlertCircle size={17} /> },
+          { label: 'Warnings',    value: unresolvedWarningAlerts.length,     color: '#F59E0B', icon: <AlertTriangle size={17} /> },
+          { label: 'Info',        value: unresolvedInfoAlerts.length,        color: '#3B82F6', icon: <Info size={17} /> },
           { label: 'Resolved',    value: resolvedCount,    color: '#10B981', icon: <CheckCircle2 size={17} /> },
         ].map(kpi => (
           <div key={kpi.label} style={{
@@ -799,7 +816,7 @@ const Alerts: React.FC = () => {
                       <span style={{ fontWeight: 700, color: txt, fontSize: '0.9rem' }}>AI Diagnostic Results</span>
                       {diagResults && (
                         <span style={{ marginLeft: 10, fontSize: '0.75rem', color: sub }}>
-                          {diagResults.queued} analysed · {diagResults.skipped} already had results
+                          {diagResults.queued} queued · {diagResults.skipped} already available
                         </span>
                       )}
                     </div>
@@ -834,6 +851,7 @@ const Alerts: React.FC = () => {
                       CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
                     };
                     const col = diag ? (sevColor[diag.severity] ?? '#6366F1') : sub;
+                    const retryNeeded = Boolean(diag && isRetryableDiagnostic(diag));
                     const completedThisRun = Boolean(
                       diag
                       && diag.timestamp
@@ -878,7 +896,15 @@ const Alerts: React.FC = () => {
                                 Completed This Run
                               </span>
                             )}
-                            {r.queue_status === 'done' && !completedThisRun && (
+                            {r.queue_status === 'done' && retryNeeded && (
+                              <span style={{
+                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(245,158,11,0.12)', color: '#D97706', border: '1px solid rgba(245,158,11,0.28)',
+                              }}>
+                                Retry Needed
+                              </span>
+                            )}
+                            {r.queue_status === 'done' && !completedThisRun && !retryNeeded && (
                               <span style={{
                                 fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                                 background: 'rgba(148,163,184,0.12)', color: '#64748B', border: '1px solid rgba(148,163,184,0.28)',
