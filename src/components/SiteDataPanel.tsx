@@ -1243,7 +1243,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
 
         {/* ── Node: Load — bottom-right ── */}
         <NodeCard
-          label="Home Load"
+          label="Solar Load"
           icon={<Home size={28} color={isLoadActive ? loadColor : (isDark ? '#475569' : '#cbd5e1')} />}
           {...fmtPower(loadValue)}
           color={loadColor}
@@ -1274,30 +1274,6 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
             </div>
           </div>
 
-          {/* Hub Info Pill */}
-          <div style={{
-            background: isDark ? 'linear-gradient(135deg, rgba(30,41,59,0.95) 0%, #6366f110 100%)' : 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, #6366f108 100%)',
-            border: `1px solid ${isDark ? '#6366f140' : '#6366f130'}`,
-            borderRadius: 14,
-            padding: '6px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.2), 0 0 8px rgba(99,102,241,0.15)' : '0 4px 12px rgba(0,0,0,0.05), 0 0 8px rgba(99,102,241,0.15)',
-            backdropFilter: 'blur(8px)',
-          }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-              Load Power
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', lineHeight: 1 }}>
-                {loadValue.toFixed(2)}
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6366f1', opacity: 0.8 }}>
-                kW
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
