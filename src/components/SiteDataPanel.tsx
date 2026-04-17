@@ -948,7 +948,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
     grid:  { x: 320, y: 124 }, // Center of Grid info pill
     batt:  { x: 80, y: 364 }, // Attach to battery info box
     load:  { x: 320, y: 353 }, // Attach to load info box
-    hub:   { x: 200, y: 180 }  // Center of Hub circular icon
+    hub:   { x: 200, y: 210 }  // Center of Hub circular icon (calibrated without load pill)
   };
 
   // Generate a smooth S-curve (Cubic Bezier) that starts/ends horizontally
