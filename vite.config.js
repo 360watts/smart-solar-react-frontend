@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   // Example:
   //   VITE_DEV_PROXY_TARGET=http://localhost:8000 npm run dev
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'https://smart-solar-django-backend.vercel.app'
+  const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'https://api.360watts.com'
 
   return {
     plugins: [react(), tailwindcss()],
