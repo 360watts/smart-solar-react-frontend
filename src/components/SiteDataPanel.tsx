@@ -1672,7 +1672,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       >
         <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
         <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No weather accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Needs WEATHER_FCST# and WEATHER_OBS# records for the same hours. Data accumulates as forecasts are verified.</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Needs overlapping weather forecast and observation records for past hours. Data appears as recent forecasts become verifiable.</div>
       </motion.div>
     );
   }
@@ -2093,6 +2093,31 @@ const PhaseLoadTab: React.FC<{
                 />
               );
             })()}
+          </div>
+        </ChartCard>
+      )}
+
+      {loadForecast.length === 0 && (
+        <ChartCard
+          title="7-Day Load Forecast"
+          subtitle="Weighted historical average"
+          isDark={isDark}
+          isLive={false}
+          height={170}
+          accentColor="#ef4444"
+          delay={0.4}
+        >
+          <div style={{
+            height: 170,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '0.85rem',
+            padding: '0 20px',
+          }}>
+            No load forecast data yet. Forecasts appear after the backend generates the next hourly horizon.
           </div>
         </ChartCard>
       )}
