@@ -408,7 +408,8 @@ const Devices: React.FC = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
-      await apiService.bulkDownloadLogFiles(selectedDevice!.id, fileFilterFrom || undefined, fileFilterTo || undefined);
+      const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
+      await apiService.bulkDownloadLogFiles(selectedDevice!.id, toIST(fileFilterFrom), toIST(fileFilterTo));
     } catch (err) {
       console.error('Bulk download failed', err);
     } finally {
@@ -1504,11 +1505,15 @@ const Devices: React.FC = () => {
             )}
             {/* Date filter + fetch + bulk download */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-              <input type="datetime-local" value={fileFilterFrom} onChange={e => setFileFilterFrom(e.target.value)} title="From"
+              <input type="datetime-local" value={fileFilterFrom} onChange={e => setFileFilterFrom(e.target.value)} title="From (IST)"
                 style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-              <input type="datetime-local" value={fileFilterTo} onChange={e => setFileFilterTo(e.target.value)} title="To"
+              <input type="datetime-local" value={fileFilterTo} onChange={e => setFileFilterTo(e.target.value)} title="To (IST)"
                 style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
-              <button onClick={() => { setLogFilesPage(0); fetchDeviceLogFiles(selectedDevice.id, 0, fileFilterFrom || undefined, fileFilterTo || undefined); }} disabled={logFilesLoading}
+              <button onClick={() => {
+                const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
+                setLogFilesPage(0);
+                fetchDeviceLogFiles(selectedDevice.id, 0, toIST(fileFilterFrom), toIST(fileFilterTo));
+              }} disabled={logFilesLoading}
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: logFilesLoading ? 'not-allowed' : 'pointer', border: 'none', background: '#3b82f6', color: '#fff', opacity: logFilesLoading ? 0.6 : 1 }}>
                 Fetch
               </button>
@@ -1540,7 +1545,7 @@ const Devices: React.FC = () => {
                         <tr key={f.id} style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
                           <td style={{ padding: '8px 14px', color: isDark ? '#e2e8f0' : '#1e293b', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
                           <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
-                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString()}</td>
+                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                           <td style={{ padding: '8px 14px' }}>
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button onClick={() => handleViewLogFile(f.id, f.filename)}
