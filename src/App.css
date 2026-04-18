@@ -8608,3 +8608,54 @@ body.dark-mode .role-badge-user  { background: rgba(0,166,62,0.15);   color: #4a
 }
 .slave-card-btn-edit:hover   { background: rgba(99,102,241,0.1); color: #6366f1; border-color: rgba(99,102,241,0.3); }
 .slave-card-btn-delete:hover { background: rgba(239,68,68,0.1); color: var(--danger-color); border-color: rgba(239,68,68,0.3); }
+
+/* Glassmorphism Prototype Theme Tokens */
+html.dark-mode {
+  --bg: #0b1226;
+  --bg-2: #0f172a;
+  --card: #111c33;
+  --card-2: #172642;
+  --line: rgba(255,255,255,0.08);
+  --line-2: rgba(255,255,255,0.14);
+  --fg: #e6ecf5;
+  --fg-dim: #9aa7bd;
+  --fg-muted: #6a7894;
+  --green: #00a63e;
+  --green-soft: rgba(0,166,62,0.14);
+  --orange: #F07522;
+  --orange-soft: rgba(240,117,34,0.14);
+  --blue: #4ea3ff;
+  --blue-soft: rgba(78,163,255,0.14);
+  --violet: #a78bfa;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+  --display: 'Poppins', 'Inter', sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
+}
+
+html:not(.dark-mode) {
+  --bg: #f8fafc;
+  --bg-2: #ffffff;
+  --card: #ffffff;
+  --card-2: #f1f5f9;
+  --line: rgba(0,0,0,0.08);
+  --line-2: rgba(0,0,0,0.14);
+  --fg: #0f172a;
+  --fg-dim: #334155;
+  --fg-muted: #64748b;
+  --green: #00a63e;
+  --green-soft: rgba(0,166,62,0.08);
+  --orange: #F07522;
+  --orange-soft: rgba(240,117,34,0.08);
+  --blue: #3b82f6;
+  --blue-soft: rgba(59,130,246,0.08);
+  --violet: #8b5cf6;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sans: 'Inter', system-ui, sans-serif;
+  --display: 'Poppins', 'Inter', sans-serif;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
+}
