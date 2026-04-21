@@ -334,6 +334,19 @@ function startOfTodayIST(): string {
   return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
 }
 
+function getTelemetryAggregateForRange(range: string, start?: string, end?: string): '5min' | undefined {
+  if (range === '24h') return '5min';
+  if (range === 'custom' && start && end) {
+    const spanMs = new Date(end).getTime() - new Date(start).getTime();
+    if (spanMs > 0 && spanMs <= 24 * 3600 * 1000) return '5min';
+  }
+  return undefined;
+}
+
+function getHistoryResolutionLabel(range: string, start?: string, end?: string): '5 min' | '15 min' {
+  return getTelemetryAggregateForRange(range, start, end) === '5min' ? '5 min' : '15 min';
+}
+
 function fmt(ts: string, range: string): string {
   try {
     const d = new Date(ts);
@@ -343,42 +356,18 @@ function fmt(ts: string, range: string): string {
   } catch { return ts; }
 }
 
-function aggregateByPeriod(data: any[], range: string): any[] {
-  if (!data.length) return [];
-  if (range === '24h') return data.filter((_, i) => i % 2 === 0 || i === data.length - 1);
-
-  // Bucket boundaries must align to IST (UTC+5:30), not UTC.
-  // Shift each timestamp by +5h30m before extracting date/hour components so that
-  // midnight IST (18:30 UTC) is treated as a day boundary, not 18:30 IST.
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-  const isDay = range !== '7d';
-  const buckets = new Map<string, any[]>();
-  data.forEach(row => {
-    const istD = new Date(new Date(row.timestamp).getTime() + IST_OFFSET_MS);
-    const key = isDay
-      ? `${istD.getUTCFullYear()}-${istD.getUTCMonth()}-${istD.getUTCDate()}`
-      : `${istD.getUTCFullYear()}-${istD.getUTCMonth()}-${istD.getUTCDate()}-${istD.getUTCHours()}`;
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key)!.push(row);
-  });
-
-  return Array.from(buckets.values()).map(bucket => {
-    const avg = (field: string) => bucket.reduce((s, r) => s + (r[field] ?? 0), 0) / bucket.length;
-    const first = bucket[0];
-    return {
-      timestamp:            first.timestamp,
-      pv1_power_w:          avg('pv1_power_w'),
-      pv2_power_w:          avg('pv2_power_w'),
-      pv3_power_w:          avg('pv3_power_w'),
-      pv4_power_w:          avg('pv4_power_w'),
-      load_power_w:         avg('load_power_w'),
-      grid_power_w:         avg('grid_power_w'),
-      battery_soc_percent:  avg('battery_soc_percent'),
-      battery_power_w:      avg('battery_power_w'),
-      pv_today_kwh:         isDay ? Math.max(...bucket.map(r => r.pv_today_kwh ?? 0)) : first.pv_today_kwh,
-      ac_output_power_w:    avg('ac_output_power_w'),
-    };
-  });
+function inferBucketHours(rows: any[]): number {
+  if (!rows || rows.length < 2) return 0.25; // default to 15-minute buckets
+  const gaps: number[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const prev = new Date(rows[i - 1].timestamp).getTime();
+    const curr = new Date(rows[i].timestamp).getTime();
+    const diffHours = (curr - prev) / 3600000;
+    if (Number.isFinite(diffHours) && diffHours > 0) gaps.push(diffHours);
+  }
+  if (!gaps.length) return 0.25;
+  gaps.sort((a, b) => a - b);
+  return gaps[Math.floor(gaps.length / 2)];
 }
 
 function buildSparseCategoryTicks<T>(data: T[], valueSelector: (row: T) => string, maxTicks = 8): string[] {
@@ -2276,21 +2265,26 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
   const [weatherSubTab, setWeatherSubTab] = useState<'current' | 'accuracy'>('current');
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
+  const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
 
   // ── Fetch latest telemetry only (silent, no loading flash) ──────────────────
   const fetchLatestTelemetry = useCallback(async () => {
     try {
       const now = new Date();
-      let telemetryParams: any = {};
-      if (dateRange === '24h') telemetryParams = { start_date: startOfTodayIST(), end_date: now.toISOString() };
-      else if (dateRange === 'custom' && debouncedStart && debouncedEnd) telemetryParams = { start_date: new Date(debouncedStart).toISOString(), end_date: new Date(debouncedEnd).toISOString() };
-      else if (dateRange === '7d') telemetryParams = { days: 7 };
-      else if (dateRange === '30d') telemetryParams = { days: 30 };
+      // Always probe the latest raw points so Overview freshness is not blocked
+      // by 5/15-minute CAGG materialization lag.
+      const telemetryParams: any = {
+        start_date: new Date(now.getTime() - 20 * 60 * 1000).toISOString(),
+        end_date: now.toISOString(),
+        aggregate: 'none',
+      };
 
       const tel = await apiService.getSiteTelemetry(siteId, telemetryParams);
       if (Array.isArray(tel) && tel.length > 0) {
+        const latest = tel[tel.length - 1];
+        setLatestLiveTelemetry(latest ?? null);
         setTelemetry(prev => {
-          // Merge: keep existing, append any new readings by timestamp
+          // Merge: keep existing, append any new raw readings by timestamp.
           const tsSet = new Set(prev.map((r: any) => r.timestamp));
           const newer = tel.filter((r: any) => !tsSet.has(r.timestamp));
           if (newer.length === 0) return prev; // nothing new
@@ -2334,7 +2328,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
       let telemetryRows: any[] = [];
       if (dateRange === '24h') {
-        const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfTodayIST(), end_date: now.toISOString() });
+        const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfTodayIST(), end_date: now.toISOString(), aggregate: '5min' });
         telemetryRows = Array.isArray(rows) ? rows : [];
       } else {
         let rangeStart: Date;
@@ -2348,11 +2342,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
           rangeStart = new Date(now.getTime() - 24 * 3600 * 1000);
         }
         const windows = buildDayWindows(rangeStart, rangeEnd);
+        const aggregate = getTelemetryAggregateForRange(dateRange, debouncedStart, debouncedEnd);
         // Fetch in parallel batches of 3 to balance speed vs backend load
         for (let i = 0; i < windows.length; i += 3) {
           const batch = windows.slice(i, i + 3);
           const results = await Promise.allSettled(
-            batch.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date }))
+            batch.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date, aggregate }))
           );
           for (const r of results) {
             if (r.status === 'fulfilled' && Array.isArray(r.value)) telemetryRows.push(...r.value);
@@ -2362,6 +2357,30 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       }
 
       const [fcst, wth] = await forecastWeatherPromise;
+
+      // Pull latest raw rows to drive Overview freshness and Energy Flow block.
+      let latestRawRows: any[] = [];
+      try {
+        const raw = await apiService.getSiteTelemetry(siteId, {
+          start_date: new Date(now.getTime() - 20 * 60 * 1000).toISOString(),
+          end_date: now.toISOString(),
+          aggregate: 'none',
+        });
+        latestRawRows = Array.isArray(raw) ? raw : [];
+      } catch {
+        latestRawRows = [];
+      }
+
+      if (latestRawRows.length > 0) {
+        const tsSet = new Set(telemetryRows.map((r: any) => r.timestamp));
+        const newerRaw = latestRawRows.filter((r: any) => !tsSet.has(r.timestamp));
+        if (newerRaw.length > 0) {
+          telemetryRows = [...telemetryRows, ...newerRaw].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
+        }
+        setLatestLiveTelemetry(latestRawRows[latestRawRows.length - 1] ?? null);
+      } else {
+        setLatestLiveTelemetry(null);
+      }
 
       setTelemetry(telemetryRows);
       setForecast(Array.isArray(fcst) ? fcst : []);
@@ -2406,6 +2425,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       rangeStart = new Date(debouncedStart);
       rangeEnd   = new Date(debouncedEnd);
     }
+    if (dateRange === 'custom' && rangeStart && (rangeEnd.getTime() - rangeStart.getTime()) <= 24 * 3600 * 1000) {
+      setHistoryError(null);
+      return;
+    }
     if (!rangeStart) { setHistoryError(null); return; }
 
     setHistoryError(null);
@@ -2428,7 +2451,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     // Fetch each window sequentially — keeps each request well under the 10s timeout
     for (const params of days) {
       try {
-        const hist = await apiService.getSiteHistory(siteId, params);
+        const hist = await apiService.getSiteHistory(siteId, { ...params, aggregate: '15min' });
         if (Array.isArray(hist) && hist.length > 0) {
           setTelemetry(prev => {
             const tsSet = new Set(prev.map((r: any) => r.timestamp));
@@ -2488,7 +2511,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId, phaseLoadHours]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
-  const latest = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
+  const latest = latestLiveTelemetry ?? (telemetry.length > 0 ? telemetry[telemetry.length - 1] : null);
 
   const pvKw = latest ? (
     (Number(latest.pv1_power_w ?? 0) + Number(latest.pv2_power_w ?? 0) + Number(latest.pv3_power_w ?? 0) + Number(latest.pv4_power_w ?? 0)) / 1000
@@ -2612,8 +2635,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   // ── Chart data ──────────────────────────────────────────────────────────────
   const historyData = useMemo(() => {
-    const aggregated = aggregateByPeriod(telemetry, dateRange);
-    return aggregated.map(row => {
+    return telemetry.map(row => {
       const d = new Date(row.timestamp);
       const timeLabel = dateRange === '7d'
         ? `${d.toLocaleDateString([], { weekday: 'short', timeZone: IST })} || ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })}`
@@ -2632,7 +2654,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const historyStatsVisible = useMemo(() => {
     const data = historyData;
     if (!data.length) return null;
-    const intervalH = dateRange === '24h' ? 0.5 : dateRange === '7d' ? 1 : 24;
+    const intervalH = inferBucketHours(telemetry);
     const pvs     = data.map(d => d['PV (kW)'] as number).filter(v => v != null);
     const loads   = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
     const grids   = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
@@ -2651,7 +2673,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     const socMax = socs.length ? Math.max(...socs) : null;
     const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
     return { pvTotal, pvPeak, loadTotal, loadPeak, loadAvg, invOutPeak, invOutAvg, gridImport, gridExport, socMin, socMax, socAvg };
-  }, [historyData, dateRange]);
+  }, [historyData, telemetry]);
 
   // ── Prediction vs Actual ────────────────────────────────────────────────────
   const vsActualData = useMemo(() => {
@@ -2755,6 +2777,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [forecastData, forecastWindow]);
   
   const forecastTickValues = forecastTickObjects?.map(d => d.time);
+
+  const historyResolutionLabel = useMemo(
+    () => getHistoryResolutionLabel(dateRange, debouncedStart, debouncedEnd),
+    [dateRange, debouncedStart, debouncedEnd]
+  );
 
   const forecastGeneratedAt = useMemo<Date | null>(() => {
     if (forecast.length === 0) return null;
@@ -3680,12 +3707,38 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
                 <ChartCard
                   title="Power Flow"
-                  subtitle={`${historyData.length} data points · drag to zoom`}
+                  subtitle={`${historyData.length} data points · ${historyResolutionLabel} buckets · drag to zoom`}
                   isDark={isDark}
                   isLive={dateRange === '24h'}
                   isLoading={loading && historyData.length === 0}
                   height={360}
                   delay={0.1}
+                  headerRight={
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '5px 10px',
+                        borderRadius: 999,
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        fontFamily: 'Poppins, sans-serif',
+                        color: historyResolutionLabel === '5 min' ? '#00a63e' : (isDark ? '#cbd5e1' : '#475569'),
+                        background: historyResolutionLabel === '5 min'
+                          ? (isDark ? 'rgba(0,166,62,0.14)' : 'rgba(0,166,62,0.08)')
+                          : (isDark ? 'rgba(148,163,184,0.12)' : 'rgba(71,85,105,0.08)'),
+                        border: `1px solid ${historyResolutionLabel === '5 min'
+                          ? 'rgba(0,166,62,0.24)'
+                          : (isDark ? 'rgba(148,163,184,0.18)' : 'rgba(71,85,105,0.14)')}`,
+                      }}
+                      aria-label={`History chart aggregation: ${historyResolutionLabel}`}
+                    >
+                      {historyResolutionLabel}
+                    </span>
+                  }
                 >
                   {historyData.length === 0 ? (
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>No history points for selected range.</p>

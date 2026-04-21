@@ -435,11 +435,12 @@ class ApiService {
   }
 
   // DynamoDB site data
-  async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number }): Promise<any[]> {
+  async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number; aggregate?: 'none' | '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams();
     if (params?.start_date) query.append('start_date', params.start_date);
     if (params?.end_date) query.append('end_date', params.end_date);
     if (params?.days) query.append('days', params.days.toString());
+    if (params?.aggregate) query.append('aggregate', params.aggregate);
     const url = `/sites/${siteId}/telemetry/${query.toString() ? '?' + query.toString() : ''}`;
     // 55-second TTL: slightly under the 60-second auto-refresh interval so the
     // next poll always fetches fresh data rather than hitting a same-age cache.
@@ -456,8 +457,9 @@ class ApiService {
    * S3 path: telemetry_csv/{site_id}/{YYYY}/{MM}/{DD}/{HH}/data.csv
    * Returns same shape as getSiteTelemetry.
    */
-  async getSiteHistory(siteId: string, params: { start_date: string; end_date: string }): Promise<any[]> {
+  async getSiteHistory(siteId: string, params: { start_date: string; end_date: string; aggregate?: '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams({ start_date: params.start_date, end_date: params.end_date });
+    if (params.aggregate) query.append('aggregate', params.aggregate);
     // 5-minute TTL: S3 history is immutable for past data, very safe to cache
     const cacheKey = `history_${siteId}_${query.toString()}`;
     const cached = cacheService.get(cacheKey);
