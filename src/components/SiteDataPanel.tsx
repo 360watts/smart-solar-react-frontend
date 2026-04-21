@@ -1888,14 +1888,35 @@ const PhaseLoadTab: React.FC<{
 }> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange }) => {
   const chartData = useMemo(() => {
     if (!phaseLoad.length) return [];
-    return phaseLoad.map((row: any) => {
-      const d = new Date(row.hour || row.timestamp);
+    const bucketMap = new Map<string, { ts: Date; l1: number; l2: number; l3: number; total: number; n: number }>();
+
+    for (const row of phaseLoad) {
+      const baseTs = new Date(row.hour || row.timestamp);
+      if (Number.isNaN(baseTs.getTime())) continue;
+      // Snap to 5-minute buckets for a consistent operational view.
+      const bucketMs = Math.floor(baseTs.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000);
+      const bucketTs = new Date(bucketMs);
+      const key = bucketTs.toISOString();
+      if (!bucketMap.has(key)) {
+        bucketMap.set(key, { ts: bucketTs, l1: 0, l2: 0, l3: 0, total: 0, n: 0 });
+      }
+      const b = bucketMap.get(key)!;
+      b.l1 += Number(row.load_l1_kw ?? 0);
+      b.l2 += Number(row.load_l2_kw ?? 0);
+      b.l3 += Number(row.load_l3_kw ?? 0);
+      b.total += Number(row.load_total_kw ?? 0);
+      b.n += 1;
+    }
+
+    return Array.from(bucketMap.values())
+      .sort((a, b) => a.ts.getTime() - b.ts.getTime())
+      .map((b: any) => {
       return {
-        time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        L1: row.load_l1_kw != null ? +Number(row.load_l1_kw).toFixed(3) : null,
-        L2: row.load_l2_kw != null ? +Number(row.load_l2_kw).toFixed(3) : null,
-        L3: row.load_l3_kw != null ? +Number(row.load_l3_kw).toFixed(3) : null,
-        total: row.load_total_kw != null ? +Number(row.load_total_kw).toFixed(3) : null,
+        time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+        L1: +Number(b.l1 / (b.n || 1)).toFixed(3),
+        L2: +Number(b.l2 / (b.n || 1)).toFixed(3),
+        L3: +Number(b.l3 / (b.n || 1)).toFixed(3),
+        total: +Number(b.total / (b.n || 1)).toFixed(3),
       };
     });
   }, [phaseLoad]);
@@ -1975,8 +1996,8 @@ const PhaseLoadTab: React.FC<{
 
       {/* ── Stacked area chart with glow strokes ── */}
       <ChartCard
-        title="Hourly Load Distribution"
-        subtitle={`L1 + L2 + L3 stacked · last ${hours}h`}
+        title="Phase Load Distribution (5 min)"
+        subtitle={`L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h`}
         isDark={isDark}
         isLive={true}
         height={chartData.length === 0 ? 100 : 300}
@@ -2283,13 +2304,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       if (Array.isArray(tel) && tel.length > 0) {
         const latest = tel[tel.length - 1];
         setLatestLiveTelemetry(latest ?? null);
-        setTelemetry(prev => {
-          // Merge: keep existing, append any new raw readings by timestamp.
-          const tsSet = new Set(prev.map((r: any) => r.timestamp));
-          const newer = tel.filter((r: any) => !tsSet.has(r.timestamp));
-          if (newer.length === 0) return prev; // nothing new
-          return [...prev, ...newer].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
-        });
         setLastUpdated(new Date());
         setSecondsSinceUpdate(0);
       }
@@ -2372,11 +2386,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       }
 
       if (latestRawRows.length > 0) {
-        const tsSet = new Set(telemetryRows.map((r: any) => r.timestamp));
-        const newerRaw = latestRawRows.filter((r: any) => !tsSet.has(r.timestamp));
-        if (newerRaw.length > 0) {
-          telemetryRows = [...telemetryRows, ...newerRaw].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
-        }
         setLatestLiveTelemetry(latestRawRows[latestRawRows.length - 1] ?? null);
       } else {
         setLatestLiveTelemetry(null);
@@ -2391,7 +2400,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
       // Analytics — fire-and-forget (non-blocking, won't break on error)
       Promise.allSettled([
-        apiService.getPhaseLoad(siteId, phaseLoadHours, 'hourly'),
+        apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw'),
         apiService.getForecastAccuracy(siteId, 30),
         apiService.getLoadForecast(siteId, 7),
         apiService.getWeatherAccuracy(siteId, 7),
@@ -2505,7 +2514,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   // Re-fetch phase load when hours selector changes
   useEffect(() => {
-    apiService.getPhaseLoad(siteId, phaseLoadHours, 'hourly')
+    apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw')
       .then(data => setPhaseLoad(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, [siteId, phaseLoadHours]);
