@@ -2054,7 +2054,12 @@ const PhaseLoadTab: React.FC<{
       {loadForecast.length > 0 && (
         <ChartCard
           title="7-Day Load Forecast"
-          subtitle="Weighted historical average"
+          subtitle={(() => {
+            const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
+            if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
+            if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
+            return firstMethod;
+          })()}
           isDark={isDark}
           isLive={false}
           height={230}
@@ -2110,7 +2115,7 @@ const PhaseLoadTab: React.FC<{
       {loadForecast.length === 0 && (
         <ChartCard
           title="7-Day Load Forecast"
-          subtitle="Weighted historical average"
+          subtitle="Predictive load forecasting"
           isDark={isDark}
           isLive={false}
           height={170}
@@ -2127,7 +2132,7 @@ const PhaseLoadTab: React.FC<{
             fontSize: '0.85rem',
             padding: '0 20px',
           }}>
-            No load forecast data yet. Forecasts appear after the backend generates the next hourly horizon.
+            No load forecast data yet. Forecasts generated every 30 minutes by the backend.
           </div>
         </ChartCard>
       )}
