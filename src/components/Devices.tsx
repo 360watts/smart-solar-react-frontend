@@ -92,7 +92,6 @@ interface SolarSite {
   timezone: string;
   is_active: boolean;
   deye_station_id?: number | null;
-  logger_serial?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -1666,7 +1665,6 @@ const Devices: React.FC = () => {
                     timezone: siteForm.timezone.trim(),
                     is_active: siteForm.is_active,
                     deye_station_id: siteForm.deye_station_id !== '' ? parseInt(siteForm.deye_station_id, 10) : null,
-                    logger_serial: siteForm.logger_serial.trim() !== '' ? siteForm.logger_serial.trim() : null,
                   };
 
                   let updated;
@@ -1952,21 +1950,8 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Logger Serial</label>
-                      <input
-                        type="text"
-                        value={siteForm.logger_serial}
-                        onChange={e => setSiteForm({ ...siteForm, logger_serial: e.target.value })}
-                        placeholder="e.g. 2509273375"
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
-                          fontSize: '0.875rem',
-                        }}
-                      />
-                      <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#9ca3af' }}>
-                        SolarmanV5/LSW3 serial printed on the dongle.
+                      <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#9ca3af', fontStyle: 'italic' }}>
+                        Now set on the Device (Gateway Settings tab in Site Detail).
                       </span>
                     </div>
                   </div>

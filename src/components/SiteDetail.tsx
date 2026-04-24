@@ -131,7 +131,7 @@ export default function SiteDetail() {
       setOwnerUserId(data.owner_user != null ? String(data.owner_user) : '');
       setLifecycleTo(data.site_status || 'active');
       setDeyeStationId(data.deye_station_id != null ? String(data.deye_station_id) : '');
-      setLoggerSerial(data.logger_serial ?? '');
+      setLoggerSerial(data.gateway_device?.logger_serial ?? '');
     } catch (e) {
       setSite(null);
       setError(e instanceof Error ? e.message : 'Failed to load site');
@@ -271,7 +271,7 @@ export default function SiteDetail() {
 
   const resetDeyeSettingsForm = () => {
     setDeyeStationId(site?.deye_station_id != null ? String(site.deye_station_id) : '');
-    setLoggerSerial(site?.logger_serial ?? '');
+    setLoggerSerial(site?.gateway_device?.logger_serial ?? '');
   };
 
   const saveDeyeSettings = async () => {
@@ -283,13 +283,21 @@ export default function SiteDetail() {
         throw new Error('Invalid Deye Station ID');
       }
 
-      const payload: Record<string, unknown> = {
+      // Deye Station ID lives on the site
+      const sitePayload: Record<string, unknown> = {
         deye_station_id: parsedStation,
-        logger_serial: loggerSerial.trim() === '' ? null : loggerSerial.trim(),
       };
-
-      const data = await apiService.patchSiteStaff(siteId, payload);
+      const data = await apiService.patchSiteStaff(siteId, sitePayload);
       setSite(data);
+
+      // Logger Serial lives on the device (gateway)
+      if (gw?.device_id) {
+        const devicePayload: Record<string, unknown> = {
+          logger_serial: loggerSerial.trim() === '' ? null : loggerSerial.trim(),
+        };
+        await apiService.patchDevice(gw.device_id, devicePayload);
+      }
+
       setEditingDeyeSettings(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
@@ -643,7 +651,7 @@ export default function SiteDetail() {
                         />
                       </div>
                       <div>
-                        <label style={labelStyle}>Logger Serial</label>
+                        <label style={labelStyle}>Logger Serial (on Device)</label>
                         <input
                           value={loggerSerial}
                           onChange={e => setLoggerSerial(e.target.value)}

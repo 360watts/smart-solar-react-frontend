@@ -174,7 +174,8 @@ export default function CommissioningWizard() {
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
       if (timezoneValue.trim()) payload.timezone = timezoneValue.trim();
       if (logger !== undefined) payload.deye_station_id = logger;
-      if (dataLogger !== undefined) payload.logger_serial = dataLogger;
+      // logger_serial is now set on Device, not Site — skip it during site creation
+      // It will be set when the device is attached to the site
 
       const res = await apiService.createSiteStaff(payload);
       
