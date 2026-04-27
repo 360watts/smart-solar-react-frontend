@@ -1483,6 +1483,16 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
   const summary = accuracy.overall ?? accuracy.summary ?? {};
   const hourly: any[] = accuracy.hourly ?? [];
 
+  // Split hourly into daytime / nighttime buckets (IST = UTC+5, hour_local ≈ (hour_utc+5)%24)
+  const daytimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local >= 6 && local <= 18; });
+  const nighttimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local < 6 || local > 18; });
+  const avgPct = (arr: any[]) => {
+    const vals = arr.map((h: any) => h.mean_error_pct).filter((v: any) => v != null);
+    return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
+  };
+  const dayErrorPct  = avgPct(daytimeHourly);
+  const nightErrorPct = avgPct(nighttimeHourly);
+
   // Color each bar by MAE severity
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
   const overallMaeKw = summary.mae_kw ?? maxMae;
@@ -1501,17 +1511,24 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
     };
   });
 
+  const daysComputed = summary.days_computed ?? '—';
   const summaryCards = [
-    { label: 'MAE', value: summary.mae_kw != null ? `${Number(summary.mae_kw).toFixed(2)} kW` : '—', accent: '#00a63e', sub: 'Mean absolute error' },
-    { label: 'RMSE', value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(2)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
-    { label: 'Avg Error', value: (summary.mean_abs_error_pct ?? summary.avg_error_pct) != null ? `${Number(summary.mean_abs_error_pct ?? summary.avg_error_pct).toFixed(1)}%` : '—', accent: '#f59e0b', sub: 'Of P50 forecast' },
-    { label: 'Days', value: String(summary.days_computed ?? '—'), accent: '#8b5cf6', sub: 'Days computed' },
+    { label: 'MAE',         value: summary.mae_kw  != null ? `${Number(summary.mae_kw).toFixed(2)} kW`  : '—', accent: '#00a63e', sub: 'Mean absolute error' },
+    { label: 'RMSE',        value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(2)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
+    { label: 'Day Error',   value: dayErrorPct   != null ? `${Number(dayErrorPct).toFixed(1)}%`   : '—', accent: '#f59e0b', sub: 'Avg % error (06–18 IST)' },
+    { label: 'Night Error', value: nightErrorPct != null ? `${Number(nightErrorPct).toFixed(1)}%` : '—', accent: '#8b5cf6', sub: 'Avg % error (18–06 IST)' },
+    { label: 'Coverage',    value: summary.coverage_pct != null ? `${Number(summary.coverage_pct).toFixed(1)}%` : '—', accent: '#06b6d4', sub: 'Actual within P10–P90' },
   ];
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      {/* Summary metric cards — premium animated with radial glow */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14, marginBottom: 20 }}>
+      {/* Summary metric cards */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, opacity: 0.45, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#e2e8f0' : '#475569' }}>
+          Last {daysComputed} days
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 20 }}>
         {summaryCards.map((c, idx) => (
           <motion.div
             key={c.label}
