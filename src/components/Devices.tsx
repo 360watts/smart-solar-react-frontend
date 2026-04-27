@@ -1015,7 +1015,10 @@ const Devices: React.FC = () => {
 
         {/* ── Device Alerts Panel ── */}
         {(() => {
-          const selectedAlerts = activeAlertsByDevice.get(selectedDevice.device_serial) || [];
+          const selectedAlerts =
+            activeAlertsByDevice.get(String(selectedDevice.id)) ||
+            activeAlertsByDevice.get(selectedDevice.device_serial) ||
+            [];
           const critical = selectedAlerts.filter(a => a.severity === 'critical').length;
           const warning = selectedAlerts.filter(a => a.severity === 'warning').length;
           const info = selectedAlerts.filter(a => a.severity === 'info').length;
