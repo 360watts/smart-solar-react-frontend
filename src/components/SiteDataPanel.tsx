@@ -30,6 +30,58 @@ function makeGradient(ctx: CanvasRenderingContext2D, area: ChartArea, color: str
   gradient.addColorStop(1, color + Math.round(bottomOpacity * 255).toString(16).padStart(2, '0'));
   return gradient;
 }
+
+function createDragZoomPlugins(onZoomComplete: () => void) {
+  return {
+    zoom: {
+      wheel: { enabled: true, speed: 0.08 },
+      drag: {
+        enabled: true,
+        backgroundColor: 'rgba(0,166,62,0.14)',
+        borderColor: 'rgba(0,166,62,0.7)',
+        borderWidth: 1,
+      },
+      pinch: { enabled: true },
+      mode: 'x' as const,
+      onZoomComplete,
+    },
+    pan: { enabled: false, mode: 'x' as const },
+  };
+}
+
+function useChartZoomState() {
+  const chartRef = useRef<any>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const onZoomComplete = useRef(() => setIsZoomed(true));
+
+  const resetZoom = useCallback(() => {
+    chartRef.current?.resetZoom();
+    setIsZoomed(false);
+  }, []);
+
+  return { chartRef, isZoomed, onZoomComplete, resetZoom };
+}
+
+const zoomResetButtonStyle: React.CSSProperties = {
+  border: '1px solid rgba(0, 166, 62, 0.25)',
+  background: 'transparent',
+  color: '#00a63e',
+  borderRadius: 8,
+  padding: '6px 12px',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontFamily: 'Poppins, sans-serif',
+};
+
+const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void }> = ({ visible, onClick }) => {
+  if (!visible) return null;
+  return (
+    <button onClick={onClick} style={zoomResetButtonStyle}>
+      Reset Zoom
+    </button>
+  );
+};
 import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap, Layers, BarChart2, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
@@ -1466,22 +1518,10 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
     boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
   };
 
-  if (!accuracy || (!accuracy.hourly?.length && !accuracy.daily?.length)) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}
-      >
-        <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.65, maxWidth: 340, margin: '0 auto' }}>Accuracy scores are computed nightly. Data will appear tomorrow after the first overnight run.</div>
-      </motion.div>
-    );
-  }
-
-  const summary = accuracy.overall ?? accuracy.summary ?? {};
-  const hourly: any[] = accuracy.hourly ?? [];
+  const summary = accuracy?.overall ?? accuracy?.summary ?? {};
+  const hourly: any[] = accuracy?.hourly ?? [];
+  const maeZoom = useChartZoomState();
+  const errorPctZoom = useChartZoomState();
 
   // Split hourly into daytime / nighttime buckets (IST = UTC+5, hour_local ≈ (hour_utc+5)%24)
   const daytimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local >= 6 && local <= 18; });
@@ -1496,7 +1536,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
   // Color each bar by MAE severity
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
   const overallMaeKw = summary.mae_kw ?? maxMae;
-  const chartData = hourly.map((h: any) => {
+  const chartData = useMemo(() => hourly.map((h: any) => {
     const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(2) : null;
     const ratio = mae != null ? mae / maxMae : 0;
     const barColor = ratio < 0.33 ? '#00a63e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
@@ -1509,7 +1549,53 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
       hour: `${String(h.hour_utc).padStart(2, '0')}:00`,
       mae, barColor, errorPct,
     };
-  });
+  }), [hourly, maxMae, overallMaeKw]);
+
+  const maeChartOptions = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` },
+      },
+      zoom: createDragZoomPlugins(() => maeZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const errorPctChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
+      },
+      zoom: createDragZoomPlugins(() => errorPctZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
 
   const daysComputed = summary.days_computed ?? '—';
   const summaryCards = [
@@ -1563,23 +1649,25 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
       {/* Hourly MAE bar chart — color-coded by severity */}
       <ChartCard
         title="MAE by Hour of Day (UTC)"
-        subtitle="Color: green = low error, red = high error"
+        subtitle="Color: green = low error, red = high error · drag to zoom"
         isDark={isDark}
         height={220}
         accentColor="#00a63e"
         delay={0.3}
         headerRight={
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {[['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
               <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
               </span>
             ))}
+            <ZoomResetButton visible={maeZoom.isZoomed} onClick={maeZoom.resetZoom} />
           </div>
         }
       >
         <div style={{ height: 220 }}>
           <CJBar
+            ref={maeZoom.chartRef}
             data={{
               labels: chartData.map((d: any) => d.hour),
               datasets: [{
@@ -1591,38 +1679,23 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                 borderRadius: 5,
               }],
             }}
-            options={{
-              responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-                  titleColor: isDark ? '#f1f5f9' : '#111827',
-                  bodyColor: isDark ? '#94a3b8' : '#374151',
-                  borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
-                  bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                  callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` },
-                },
-              },
-              scales: {
-                x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-              },
-            } as ChartOptions<'bar'>}
+            options={maeChartOptions}
           />
         </div>
       </ChartCard>
 
       <ChartCard
         title="Error % by Hour of Day"
-        subtitle="Relative forecast error across hours"
+        subtitle="Relative forecast error across hours · drag to zoom"
         isDark={isDark}
         height={180}
         accentColor="#3b82f6"
         delay={0.4}
+        headerRight={<ZoomResetButton visible={errorPctZoom.isZoomed} onClick={errorPctZoom.resetZoom} />}
       >
         <div style={{ height: 180 }}>
           <CJLine
+            ref={errorPctZoom.chartRef}
             data={{
               labels: chartData.map((d: any) => d.hour),
               datasets: [{
@@ -1633,24 +1706,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                 backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#3b82f620'; return makeGradient(chart.ctx, chart.chartArea, '#3b82f6', 0.40, 0.02); },
               }],
             }}
-            options={{
-              responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-                  titleColor: isDark ? '#f1f5f9' : '#111827',
-                  bodyColor: isDark ? '#94a3b8' : '#374151',
-                  borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
-                  bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                  callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
-                },
-              },
-              scales: {
-                x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-              },
-            } as ChartOptions<'line'>}
+            options={errorPctChartOptions}
           />
         </div>
       </ChartCard>
@@ -1663,6 +1719,10 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
 const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
   const records: any[] = accuracy?.records ?? [];
   const summary = accuracy?.summary ?? {};
+  const maeZoom = useChartZoomState();
+  const errorPctZoom = useChartZoomState();
+  const ghiErrorZoom = useChartZoomState();
+  const tempErrorZoom = useChartZoomState();
 
   if (!records.length) {
     return (
@@ -1683,12 +1743,80 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
     );
   }
 
-  const chartData = records.slice(-48).map((d: any) => ({
+  const chartData = useMemo(() => records.slice(-48).map((d: any) => ({
     time: new Date(d.timestamp).toLocaleTimeString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }),
     ghiErr: d.ghi_error_wm2 != null ? +Math.abs(Number(d.ghi_error_wm2)).toFixed(1) : null,
     tempErr: d.temp_error_c != null ? +Math.abs(Number(d.temp_error_c)).toFixed(2) : null,
     cloudErr: d.cloud_error_pct != null ? +Math.abs(Number(d.cloud_error_pct)).toFixed(1) : null,
-  }));
+  })), [records]);
+
+  const ghiChartOptions = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'bar'>) => ` ${Number(item.parsed.y).toFixed(1)} W/m²` },
+      },
+      zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const panelBg: React.CSSProperties = {
+    padding: 20, borderRadius: 20,
+    background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+  };
+
+  const tempChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'line'>) => ` ${Number(item.parsed.y).toFixed(2)}°C` },
+      },
+      zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  if (!accuracy || (!accuracy.hourly?.length && !accuracy.daily?.length)) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}
+      >
+        <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
+        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.65, maxWidth: 340, margin: '0 auto' }}>Accuracy scores are computed nightly. Data will appear tomorrow after the first overnight run.</div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -1711,14 +1839,16 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
 
       <ChartCard
         title="GHI Error — Forecast vs Observed"
-        subtitle="Solar irradiance forecast accuracy (W/m²)"
+        subtitle="Solar irradiance forecast accuracy (W/m²) · drag to zoom"
         isDark={isDark}
         height={200}
         accentColor="#eab308"
         delay={0.2}
+        headerRight={<ZoomResetButton visible={ghiErrorZoom.isZoomed} onClick={ghiErrorZoom.resetZoom} />}
       >
         <div style={{ width: '100%', height: 200 }}>
           <CJBar
+            ref={ghiErrorZoom.chartRef}
             data={{
               labels: chartData.map((d: any) => d.time),
               datasets: [{
@@ -1730,38 +1860,23 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
                 borderRadius: 4,
               }],
             }}
-            options={{
-              responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
-                  titleColor: isDark ? '#f1f5f9' : '#111827',
-                  bodyColor: isDark ? '#94a3b8' : '#374151',
-                  borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
-                  bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                  callbacks: { label: (item: TooltipItem<'bar'>) => ` ${Number(item.parsed.y).toFixed(1)} W/m²` },
-                },
-              },
-              scales: {
-                x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-                y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-              },
-            } as ChartOptions<'bar'>}
+            options={ghiChartOptions}
           />
         </div>
       </ChartCard>
 
       <ChartCard
         title="Temperature Error — Forecast vs Observed"
-        subtitle="Absolute temperature error (°C)"
+        subtitle="Absolute temperature error (°C) · drag to zoom"
         isDark={isDark}
         height={180}
         accentColor="#ef4444"
         delay={0.3}
+        headerRight={<ZoomResetButton visible={tempErrorZoom.isZoomed} onClick={tempErrorZoom.resetZoom} />}
       >
         <div style={{ width: '100%', height: 180 }}>
           <CJLine
+            ref={tempErrorZoom.chartRef}
             data={{
               labels: chartData.map((d: any) => d.time),
               datasets: [{
@@ -1772,24 +1887,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
                 backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#ef444420'; return makeGradient(chart.ctx, chart.chartArea, '#ef4444', 0.20, 0.01); },
               }],
             }}
-            options={{
-              responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
-                  titleColor: isDark ? '#f1f5f9' : '#111827',
-                  bodyColor: isDark ? '#94a3b8' : '#374151',
-                  borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
-                  bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                  callbacks: { label: (item: TooltipItem<'line'>) => ` ${Number(item.parsed.y).toFixed(2)}°C` },
-                },
-              },
-              scales: {
-                x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-                y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-              },
-            } as ChartOptions<'line'>}
+            options={tempChartOptions}
           />
         </div>
       </ChartCard>
@@ -1906,9 +2004,9 @@ const PhaseLoadTab: React.FC<{
 }> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange, forecastAccuracy }) => {
   // Allow switching between forecast chart and accuracy view
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
-  const loadForecastChartRef = useRef<any>(null);
-  const [loadForecastIsZoomed, setLoadForecastIsZoomed] = useState(false);
-  const onLoadForecastZoom = useRef(() => setLoadForecastIsZoomed(true));
+  const [showTotalLoad, setShowTotalLoad] = useState(false);
+  const phaseLoadChartZoom = useChartZoomState();
+  const loadForecastChartZoom = useChartZoomState();
   const chartData = useMemo(() => {
     if (!phaseLoad.length) return [];
     const bucketMap = new Map<string, { ts: Date; l1: number; l2: number; l3: number; total: number; n: number }>();
@@ -1944,6 +2042,22 @@ const PhaseLoadTab: React.FC<{
     });
   }, [phaseLoad]);
 
+  const loadForecastChartData = useMemo(() => {
+    return loadForecast.map((r: any) => {
+      const d = new Date(r.forecast_for);
+      return {
+        time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+        load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
+        p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
+        p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
+      };
+    });
+  }, [loadForecast]);
+
+  useEffect(() => {
+    phaseLoadChartZoom.resetZoom();
+  }, [hours]);
+
   // Per-phase load power — use dedicated load-side registers only.
   // Preserve legitimate zero readings so a real 0 W phase does not fall through to unrelated grid values.
   const totalLoadW: number | null = latest?.load_power_w ?? null;
@@ -1967,13 +2081,49 @@ const PhaseLoadTab: React.FC<{
   // Show cards whenever we have any live telemetry
   const hasLive = latest != null && latest.load_power_w !== undefined;
 
-  const panelBg: React.CSSProperties = {
-    padding: 20, borderRadius: 20,
-    background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
-  };
+  
+
+  const phaseLoadChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
+      },
+      zoom: createDragZoomPlugins(() => phaseLoadChartZoom.onZoomComplete.current()),
+    } as any,
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(1) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
+      },
+      zoom: createDragZoomPlugins(() => loadForecastChartZoom.onZoomComplete.current()),
+    } as any,
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
@@ -2046,12 +2196,33 @@ const PhaseLoadTab: React.FC<{
       {/* ── Stacked area chart with glow strokes ── */}
       <ChartCard
         title="Phase Load Distribution (5 min)"
-        subtitle={`L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h`}
+        subtitle={`L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h · drag to zoom`}
         isDark={isDark}
         isLive={true}
         height={chartData.length === 0 ? 100 : 300}
         accentColor="#3b82f6"
         delay={0.3}
+        headerRight={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => setShowTotalLoad(prev => !prev)}
+              style={{
+                border: '1px solid rgba(59,130,246,0.25)',
+                background: showTotalLoad ? 'rgba(59,130,246,0.14)' : 'transparent',
+                color: showTotalLoad ? '#3b82f6' : 'var(--text-muted)',
+                borderRadius: 8,
+                padding: '6px 10px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              Total Load
+            </button>
+            <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
+          </div>
+        }
       >
         {chartData.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
@@ -2062,151 +2233,111 @@ const PhaseLoadTab: React.FC<{
         ) : (
           <div style={{ height: 300 }}>
             <CJLine
+              ref={phaseLoadChartZoom.chartRef}
               data={{
                 labels: chartData.map((d: any) => d.time),
-                datasets: (['L1', 'L2', 'L3'] as const).map(ph => ({
-                  label: `Phase ${ph}`,
-                  data: chartData.map((d: any) => d[ph]),
-                  borderColor: PHASE_COLORS[ph], borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                  fill: ph === 'L1' ? 'origin' : '-1',
-                  backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return PHASE_COLORS[ph] + '30'; return makeGradient(chart.ctx, chart.chartArea, PHASE_COLORS[ph], 0.55, 0.05); },
-                })),
+                datasets: showTotalLoad
+                  ? [{
+                      label: 'Total Load',
+                      data: chartData.map((d: any) => +(d.L1 + d.L2 + d.L3).toFixed(2)),
+                      borderColor: isDark ? '#f8fafc' : '#111827',
+                      borderWidth: 2.4,
+                      tension: 0.25,
+                      pointRadius: 0,
+                      fill: 'origin',
+                      backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return 'rgba(100,116,139,0.3)'; return makeGradient(chart.ctx, chart.chartArea, isDark ? '#94a3b8' : '#64748b', 0.45, 0.05); },
+                    }]
+                  : (['L1', 'L2', 'L3'] as const).map(ph => ({
+                      label: `Phase ${ph}`,
+                      data: chartData.map((d: any) => d[ph]),
+                      borderColor: PHASE_COLORS[ph], borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                      fill: ph === 'L1' ? 'origin' : '-1',
+                      backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return PHASE_COLORS[ph] + '30'; return makeGradient(chart.ctx, chart.chartArea, PHASE_COLORS[ph], 0.55, 0.05); },
+                    })),
               }}
-              options={{
-                responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                  legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
-                  tooltip: {
-                    backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-                    titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
-                    bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                    callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
-                  },
-                  zoom: {
-                    zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x' },
-                    pan: { enabled: true, mode: 'x' },
-                  },
-                } as any,
-                scales: {
-                  x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                  y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(1) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                },
-              } as ChartOptions<'line'>}
+              options={phaseLoadChartOptions}
             />
           </div>
         )}
       </ChartCard>
 
       {/* ── 7-Day Load Forecast / Accuracy (sub-tab) ── */}
-      {phaseForecastSubTab === 'accuracy' ? (
-        <div style={{ marginBottom: 12 }}>
-          <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
-        </div>
-      ) : (
-        <>
-          {loadForecast.length > 0 ? (
-            <ChartCard
-              title="7-Day Load Forecast"
-              subtitle={(() => {
-                const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
-                if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
-                if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
-                return firstMethod;
-              })()}
-              isDark={isDark}
-              isLive={false}
-              height={230}
-              accentColor="#ef4444"
-              delay={0.4}
-            >
-              <div style={{ height: 230 }}>
-                {(() => {
-                  const fcData = loadForecast.map((r: any) => {
-                    const d = new Date(r.forecast_for);
-                    return {
-                      time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-                      load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
-                        p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
-                        p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
-                    };
-                  });
-                  return (
-                    <CJLine ref={loadForecastChartRef}
-                      data={{
-                        labels: fcData.map(d => d.time),
-                        datasets: [
-                            {
-                              label: 'P10',
-                              data: fcData.map(d => d.p10),
-                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
-                            },
-                            {
-                              label: 'Forecast Load (P50)',
-                              data: fcData.map(d => d.load),
-                              borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                              fill: '-1',
-                              backgroundColor: 'rgba(239,68,68,0.15)',
-                            },
-                            {
-                              label: 'P90',
-                              data: fcData.map(d => d.p90),
-                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
-                              fill: '-1',
-                              backgroundColor: 'rgba(239,68,68,0.15)',
-                            }
-                          ],
-                      }}
-                      options={{
-                        responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                          legend: { display: false },
-                          tooltip: {
-                            backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-                            titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
-                            borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
-                            bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                            callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
-                          },
-                        },
-                        scales: {
-                          x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                          y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                        },
-                      } as ChartOptions<'line'>}
-                    />
-                  );
-                })()}
-              </div>
-            </ChartCard>
-          ) : (
-            <ChartCard
-              title="7-Day Load Forecast"
-              subtitle="Predictive load forecasting"
-              isDark={isDark}
-              isLive={false}
-              height={170}
-              accentColor="#ef4444"
-              delay={0.4}
-            >
-              <div style={{
-                height: 170,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                color: 'var(--text-muted)',
-                fontSize: '0.85rem',
-                padding: '0 20px',
-              }}>
-                No load forecast data yet. Forecasts generated every 30 minutes by the backend.
-              </div>
-            </ChartCard>
-          )}
-        </>
-      )}
+      <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
+        {loadForecast.length > 0 ? (
+          <ChartCard
+            title="7-Day Load Forecast"
+            subtitle={(() => {
+              const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
+              if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
+              if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
+              return firstMethod;
+            })() + ' · drag to zoom'}
+            isDark={isDark}
+            isLive={false}
+            height={230}
+            accentColor="#ef4444"
+            delay={0.4}
+            headerRight={<ZoomResetButton visible={loadForecastChartZoom.isZoomed} onClick={loadForecastChartZoom.resetZoom} />}
+          >
+            <div style={{ height: 230 }}>
+              <CJLine
+                ref={loadForecastChartZoom.chartRef}
+                data={{
+                  labels: loadForecastChartData.map(d => d.time),
+                  datasets: [
+                    {
+                      label: 'P10',
+                      data: loadForecastChartData.map(d => d.p10),
+                      borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
+                    },
+                    {
+                      label: 'Forecast Load (P50)',
+                      data: loadForecastChartData.map(d => d.load),
+                      borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                      fill: '-1',
+                      backgroundColor: 'rgba(239,68,68,0.15)',
+                    },
+                    {
+                      label: 'P90',
+                      data: loadForecastChartData.map(d => d.p90),
+                      borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
+                      fill: '-1',
+                      backgroundColor: 'rgba(239,68,68,0.15)',
+                    }
+                  ],
+                }}
+                options={loadForecastChartOptions}
+              />
+            </div>
+          </ChartCard>
+        ) : (
+          <ChartCard
+            title="7-Day Load Forecast"
+            subtitle="Predictive load forecasting"
+            isDark={isDark}
+            isLive={false}
+            height={170}
+            accentColor="#ef4444"
+            delay={0.4}
+          >
+            <div style={{
+              height: 170,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              fontSize: '0.85rem',
+              padding: '0 20px',
+            }}>
+              No load forecast data yet. Forecasts generated every 30 minutes by the backend.
+            </div>
+          </ChartCard>
+        )}
+      </div>
+      <div style={{ display: phaseForecastSubTab === 'accuracy' ? 'block' : 'none', marginBottom: 12 }}>
+        <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
+      </div>
     </motion.div>
   );
 };
@@ -2268,19 +2399,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
 
   // Chart.js refs for zoom reset
-  const historyChartRef = useRef<any>(null);
-  const forecastChartRef = useRef<any>(null);
-  const vsActualChartRef = useRef<any>(null);
-  const loadForecastChartRef = useRef<any>(null);
-  const [historyIsZoomed, setHistoryIsZoomed] = useState(false);
-  const [forecastIsZoomed, setForecastIsZoomed] = useState(false);
-  const [vsActualIsZoomed, setVsActualIsZoomed] = useState(false);
-  const [loadForecastIsZoomed, setLoadForecastIsZoomed] = useState(false);
-  // Stable refs for zoom callbacks — prevents options useMemo from re-running on isZoomed state changes
-  const onHistoryZoom = useRef(() => setHistoryIsZoomed(true));
-  const onForecastZoom = useRef(() => setForecastIsZoomed(true));
-  const onVsActualZoom = useRef(() => setVsActualIsZoomed(true));
-  const onLoadForecastZoom = useRef(() => setLoadForecastIsZoomed(true));
+  const historyZoom = useChartZoomState();
+  const forecastZoom = useChartZoomState();
+  const vsActualZoom = useChartZoomState();
 
   // Fully memoized chart options — stable object reference prevents react-chartjs-2 from calling
   // chart.update() on every render, which would overwrite scale.min/max set by the zoom plugin.
@@ -2304,7 +2425,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'SOC' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'SOC' ? 0 : 3)} ${unit}`; } },
       },
-      zoom: { zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x', onZoomComplete: () => onHistoryZoom.current() }, pan: { enabled: true, mode: 'x', onPanComplete: () => onHistoryZoom.current() } },
+      zoom: createDragZoomPlugins(() => historyZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: gridColor } },
@@ -2326,7 +2447,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} ${unit}`; } },
       },
-      zoom: { zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x', onZoomComplete: () => onForecastZoom.current() }, pan: { enabled: true, mode: 'x', onPanComplete: () => onForecastZoom.current() } },
+      zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: gridColor } },
@@ -2347,7 +2468,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
       },
-      zoom: { zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x', onZoomComplete: () => onVsActualZoom.current() }, pan: { enabled: true, mode: 'x', onPanComplete: () => onVsActualZoom.current() } },
+      zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: gridColor } },
@@ -2585,13 +2706,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [lastUpdated]);
 
   useEffect(() => {
-    forecastChartRef.current?.resetZoom();
-    setForecastIsZoomed(false);
+    forecastZoom.resetZoom();
   }, [forecastWindow]);
 
   useEffect(() => {
-    historyChartRef.current?.resetZoom();
-    setHistoryIsZoomed(false);
+    historyZoom.resetZoom();
   }, [dateRange]);
 
   // Re-fetch phase load when hours selector changes
@@ -3643,10 +3762,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   ))}
                 </div>
 
-                {weatherSubTab === 'accuracy' ? (
-                  <WeatherAccuracySubTab accuracy={weatherAccuracy} isDark={isDark} />
-                ) : (
-                <>
+                <div style={{ display: weatherSubTab === 'current' ? 'block' : 'none' }}>
                 {weather?.current ? (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -3708,8 +3824,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     No hourly weather forecast available.
                   </motion.div>
                 )}
-                </> /* end weatherSubTab current */
-                )}
+                </div>
+                <div style={{ display: weatherSubTab === 'accuracy' ? 'block' : 'none' }}>
+                  <WeatherAccuracySubTab accuracy={weatherAccuracy} isDark={isDark} />
+                </div>
               </motion.div>
             )}
 
@@ -3775,24 +3893,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                         {series.label}
                       </button>
                     ))}
-                    {historyIsZoomed ? (
-                      <button
-                        onClick={() => { historyChartRef.current?.resetZoom(); setHistoryIsZoomed(false); }}
-                        style={{
-                          border: '1px solid rgba(0, 166, 62, 0.25)',
-                          background: 'transparent',
-                          color: '#00a63e',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          fontFamily: 'Poppins, sans-serif',
-                        }}
-                      >
-                        Reset Zoom
-                      </button>
-                    ) : null}
+                    <ZoomResetButton visible={historyZoom.isZoomed} onClick={historyZoom.resetZoom} />
                   </div>
                 </div>
 
@@ -3836,7 +3937,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   ) : historyView === 'chart' ? (
                     <div style={{ width: '100%', height: 360 }}>
                       <CJLine
-                        ref={historyChartRef}
+                        ref={historyZoom.chartRef}
                         data={{
                           labels: historyData.map(d => d.time),
                           datasets: [
@@ -3957,10 +4058,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   ))}
                 </div>
 
-                {forecastSubTab === 'accuracy' ? (
+                <div style={{ display: forecastSubTab === 'accuracy' ? 'block' : 'none' }}>
                   <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
-                ) : (
-                <>
+                </div>
+                <div style={{ display: forecastSubTab === 'chart' ? 'block' : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {(['chart', 'table'] as const).map(mode => (
@@ -4026,24 +4127,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: showBands.GHI ? '#eab308' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
                       GHI
                     </button>
-                    {forecastIsZoomed ? (
-                      <button
-                        onClick={() => { forecastChartRef.current?.resetZoom(); setForecastIsZoomed(false); }}
-                        style={{
-                          border: '1px solid rgba(0, 166, 62, 0.25)',
-                          background: 'transparent',
-                          color: '#00a63e',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          fontFamily: 'Poppins, sans-serif',
-                        }}
-                      >
-                        Reset Zoom
-                      </button>
-                    ) : null}
+                    <ZoomResetButton visible={forecastZoom.isZoomed} onClick={forecastZoom.resetZoom} />
                   </div>
                 </div>
 
@@ -4068,7 +4152,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   ) : forecastView === 'chart' ? (
                     <div style={{ width: '100%', height: 360 }}>
                       <CJLine
-                        ref={forecastChartRef}
+                        ref={forecastZoom.chartRef}
                         data={{
                           labels: forecastData.map(d => d.time),
                           datasets: [
@@ -4183,24 +4267,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                         {series.label}
                       </button>
                     ))}
-                    {vsActualIsZoomed ? (
-                      <button
-                        onClick={() => { vsActualChartRef.current?.resetZoom(); setVsActualIsZoomed(false); }}
-                        style={{
-                          border: '1px solid rgba(0, 166, 62, 0.25)',
-                          background: 'transparent',
-                          color: '#00a63e',
-                          borderRadius: 8,
-                          padding: '6px 12px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          fontFamily: 'Poppins, sans-serif',
-                        }}
-                      >
-                        Reset Zoom
-                      </button>
-                    ) : null}
+                    <ZoomResetButton visible={vsActualZoom.isZoomed} onClick={vsActualZoom.resetZoom} />
                   </div>
                 </div>
 
@@ -4218,7 +4285,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   ) : vsActualView === 'chart' ? (
                     <div style={{ width: '100%', height: 320 }}>
                       <CJLine
-                        ref={vsActualChartRef}
+                        ref={vsActualZoom.chartRef}
                         data={{
                           labels: vsActualData.map(d => d.label),
                           datasets: [
@@ -4247,8 +4314,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     <VsActualTable data={vsActualData} />
                   )}
                 </div>
-                </> /* end forecastSubTab chart branch */
-                )} {/* end forecastSubTab === 'accuracy' ternary */}
+                </div>
               </motion.div>
             )}
 
