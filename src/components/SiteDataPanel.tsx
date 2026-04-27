@@ -1921,12 +1921,12 @@ const PhaseLoadTab: React.FC<{
     });
   }, [phaseLoad]);
 
-  // Per-phase load power — use dedicated register if mapped, else estimate from remaining load
-  // Use || not ?? so DynamoDB-defaulted zeros fall through to the next fallback
-  const totalLoadW: number | null = latest?.load_power_w || null;
-  const rawL1W: number | null = latest?.load_l1_power_w || latest?.grid_l1_power_w || null;
-  const rawL2W: number | null = latest?.load_l2_power_w || latest?.grid_l2_power_w || null;
-  const rawL3W: number | null = latest?.load_l3_power_w || latest?.grid_l3_power_w || null;
+  // Per-phase load power — use dedicated load-side registers only.
+  // Preserve legitimate zero readings so a real 0 W phase does not fall through to unrelated grid values.
+  const totalLoadW: number | null = latest?.load_power_w ?? null;
+  const rawL1W: number | null = latest?.load_l1_power_w ?? null;
+  const rawL2W: number | null = latest?.load_l2_power_w ?? null;
+  const rawL3W: number | null = latest?.load_l3_power_w ?? null;
   // Smarter estimate: subtract known phases from total, split remainder equally
   const knownW = (rawL1W ?? 0) + (rawL2W ?? 0) + (rawL3W ?? 0);
   const unknownPhases = (rawL1W == null ? 1 : 0) + (rawL2W == null ? 1 : 0) + (rawL3W == null ? 1 : 0);
@@ -1935,13 +1935,12 @@ const PhaseLoadTab: React.FC<{
   const liveW1: number | null = rawL1W ?? estUnknownW ?? null;
   const liveW2: number | null = rawL2W ?? estUnknownW ?? null;
   const liveW3: number | null = rawL3W ?? estUnknownW ?? null;
-  // Per-phase voltage — dedicated registers first, then aggregate (|| skips stored zeros)
-  const liveV1: number | null = latest?.grid_l1_voltage_v || latest?.grid_phase_l1_voltage_v || latest?.grid_voltage_v || null;
-  const liveV2: number | null = latest?.grid_l2_voltage_v || latest?.grid_phase_l2_voltage_v || null;
-  const liveV3: number | null = latest?.grid_l3_voltage_v || latest?.grid_phase_l3_voltage_v || null;
-  const liveA1: number | null = latest?.grid_l1_current_a || null;
-  const liveA2: number | null = latest?.grid_l2_current_a || null;
-  const liveA3: number | null = latest?.grid_l3_current_a || null;
+  const liveV1: number | null = latest?.load_l1_voltage_v ?? null;
+  const liveV2: number | null = latest?.load_l2_voltage_v ?? null;
+  const liveV3: number | null = latest?.load_l3_voltage_v ?? null;
+  const liveA1: number | null = latest?.load_l1_current_a ?? null;
+  const liveA2: number | null = latest?.load_l2_current_a ?? null;
+  const liveA3: number | null = latest?.load_l3_current_a ?? null;
   // Show cards whenever we have any live telemetry
   const hasLive = latest != null && latest.load_power_w !== undefined;
 
