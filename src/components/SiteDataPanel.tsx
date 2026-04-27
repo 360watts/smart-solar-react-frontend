@@ -45,8 +45,8 @@ const TABS = [
   { id: 'details',   label: 'Details',   icon: <Activity size={tabIconSize} /> },
   { id: 'weather',   label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
   { id: 'history',   label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
-  { id: 'forecast',  label: 'Forecast',  icon: <Sun size={tabIconSize} /> },
-  { id: 'phase-load', label: 'Phase Load', icon: <Layers size={tabIconSize} /> },
+  { id: 'forecast',  label: 'Solar Forecast',  icon: <Sun size={tabIconSize} /> },
+  { id: 'phase-load', label: 'Load Forecast', icon: <Layers size={tabIconSize} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -144,7 +144,7 @@ const ForecastTooltip = ({ active, payload, label }: any) => {
                 <span style={{ fontWeight: 600 }}>{entry.name?.split(' ')[0]}</span>
               </div>
               <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
-                {Number(entry.value).toFixed(3)} {unit}
+                {Number(entry.value).toFixed(2)} {unit}
               </span>
             </motion.div>
           );
@@ -1374,10 +1374,10 @@ const ForecastTable = ({ data }: { data: any[] }) => {
                     </span>
                   )}
                 </td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(3) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(3) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(2) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(2) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(2) ?? '—'}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(2) ?? '—'}</td>
                 <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
               </tr>
             );
@@ -1444,8 +1444,8 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
               <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(3) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(3)}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(2)}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
             </tr>
           ))}
@@ -1487,7 +1487,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
   const overallMaeKw = summary.mae_kw ?? maxMae;
   const chartData = hourly.map((h: any) => {
-    const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(3) : null;
+    const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(2) : null;
     const ratio = mae != null ? mae / maxMae : 0;
     const barColor = ratio < 0.33 ? '#00a63e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
     // mean_error_pct is null at nighttime (actual ≈ 0); fall back to MAE relative to overall mean
@@ -1502,8 +1502,8 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
   });
 
   const summaryCards = [
-    { label: 'MAE', value: summary.mae_kw != null ? `${Number(summary.mae_kw).toFixed(3)} kW` : '—', accent: '#00a63e', sub: 'Mean absolute error' },
-    { label: 'RMSE', value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(3)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
+    { label: 'MAE', value: summary.mae_kw != null ? `${Number(summary.mae_kw).toFixed(2)} kW` : '—', accent: '#00a63e', sub: 'Mean absolute error' },
+    { label: 'RMSE', value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(2)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
     { label: 'Avg Error', value: (summary.mean_abs_error_pct ?? summary.avg_error_pct) != null ? `${Number(summary.mean_abs_error_pct ?? summary.avg_error_pct).toFixed(1)}%` : '—', accent: '#f59e0b', sub: 'Of P50 forecast' },
     { label: 'Days', value: String(summary.days_computed ?? '—'), accent: '#8b5cf6', sub: 'Days computed' },
   ];
@@ -1584,7 +1584,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                   bodyColor: isDark ? '#94a3b8' : '#374151',
                   borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
                   bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                  callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(3)} kW` },
+                  callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` },
                 },
               },
               scales: {
@@ -1885,7 +1885,13 @@ const PhaseLoadTab: React.FC<{
   isDark: boolean;
   hours: number;
   onHoursChange: (h: number) => void;
-}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange }) => {
+  forecastAccuracy?: any;
+}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange, forecastAccuracy }) => {
+  // Allow switching between forecast chart and accuracy view
+  const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
+  const loadForecastChartRef = useRef<any>(null);
+  const [loadForecastIsZoomed, setLoadForecastIsZoomed] = useState(false);
+  const onLoadForecastZoom = useRef(() => setLoadForecastIsZoomed(true));
   const chartData = useMemo(() => {
     if (!phaseLoad.length) return [];
     const bucketMap = new Map<string, { ts: Date; l1: number; l2: number; l3: number; total: number; n: number }>();
@@ -1913,10 +1919,10 @@ const PhaseLoadTab: React.FC<{
       .map((b: any) => {
       return {
         time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        L1: +Number(b.l1 / (b.n || 1)).toFixed(3),
-        L2: +Number(b.l2 / (b.n || 1)).toFixed(3),
-        L3: +Number(b.l3 / (b.n || 1)).toFixed(3),
-        total: +Number(b.total / (b.n || 1)).toFixed(3),
+        L1: +Number(b.l1 / (b.n || 1)).toFixed(2),
+        L2: +Number(b.l2 / (b.n || 1)).toFixed(2),
+        L3: +Number(b.l3 / (b.n || 1)).toFixed(2),
+        total: +Number(b.total / (b.n || 1)).toFixed(2),
       };
     });
   }, [phaseLoad]);
@@ -1964,6 +1970,33 @@ const PhaseLoadTab: React.FC<{
           <p style={{ margin: '2px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem', opacity: 0.55, color: isDark ? '#e2e8f0' : '#475569' }}>
             Real-time per-phase load analysis and 7-day forecast
           </p>
+          {/* Sub-tab toggle: Forecast / Accuracy */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load forecast sub tabs">
+            <button
+              onClick={() => setPhaseForecastSubTab('chart')}
+              aria-pressed={phaseForecastSubTab === 'chart'}
+              style={{
+                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'chart' ? `1px solid ${isDark ? '#00a63e' : '#00a63e'}` : '1px solid transparent',
+                background: phaseForecastSubTab === 'chart' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
+                color: phaseForecastSubTab === 'chart' ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#e2e8f0' : '#475569'),
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
+              }}
+            >
+              Forecast
+            </button>
+            <button
+              onClick={() => setPhaseForecastSubTab('accuracy')}
+              aria-pressed={phaseForecastSubTab === 'accuracy'}
+              style={{
+                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'accuracy' ? `1px solid ${isDark ? '#00a63e' : '#00a63e'}` : '1px solid transparent',
+                background: phaseForecastSubTab === 'accuracy' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
+                color: phaseForecastSubTab === 'accuracy' ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#e2e8f0' : '#475569'),
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
+              }}
+            >
+              Accuracy
+            </button>
+          </div>
         </div>
         <select
           value={hours}
@@ -2032,7 +2065,7 @@ const PhaseLoadTab: React.FC<{
                     titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
                     borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
                     bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                    callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(3)} kW` },
+                    callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
                   },
                   zoom: {
                     zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x' },
@@ -2049,91 +2082,113 @@ const PhaseLoadTab: React.FC<{
         )}
       </ChartCard>
 
-      {/* ── 7-Day Load Forecast ── */}
-      {loadForecast.length > 0 && (
-        <ChartCard
-          title="7-Day Load Forecast"
-          subtitle={(() => {
-            const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
-            if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
-            if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
-            return firstMethod;
-          })()}
-          isDark={isDark}
-          isLive={false}
-          height={230}
-          accentColor="#ef4444"
-          delay={0.4}
-        >
-          <div style={{ height: 230 }}>
-            {(() => {
-              const fcData = loadForecast.map((r: any) => {
-                const d = new Date(r.forecast_for);
-                return {
-                  time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-                  load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(3) : null,
-                };
-              });
-              return (
-                <CJLine
-                  data={{
-                    labels: fcData.map(d => d.time),
-                    datasets: [{
-                      label: 'Forecast Load',
-                      data: fcData.map(d => d.load),
-                      borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                      fill: true,
-                      backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#ef444430'; return makeGradient(chart.ctx, chart.chartArea, '#ef4444', 0.45, 0.02); },
-                    }],
-                  }}
-                  options={{
-                    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
-                        titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
-                        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
-                        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-                        callbacks: { label: (item: TooltipItem<'line'>) => ` Forecast Load: ${Number(item.parsed.y).toFixed(3)} kW` },
-                      },
-                    },
-                    scales: {
-                      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-                    },
-                  } as ChartOptions<'line'>}
-                />
-              );
-            })()}
-          </div>
-        </ChartCard>
-      )}
-
-      {loadForecast.length === 0 && (
-        <ChartCard
-          title="7-Day Load Forecast"
-          subtitle="Predictive load forecasting"
-          isDark={isDark}
-          isLive={false}
-          height={170}
-          accentColor="#ef4444"
-          delay={0.4}
-        >
-          <div style={{
-            height: 170,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '0.85rem',
-            padding: '0 20px',
-          }}>
-            No load forecast data yet. Forecasts generated every 30 minutes by the backend.
-          </div>
-        </ChartCard>
+      {/* ── 7-Day Load Forecast / Accuracy (sub-tab) ── */}
+      {phaseForecastSubTab === 'accuracy' ? (
+        <div style={{ marginBottom: 12 }}>
+          <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
+        </div>
+      ) : (
+        <>
+          {loadForecast.length > 0 ? (
+            <ChartCard
+              title="7-Day Load Forecast"
+              subtitle={(() => {
+                const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
+                if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
+                if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
+                return firstMethod;
+              })()}
+              isDark={isDark}
+              isLive={false}
+              height={230}
+              accentColor="#ef4444"
+              delay={0.4}
+            >
+              <div style={{ height: 230 }}>
+                {(() => {
+                  const fcData = loadForecast.map((r: any) => {
+                    const d = new Date(r.forecast_for);
+                    return {
+                      time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+                      load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
+                        p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
+                        p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
+                    };
+                  });
+                  return (
+                    <CJLine ref={loadForecastChartRef}
+                      data={{
+                        labels: fcData.map(d => d.time),
+                        datasets: [
+                            {
+                              label: 'P10',
+                              data: fcData.map(d => d.p10),
+                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
+                            },
+                            {
+                              label: 'Forecast Load (P50)',
+                              data: fcData.map(d => d.load),
+                              borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                              fill: '-1',
+                              backgroundColor: 'rgba(239,68,68,0.15)',
+                            },
+                            {
+                              label: 'P90',
+                              data: fcData.map(d => d.p90),
+                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
+                              fill: '-1',
+                              backgroundColor: 'rgba(239,68,68,0.15)',
+                            }
+                          ],
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: {
+                            backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+                            titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
+                            borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
+                            bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+                            callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
+                          },
+                        },
+                        scales: {
+                          x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+                          y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+                        },
+                      } as ChartOptions<'line'>}
+                    />
+                  );
+                })()}
+              </div>
+            </ChartCard>
+          ) : (
+            <ChartCard
+              title="7-Day Load Forecast"
+              subtitle="Predictive load forecasting"
+              isDark={isDark}
+              isLive={false}
+              height={170}
+              accentColor="#ef4444"
+              delay={0.4}
+            >
+              <div style={{
+                height: 170,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                fontSize: '0.85rem',
+                padding: '0 20px',
+              }}>
+                No load forecast data yet. Forecasts generated every 30 minutes by the backend.
+              </div>
+            </ChartCard>
+          )}
+        </>
       )}
     </motion.div>
   );
@@ -2199,13 +2254,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const historyChartRef = useRef<any>(null);
   const forecastChartRef = useRef<any>(null);
   const vsActualChartRef = useRef<any>(null);
+  const loadForecastChartRef = useRef<any>(null);
   const [historyIsZoomed, setHistoryIsZoomed] = useState(false);
   const [forecastIsZoomed, setForecastIsZoomed] = useState(false);
   const [vsActualIsZoomed, setVsActualIsZoomed] = useState(false);
+  const [loadForecastIsZoomed, setLoadForecastIsZoomed] = useState(false);
   // Stable refs for zoom callbacks — prevents options useMemo from re-running on isZoomed state changes
   const onHistoryZoom = useRef(() => setHistoryIsZoomed(true));
   const onForecastZoom = useRef(() => setForecastIsZoomed(true));
   const onVsActualZoom = useRef(() => setVsActualIsZoomed(true));
+  const onLoadForecastZoom = useRef(() => setLoadForecastIsZoomed(true));
 
   // Fully memoized chart options — stable object reference prevents react-chartjs-2 from calling
   // chart.update() on every render, which would overwrite scale.min/max set by the zoom plugin.
@@ -2249,7 +2307,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         borderColor: ttBorder, borderWidth: 1, padding: 12, cornerRadius: 12,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(3)} ${unit}`; } },
+        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} ${unit}`; } },
       },
       zoom: { zoom: { wheel: { enabled: true, speed: 0.08 }, drag: { enabled: false }, pinch: { enabled: false }, mode: 'x', onZoomComplete: () => onForecastZoom.current() }, pan: { enabled: true, mode: 'x', onPanComplete: () => onForecastZoom.current() } },
     } as any,
@@ -2285,6 +2343,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // Analytics data
   const [phaseLoad, setPhaseLoad] = useState<any[]>([]);
   const [forecastAccuracy, setForecastAccuracy] = useState<any>(null);
+  const [loadForecastAccuracy, setLoadForecastAccuracy] = useState<any>(null);
   const [loadForecast, setLoadForecast] = useState<any[]>([]);
   const [weatherAccuracy, setWeatherAccuracy] = useState<any>(null);
   const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
@@ -2408,11 +2467,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         apiService.getForecastAccuracy(siteId, 30),
         apiService.getLoadForecast(siteId, 7),
         apiService.getWeatherAccuracy(siteId, 7),
-      ]).then(([pl, fa, lf, wa]) => {
+        apiService.getLoadForecastAccuracy(siteId, 30),
+      ]).then(([pl, fa, lf, wa, lfa]) => {
         if (pl.status === 'fulfilled') setPhaseLoad(Array.isArray(pl.value) ? pl.value : []);
         if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
         if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);
         if (wa.status === 'fulfilled') setWeatherAccuracy(wa.value ?? null);
+        if (lfa.status === 'fulfilled') setLoadForecastAccuracy(lfa.value ?? null);
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load site data');
@@ -2718,9 +2779,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       }
 
       const actualKw = nearest
-        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0) + (nearest.pv3_power_w ?? 0) + (nearest.pv4_power_w ?? 0)) / 1000).toFixed(3)
+        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0) + (nearest.pv3_power_w ?? 0) + (nearest.pv4_power_w ?? 0)) / 1000).toFixed(2)
         : null;
-      const p50 = +Number(frow.p50_kw).toFixed(3);
+      const p50 = +Number(frow.p50_kw).toFixed(2);
       const diffPct = actualKw != null && p50 > 0
         ? Math.round(((actualKw - p50) / p50) * 100)
         : null;
@@ -2757,10 +2818,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
       return {
         time, dateLabel, timeLabel, rawDate, rawTs,
-        p50: row.p50_kw != null ? +Number(row.p50_kw).toFixed(3) : null,
-        p10: row.p10_kw != null ? +Number(row.p10_kw).toFixed(3) : null,
-        p90: row.p90_kw != null ? +Number(row.p90_kw).toFixed(3) : null,
-        physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(3) : null,
+        p50: row.p50_kw != null ? +Number(row.p50_kw).toFixed(2) : null,
+        p10: row.p10_kw != null ? +Number(row.p10_kw).toFixed(2) : null,
+        p90: row.p90_kw != null ? +Number(row.p90_kw).toFixed(2) : null,
+        physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(2) : null,
         ghi: row.ghi_input_wm2 != null ? +row.ghi_input_wm2 : null,
         temp: row.temperature_c != null ? +row.temperature_c : null,
         regime: row.regime ?? null,
@@ -4191,6 +4252,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   isDark={isDark}
                   hours={phaseLoadHours}
                   onHoursChange={setPhaseLoadHours}
+                  forecastAccuracy={loadForecastAccuracy}
                 />
               </motion.div>
             )}

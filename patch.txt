@@ -1,0 +1,51 @@
+--- src/components/SiteDataPanel.tsx
++++ src/components/SiteDataPanel.tsx
+@@ -2108,12 +2108,30 @@
+                       return {
+                         time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+                         load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
++                        p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
++                        p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
+                       };
+                     });
+                     return (
+                       <CJLine
+                         data={{
+                           labels: fcData.map(d => d.time),
+-                          datasets: [{
+-                            label: 'Forecast Load',
+-                            data: fcData.map(d => d.load),
+-                            borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+-                            fill: true,
+-                            backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#ef444430'; return makeGradient(chart.ctx, chart.chartArea, '#ef4444', 0.45, 0.02); },
+-                          }],
++                          datasets: [
++                            {
++                              label: 'P10',
++                              data: fcData.map(d => d.p10),
++                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
++                            },
++                            {
++                              label: 'Forecast Load (P50)',
++                              data: fcData.map(d => d.load),
++                              borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
++                              fill: '-1',
++                              backgroundColor: 'rgba(239,68,68,0.15)',
++                            },
++                            {
++                              label: 'P90',
++                              data: fcData.map(d => d.p90),
++                              borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
++                              fill: '-1',
++                              backgroundColor: 'rgba(239,68,68,0.15)',
++                            }
++                          ],
+                         }}
+                         options={{
+@@ -2132,3 +2150,5 @@
+                               bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+-                              callbacks: { label: (item: TooltipItem<'line'>) => ` Forecast Load: ${Number(item.parsed.y).toFixed(2)} kW` },
++                              callbacks: { 
++                                label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW`
++                              },
+                             },

@@ -525,6 +525,16 @@ class ApiService {
     return data;
   }
 
+  async getLoadForecastAccuracy(siteId: string, days: number = 30): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const cacheKey = `load_forecast_accuracy_${siteId}_${days}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}`);
+    cacheService.set(cacheKey, data, 30 * 60 * 1000);
+    return data;
+  }
+
   async getLoadForecast(siteId: string, days: number = 7): Promise<any[]> {
     const enc = encodeURIComponent(siteId);
     const cacheKey = `load_forecast_${siteId}_${days}`;
