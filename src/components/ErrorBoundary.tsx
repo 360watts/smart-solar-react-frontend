@@ -9,6 +9,28 @@ interface State {
   error: Error | null;
 }
 
+/** Returns true if the error is a Vite/Webpack dynamic import failure (stale chunk after deploy). */
+function isChunkLoadError(error: Error): boolean {
+  const msg = error?.message ?? '';
+  return (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('error loading dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('dynamically imported module') ||
+    // Safari
+    (error?.name === 'TypeError' && msg.includes('import('))
+  );
+}
+
+/** Hard-reload once to pick up the new chunk after a Vercel redeploy. */
+function reloadOnce(): void {
+  const RELOAD_KEY = 'chunk_load_reload';
+  if (!sessionStorage.getItem(RELOAD_KEY)) {
+    sessionStorage.setItem(RELOAD_KEY, '1');
+    window.location.reload();
+  }
+}
+
 class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -20,16 +42,25 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (isChunkLoadError(error)) {
+      reloadOnce();
+      return;
+    }
     console.error('Error caught by boundary:', error, errorInfo);
-    // You can log to an error reporting service here
   }
 
   handleReset = () => {
+    sessionStorage.removeItem('chunk_load_reload');
     this.setState({ hasError: false, error: null });
   };
 
   render(): ReactElement {
     if (this.state.hasError) {
+      // If it's a chunk error we already triggered a reload — show nothing (blank avoids flash).
+      if (this.state.error && isChunkLoadError(this.state.error)) {
+        return <></> as unknown as ReactElement;
+      }
+
       return (
         <div
           style={{
