@@ -205,6 +205,7 @@ const Alerts: React.FC = () => {
   const [fleetHealthError, setFleetHealthError] = useState<string | null>(null);
   const [fleetHealthReportDate, setFleetHealthReportDate] = useState<string | null>(null);
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
+  const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
 
   // Chart interactivity state
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'composed'>('bar');
@@ -2030,17 +2031,83 @@ const Alerts: React.FC = () => {
                                   {site.devices.sort((a: any, b: any) => (b.alerts?.total || 0) - (a.alerts?.total || 0)).map((device: any) => {
                                     const statusIcon = !device.is_online ? '🔴' : device.alerts?.total > 0 ? '🟡' : '🟢';
                                     const alertCodes = Object.keys(device.alerts?.by_fault_code || {}).join(', ') || '—';
+                                    const deviceKey = `${site.siteId}:${device.serial}`;
+                                    const isDeviceExpanded = expandedDevices.has(deviceKey);
+                                    const deviceAlerts = (data.detailed_alerts || []).filter((a: any) => a.device_serial === device.serial);
 
                                     return (
-                                      <div key={device.serial} style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', alignItems: 'center', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), fontSize: '0.8125rem', color: txt }}>
-                                        <div></div>
-                                        <code style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial}</code>
-                                        <span>{statusIcon}</span>
-                                        <span style={{ fontFamily: 'monospace' }}>{device.is_online ? 'Online' : 'Offline'}</span>
-                                        <span style={{ fontFamily: 'monospace', color: sub }}>{device.telemetry?.record_count || 0}</span>
-                                        <span style={{ fontFamily: 'monospace', color: sub }}>{(device.telemetry?.data_completeness_pct || 0).toFixed(1)}%</span>
-                                        <span style={{ fontFamily: 'monospace', color: device.alerts?.total > 0 ? '#EF4444' : sub }}>{device.alerts?.total || 0}</span>
-                                        <span style={{ fontFamily: 'monospace', color: sub, fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alertCodes}</span>
+                                      <div key={device.serial}>
+                                        {/* Device row (clickable) */}
+                                        <div
+                                          onClick={() => setExpandedDevices(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(deviceKey)) next.delete(deviceKey);
+                                            else next.add(deviceKey);
+                                            return next;
+                                          })}
+                                          style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', alignItems: 'center', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), fontSize: '0.8125rem', color: txt, cursor: deviceAlerts.length > 0 ? 'pointer' : 'default', transition: 'background 0.15s' }}
+                                        >
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub }}>
+                                            {deviceAlerts.length > 0 && (isDeviceExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                                          </div>
+                                          <code style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial}</code>
+                                          <span>{statusIcon}</span>
+                                          <span style={{ fontFamily: 'monospace' }}>{device.is_online ? 'Online' : 'Offline'}</span>
+                                          <span style={{ fontFamily: 'monospace', color: sub }}>{device.telemetry?.record_count || 0}</span>
+                                          <span style={{ fontFamily: 'monospace', color: sub }}>{(device.telemetry?.data_completeness_pct || 0).toFixed(1)}%</span>
+                                          <span style={{ fontFamily: 'monospace', color: device.alerts?.total > 0 ? '#EF4444' : sub }}>{device.alerts?.total || 0}</span>
+                                          <span style={{ fontFamily: 'monospace', color: sub, fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alertCodes}</span>
+                                        </div>
+
+                                        {/* Device alerts (expanded) */}
+                                        {isDeviceExpanded && deviceAlerts.length > 0 && (
+                                          <div style={{ borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), overflowX: 'auto' }}>
+                                            <div style={{ padding: '12px 40px', fontSize: '0.75rem', fontWeight: 600, color: sub, borderBottom: `1px solid ${bdr}` }}>Alerts for {device.serial}</div>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                              <thead>
+                                                <tr style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
+                                                  <th style={{ padding: '8px 40px 8px 40px', textAlign: 'left', color: sub, fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem' }}>Fault Code</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Severity</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Status</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Triggered</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Resolved</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Message</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {deviceAlerts.map((alert: any) => {
+                                                  const severityColor = alert.severity === 'critical' ? '#EF4444' : alert.severity === 'warning' ? '#F59E0B' : '#10B981';
+                                                  const severityBg = alert.severity === 'critical' ? 'rgba(239,68,68,0.15)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
+                                                  const statusColor = alert.status === 'active' ? '#EF4444' : '#10B981';
+                                                  return (
+                                                    <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
+                                                      <td style={{ padding: '8px 40px 8px 40px', color: txt, fontFamily: 'monospace', fontSize: '0.7rem' }}>{alert.fault_code || '—'}</td>
+                                                      <td style={{ padding: '8px 12px' }}>
+                                                        <span style={{ background: severityBg, color: severityColor, padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: '0.65rem', display: 'inline-block' }}>
+                                                          {alert.severity}
+                                                        </span>
+                                                      </td>
+                                                      <td style={{ padding: '8px 12px' }}>
+                                                        <span style={{ background: alert.status === 'active' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: statusColor, padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: '0.65rem', display: 'inline-block' }}>
+                                                          {alert.status}
+                                                        </span>
+                                                      </td>
+                                                      <td style={{ padding: '8px 12px', color: sub, fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                        {formatTime(alert.triggered_at)}
+                                                      </td>
+                                                      <td style={{ padding: '8px 12px', color: sub, fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                        {alert.resolved_at ? formatTime(alert.resolved_at) : '—'}
+                                                      </td>
+                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {alert.message || '—'}
+                                                      </td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -2076,68 +2143,6 @@ const Alerts: React.FC = () => {
                           {issue}
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* D. Detailed Alerts List */}
-                {(data.detailed_alerts && data.detailed_alerts.length > 0) && (
-                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
-                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <AlertCircle size={17} color="white" />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Alert Details</div>
-                        <div style={{ fontSize: '0.8125rem', color: sub }}>{data.detailed_alerts.length} alert{data.detailed_alerts.length !== 1 ? 's' : ''}</div>
-                      </div>
-                    </div>
-                    <div style={{ overflowX: 'auto', padding: '1rem 0' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: `1px solid ${bdr}`, background: tok.bgSub(isDark) }}>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600, fontFamily: 'monospace' }}>Device</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Fault Code</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Severity</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Status</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Triggered</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Resolved</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Message</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.detailed_alerts.map((alert: any) => {
-                            const severityColor = alert.severity === 'critical' ? '#EF4444' : alert.severity === 'warning' ? '#F59E0B' : '#10B981';
-                            const severityBg = alert.severity === 'critical' ? 'rgba(239,68,68,0.15)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
-                            const statusColor = alert.status === 'active' ? '#EF4444' : '#10B981';
-                            return (
-                              <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
-                                <td style={{ padding: '12px 20px', color: txt, fontFamily: 'monospace', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.device_serial}</td>
-                                <td style={{ padding: '12px 20px', color: txt, fontFamily: 'monospace', fontSize: '0.75rem' }}>{alert.fault_code || '—'}</td>
-                                <td style={{ padding: '12px 20px' }}>
-                                  <span style={{ background: severityBg, color: severityColor, padding: '4px 10px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem', display: 'inline-block' }}>
-                                    {alert.severity}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '12px 20px' }}>
-                                  <span style={{ background: alert.status === 'active' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: statusColor, padding: '4px 10px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem', display: 'inline-block' }}>
-                                    {alert.status}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '12px 20px', color: sub, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                                  {formatTime(alert.triggered_at)}
-                                </td>
-                                <td style={{ padding: '12px 20px', color: sub, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                                  {alert.resolved_at ? formatTime(alert.resolved_at) : '—'}
-                                </td>
-                                <td style={{ padding: '12px 20px', color: txt, fontSize: '0.8rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {alert.message || '—'}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 )}
