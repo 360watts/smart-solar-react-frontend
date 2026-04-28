@@ -1889,16 +1889,25 @@ const Alerts: React.FC = () => {
           )}
 
           {fleetHealthReport && !fleetHealthLoading && (() => {
-            const data = fleetHealthReport.data;
-            const summary = data.fleet_summary;
+            const data = fleetHealthReport.data || {};
+            const summary = data.fleet_summary || {
+              total_alerts: 0,
+              critical_alerts: 0,
+              warning_alerts: 0,
+              unresolved_alerts: 0,
+              auto_reboots: 0,
+              device_offline_events: 0,
+              rs485_stale_events: 0,
+              complete_failures: 0,
+            };
             const devices = data.devices || {};
             const issues = data.issues || [];
 
             // Determine health status
             const getHealthStatus = () => {
-              if (summary.critical_alerts > 0) return { color: '#EF4444', label: '🔴 Critical', bg: 'rgba(239,68,68,0.12)' };
-              if (summary.unresolved_alerts > 0 || summary.rs485_stale_events > 0) return { color: '#F59E0B', label: '🟡 Warning', bg: 'rgba(245,158,11,0.12)' };
-              if (summary.complete_failures > 0) return { color: '#000000', label: '⚫ Failed', bg: 'rgba(0,0,0,0.12)' };
+              if ((summary.critical_alerts || 0) > 0) return { color: '#EF4444', label: '🔴 Critical', bg: 'rgba(239,68,68,0.12)' };
+              if ((summary.unresolved_alerts || 0) > 0 || (summary.rs485_stale_events || 0) > 0) return { color: '#F59E0B', label: '🟡 Warning', bg: 'rgba(245,158,11,0.12)' };
+              if ((summary.complete_failures || 0) > 0) return { color: '#000000', label: '⚫ Failed', bg: 'rgba(0,0,0,0.12)' };
               return { color: '#10B981', label: '🟢 Healthy', bg: 'rgba(16,185,129,0.12)' };
             };
             const healthStatus = getHealthStatus();
@@ -1932,9 +1941,9 @@ const Alerts: React.FC = () => {
               };
             }).sort((a, b) => b.totalAlerts - a.totalAlerts);
 
-            // Format date
-            const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const formatTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            // Format date — handle undefined safely
+            const formatDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            const formatTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
 
             return (
               <>
@@ -1942,11 +1951,11 @@ const Alerts: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   {[
                     { label: 'Health Status', value: healthStatus.label, color: healthStatus.color, icon: <Heart size={17} />, bg: healthStatus.bg },
-                    { label: 'Total Alerts', value: summary.total_alerts.toString(), color: '#6366F1', icon: <AlertCircle size={17} /> },
-                    { label: 'Critical', value: summary.critical_alerts.toString(), color: summary.critical_alerts > 0 ? '#EF4444' : '#10B981', icon: <AlertCircle size={17} /> },
-                    { label: 'Warnings', value: summary.warning_alerts.toString(), color: summary.warning_alerts > 0 ? '#F59E0B' : '#10B981', icon: <AlertTriangle size={17} /> },
-                    { label: 'Unresolved', value: summary.unresolved_alerts.toString(), color: '#DC2626', icon: <AlertCircle size={17} /> },
-                    { label: 'RS-485 Stale', value: summary.rs485_stale_events.toString(), color: summary.rs485_stale_events > 0 ? '#F59E0B' : '#10B981', icon: <Shield size={17} /> },
+                    { label: 'Total Alerts', value: (summary.total_alerts || 0).toString(), color: '#6366F1', icon: <AlertCircle size={17} /> },
+                    { label: 'Critical', value: (summary.critical_alerts || 0).toString(), color: (summary.critical_alerts || 0) > 0 ? '#EF4444' : '#10B981', icon: <AlertCircle size={17} /> },
+                    { label: 'Warnings', value: (summary.warning_alerts || 0).toString(), color: (summary.warning_alerts || 0) > 0 ? '#F59E0B' : '#10B981', icon: <AlertTriangle size={17} /> },
+                    { label: 'Unresolved', value: (summary.unresolved_alerts || 0).toString(), color: '#DC2626', icon: <AlertCircle size={17} /> },
+                    { label: 'RS-485 Stale', value: (summary.rs485_stale_events || 0).toString(), color: (summary.rs485_stale_events || 0) > 0 ? '#F59E0B' : '#10B981', icon: <Shield size={17} /> },
                   ].map(card => (
                     <div key={card.label} style={{ ...cardStyle(isDark), padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, background: card.bg || tok.bgCard(isDark) }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

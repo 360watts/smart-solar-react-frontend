@@ -1100,7 +1100,7 @@ class ApiService {
     return this.request(`/alerts/analytics/?${params}`);
   }
 
-  async getFleetHealthReport(reportIdOrDate?: string | number): Promise<any> {
+  async getFleetHealthReport(reportIdOrDate?: string | number | null): Promise<any> {
     const params = new URLSearchParams();
     if (reportIdOrDate) {
       if (typeof reportIdOrDate === 'number') {
