@@ -1099,6 +1099,19 @@ class ApiService {
     if (site) params.set('site', site);
     return this.request(`/alerts/analytics/?${params}`);
   }
+
+  async getFleetHealthReport(reportIdOrDate?: string | number): Promise<any> {
+    const params = new URLSearchParams();
+    if (reportIdOrDate) {
+      if (typeof reportIdOrDate === 'number') {
+        params.set('report_id', String(reportIdOrDate));
+      } else {
+        params.set('date', reportIdOrDate);
+      }
+    }
+    const query = params.toString() ? `?${params}` : '';
+    return this.request(`/fleet-health/daily-report/${query}`);
+  }
 }
 
 export const apiService = new ApiService();

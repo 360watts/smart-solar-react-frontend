@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, BarChart3, LayoutGrid, RefreshCw, Search,
   Shield, Activity, ChevronDown, ChevronRight, ChevronLeft, BookOpen, TrendingUp,
   Download, Filter, X, BarChart, LineChart, AreaChart,
-  Brain, ChevronUp,
+  Brain, ChevronUp, Heart, ZoomIn, Calendar,
 } from 'lucide-react';
 import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse, AlertItem } from '../services/api';
 import type { DiagnoseBatchResponse, AlertDiagnosticResult } from '../services/api';
@@ -177,7 +177,7 @@ const Alerts: React.FC = () => {
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [alertSearch, setAlertSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'alerts' | 'analytics' | 'fleet-health'>('overview');
   const [refreshing, setRefreshing] = useState(false);
 
   // Pagination state
@@ -198,6 +198,13 @@ const Alerts: React.FC = () => {
   const [diagPanelOpen, setDiagPanelOpen] = useState(false);
   const [selectedAlertForDiag, setSelectedAlertForDiag] = useState<string | null>(null);
   const [diagRunStartedAt, setDiagRunStartedAt] = useState<string | null>(null);
+
+  // Fleet Health Report state
+  const [fleetHealthReport, setFleetHealthReport] = useState<any | null>(null);
+  const [fleetHealthLoading, setFleetHealthLoading] = useState(false);
+  const [fleetHealthError, setFleetHealthError] = useState<string | null>(null);
+  const [fleetHealthReportDate, setFleetHealthReportDate] = useState<string | null>(null);
+  const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
 
   // Chart interactivity state
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area' | 'composed'>('bar');
@@ -308,6 +315,16 @@ const Alerts: React.FC = () => {
       .catch(err => setAnalyticsError(err instanceof Error ? err.message : 'Failed to load analytics'))
       .finally(() => setAnalyticsLoading(false));
   }, [activeTab, lookbackDays]);
+
+  useEffect(() => {
+    if (activeTab !== 'fleet-health') return;
+    setFleetHealthLoading(true);
+    setFleetHealthError(null);
+    apiService.getFleetHealthReport(fleetHealthReportDate)
+      .then(setFleetHealthReport)
+      .catch(err => setFleetHealthError(err instanceof Error ? err.message : 'Failed to load fleet health report'))
+      .finally(() => setFleetHealthLoading(false));
+  }, [activeTab, fleetHealthReportDate]);
 
   const fetchAlerts = async () => {
     try {
@@ -430,10 +447,11 @@ const Alerts: React.FC = () => {
   }
 
   // ── Tabs config ──
-  const tabs: { key: 'overview' | 'alerts' | 'analytics'; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { key: 'overview',  label: 'Overview',   icon: <LayoutGrid size={15} /> },
-    { key: 'alerts',    label: 'All Alerts', icon: <Bell size={15} />, badge: filteredAlerts.length },
-    { key: 'analytics', label: 'Analytics',  icon: <BarChart3 size={15} /> },
+  const tabs: { key: 'overview' | 'alerts' | 'analytics' | 'fleet-health'; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { key: 'overview',     label: 'Overview',      icon: <LayoutGrid size={15} /> },
+    { key: 'alerts',       label: 'All Alerts',    icon: <Bell size={15} />, badge: filteredAlerts.length },
+    { key: 'analytics',    label: 'Analytics',     icon: <BarChart3 size={15} /> },
+    { key: 'fleet-health', label: 'Fleet Health',  icon: <Heart size={15} /> },
   ];
 
   return (
@@ -1828,6 +1846,230 @@ const Alerts: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ══════════════════════ TAB: Fleet Health ══════════════════════ */}
+      {activeTab === 'fleet-health' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Date Picker and Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: sub }}>Date:</span>
+            <input
+              type="date"
+              value={fleetHealthReportDate || new Date().toISOString().split('T')[0]}
+              onChange={(e) => setFleetHealthReportDate(e.target.value)}
+              style={{ ...inputStyle(isDark), width: 'auto' }}
+            />
+            <span style={{ fontSize: '0.75rem', color: sub }}>Leave empty for latest report</span>
+            <button
+              onClick={() => setFleetHealthReportDate(null)}
+              style={{
+                ...btnBase,
+                padding: '6px 14px',
+                background: tok.bgMuted(isDark),
+                color: sub,
+                border: `1px solid ${bdr}`,
+                fontSize: '0.8125rem',
+              }}
+            >
+              Latest
+            </button>
+          </div>
+
+          {/* Loading / Error */}
+          {fleetHealthLoading && <SkeletonLoader rows={6} height="28px" />}
+          {fleetHealthError && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '1rem 1.25rem', color: '#EF4444' }}>
+              <strong>Error loading fleet health:</strong> {fleetHealthError}
+            </div>
+          )}
+
+          {fleetHealthReport && !fleetHealthLoading && (() => {
+            const data = fleetHealthReport.data;
+            const summary = data.fleet_summary;
+            const devices = data.devices || {};
+            const issues = data.issues || [];
+
+            // Determine health status
+            const getHealthStatus = () => {
+              if (summary.critical_alerts > 0) return { color: '#EF4444', label: '🔴 Critical', bg: 'rgba(239,68,68,0.12)' };
+              if (summary.unresolved_alerts > 0 || summary.rs485_stale_events > 0) return { color: '#F59E0B', label: '🟡 Warning', bg: 'rgba(245,158,11,0.12)' };
+              if (summary.complete_failures > 0) return { color: '#000000', label: '⚫ Failed', bg: 'rgba(0,0,0,0.12)' };
+              return { color: '#10B981', label: '🟢 Healthy', bg: 'rgba(16,185,129,0.12)' };
+            };
+            const healthStatus = getHealthStatus();
+
+            // Group devices by site
+            const siteMap: Record<string, any[]> = {};
+            Object.entries(devices).forEach(([serial, device]: [string, any]) => {
+              const siteId = device.site_id;
+              if (!siteMap[siteId]) siteMap[siteId] = [];
+              siteMap[siteId].push({ serial, ...device });
+            });
+
+            // Calculate site metrics
+            const siteMetrics = Object.entries(siteMap).map(([siteId, siteDevices]) => {
+              const totalAlerts = siteDevices.reduce((sum: number, d: any) => sum + (d.alerts?.total || 0), 0);
+              const totalRecords = siteDevices.reduce((sum: number, d: any) => sum + (d.telemetry?.record_count || 0), 0);
+              const avgCompleteness = siteDevices.length > 0
+                ? siteDevices.reduce((sum: number, d: any) => sum + (d.telemetry?.data_completeness_pct || 0), 0) / siteDevices.length
+                : 0;
+              const hasOfflineDevices = siteDevices.some((d: any) => !d.is_online);
+              const hasAlerts = totalAlerts > 0;
+
+              return {
+                siteId,
+                devices: siteDevices,
+                totalAlerts,
+                totalRecords,
+                avgCompleteness,
+                hasOfflineDevices,
+                hasAlerts,
+              };
+            }).sort((a, b) => b.totalAlerts - a.totalAlerts);
+
+            // Format date
+            const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const formatTime = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            return (
+              <>
+                {/* A. Fleet Summary Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                  {[
+                    { label: 'Health Status', value: healthStatus.label, color: healthStatus.color, icon: <Heart size={17} />, bg: healthStatus.bg },
+                    { label: 'Total Alerts', value: summary.total_alerts.toString(), color: '#6366F1', icon: <AlertCircle size={17} /> },
+                    { label: 'Critical', value: summary.critical_alerts.toString(), color: summary.critical_alerts > 0 ? '#EF4444' : '#10B981', icon: <AlertCircle size={17} /> },
+                    { label: 'Warnings', value: summary.warning_alerts.toString(), color: summary.warning_alerts > 0 ? '#F59E0B' : '#10B981', icon: <AlertTriangle size={17} /> },
+                    { label: 'Unresolved', value: summary.unresolved_alerts.toString(), color: '#DC2626', icon: <AlertCircle size={17} /> },
+                    { label: 'RS-485 Stale', value: summary.rs485_stale_events.toString(), color: summary.rs485_stale_events > 0 ? '#F59E0B' : '#10B981', icon: <Shield size={17} /> },
+                  ].map(card => (
+                    <div key={card.label} style={{ ...cardStyle(isDark), padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, background: card.bg || tok.bgCard(isDark) }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
+                        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${card.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>{card.icon}</div>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, lineHeight: 1, fontFamily: 'monospace' }}>{card.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Report metadata */}
+                <div style={{ ...cardStyle(isDark), padding: '12px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, fontSize: '0.8125rem', color: sub }}>
+                  <div><span style={{ fontWeight: 600 }}>Report Date:</span> {data.report_date}</div>
+                  <div><span style={{ fontWeight: 600 }}>Window:</span> {new Date(data.window_start).toLocaleDateString()} - {new Date(data.window_end).toLocaleDateString()}</div>
+                  <div><span style={{ fontWeight: 600 }}>Generated:</span> {formatTime(fleetHealthReport.generated_at)}</div>
+                  {fleetHealthReport.last_accessed_at && <div><span style={{ fontWeight: 600 }}>Last Accessed:</span> {formatTime(fleetHealthReport.last_accessed_at)}</div>}
+                </div>
+
+                {/* B. Site Breakdown Table */}
+                {siteMetrics.length > 0 ? (
+                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <BarChart3 size={17} color="white" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Site Breakdown</div>
+                        <div style={{ fontSize: '0.8125rem', color: sub }}>{siteMetrics.length} site{siteMetrics.length !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                    {/* Scrollable table wrapper */}
+                    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                      <div style={{ minWidth: 800 }}>
+                        {/* Header */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <span></span><span>Site ID</span><span>Status</span><span>Devices</span><span>Records</span><span>Complete %</span><span>Alerts</span><span>Largest Gap</span>
+                        </div>
+                        {/* Rows */}
+                        {siteMetrics.map(site => {
+                          const isExpanded = expandedSites.has(site.siteId);
+                          const statusIcon = site.hasOfflineDevices ? '🔴' : site.hasAlerts ? '🟡' : '🟢';
+                          const largestGap = Math.max(...site.devices.map((d: any) => d.telemetry?.largest_gap_minutes || 0), 0);
+
+                          return (
+                            <div key={site.siteId} style={{ borderBottom: `1px solid ${bdr}` }}>
+                              {/* Site row */}
+                              <div
+                                onClick={() => setExpandedSites(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(site.siteId)) next.delete(site.siteId);
+                                  else next.add(site.siteId);
+                                  return next;
+                                })}
+                                style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', background: isExpanded ? tok.bgSub(isDark) : 'transparent', transition: 'background 0.15s' }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub }}>
+                                  {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                                </div>
+                                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: txt, fontWeight: 700 }}>{site.siteId}</code>
+                                <span style={{ fontSize: '0.875rem' }}>{statusIcon}</span>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: txt, fontFamily: 'monospace' }}>{site.devices.length}</span>
+                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{site.totalRecords}</span>
+                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{site.avgCompleteness.toFixed(1)}%</span>
+                                <span style={{ fontSize: '0.875rem', fontWeight: site.totalAlerts > 0 ? 700 : 400, color: site.totalAlerts > 0 ? '#EF4444' : sub, fontFamily: 'monospace' }}>{site.totalAlerts}</span>
+                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{largestGap.toFixed(1)}m</span>
+                              </div>
+
+                              {/* Device rows (expanded) */}
+                              {isExpanded && (
+                                <>
+                                  {site.devices.sort((a: any, b: any) => (b.alerts?.total || 0) - (a.alerts?.total || 0)).map((device: any) => {
+                                    const statusIcon = !device.is_online ? '🔴' : device.alerts?.total > 0 ? '🟡' : '🟢';
+                                    const alertCodes = Object.keys(device.alerts?.by_fault_code || {}).join(', ') || '—';
+
+                                    return (
+                                      <div key={device.serial} style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', alignItems: 'center', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), fontSize: '0.8125rem', color: txt }}>
+                                        <div></div>
+                                        <code style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial}</code>
+                                        <span>{statusIcon}</span>
+                                        <span style={{ fontFamily: 'monospace' }}>{device.is_online ? 'Online' : 'Offline'}</span>
+                                        <span style={{ fontFamily: 'monospace', color: sub }}>{device.telemetry?.record_count || 0}</span>
+                                        <span style={{ fontFamily: 'monospace', color: sub }}>{(device.telemetry?.data_completeness_pct || 0).toFixed(1)}%</span>
+                                        <span style={{ fontFamily: 'monospace', color: device.alerts?.total > 0 ? '#EF4444' : sub }}>{device.alerts?.total || 0}</span>
+                                        <span style={{ fontFamily: 'monospace', color: sub, fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alertCodes}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ ...cardStyle(isDark), padding: '2.5rem', textAlign: 'center', color: sub }}>
+                    No devices in report.
+                  </div>
+                )}
+
+                {/* C. Issues Summary */}
+                {issues.length > 0 && (
+                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #EF4444, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <AlertTriangle size={17} color="white" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Issues Detected</div>
+                        <div style={{ fontSize: '0.8125rem', color: sub }}>{issues.length} issue{issues.length !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {issues.map((issue: string, idx: number) => (
+                        <div key={idx} style={{ fontSize: '0.875rem', color: txt, padding: '10px 12px', background: tok.bgSub(isDark), borderRadius: 8, borderLeft: '3px solid #F59E0B' }}>
+                          {issue}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             );
           })()}

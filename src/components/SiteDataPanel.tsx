@@ -2007,39 +2007,35 @@ const PhaseLoadTab: React.FC<{
   const [showTotalLoad, setShowTotalLoad] = useState(false);
   const phaseLoadChartZoom = useChartZoomState();
   const loadForecastChartZoom = useChartZoomState();
-  const chartData = useMemo(() => {
-    if (!phaseLoad.length) return [];
-    const bucketMap = new Map<string, { ts: Date; l1: number; l2: number; l3: number; total: number; n: number }>();
+  const { chartData, chartData15 } = useMemo(() => {
+    if (!phaseLoad.length) return { chartData: [], chartData15: [] };
 
-    for (const row of phaseLoad) {
-      const baseTs = new Date(row.hour || row.timestamp);
-      if (Number.isNaN(baseTs.getTime())) continue;
-      // Snap to 5-minute buckets for a consistent operational view.
-      const bucketMs = Math.floor(baseTs.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000);
-      const bucketTs = new Date(bucketMs);
-      const key = bucketTs.toISOString();
-      if (!bucketMap.has(key)) {
-        bucketMap.set(key, { ts: bucketTs, l1: 0, l2: 0, l3: 0, total: 0, n: 0 });
+    const make = (bucketMinutes: number) => {
+      const bucketMs = bucketMinutes * 60 * 1000;
+      const map = new Map<string, { ts: Date; l1: number; l2: number; l3: number; n: number }>();
+      for (const row of phaseLoad) {
+        const baseTs = new Date(row.hour || row.timestamp);
+        if (Number.isNaN(baseTs.getTime())) continue;
+        const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
+        const key = new Date(snapped).toISOString();
+        if (!map.has(key)) map.set(key, { ts: new Date(snapped), l1: 0, l2: 0, l3: 0, n: 0 });
+        const b = map.get(key)!;
+        b.l1 += Number(row.load_l1_kw ?? 0);
+        b.l2 += Number(row.load_l2_kw ?? 0);
+        b.l3 += Number(row.load_l3_kw ?? 0);
+        b.n += 1;
       }
-      const b = bucketMap.get(key)!;
-      b.l1 += Number(row.load_l1_kw ?? 0);
-      b.l2 += Number(row.load_l2_kw ?? 0);
-      b.l3 += Number(row.load_l3_kw ?? 0);
-      b.total += Number(row.load_total_kw ?? 0);
-      b.n += 1;
-    }
+      return Array.from(map.values())
+        .sort((a, b) => a.ts.getTime() - b.ts.getTime())
+        .map(b => ({
+          time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          L1: +Number(b.l1 / (b.n || 1)).toFixed(2),
+          L2: +Number(b.l2 / (b.n || 1)).toFixed(2),
+          L3: +Number(b.l3 / (b.n || 1)).toFixed(2),
+        }));
+    };
 
-    return Array.from(bucketMap.values())
-      .sort((a, b) => a.ts.getTime() - b.ts.getTime())
-      .map((b: any) => {
-      return {
-        time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        L1: +Number(b.l1 / (b.n || 1)).toFixed(2),
-        L2: +Number(b.l2 / (b.n || 1)).toFixed(2),
-        L3: +Number(b.l3 / (b.n || 1)).toFixed(2),
-        total: +Number(b.total / (b.n || 1)).toFixed(2),
-      };
-    });
+    return { chartData: make(5), chartData15: make(15) };
   }, [phaseLoad]);
 
   const loadForecastChartData = useMemo(() => {
@@ -2195,8 +2191,8 @@ const PhaseLoadTab: React.FC<{
 
       {/* ── Stacked area chart with glow strokes ── */}
       <ChartCard
-        title="Phase Load Distribution (5 min)"
-        subtitle={`L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h · drag to zoom`}
+        title={showTotalLoad ? 'Total Phase Load (15 min)' : 'Phase Load Distribution (5 min)'}
+        subtitle={showTotalLoad ? `L1 + L2 + L3 combined · 15-minute buckets · last ${hours}h · drag to zoom` : `L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h · drag to zoom`}
         isDark={isDark}
         isLive={true}
         height={chartData.length === 0 ? 100 : 300}
@@ -2235,11 +2231,11 @@ const PhaseLoadTab: React.FC<{
             <CJLine
               ref={phaseLoadChartZoom.chartRef}
               data={{
-                labels: chartData.map((d: any) => d.time),
+                labels: (showTotalLoad ? chartData15 : chartData).map((d: any) => d.time),
                 datasets: showTotalLoad
                   ? [{
                       label: 'Total Load',
-                      data: chartData.map((d: any) => +(d.L1 + d.L2 + d.L3).toFixed(2)),
+                      data: chartData15.map((d: any) => +(d.L1 + d.L2 + d.L3).toFixed(2)),
                       borderColor: isDark ? '#f8fafc' : '#111827',
                       borderWidth: 2.4,
                       tension: 0.25,
@@ -2249,7 +2245,7 @@ const PhaseLoadTab: React.FC<{
                     }]
                   : (['L1', 'L2', 'L3'] as const).map(ph => ({
                       label: `Phase ${ph}`,
-                      data: chartData.map((d: any) => d[ph]),
+                      data: chartData.map((d: any) => d[ph] as number),
                       borderColor: PHASE_COLORS[ph], borderWidth: 2.2, tension: 0.4, pointRadius: 0,
                       fill: ph === 'L1' ? 'origin' : '-1',
                       backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return PHASE_COLORS[ph] + '30'; return makeGradient(chart.ctx, chart.chartArea, PHASE_COLORS[ph], 0.55, 0.05); },
