@@ -450,9 +450,9 @@ const Alerts: React.FC = () => {
   // ── Tabs config ──
   const tabs: { key: 'overview' | 'alerts' | 'analytics' | 'fleet-health'; label: string; icon: React.ReactNode; badge?: number }[] = [
     { key: 'overview',     label: 'Overview',      icon: <LayoutGrid size={15} /> },
+    { key: 'fleet-health', label: 'Fleet Health',  icon: <Heart size={15} /> },
     { key: 'alerts',       label: 'All Alerts',    icon: <Bell size={15} />, badge: filteredAlerts.length },
     { key: 'analytics',    label: 'Analytics',     icon: <BarChart3 size={15} /> },
-    { key: 'fleet-health', label: 'Fleet Health',  icon: <Heart size={15} /> },
   ];
 
   return (
@@ -497,17 +497,17 @@ const Alerts: React.FC = () => {
       {/* ── KPI Row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
         {[
-          { label: 'Total',       value: alerts.length,    color: '#6366F1', icon: <Bell size={17} /> },
-          { label: 'Unresolved',  value: unresolvedAlerts.length, color: '#EF4444', icon: <AlertCircle size={17} /> },
-          { label: 'Critical',    value: unresolvedCriticalAlerts.length,    color: '#DC2626', icon: <AlertCircle size={17} /> },
-          { label: 'Warnings',    value: unresolvedWarningAlerts.length,     color: '#F59E0B', icon: <AlertTriangle size={17} /> },
-          { label: 'Info',        value: unresolvedInfoAlerts.length,        color: '#3B82F6', icon: <Info size={17} /> },
-          { label: 'Resolved',    value: resolvedCount,    color: '#10B981', icon: <CheckCircle2 size={17} /> },
+          { label: 'Total',      subtitle: 'all time',   value: alerts.length,                       color: '#6366F1', icon: <Bell size={17} /> },
+          { label: 'Active',     subtitle: 'need action', value: unresolvedAlerts.length,             color: '#EF4444', icon: <AlertCircle size={17} /> },
+          { label: 'Critical',   subtitle: 'active now', value: unresolvedCriticalAlerts.length,      color: '#DC2626', icon: <AlertCircle size={17} /> },
+          { label: 'Warnings',   subtitle: 'active now', value: unresolvedWarningAlerts.length,       color: '#F59E0B', icon: <AlertTriangle size={17} /> },
+          { label: 'Info',       subtitle: 'active now', value: unresolvedInfoAlerts.length,          color: '#3B82F6', icon: <Info size={17} /> },
+          { label: 'Resolved',   subtitle: 'of ' + alerts.length + ' total', value: resolvedCount,   color: '#10B981', icon: <CheckCircle2 size={17} /> },
         ].map(kpi => (
           <div key={kpi.label} style={{
             ...cardStyle(isDark),
             padding: '14px 16px',
-            display: 'flex', flexDirection: 'column', gap: 8,
+            display: 'flex', flexDirection: 'column', gap: 6,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
@@ -516,6 +516,7 @@ const Alerts: React.FC = () => {
               </div>
             </div>
             <div style={{ fontSize: '1.75rem', fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+            <div style={{ fontSize: '0.68rem', color: tok.textMuted(isDark), fontStyle: 'italic' }}>{kpi.subtitle}</div>
           </div>
         ))}
       </div>
@@ -565,9 +566,9 @@ const Alerts: React.FC = () => {
             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
                 { label: 'Total Alerts', value: alerts.length, color: '#6366F1' },
-                { label: 'Unresolved',   value: unresolvedAlerts.length, color: '#EF4444' },
-                { label: 'Critical',     value: criticalCount, color: '#DC2626' },
-                { label: 'Warnings',     value: warningCount,  color: '#F59E0B' },
+                { label: 'Active',       value: unresolvedAlerts.length, color: '#EF4444' },
+                { label: 'Critical (active)', value: unresolvedCriticalAlerts.length, color: '#DC2626' },
+                { label: 'Warnings (active)', value: unresolvedWarningAlerts.length, color: '#F59E0B' },
               ].map(item => (
                 <div key={item.label} style={{
                   background: `${item.color}0f`,
@@ -1857,28 +1858,30 @@ const Alerts: React.FC = () => {
       {activeTab === 'fleet-health' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Date Picker and Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: sub }}>Date:</span>
-            <input
-              type="date"
-              value={fleetHealthReportDate || new Date().toISOString().split('T')[0]}
-              onChange={(e) => setFleetHealthReportDate(e.target.value)}
-              style={{ ...inputStyle(isDark), width: 'auto' }}
-            />
-            <span style={{ fontSize: '0.75rem', color: sub }}>Leave empty for latest report</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={() => setFleetHealthReportDate(null)}
               style={{
                 ...btnBase,
-                padding: '6px 14px',
-                background: tok.bgMuted(isDark),
-                color: sub,
-                border: `1px solid ${bdr}`,
+                padding: '7px 16px',
+                background: !fleetHealthReportDate ? '#6366F1' : tok.bgMuted(isDark),
+                color: !fleetHealthReportDate ? '#fff' : sub,
+                border: `1px solid ${!fleetHealthReportDate ? '#6366F1' : bdr}`,
+                borderRadius: 8,
                 fontSize: '0.8125rem',
+                fontWeight: 600,
               }}
             >
-              Latest
+              Latest Report
             </button>
+            <span style={{ fontSize: '0.8125rem', color: tok.textMuted(isDark) }}>or pick a date:</span>
+            <input
+              type="date"
+              value={fleetHealthReportDate || ''}
+              onChange={(e) => setFleetHealthReportDate(e.target.value || null)}
+              max={new Date().toISOString().split('T')[0]}
+              style={{ ...inputStyle(isDark), width: 'auto' }}
+            />
           </div>
 
           {/* Loading / Error */}
@@ -1948,189 +1951,262 @@ const Alerts: React.FC = () => {
 
             return (
               <>
-                {/* A. Fleet Summary Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                  {[
-                    { label: 'Health Status', value: healthStatus.label, color: healthStatus.color, icon: <Heart size={17} />, bg: healthStatus.bg },
-                    { label: 'Total Alerts', value: (summary.total_alerts || 0).toString(), color: '#6366F1', icon: <AlertCircle size={17} /> },
-                    { label: 'Critical', value: (summary.critical_alerts || 0).toString(), color: (summary.critical_alerts || 0) > 0 ? '#EF4444' : '#10B981', icon: <AlertCircle size={17} /> },
-                    { label: 'Warnings', value: (summary.warning_alerts || 0).toString(), color: (summary.warning_alerts || 0) > 0 ? '#F59E0B' : '#10B981', icon: <AlertTriangle size={17} /> },
-                    { label: 'Unresolved', value: (summary.unresolved_alerts || 0).toString(), color: '#DC2626', icon: <AlertCircle size={17} /> },
-                    { label: 'RS-485 Stale', value: (summary.rs485_stale_events || 0).toString(), color: (summary.rs485_stale_events || 0) > 0 ? '#F59E0B' : '#10B981', icon: <Shield size={17} /> },
-                  ].map(card => (
-                    <div key={card.label} style={{ ...cardStyle(isDark), padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, background: card.bg || tok.bgCard(isDark) }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
-                        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${card.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>{card.icon}</div>
-                      </div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, lineHeight: 1, fontFamily: 'monospace' }}>{card.value}</div>
+                {/* A. Fleet Status Banner */}
+                <div style={{
+                  ...cardStyle(isDark),
+                  padding: '16px 20px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+                  background: healthStatus.bg,
+                  border: `1px solid ${healthStatus.color}40`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: `${healthStatus.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: healthStatus.color }}>
+                      <Heart size={20} />
                     </div>
-                  ))}
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '1.0625rem', color: healthStatus.color }}>{healthStatus.label.replace(/^[^ ]+ /, '')}</div>
+                      <div style={{ fontSize: '0.8rem', color: tok.textSecondary(isDark) }}>Fleet health for {data.report_date} &nbsp;·&nbsp; {new Date(data.window_start).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} – {new Date(data.window_end).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Total Alerts',  value: summary.total_alerts || 0,       color: '#6366F1' },
+                      { label: 'Unresolved',    value: summary.unresolved_alerts || 0,  color: (summary.unresolved_alerts || 0) > 0 ? '#EF4444' : '#10B981' },
+                      { label: 'Critical',      value: summary.critical_alerts || 0,    color: (summary.critical_alerts || 0) > 0 ? '#EF4444' : '#10B981' },
+                      { label: 'RS-485 Stale',  value: summary.rs485_stale_events || 0, color: (summary.rs485_stale_events || 0) > 0 ? '#F59E0B' : '#10B981' },
+                      { label: 'Auto-Reboots', value: summary.auto_reboots || 0,        color: (summary.auto_reboots || 0) > 0 ? '#F59E0B' : '#10B981' },
+                    ].map(s => (
+                      <div key={s.label} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                        <div style={{ fontSize: '0.65rem', color: tok.textMuted(isDark), marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Report metadata */}
-                <div style={{ ...cardStyle(isDark), padding: '12px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, fontSize: '0.8125rem', color: sub }}>
-                  <div><span style={{ fontWeight: 600 }}>Report Date:</span> {data.report_date}</div>
-                  <div><span style={{ fontWeight: 600 }}>Window:</span> {new Date(data.window_start).toLocaleDateString()} - {new Date(data.window_end).toLocaleDateString()}</div>
-                  <div><span style={{ fontWeight: 600 }}>Generated:</span> {formatTime(fleetHealthReport.generated_at)}</div>
-                  {fleetHealthReport.last_accessed_at && <div><span style={{ fontWeight: 600 }}>Last Accessed:</span> {formatTime(fleetHealthReport.last_accessed_at)}</div>}
-                </div>
-
-                {/* B. Site Breakdown Table */}
-                {siteMetrics.length > 0 ? (
-                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
-                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <BarChart3 size={17} color="white" />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Site Breakdown</div>
-                        <div style={{ fontSize: '0.8125rem', color: sub }}>{siteMetrics.length} site{siteMetrics.length !== 1 ? 's' : ''}</div>
-                      </div>
+                {/* Issues Banner (if any) */}
+                {issues.length > 0 && (
+                  <div style={{ ...cardStyle(isDark), padding: '14px 18px', border: `1px solid rgba(239,68,68,0.3)`, background: 'rgba(239,68,68,0.06)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#EF4444', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <AlertCircle size={15} /> {issues.length} Issue{issues.length !== 1 ? 's' : ''} Detected
                     </div>
-                    {/* Scrollable table wrapper */}
-                    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                      <div style={{ minWidth: 800 }}>
-                        {/* Header */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          <span></span><span>Site ID</span><span>Status</span><span>Devices</span><span>Records</span><span>Complete %</span><span>Alerts</span><span>Largest Gap</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {issues.map((issue: any, i: number) => (
+                        <div key={i} style={{ fontSize: '0.8125rem', color: tok.textPrimary(isDark), display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <span style={{ color: '#EF4444', flexShrink: 0 }}>•</span>
+                          <span>{typeof issue === 'string' ? issue : issue.message || JSON.stringify(issue)}</span>
                         </div>
-                        {/* Rows */}
-                        {siteMetrics.map(site => {
-                          const isExpanded = expandedSites.has(site.siteId);
-                          const statusIcon = site.hasOfflineDevices ? '🔴' : site.hasAlerts ? '🟡' : '🟢';
-                          const largestGap = Math.max(...site.devices.map((d: any) => d.telemetry?.largest_gap_minutes || 0), 0);
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                          return (
-                            <div key={site.siteId} style={{ borderBottom: `1px solid ${bdr}` }}>
-                              {/* Site row */}
-                              <div
-                                onClick={() => setExpandedSites(prev => {
-                                  const next = new Set(prev);
-                                  if (next.has(site.siteId)) next.delete(site.siteId);
-                                  else next.add(site.siteId);
-                                  return next;
-                                })}
-                                style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', background: isExpanded ? tok.bgSub(isDark) : 'transparent', transition: 'background 0.15s' }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub }}>
-                                  {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                                </div>
-                                <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: txt, fontWeight: 700 }}>{site.siteId}</code>
-                                <span style={{ fontSize: '0.875rem' }}>{statusIcon}</span>
-                                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: txt, fontFamily: 'monospace' }}>{site.devices.length}</span>
-                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{site.totalRecords}</span>
-                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{site.avgCompleteness.toFixed(1)}%</span>
-                                <span style={{ fontSize: '0.875rem', fontWeight: site.totalAlerts > 0 ? 700 : 400, color: site.totalAlerts > 0 ? '#EF4444' : sub, fontFamily: 'monospace' }}>{site.totalAlerts}</span>
-                                <span style={{ fontSize: '0.875rem', color: sub, fontFamily: 'monospace' }}>{largestGap.toFixed(1)}m</span>
+                {/* Report metadata — compact strip */}
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.75rem', color: tok.textMuted(isDark), alignItems: 'center', padding: '2px 0' }}>
+                  <span><strong>Generated:</strong> {formatTime(fleetHealthReport.generated_at)}</span>
+                  {fleetHealthReport.last_accessed_at && <span><strong>Last viewed:</strong> {formatTime(fleetHealthReport.last_accessed_at)}</span>}
+                </div>
+
+                {/* B. Site Breakdown — card-per-site */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '0.875rem' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <BarChart3 size={15} color="white" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Site Breakdown</div>
+                      <div style={{ fontSize: '0.75rem', color: sub }}>{siteMetrics.length} site{siteMetrics.length !== 1 ? 's' : ''} · click a site to see devices</div>
+                    </div>
+                  </div>
+
+                  {siteMetrics.length === 0 ? (
+                    <div style={{ ...cardStyle(isDark), padding: '2rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>
+                      No devices found in this report.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {siteMetrics.map(site => {
+                        const isExpanded = expandedSites.has(site.siteId);
+                        const siteStatus = site.hasOfflineDevices
+                          ? { label: 'Offline', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)' }
+                          : site.hasAlerts
+                            ? { label: 'Warning', color: '#F59E0B', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.25)' }
+                            : { label: 'Healthy', color: '#10B981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' };
+                        const largestGap = Math.max(...site.devices.map((d: any) => d.telemetry?.largest_gap_minutes || 0), 0);
+                        const completenessColor = site.avgCompleteness < 70 ? '#EF4444' : site.avgCompleteness < 90 ? '#F59E0B' : '#10B981';
+
+                        return (
+                          <div key={site.siteId} style={{ ...cardStyle(isDark), padding: 0, border: `1px solid ${isExpanded ? siteStatus.border : tok.border(isDark)}`, transition: 'border-color 0.15s' }}>
+
+                            {/* ── Site header row ── */}
+                            <div
+                              onClick={() => setExpandedSites(prev => {
+                                const next = new Set(prev);
+                                if (next.has(site.siteId)) next.delete(site.siteId);
+                                else next.add(site.siteId);
+                                return next;
+                              })}
+                              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', cursor: 'pointer', background: isExpanded ? siteStatus.bg : 'transparent', borderRadius: isExpanded ? '13px 13px 0 0' : 13, transition: 'background 0.15s' }}
+                            >
+                              {/* Expand chevron */}
+                              <div style={{ color: sub, flexShrink: 0 }}>
+                                {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                               </div>
 
-                              {/* Device rows (expanded) */}
-                              {isExpanded && (
-                                <>
-                                  {site.devices.sort((a: any, b: any) => (b.alerts?.total || 0) - (a.alerts?.total || 0)).map((device: any) => {
-                                    const statusIcon = !device.is_online ? '🔴' : device.alerts?.total > 0 ? '🟡' : '🟢';
+                              {/* Status dot */}
+                              <div style={{ width: 9, height: 9, borderRadius: '50%', background: siteStatus.color, flexShrink: 0, boxShadow: `0 0 0 3px ${siteStatus.color}30` }} />
+
+                              {/* Site ID */}
+                              <code style={{ fontSize: '0.9rem', fontFamily: 'monospace', color: txt, fontWeight: 800, flex: '0 0 auto' }}>{site.siteId}</code>
+
+                              {/* Status pill */}
+                              <span style={{ padding: '2px 9px', borderRadius: 5, fontSize: '0.68rem', fontWeight: 700, color: siteStatus.color, background: siteStatus.bg, border: `1px solid ${siteStatus.border}`, flexShrink: 0 }}>{siteStatus.label}</span>
+
+                              {/* Spacer */}
+                              <div style={{ flex: 1 }} />
+
+                              {/* Quick-stats strip */}
+                              <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexShrink: 0 }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: txt, lineHeight: 1 }}>{site.devices.length}</div>
+                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Devices</div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: completenessColor, lineHeight: 1 }}>{site.avgCompleteness.toFixed(0)}%</div>
+                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Data</div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: site.totalAlerts > 0 ? '#EF4444' : sub, lineHeight: 1 }}>{site.totalAlerts}</div>
+                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Alerts</div>
+                                </div>
+                                {largestGap > 0 && (
+                                  <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: largestGap > 60 ? '#EF4444' : largestGap > 20 ? '#F59E0B' : sub, lineHeight: 1 }}>{largestGap >= 60 ? `${(largestGap/60).toFixed(1)}h` : `${largestGap.toFixed(0)}m`}</div>
+                                    <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gap</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* ── Device list (expanded) ── */}
+                            {isExpanded && (
+                              <div style={{ borderTop: `1px solid ${bdr}` }}>
+                                {/* Device table header */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 80px minmax(120px, 1fr)', gap: '0 8px', padding: '8px 18px 8px 42px', background: tok.bgSub(isDark), fontSize: '0.65rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `1px solid ${bdr}` }}>
+                                  <span>Device</span><span>Status</span><span>Records</span><span>Data %</span><span>Alerts</span><span>Fault Codes</span>
+                                </div>
+
+                                {site.devices
+                                  .sort((a: any, b: any) => (b.alerts?.total || 0) - (a.alerts?.total || 0))
+                                  .map((device: any, dIdx: number) => {
+                                    const deviceStatus = !device.is_online
+                                      ? { label: 'Offline', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
+                                      : device.alerts?.total > 0
+                                        ? { label: 'Alerted', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
+                                        : { label: 'OK', color: '#10B981', bg: 'rgba(16,185,129,0.10)' };
                                     const alertCodes = Object.keys(device.alerts?.by_fault_code || {}).join(', ') || '—';
+                                    const devCompleteness = device.telemetry?.data_completeness_pct || 0;
+                                    const devCompletenessColor = devCompleteness < 70 ? '#EF4444' : devCompleteness < 90 ? '#F59E0B' : sub;
                                     const deviceKey = `${site.siteId}:${device.serial}`;
                                     const isDeviceExpanded = expandedDevices.has(deviceKey);
                                     const deviceAlerts = (data.detailed_alerts || []).filter((a: any) => a.device_serial === device.serial);
+                                    const canExpand = deviceAlerts.length > 0;
 
                                     return (
-                                      <div key={device.serial}>
-                                        {/* Device row (clickable) */}
+                                      <div key={device.serial} style={{ borderTop: dIdx > 0 ? `1px solid ${bdr}` : undefined }}>
+                                        {/* Device row */}
                                         <div
-                                          onClick={() => setExpandedDevices(prev => {
+                                          onClick={() => canExpand && setExpandedDevices(prev => {
                                             const next = new Set(prev);
                                             if (next.has(deviceKey)) next.delete(deviceKey);
                                             else next.add(deviceKey);
                                             return next;
                                           })}
-                                          style={{ display: 'grid', gridTemplateColumns: '20px 120px 80px 100px 100px 80px 80px 100px', gap: '0 12px', padding: '10px 20px', alignItems: 'center', borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), fontSize: '0.8125rem', color: txt, cursor: deviceAlerts.length > 0 ? 'pointer' : 'default', transition: 'background 0.15s' }}
+                                          style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 80px minmax(120px, 1fr)', gap: '0 8px', padding: '10px 18px', alignItems: 'center', cursor: canExpand ? 'pointer' : 'default', background: isDeviceExpanded ? tok.bgSub(isDark) : 'transparent', transition: 'background 0.12s' }}
                                         >
-                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: sub }}>
-                                            {deviceAlerts.length > 0 && (isDeviceExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />)}
+                                          {/* Device serial + expand icon */}
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 24, minWidth: 0 }}>
+                                            <span style={{ color: sub, flexShrink: 0, opacity: canExpand ? 1 : 0 }}>
+                                              {isDeviceExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                            </span>
+                                            <code style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: txt, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial}</code>
                                           </div>
-                                          <code style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.serial}</code>
-                                          <span>{statusIcon}</span>
-                                          <span style={{ fontFamily: 'monospace' }}>{device.is_online ? 'Online' : 'Offline'}</span>
-                                          <span style={{ fontFamily: 'monospace', color: sub }}>{device.telemetry?.record_count || 0}</span>
-                                          <span style={{ fontFamily: 'monospace', color: sub }}>{(device.telemetry?.data_completeness_pct || 0).toFixed(1)}%</span>
-                                          <span style={{ fontFamily: 'monospace', color: device.alerts?.total > 0 ? '#EF4444' : sub }}>{device.alerts?.total || 0}</span>
-                                          <span style={{ fontFamily: 'monospace', color: sub, fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alertCodes}</span>
+
+                                          {/* Status pill */}
+                                          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, color: deviceStatus.color, background: deviceStatus.bg, width: 'fit-content' }}>{deviceStatus.label}</span>
+
+                                          <span style={{ fontSize: '0.8125rem', color: sub, fontFamily: 'monospace' }}>{device.telemetry?.record_count || 0}</span>
+
+                                          <span style={{ fontSize: '0.8125rem', fontWeight: devCompleteness < 90 ? 700 : 400, color: devCompletenessColor, fontFamily: 'monospace' }}>{devCompleteness.toFixed(1)}%</span>
+
+                                          <span style={{ fontSize: '0.8125rem', fontWeight: device.alerts?.total > 0 ? 700 : 400, color: device.alerts?.total > 0 ? '#EF4444' : sub, fontFamily: 'monospace' }}>
+                                            {device.alerts?.total > 0 ? device.alerts.total : '—'}
+                                          </span>
+
+                                          <span style={{ fontSize: '0.75rem', color: sub, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alertCodes}</span>
                                         </div>
 
-                                        {/* Device alerts (expanded) */}
+                                        {/* Alert detail rows (expanded) */}
                                         {isDeviceExpanded && deviceAlerts.length > 0 && (
-                                          <div style={{ borderTop: `1px solid ${bdr}`, background: tok.bgSub(isDark), overflowX: 'auto' }}>
-                                            <div style={{ padding: '12px 40px', fontSize: '0.75rem', fontWeight: 600, color: sub, borderBottom: `1px solid ${bdr}` }}>Alerts for {device.serial}</div>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                              <thead>
-                                                <tr style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
-                                                  <th style={{ padding: '8px 40px 8px 40px', textAlign: 'left', color: sub, fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem' }}>Fault Code</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Duration</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Freq</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Severity</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Status</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Triggered</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Context / Insight</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody>
-                                                {deviceAlerts.map((alert: any) => {
-                                                  const severityColor = alert.severity === 'critical' ? '#EF4444' : alert.severity === 'warning' ? '#F59E0B' : '#10B981';
-                                                  const severityBg = alert.severity === 'critical' ? 'rgba(239,68,68,0.15)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
-                                                  const statusColor = alert.status === 'active' ? '#EF4444' : '#10B981';
-                                                  return (
-                                                    <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
-                                                      <td style={{ padding: '8px 40px 8px 40px', color: txt, fontFamily: 'monospace', fontSize: '0.7rem' }}>{alert.fault_code || '—'}</td>
-                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', fontWeight: alert.duration_minutes ? 600 : 400 }}>
-                                                        {alert.duration_minutes !== null && alert.duration_minutes !== undefined 
-                                                          ? `${alert.duration_minutes}m` 
-                                                          : '—'
-                                                        }
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', fontWeight: 600 }}>
-                                                        {alert.frequency || 1}×
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px' }}>
-                                                        <span style={{ background: severityBg, color: severityColor, padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: '0.65rem', display: 'inline-block' }}>
-                                                          {alert.severity}
-                                                        </span>
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px' }}>
-                                                        <span style={{ background: alert.status === 'active' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: statusColor, padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: '0.65rem', display: 'inline-block' }}>
-                                                          {alert.status}
-                                                        </span>
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px', color: sub, fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                                                        {formatTime(alert.triggered_at)}
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {alert.context_insight || alert.message || '—'}
-                                                      </td>
-                                                    </tr>
-                                                  );
-                                                })}
-                                              </tbody>
-                                            </table>
+                                          <div style={{ borderTop: `1px solid ${bdr}`, background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.025)', padding: '4px 0 8px' }}>
+                                            <div style={{ padding: '8px 18px 6px 58px', fontSize: '0.68rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                              Alert history · {deviceAlerts.length} record{deviceAlerts.length !== 1 ? 's' : ''}
+                                            </div>
+                                            <div style={{ overflowX: 'auto' }}>
+                                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                                <thead>
+                                                  <tr style={{ borderBottom: `1px solid ${bdr}` }}>
+                                                    {['Fault Code', 'Severity', 'Status', 'Duration', 'Freq', 'Triggered', 'Context / Insight'].map(h => (
+                                                      <th key={h} style={{ padding: h === 'Fault Code' ? '6px 12px 6px 58px' : '6px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.65rem', whiteSpace: 'nowrap' }}>{h}</th>
+                                                    ))}
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {deviceAlerts.map((alert: any) => {
+                                                    const sc = alert.severity === 'critical'
+                                                      ? { color: '#EF4444', bg: 'rgba(239,68,68,0.15)' }
+                                                      : alert.severity === 'warning'
+                                                        ? { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)' }
+                                                        : { color: '#10B981', bg: 'rgba(16,185,129,0.15)' };
+                                                    const stc = alert.status === 'active'
+                                                      ? { color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
+                                                      : { color: '#10B981', bg: 'rgba(16,185,129,0.12)' };
+                                                    return (
+                                                      <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}` }}>
+                                                        <td style={{ padding: '7px 12px 7px 58px', fontFamily: 'monospace', fontSize: '0.72rem', color: txt, whiteSpace: 'nowrap' }}>{alert.fault_code || '—'}</td>
+                                                        <td style={{ padding: '7px 12px' }}>
+                                                          <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.65rem' }}>{alert.severity}</span>
+                                                        </td>
+                                                        <td style={{ padding: '7px 12px' }}>
+                                                          <span style={{ background: stc.bg, color: stc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.65rem' }}>{alert.status}</span>
+                                                        </td>
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                          {alert.duration_minutes != null ? `${alert.duration_minutes}m` : '—'}
+                                                        </td>
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace' }}>{alert.frequency || 1}×</td>
+                                                        <td style={{ padding: '7px 12px', color: sub, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{formatTime(alert.triggered_at)}</td>
+                                                        <td style={{ padding: '7px 12px 7px 12px', color: sub, fontSize: '0.72rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                          {alert.context_insight || alert.message || '—'}
+                                                        </td>
+                                                      </tr>
+                                                    );
+                                                  })}
+                                                </tbody>
+                                              </table>
+                                            </div>
                                           </div>
                                         )}
                                       </div>
                                     );
                                   })}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ ...cardStyle(isDark), padding: '2.5rem', textAlign: 'center', color: sub }}>
-                    No devices in report.
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* C. Issues Summary */}
                 {issues.length > 0 && (
