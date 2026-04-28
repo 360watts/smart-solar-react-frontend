@@ -2067,11 +2067,12 @@ const Alerts: React.FC = () => {
                                               <thead>
                                                 <tr style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
                                                   <th style={{ padding: '8px 40px 8px 40px', textAlign: 'left', color: sub, fontWeight: 600, fontFamily: 'monospace', fontSize: '0.7rem' }}>Fault Code</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Duration</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Freq</th>
                                                   <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Severity</th>
                                                   <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Status</th>
                                                   <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Triggered</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Resolved</th>
-                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Message</th>
+                                                  <th style={{ padding: '8px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.7rem' }}>Context / Insight</th>
                                                 </tr>
                                               </thead>
                                               <tbody>
@@ -2082,6 +2083,15 @@ const Alerts: React.FC = () => {
                                                   return (
                                                     <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
                                                       <td style={{ padding: '8px 40px 8px 40px', color: txt, fontFamily: 'monospace', fontSize: '0.7rem' }}>{alert.fault_code || '—'}</td>
+                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', fontWeight: alert.duration_minutes ? 600 : 400 }}>
+                                                        {alert.duration_minutes !== null && alert.duration_minutes !== undefined 
+                                                          ? `${alert.duration_minutes}m` 
+                                                          : '—'
+                                                        }
+                                                      </td>
+                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', fontWeight: 600 }}>
+                                                        {alert.frequency || 1}×
+                                                      </td>
                                                       <td style={{ padding: '8px 12px' }}>
                                                         <span style={{ background: severityBg, color: severityColor, padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: '0.65rem', display: 'inline-block' }}>
                                                           {alert.severity}
@@ -2095,11 +2105,8 @@ const Alerts: React.FC = () => {
                                                       <td style={{ padding: '8px 12px', color: sub, fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                         {formatTime(alert.triggered_at)}
                                                       </td>
-                                                      <td style={{ padding: '8px 12px', color: sub, fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                                                        {alert.resolved_at ? formatTime(alert.resolved_at) : '—'}
-                                                      </td>
-                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {alert.message || '—'}
+                                                      <td style={{ padding: '8px 12px', color: txt, fontSize: '0.7rem', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {alert.context_insight || alert.message || '—'}
                                                       </td>
                                                     </tr>
                                                   );
