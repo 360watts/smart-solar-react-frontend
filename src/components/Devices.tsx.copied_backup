@@ -1,307 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MobileDevices } from './mobile';
-import { useIsMobile } from '../hooks/useIsMobile';
-import ReactDOM from 'react-dom';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell } from 'lucide-react';
-import { apiService, AlertItem } from '../services/api';
-import { useDebouncedCallback } from '../hooks/useDebounce';
-import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
-import AuditTrail from './AuditTrail';
-import SiteDataPanel from './SiteDataPanel';
-import { EmptyState } from './EmptyState';
-import { SkeletonDeviceList } from './SkeletonLoader';
-import { AccessibleModal } from './AccessibleModal';
-import PageHeader from './PageHeader';
-import { useModal } from '../hooks';
-import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../constants';
-
-interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  is_staff: boolean;
-  is_superuser: boolean;
-}
-
-interface Device {
-  id: number;
-  device_serial: string;
-  hw_id?: string;
-  model?: string;
-  user?: string;
-  provisioned_at: string;
-  config_version?: string;
-  is_online?: boolean;
-  last_heartbeat?: string;
-  last_seen_at?: string;
-  connectivity_type?: string;
-  network_ip?: string;
-  signal_strength_dbm?: number | null;
-  device_temp_c?: number | null;
-  memory_status?: { free_heap?: number } | null;
-  heartbeat_health?: {
-    severity?: 'ok' | 'warn' | 'critical';
-    issues?: string[];
-    age_seconds?: number | null;
-  } | null;
-  logs_enabled?: boolean;
-  auto_reboot_enabled?: boolean;
-  pending_config_update?: boolean;
-  config_ack_ver?: number | null;
-  config_downloaded_at?: string | null;
-  config_acked_at?: string | null;
-  created_by_username?: string;
-  created_at?: string;
-  updated_by_username?: string;
-  updated_at?: string;
-  alerts_muted_until?: string | null;
-  wifi_ssid?: string | null;
-  wifi_password?: string | null;
-}
-
-interface Preset {
-  id: number;
-  config_id?: string;
-  name: string;
-  description?: string;
-  slaves_count?: number;
-  version?: number;
-  updated_at?: string;
-  gateway_configuration?: {
-    general_settings?: {
-      config_id?: string;
-      last_updated?: string;
-    };
-  };
-}
-
-
-interface SolarSite {
-  id: number;
-  device_id: number;
-  site_id: string;
-  display_name: string;
-  latitude: number;
-  longitude: number;
-  capacity_kw: number;
-  inverter_capacity_kw?: number | null;
-  tilt_deg: number;
-  azimuth_deg: number;
-  timezone: string;
-  is_active: boolean;
-  deye_station_id?: number | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// ── Register Coverage Sub-components ─────────────────────────────────────────
-
-const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave, isDark }) => {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 20px', background: 'none', border: 'none', cursor: 'pointer',
-          transition: 'background 150ms',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {open
-            ? <ChevronDown size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
-            : <ChevronRight size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
-          }
-          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#374151', fontFamily: 'Poppins, sans-serif' }}>
-            Slave {slave.slave_id} — {slave.device_name}
-          </span>
-          {!slave.enabled && (
-            <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: isDark ? '#64748b' : '#94a3b8' }}>disabled</span>
-          )}
-        </div>
-        <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: slave.received === slave.configured ? '#22c55e' : '#f59e0b' }}>
-          {slave.received}/{slave.configured}
-        </span>
-      </button>
-
-      {open && (
-        <div style={{ overflowX: 'auto', padding: '0 20px 12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-            <thead>
-              <tr style={{ color: isDark ? '#475569' : '#94a3b8' }}>
-                {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
-                  <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {slave.registers.map((reg: any) => (
-                <tr
-                  key={reg.id}
-                  style={{
-                    borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
-                    background: reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)',
-                    transition: 'background 150ms',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)')}
-                >
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b', whiteSpace: 'nowrap' }}>
-                    {reg.label}
-                  </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#64748b' : '#94a3b8' }}>
-                    {reg.address}
-                  </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b' }}>
-                    {reg.category || '—'}
-                  </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
-                    {reg.unit || '—'}
-                  </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : isDark ? '#475569' : '#cbd5e1' }}>
-                    {reg.value != null ? reg.value : '—'}
-                  </td>
-                  <td style={{ padding: '5px 8px' }}>
-                    {reg.received
-                      ? <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
-                      : <X size={13} style={{ color: '#ef4444' }} />
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-const Devices: React.FC = () => {
-  const isMobile = useIsMobile();
-  const { isDark } = useTheme();
-  const { user } = useAuth();
-  const isStaffUser = !!user?.is_staff;
-  const [searchParams] = useSearchParams();
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [creatingDevice, setCreatingDevice] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [presetSearch, setPresetSearch] = useState('');
-  const [showPresetDropdown, setShowPresetDropdown] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
-  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [presets, setPresets] = useState<Preset[]>([]);
-  const [presetsLoading, setPresetsLoading] = useState(true);
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [deviceLogFiles, setDeviceLogFiles] = useState<any[]>([]);
-  const [logFilesLoading, setLogFilesLoading] = useState(false);
-  const [logFilesTotal, setLogFilesTotal] = useState(0);
-  const [logFilesPage, setLogFilesPage] = useState(0);
-  const [viewingFileContent, setViewingFileContent] = useState<string | null>(null);
-  const [viewingFileId, setViewingFileId] = useState<number | null>(null);
-  const [viewingFileName, setViewingFileName] = useState<string>('');
-  const [viewingFileLoading, setViewingFileLoading] = useState(false);
-  const [bulkDownloading, setBulkDownloading] = useState(false);
-  const [fileFilterFrom, setFileFilterFrom] = useState('');
-  const [fileFilterTo, setFileFilterTo] = useState('');
-  const LOG_FILES_PAGE_SIZE = 20;
-  const [editForm, setEditForm] = useState({
-    device_serial: '',
-    user: '',
-    config_version: '',
-    wifi_ssid: '',
-    wifi_password: '',
-  });
-  const [createForm, setCreateForm] = useState({
-    device_serial: '',
-    user: '',
-    config_version: '',
-    wifi_ssid: '',
-    wifi_password: '',
-  });
-  const [showChangeWifiPassword, setShowChangeWifiPassword] = useState(false);
-
-  // Site management state
-  const [siteDetails, setSiteDetails] = useState<SolarSite | null>(null);
-  const [siteLoading, setSiteLoading] = useState(false);
-  const [devicePreset, setDevicePreset] = useState<Preset | null>(null);
-
-  // Register coverage state
-  const [regCoverage, setRegCoverage] = useState<any | null>(null);
-  const [regCoverageLoading, setRegCoverageLoading] = useState(false);
-  const [regCoverageExpanded, setRegCoverageExpanded] = useState(false);
-  const [deviceAlerts, setDeviceAlerts] = useState<AlertItem[]>([]);
-  const [alertsLoading, setAlertsLoading] = useState(false);
-  
-  // Modern modal states
-  const rebootModal = useModal<Device>();
-  const deleteModal = useModal<Device>();
-  const muteAlertsModal = useModal<Device>();
-  const [muteHours, setMuteHours] = useState<number | null>(4);
-  const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
-  const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
-  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
-
-  const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
-    try {
-      if (!silent) setLoading(true);
-      const response = await apiService.getDevices(search || undefined, page, pageSize);
-      let latestRows: Device[] = [];
-
-      // Handle paginated response
-      if (response.results) {
-        latestRows = response.results;
-        setDevices(latestRows);
-        setFilteredDevices(latestRows);
-        setTotalCount(response.count);
-        setTotalPages(response.total_pages);
-        setCurrentPage(response.current_page);
-      } else {
-        // Fallback for non-paginated response
-        latestRows = Array.isArray(response) ? response : [];
-        setDevices(latestRows);
-        setFilteredDevices(latestRows);
-        setTotalCount(latestRows.length);
-        setTotalPages(1);
-        setCurrentPage(1);
-      }
-
-      // Keep detail panel in sync with fresh heartbeat/status values.
-      setSelectedDevice((prev) => {
-        if (!prev) return prev;
-        const fresh = latestRows.find((d) => d.id === prev.id);
-        return fresh ? { ...prev, ...fresh } : prev;
-      });
-      
-      if (!silent) setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      if (!silent) setLoading(false);
-    }
-  }, [pageSize]);
 
   const fetchUsers = async () => {
     try {
@@ -570,47 +268,36 @@ const Devices: React.FC = () => {
     debouncedSearch(query);  // Debounce the search
   };
 
-  const handleEdit = async (device: Device) => {
-    try {
-      const fullDevice = await apiService.getDevice(device.id);
-      setEditingDevice(fullDevice);
-      setEditForm({
-        device_serial: fullDevice.device_serial,
-        user: fullDevice.user || '',
-        config_version: fullDevice.config_version || '',
-        wifi_ssid: fullDevice.wifi_ssid || '',
-        wifi_password: fullDevice.wifi_password || '',
-      });
-      setShowChangeWifiPassword(false);
-      setUserSearchTerm(fullDevice.user ? `${users.find(u => u.username === fullDevice.user)?.first_name} ${users.find(u => u.username === fullDevice.user)?.last_name} (${fullDevice.user})` : '');
-      setShowUserDropdown(false);
-    } catch (err) {
-      console.error('Failed to fetch device details for editing:', err);
-      // Fallback to using the list device
-      setEditingDevice(device);
-      setEditForm({
-        device_serial: device.device_serial,
-        user: device.user || '',
-        config_version: device.config_version || '',
-        wifi_ssid: (device as any).wifi_ssid || '',
-        wifi_password: (device as any).wifi_password || '',
-      });
-      setShowChangeWifiPassword(false);
-      setUserSearchTerm(device.user ? `${users.find(u => u.username === device.user)?.first_name} ${users.find(u => u.username === device.user)?.last_name} (${device.user})` : '');
-      setShowUserDropdown(false);
-    }
+  const [showChangeWifiPassword, setShowChangeWifiPassword] = useState(false);
+
+  const handleEdit = (device: Device) => {
+    setEditingDevice(device);
+    setEditForm({
+      device_serial: device.device_serial,
+      user: device.user || '',
+      config_version: device.config_version || '',
+      wifi_ssid: (device as any).wifi_ssid || '',
+      // Do not pre-fill stored password when opening edit modal — require explicit change
+      wifi_password: '',
+    });
+    // Hide change-password input by default when opening edit modal
+    setShowChangeWifiPassword(false);
+    setUserSearchTerm(device.user ? `${users.find(u => u.username === device.user)?.first_name} ${users.find(u => u.username === device.user)?.last_name} (${device.user})` : '');
+    setShowUserDropdown(false);
   };
 
   const handleSave = async () => {
     if (!editingDevice) return;
 
     try {
+      // Only send wifi_password to the API when operator explicitly opted to change it
       const payload: any = { ...editForm };
-      if (!showChangeWifiPassword) {
+      if (!showChangeWifiPassword && Object.prototype.hasOwnProperty.call(payload, 'wifi_password')) {
         delete payload.wifi_password;
       }
       await apiService.updateDevice(editingDevice.id, payload);
       setEditingDevice(null);
+      setShowChangeWifiPassword(false);
       // Refetch to get the updated device with all fields including audit trail
       await fetchDevices(currentPage, searchTerm);
     } catch (err) {
@@ -844,219 +531,6 @@ const Devices: React.FC = () => {
   const getPresetConfigId = (preset: Preset): string => {
     return preset.gateway_configuration?.general_settings?.config_id || preset.config_id || '';
   };
-
-  const editDevicePortal = (editingDevice || creatingDevice) ? ReactDOM.createPortal(
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 9999, padding: '20px',
-    }} onClick={handleCancel}>
-      <div style={{
-        background: isDark ? '#1a1a1a' : '#ffffff',
-        borderRadius: 16,
-        boxShadow: isDark
-          ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
-          : '0 25px 50px -12px rgba(0,0,0,0.25)',
-        maxWidth: '640px', width: '100%',
-        maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 28px',
-          borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
-            }}>
-              <Pencil size={22} color="white" />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
-                {editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}
-              </div>
-              <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
-                {editingDevice ? 'Update device configuration and assignment' : 'Add a new device to the fleet'}
-              </div>
-            </div>
-          </div>
-          <button type="button" onClick={handleCancel} style={{
-            width: 40, height: 40, borderRadius: 10, border: 'none',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-            color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          {/* Scrollable body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-
-            {/* Device Identity */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Device Identity</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
-                <input type="text"
-                  value={editingDevice ? editForm.device_serial : createForm.device_serial}
-                  onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
-                  required autoComplete="off" placeholder="SN-12345678"
-                  style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-              </div>
-            </div>
-
-            {/* Ownership */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Ownership &amp; Assignment</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
-                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                  <input type="text" placeholder="Search and select user..." value={userSearchTerm}
-                    onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserDropdown(true); }}
-                    onFocus={() => setShowUserDropdown(true)} autoComplete="off"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-                  {(editingDevice ? editForm.user : createForm.user) && (
-                    <div style={{ marginTop: 8, fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
-                      <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
-                      <button type="button" onClick={() => { if (editingDevice) setEditForm({...editForm, user: ''}); else setCreateForm({...createForm, user: ''}); setUserSearchTerm(''); }} className="btn-icon btn-icon-danger" style={{ marginLeft: 10 }}>✕</button>
-                    </div>
-                  )}
-                  {showUserDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary, #0f172a)', border: '1px solid var(--border-color, rgba(148,163,184,0.1))', borderRadius: 8, maxHeight: 200, overflowY: 'auto', zIndex: 1000, boxShadow: 'var(--shadow-xl)', marginTop: 4 }}>
-                      {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                        <div key={user.id}
-                          onClick={() => { if (editingDevice) setEditForm({...editForm, user: user.username}); else setCreateForm({...createForm, user: user.username}); setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`); setShowUserDropdown(false); }}
-                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))', background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99,102,241,0.15)' : 'transparent', color: 'var(--text-primary, #f8fafc)', fontSize: '0.875rem' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99,102,241,0.15)' : 'transparent'}>
-                          {user.first_name} {user.last_name} ({user.username})<br/>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
-                        </div>
-                      )) : (
-                        <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
-                          {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Network / Provisioning */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #34d399, #10b981)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#34d399' : '#10b981' }}>Network / Provisioning</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi&#8209;Fi SSID</label>
-                  <input type="text"
-                    value={editingDevice ? editForm.wifi_ssid : createForm.wifi_ssid}
-                    onChange={(e) => editingDevice ? setEditForm({ ...editForm, wifi_ssid: e.target.value }) : setCreateForm({ ...createForm, wifi_ssid: e.target.value })}
-                    autoComplete="off" placeholder="Optional — SSID to provision on the device"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi&#8209;Fi Password</label>
-                  {editingDevice ? (
-                    showChangeWifiPassword ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <input type="password" value={editForm.wifi_password}
-                          onChange={(e) => setEditForm({ ...editForm, wifi_password: e.target.value })}
-                          autoComplete="new-password" placeholder="Enter new Wi-Fi password"
-                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-                        <button type="button" onClick={() => { setShowChangeWifiPassword(false); setEditForm({ ...editForm, wifi_password: '' }); }}
-                          style={{ background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', textAlign: 'left', fontSize: '0.8rem' }}>Cancel password change</button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <small style={{ fontSize: '0.875rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
-                          {editingDevice.wifi_password ? 'Password stored (hidden).' : 'No password stored.'}
-                        </small>
-                        <button type="button" onClick={() => setShowChangeWifiPassword(true)}
-                          style={{ background: 'transparent', border: `1px solid ${isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.35)'}`, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', color: isDark ? '#a5b4fc' : '#6366f1', fontSize: '0.8rem' }}>
-                          Change password
-                        </button>
-                      </div>
-                    )
-                  ) : (
-                    <input type="password" value={createForm.wifi_password}
-                      onChange={(e) => setCreateForm({ ...createForm, wifi_password: e.target.value })}
-                      autoComplete="new-password" placeholder="Optional Wi-Fi password"
-                      style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-                  )}
-                </div>
-                <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
-                  If provided, credentials are returned to the device when it calls.
-                </small>
-              </div>
-            </div>
-
-            {/* Configuration */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Configuration</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
-                  <select value={editingDevice ? editForm.config_version : createForm.config_version}
-                    onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}>
-                    <option value="">-- Manual Configuration --</option>
-                    {presetsLoading && <option value="" disabled>Loading presets...</option>}
-                    {!presetsLoading && presets.map((preset) => (
-                      <option key={preset.id} value={getPresetConfigId(preset)}>{preset.name} ({getPresetConfigId(preset) || 'no ID'})</option>
-                    ))}
-                  </select>
-                  <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Selecting a preset sets the Config Version ID below.</small>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
-                  <input type="text"
-                    value={editingDevice ? editForm.config_version : createForm.config_version}
-                    onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
-                    autoComplete="off" placeholder="Manual Config ID"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-                </div>
-              </div>
-            </div>
-
-            {editingDevice && (
-              <AuditTrail createdBy={editingDevice.created_by_username} createdAt={editingDevice.created_at} updatedBy={editingDevice.updated_by_username} updatedAt={editingDevice.updated_at} />
-            )}
-          </div>
-
-          {/* Footer */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', padding: '16px 28px', borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', flexShrink: 0 }}>
-            <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>
-              {editingDevice ? 'Save Changes' : 'Register Device'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  ) : null;
 
   if (selectedDevice) {
 
@@ -2235,6 +1709,302 @@ const Devices: React.FC = () => {
           document.body
         */}
 
+        {/* Unified edit/create modal handled below (editingDevice || creatingDevice) */}
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '20px',
+          }} onClick={() => { setEditingDevice(null); setShowChangeWifiPassword(false); }}>
+            <div style={{
+              background: isDark ? '#1a1a1a' : '#ffffff',
+              borderRadius: 16,
+              boxShadow: isDark
+                ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+                : '0 25px 50px -12px rgba(0,0,0,0.25)',
+              maxWidth: '640px', width: '100%',
+              maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            }} onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '24px 28px',
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  }}>
+                    <Pencil size={22} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                      Edit Device: {editingDevice.device_serial}
+                    </div>
+                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                      Update device configuration
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setEditingDevice(null); setShowChangeWifiPassword(false); }} style={{
+                  width: 40, height: 40, borderRadius: 10, border: 'none',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                {/* Scrollable body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
+                  {/* Device Identity */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Device Identity
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
+                        <input
+                          type="text"
+                          value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                          onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                          required
+                          autoComplete="off"
+                          placeholder="SN-12345678"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ownership */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Ownership &amp; Assignment
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
+                        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            placeholder="Search by name, username, or email..."
+                            value={userSearchTerm}
+                            onChange={(e) => {
+                              setUserSearchTerm(e.target.value);
+                              setShowUserDropdown(true);
+                            }}
+                            onFocus={() => setShowUserDropdown(true)}
+                            autoComplete="off"
+                            className="full-width"
+                            style={{
+                              padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                              background: isDark ? '#2a2a2a' : '#ffffff',
+                              color: isDark ? '#f3f4f6' : '#111827',
+                              fontSize: '0.875rem',
+                            }}
+                          />
+                          {showUserDropdown && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '0',
+                              right: '0',
+                              background: 'var(--bg-secondary, #1e293b)',
+                              border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
+                              borderRadius: '6px',
+                              marginTop: '4px',
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              zIndex: 10,
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                            }}>
+                              {filteredUsers.length > 0 ? (
+                                filteredUsers.map((user) => (
+                                  <div
+                                    key={user.id}
+                                    onClick={() => {
+                                      if (editingDevice) {
+                                        setEditForm({...editForm, user: user.username});
+                                      } else {
+                                        setCreateForm({...createForm, user: user.username});
+                                      }
+                                      setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
+                                      setShowUserDropdown(false);
+                                    }}
+                                    style={{
+                                      padding: '12px 16px',
+                                      cursor: 'pointer',
+                                      borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                                      background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                      color: 'var(--text-primary, #f8fafc)',
+                                      transition: 'all 0.15s ease',
+                                      fontSize: '0.875rem'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
+                                  >
+                                    {user.first_name} {user.last_name} ({user.username}) <br/>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                                  {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuration */}
+                  <div style={{
+                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12, padding: '20px', marginBottom: 16,
+                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                        Configuration
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
+                        <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            placeholder={presetsLoading ? 'Loading presets…' : 'Search presets…'}
+                            value={presetSearch}
+                            onChange={(e) => { setPresetSearch(e.target.value); setShowPresetDropdown(true); }}
+                            onFocus={() => setShowPresetDropdown(true)}
+                            autoComplete="off"
+                            className="full-width"
+                            style={{
+                              padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                              background: isDark ? '#2a2a2a' : '#ffffff',
+                              color: isDark ? '#f3f4f6' : '#111827',
+                              fontSize: '0.875rem',
+                            }}
+                          />
+                          {showPresetDropdown && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary, #1e293b)', border: '1px solid var(--border-color, rgba(148,163,184,0.2))', borderRadius: '6px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                              <div
+                                onClick={() => { if (editingDevice) setEditForm({ ...editForm, config_version: '' }); else setCreateForm({ ...createForm, config_version: '' }); setPresetSearch(''); setShowPresetDropdown(false); }}
+                                style={{ padding: '10px 14px', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)', fontSize: '0.875rem', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >— Manual Configuration —</div>
+                              {presets.filter(p => !presetSearch.trim() || p.name.toLowerCase().includes(presetSearch.toLowerCase()) || (getPresetConfigId(p) || '').toLowerCase().includes(presetSearch.toLowerCase())).map((preset) => (
+                                <div
+                                  key={preset.id}
+                                  onClick={() => { const cid = getPresetConfigId(preset); if (editingDevice) setEditForm({ ...editForm, config_version: cid }); else setCreateForm({ ...createForm, config_version: cid }); setPresetSearch(preset.name); setShowPresetDropdown(false); }}
+                                  style={{ padding: '10px 14px', cursor: 'pointer', background: (editingDevice ? editForm.config_version : createForm.config_version) === getPresetConfigId(preset) ? 'rgba(99,102,241,0.15)' : 'transparent', color: 'var(--text-primary, #f8fafc)', fontSize: '0.875rem', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.config_version : createForm.config_version) === getPresetConfigId(preset) ? 'rgba(99,102,241,0.15)' : 'transparent'}
+                                >
+                                  {preset.name} <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>({getPresetConfigId(preset) || 'no ID'})</span>
+                                </div>
+                              ))}
+                              {!presetsLoading && presets.filter(p => !presetSearch.trim() || p.name.toLowerCase().includes(presetSearch.toLowerCase()) || (getPresetConfigId(p) || '').toLowerCase().includes(presetSearch.toLowerCase())).length === 0 && (
+                                <div style={{ padding: '10px 14px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>No presets match</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <small className="form-hint">Selecting a preset sets the Config Version ID below.</small>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
+                        <input
+                          type="text"
+                          value={editingDevice ? editForm.config_version : createForm.config_version}
+                          onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
+                          autoComplete="off"
+                          placeholder="Manual Config ID"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {editingDevice && (
+                    <AuditTrail
+                      createdBy={editingDevice.created_by_username}
+                      createdAt={editingDevice.created_at}
+                      updatedBy={editingDevice.updated_by_username}
+                      updatedAt={editingDevice.updated_at}
+                    />
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                  display: 'flex', gap: 10, justifyContent: 'flex-end',
+                  padding: '16px 28px',
+                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  flexShrink: 0,
+                }}>
+                  <button type="button" onClick={handleCancel} style={{
+                    padding: '10px 20px', borderRadius: 8,
+                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  }}>Cancel</button>
+                  <button type="submit" style={{
+                    padding: '10px 20px', borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                  }}>
+                    {editingDevice ? 'Save Changes' : 'Create Device'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
         {/* Modern Reboot Confirmation Modal */}
         <AccessibleModal
           open={rebootModal.open}
@@ -2534,7 +2304,6 @@ const Devices: React.FC = () => {
           </div>,
           document.body
         )}
-        {editDevicePortal}
       </div>
     );
   }
@@ -2840,7 +2609,336 @@ const Devices: React.FC = () => {
         )}
       </div>
 
-      {editDevicePortal}
+      {(editingDevice || creatingDevice) && ReactDOM.createPortal(
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '20px',
+        }} onClick={handleCancel}>
+          <div style={{
+            background: isDark ? '#1a1a1a' : '#ffffff',
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
+              : '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: '640px', width: '100%',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '24px 28px',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                }}>
+                  <Pencil size={22} color="white" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                    {editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}
+                  </div>
+                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                    {editingDevice ? 'Update device configuration and assignment' : 'Add a new device to the fleet'}
+                  </div>
+                </div>
+              </div>
+              <button type="button" onClick={handleCancel} style={{
+                width: 40, height: 40, borderRadius: 10, border: 'none',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {/* Scrollable body */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
+                {/* Device Identity */}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Device Identity</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
+                    <input
+                      type="text"
+                      value={editingDevice ? editForm.device_serial : createForm.device_serial}
+                      onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
+                      required
+                      autoComplete="off"
+                      placeholder="SN-12345678"
+                      style={{
+                        padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        background: isDark ? '#2a2a2a' : '#ffffff',
+                        color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Network / Provisioning */}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #34d399, #10b981)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#34d399' : '#10b981' }}>Network / Provisioning</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi‑Fi SSID</label>
+                      <input
+                        type="text"
+                        value={editingDevice ? (editForm as any).wifi_ssid : (createForm as any).wifi_ssid}
+                        onChange={(e) => editingDevice ? setEditForm({...editForm, wifi_ssid: e.target.value}) : setCreateForm({...createForm, wifi_ssid: e.target.value})}
+                        autoComplete="off"
+                        placeholder="Optional SSID to provision"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi‑Fi Password</label>
+                      {editingDevice ? (
+                        showChangeWifiPassword ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <input
+                              type="password"
+                              value={(editForm as any).wifi_password}
+                              onChange={(e) => setEditForm({ ...editForm, wifi_password: e.target.value })}
+                              autoComplete="new-password"
+                              placeholder="Enter new Wi‑Fi password"
+                              style={{
+                                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                                background: isDark ? '#2a2a2a' : '#ffffff',
+                                color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button type="button" onClick={() => { setShowChangeWifiPassword(false); setEditForm({ ...editForm, wifi_password: '' }); }} style={{ background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer' }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                            <small style={{ fontSize: '0.875rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{(editingDevice as any).wifi_password ? 'Password is stored (hidden).' : 'No password stored.'}</small>
+                            <button type="button" onClick={() => setShowChangeWifiPassword(true)} style={{ background: 'transparent', border: '1px solid rgba(99,102,241,0.15)', padding: '6px 10px', borderRadius: 8, cursor: 'pointer', color: isDark ? '#e5e7eb' : '#111827' }}>Change Wi‑Fi password</button>
+                          </div>
+                        )
+                      ) : (
+                        <input
+                          type="password"
+                          value={(createForm as any).wifi_password}
+                          onChange={(e) => setCreateForm({ ...createForm, wifi_password: e.target.value })}
+                          autoComplete="new-password"
+                          placeholder="Optional Wi‑Fi password"
+                          style={{
+                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                          }}
+                        />
+                      )}
+                    </div>
+                    <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>If provided, these credentials will be stored and returned to the device when it requests.</small>
+                  </div>
+                </div>
+
+                {/* Ownership */}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Ownership & Assignment</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
+                    <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        placeholder="Search and select user..."
+                        value={userSearchTerm}
+                        onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserDropdown(true); }}
+                        onFocus={() => setShowUserDropdown(true)}
+                        autoComplete="off"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
+                      />
+                      {(editingDevice ? editForm.user : createForm.user) && (
+                        <div style={{ marginTop: '8px', fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
+                          <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editingDevice) { setEditForm({...editForm, user: ''}); } else { setCreateForm({...createForm, user: ''}); }
+                              setUserSearchTerm('');
+                            }}
+                            className="btn-icon btn-icon-danger"
+                            style={{ marginLeft: '10px' }}
+                            title="Remove Assignment"
+                          >✕</button>
+                        </div>
+                      )}
+                      {showUserDropdown && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0,
+                          background: 'var(--bg-secondary, #0f172a)',
+                          border: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                          borderRadius: '8px', maxHeight: '200px', overflowY: 'auto',
+                          zIndex: 1000, boxShadow: 'var(--shadow-xl)', marginTop: '4px',
+                        }}>
+                          {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                              <div
+                                key={user.id}
+                                onClick={() => {
+                                  if (editingDevice) { setEditForm({...editForm, user: user.username}); } else { setCreateForm({...createForm, user: user.username}); }
+                                  setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`);
+                                  setShowUserDropdown(false);
+                                }}
+                                style={{
+                                  padding: '12px 16px', cursor: 'pointer',
+                                  borderBottom: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+                                  background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                                  color: 'var(--text-primary, #f8fafc)', transition: 'all 0.15s ease', fontSize: '0.875rem',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}
+                              >
+                                {user.first_name} {user.last_name} ({user.username})<br/>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                              {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configuration */}
+                <div style={{
+                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  borderRadius: 12, padding: '20px', marginBottom: 16,
+                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Configuration</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
+                      <select
+                        value={editingDevice ? editForm.config_version : createForm.config_version}
+                        onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
+                      >
+                        <option value="">-- Manual Configuration --</option>
+                        {presetsLoading && <option value="" disabled>Loading presets...</option>}
+                        {!presetsLoading && presets.map((preset) => (
+                          <option key={preset.id} value={getPresetConfigId(preset)}>
+                            {preset.name} ({getPresetConfigId(preset) || 'no ID'})
+                          </option>
+                        ))}
+                      </select>
+                      <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Selecting a preset sets the Config Version ID below.</small>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
+                      <input
+                        type="text"
+                        value={editingDevice ? editForm.config_version : createForm.config_version}
+                        onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
+                        autoComplete="off"
+                        placeholder="Manual Config ID"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff',
+                          color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {editingDevice && (
+                  <AuditTrail
+                    createdBy={editingDevice.created_by_username}
+                    createdAt={editingDevice.created_at}
+                    updatedBy={editingDevice.updated_by_username}
+                    updatedAt={editingDevice.updated_at}
+                  />
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                display: 'flex', gap: 10, justifyContent: 'flex-end',
+                padding: '16px 28px',
+                borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                flexShrink: 0,
+              }}>
+                <button type="button" onClick={handleCancel} style={{
+                  padding: '10px 20px', borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                }}>Cancel</button>
+                <button type="submit" style={{
+                  padding: '10px 20px', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
+                }}>{editingDevice ? 'Save Changes' : 'Register Device'}</button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
 
     {/* Modern Reboot Confirmation Modal */}
     <AccessibleModal

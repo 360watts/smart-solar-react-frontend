@@ -845,6 +845,10 @@ class ApiService {
     });
   }
 
+  async getDevice(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/`);
+  }
+
   async patchDevice(deviceId: number, data: Record<string, unknown>): Promise<any> {
     return this.request(`/devices/${deviceId}/`, {
       method: 'PATCH',
