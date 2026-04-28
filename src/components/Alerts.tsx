@@ -191,7 +191,7 @@ const Alerts: React.FC = () => {
   const [expandedFaultCode, setExpandedFaultCode] = useState<string | null>(null);
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [catalogueExpandedCode, setCatalogueExpandedCode] = useState<string | null>(null);
-  const [hoveredTimelineDay, setHoveredTimelineDay] = useState<number | null>(null);
+
 
   const [diagRunning, setDiagRunning] = useState(false);
   const [diagResults, setDiagResults] = useState<DiagnoseBatchResponse | null>(null);
@@ -204,6 +204,7 @@ const Alerts: React.FC = () => {
   const [fleetHealthLoading, setFleetHealthLoading] = useState(false);
   const [fleetHealthError, setFleetHealthError] = useState<string | null>(null);
   const [fleetHealthReportDate, setFleetHealthReportDate] = useState<string | null>(null);
+  const [todayFleetHealthReport, setTodayFleetHealthReport] = useState<any | null>(null);
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set());
   const [expandedDevices, setExpandedDevices] = useState<Set<string>>(new Set());
 
@@ -212,7 +213,7 @@ const Alerts: React.FC = () => {
   const [chartSeverityFilter, setChartSeverityFilter] = useState<Set<'critical' | 'warning' | 'info'>>(new Set(['critical', 'warning', 'info']));
   const [chartMetric, setChartMetric] = useState<'total' | 'critical' | 'warning' | 'info'>('total');
   const [showBrush, setShowBrush] = useState(false);
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Chart data transformation
@@ -303,6 +304,10 @@ const Alerts: React.FC = () => {
 
   useEffect(() => {
     fetchAlerts();
+    // Also fetch today's fleet health report for the overview summary
+    apiService.getFleetHealthReport(null)
+      .then(setTodayFleetHealthReport)
+      .catch(err => console.error('Failed to load today\'s fleet health for summary:', err));
     const interval = setInterval(fetchAlerts, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -340,7 +345,26 @@ const Alerts: React.FC = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Bust the cache so getAlerts() always hits the network
+    apiService.invalidateAlertsCache();
     await fetchAlerts();
+    // Also re-fetch the active tab's own data
+    if (activeTab === 'analytics') {
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+      apiService.getAlertsAnalytics(lookbackDays)
+        .then(setAnalyticsData)
+        .catch(err => setAnalyticsError(err instanceof Error ? err.message : 'Failed to load analytics'))
+        .finally(() => setAnalyticsLoading(false));
+    }
+    if (activeTab === 'fleet-health') {
+      setFleetHealthLoading(true);
+      setFleetHealthError(null);
+      apiService.getFleetHealthReport(fleetHealthReportDate)
+        .then(setFleetHealthReport)
+        .catch(err => setFleetHealthError(err instanceof Error ? err.message : 'Failed to load fleet health'))
+        .finally(() => setFleetHealthLoading(false));
+    }
     setRefreshing(false);
   };
 
@@ -495,30 +519,80 @@ const Alerts: React.FC = () => {
       />
 
       {/* ── KPI Row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
-        {[
-          { label: 'Total',      subtitle: 'all time',   value: alerts.length,                       color: '#6366F1', icon: <Bell size={17} /> },
-          { label: 'Active',     subtitle: 'need action', value: unresolvedAlerts.length,             color: '#EF4444', icon: <AlertCircle size={17} /> },
-          { label: 'Critical',   subtitle: 'active now', value: unresolvedCriticalAlerts.length,      color: '#DC2626', icon: <AlertCircle size={17} /> },
-          { label: 'Warnings',   subtitle: 'active now', value: unresolvedWarningAlerts.length,       color: '#F59E0B', icon: <AlertTriangle size={17} /> },
-          { label: 'Info',       subtitle: 'active now', value: unresolvedInfoAlerts.length,          color: '#3B82F6', icon: <Info size={17} /> },
-          { label: 'Resolved',   subtitle: 'of ' + alerts.length + ' total', value: resolvedCount,   color: '#10B981', icon: <CheckCircle2 size={17} /> },
-        ].map(kpi => (
-          <div key={kpi.label} style={{
-            ...cardStyle(isDark),
-            padding: '14px 16px',
-            display: 'flex', flexDirection: 'column', gap: 6,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: `${kpi.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: kpi.color }}>
-                {kpi.icon}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.75rem' }}>
+
+        {/* Row 1 — Active Now (the numbers that matter most) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+          {[
+            {
+              label: 'Active Now',
+              subtitle: unresolvedAlerts.length === 0 ? 'Fleet all clear' : 'need attention',
+              value: unresolvedAlerts.length,
+              color: unresolvedAlerts.length === 0 ? '#10B981'
+                : unresolvedAlerts.some(a => a.severity === 'critical') ? '#EF4444' : '#F59E0B',
+              icon: <AlertCircle size={17} />,
+              large: true,
+            },
+            {
+              label: 'Critical',
+              subtitle: 'active',
+              value: unresolvedCriticalAlerts.length,
+              color: unresolvedCriticalAlerts.length > 0 ? '#DC2626' : sub,
+              icon: <AlertCircle size={17} />,
+            },
+            {
+              label: 'Warnings',
+              subtitle: 'active',
+              value: unresolvedWarningAlerts.length,
+              color: unresolvedWarningAlerts.length > 0 ? '#F59E0B' : sub,
+              icon: <AlertTriangle size={17} />,
+            },
+            {
+              label: 'Info',
+              subtitle: 'active',
+              value: unresolvedInfoAlerts.length,
+              color: unresolvedInfoAlerts.length > 0 ? '#3B82F6' : sub,
+              icon: <Info size={17} />,
+            },
+          ].map(kpi => (
+            <div key={kpi.label} style={{
+              ...cardStyle(isDark),
+              padding: '14px 16px',
+              display: 'flex', flexDirection: 'column', gap: 5,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
+                <div style={{ width: 26, height: 26, borderRadius: 7, background: `${kpi.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: kpi.color }}>
+                  {kpi.icon}
+                </div>
               </div>
+              <div style={{ fontSize: kpi.large ? '2.25rem' : '1.75rem', fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+              <div style={{ fontSize: '0.68rem', color: tok.textMuted(isDark), fontStyle: 'italic' }}>{kpi.subtitle}</div>
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
-            <div style={{ fontSize: '0.68rem', color: tok.textMuted(isDark), fontStyle: 'italic' }}>{kpi.subtitle}</div>
+          ))}
+        </div>
+
+        {/* Row 2 — History context (compact strip) */}
+        <div style={{ ...cardStyle(isDark), padding: '10px 18px', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>History</span>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: txt }}>{alerts.length}</span>
+              <span style={{ fontSize: '0.75rem', color: sub }}>fetched</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10B981' }}>{resolvedCount}</span>
+              <span style={{ fontSize: '0.75rem', color: sub }}>resolved</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ height: 6, width: 100, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
+                <div style={{ width: `${resolutionPct}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6 }} />
+              </div>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#10B981' }}>{resolutionPct}%</span>
+              <span style={{ fontSize: '0.75rem', color: sub }}>resolution rate</span>
+            </div>
           </div>
-        ))}
+        </div>
       </div>
 
       {/* ── Tabs ── */}
@@ -564,12 +638,32 @@ const Alerts: React.FC = () => {
               </div>
             </div>
             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {[
-                { label: 'Total Alerts', value: alerts.length, color: '#6366F1' },
-                { label: 'Active',       value: unresolvedAlerts.length, color: '#EF4444' },
-                { label: 'Critical (active)', value: unresolvedCriticalAlerts.length, color: '#DC2626' },
-                { label: 'Warnings (active)', value: unresolvedWarningAlerts.length, color: '#F59E0B' },
-              ].map(item => (
+              {(() => {
+                // Use today's fleet health report if available, otherwise fall back to all-time alerts
+                if (todayFleetHealthReport?.data?.fleet_summary) {
+                  const summary = todayFleetHealthReport.data.fleet_summary;
+                  const totalAlerts = summary.total_alerts || 0;
+                  const unresolvedAlerts = summary.unresolved_alerts || 0;
+                  const criticalActive = summary.critical_alerts || 0;
+                  const warningActive = summary.warning_alerts || 0;
+                  const resolutionPct = totalAlerts > 0 ? Math.round(((totalAlerts - unresolvedAlerts) / totalAlerts) * 100) : 0;
+                  
+                  return [
+                    { label: 'Total Alerts', value: totalAlerts, color: '#6366F1' },
+                    { label: 'Active', value: unresolvedAlerts, color: '#EF4444' },
+                    { label: 'Critical (active)', value: criticalActive, color: '#DC2626' },
+                    { label: 'Warnings (active)', value: warningActive, color: '#F59E0B' },
+                  ];
+                } else {
+                  // Fallback: show only active/unresolved alerts from all-time list
+                  return [
+                    { label: 'Total Alerts', value: unresolvedAlerts.length, color: '#6366F1' },
+                    { label: 'Active', value: unresolvedAlerts.length, color: '#EF4444' },
+                    { label: 'Critical (active)', value: unresolvedCriticalAlerts.length, color: '#DC2626' },
+                    { label: 'Warnings (active)', value: unresolvedWarningAlerts.length, color: '#F59E0B' },
+                  ];
+                }
+              })().map(item => (
                 <div key={item.label} style={{
                   background: `${item.color}0f`,
                   border: `1px solid ${item.color}2a`,
@@ -583,15 +677,47 @@ const Alerts: React.FC = () => {
             {/* Resolution progress */}
             <div style={{ padding: '0 20px 18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub }}>Resolution Rate</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#10B981' }}>{resolutionPct}%</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub }}>Resolution Rate (Today)</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#10B981' }}>
+                  {(() => {
+                    if (todayFleetHealthReport?.data?.fleet_summary) {
+                      const summary = todayFleetHealthReport.data.fleet_summary;
+                      const totalAlerts = summary.total_alerts || 0;
+                      const unresolvedAlerts = summary.unresolved_alerts || 0;
+                      return totalAlerts > 0 ? Math.round(((totalAlerts - unresolvedAlerts) / totalAlerts) * 100) : 0;
+                    }
+                    return resolutionPct;
+                  })()}%
+                </span>
               </div>
               <div style={{ height: 6, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
-                <div style={{ width: `${resolutionPct}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6, transition: 'width 0.5s' }} />
+                <div style={{ width: `${(() => {
+                  if (todayFleetHealthReport?.data?.fleet_summary) {
+                    const summary = todayFleetHealthReport.data.fleet_summary;
+                    const totalAlerts = summary.total_alerts || 0;
+                    const unresolvedAlerts = summary.unresolved_alerts || 0;
+                    return totalAlerts > 0 ? Math.round(((totalAlerts - unresolvedAlerts) / totalAlerts) * 100) : 0;
+                  }
+                  return resolutionPct;
+                })()}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6, transition: 'width 0.5s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: '0.75rem', color: sub }}>
-                <span>{resolvedCount} resolved</span>
-                <span>{unresolvedAlerts.length} pending</span>
+                <span>{(() => {
+                  if (todayFleetHealthReport?.data?.fleet_summary) {
+                    const summary = todayFleetHealthReport.data.fleet_summary;
+                    const totalAlerts = summary.total_alerts || 0;
+                    const unresolvedAlerts = summary.unresolved_alerts || 0;
+                    return (totalAlerts - unresolvedAlerts) + ' resolved';
+                  }
+                  return resolvedCount + ' resolved';
+                })()}</span>
+                <span>{(() => {
+                  if (todayFleetHealthReport?.data?.fleet_summary) {
+                    const summary = todayFleetHealthReport.data.fleet_summary;
+                    return (summary.unresolved_alerts || 0) + ' pending';
+                  }
+                  return unresolvedAlerts.length + ' pending';
+                })()}</span>
               </div>
             </div>
           </div>
@@ -693,11 +819,8 @@ const Alerts: React.FC = () => {
                       </div>
                       <span style={{
                         fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', padding: '3px 10px', borderRadius: 20,
-                        background: (alert.resolved || alert.status === 'resolved') ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-                        color: (alert.resolved || alert.status === 'resolved') ? '#10B981' : '#EF4444',
-                      }}>
-                        {(alert.resolved || alert.status === 'resolved') ? 'Resolved' : 'Active'}
-                      </span>
+                        background: 'rgba(239,68,68,0.12)', color: '#EF4444',
+                      }}>Active</span>
                     </div>
                   ))}
                 </div>
@@ -1185,7 +1308,7 @@ const Alerts: React.FC = () => {
 
       {/* ══════════════════════ DIAGNOSTIC DETAIL MODAL ══════════════════════ */}
       {selectedAlertForDiag !== null && (() => {
-        const alert = paginatedAlerts.find((a: AlertItem) => a.id === selectedAlertForDiag);
+        const alert = alerts.find((a: AlertItem) => a.id === selectedAlertForDiag);
         if (!alert || !alert.metadata?.diagnostic) return null;
         const diag = alert.metadata.diagnostic;
         const sevColor: Record<string, string> = {
@@ -1367,15 +1490,13 @@ const Alerts: React.FC = () => {
               : null;
             const catalogueByCode = Object.fromEntries(analyticsData.rule_catalogue.map(r => [r.fault_code, r]));
             const timelineDays = analyticsData.timeline.slice(-30);
-            const maxDayCount = Math.max(1, ...timelineDays.map(d => d.faults.reduce((s, f) => s + f.count, 0)));
-
             return (
               <>
                 {/* ── A. Summary cards ── */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   {[
                     { label: 'Total Occurrences', value: totalOccurrences.toString(), sub: `in last ${analyticsData.lookback_days}d`, color: '#6366F1', icon: <BarChart3 size={17} /> },
-                    { label: 'Active Now', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear' : 'Needs attention', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
+                    { label: 'Active Faults', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear in this period' : 'Unresolved in period', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
                     { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${normalizeFaultTitle(mostFrequent.fault_code, mostFrequent.title)}` : 'No faults', color: mostFrequent ? SEVERITY_CONFIG[mostFrequent.severity].color : sub, icon: <AlertTriangle size={17} /> },
                     { label: 'Avg Time to Resolve', value: fmtTTR(avgTTR), sub: resolvedFaults.length > 0 ? `across ${resolvedFaults.length} fault type${resolvedFaults.length > 1 ? 's' : ''}` : 'No resolved faults', color: '#F59E0B', icon: <Clock size={17} /> },
                   ].map(card => (

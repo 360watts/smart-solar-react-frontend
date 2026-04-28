@@ -297,6 +297,10 @@ class ApiService {
     return response.json();
   }
 
+  invalidateAlertsCache(): void {
+    cacheService.clear('alerts_manage');
+  }
+
   async getAlerts(): Promise<AlertItem[]> {
     const cacheKey = 'alerts_manage';
     const cached = cacheService.get(cacheKey);
