@@ -2079,6 +2079,68 @@ const Alerts: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* D. Detailed Alerts List */}
+                {(data.detailed_alerts && data.detailed_alerts.length > 0) && (
+                  <div style={{ ...cardStyle(isDark), padding: 0 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: `1px solid ${bdr}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <AlertCircle size={17} color="white" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: txt, fontSize: '0.9375rem' }}>Alert Details</div>
+                        <div style={{ fontSize: '0.8125rem', color: sub }}>{data.detailed_alerts.length} alert{data.detailed_alerts.length !== 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                    <div style={{ overflowX: 'auto', padding: '1rem 0' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: `1px solid ${bdr}`, background: tok.bgSub(isDark) }}>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600, fontFamily: 'monospace' }}>Device</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Fault Code</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Severity</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Status</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Triggered</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Resolved</th>
+                            <th style={{ padding: '12px 20px', textAlign: 'left', color: sub, fontWeight: 600 }}>Message</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.detailed_alerts.map((alert: any) => {
+                            const severityColor = alert.severity === 'critical' ? '#EF4444' : alert.severity === 'warning' ? '#F59E0B' : '#10B981';
+                            const severityBg = alert.severity === 'critical' ? 'rgba(239,68,68,0.15)' : alert.severity === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
+                            const statusColor = alert.status === 'active' ? '#EF4444' : '#10B981';
+                            return (
+                              <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}`, background: 'transparent' }}>
+                                <td style={{ padding: '12px 20px', color: txt, fontFamily: 'monospace', fontSize: '0.75rem', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.device_serial}</td>
+                                <td style={{ padding: '12px 20px', color: txt, fontFamily: 'monospace', fontSize: '0.75rem' }}>{alert.fault_code || '—'}</td>
+                                <td style={{ padding: '12px 20px' }}>
+                                  <span style={{ background: severityBg, color: severityColor, padding: '4px 10px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem', display: 'inline-block' }}>
+                                    {alert.severity}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px 20px' }}>
+                                  <span style={{ background: alert.status === 'active' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: statusColor, padding: '4px 10px', borderRadius: 6, fontWeight: 600, fontSize: '0.75rem', display: 'inline-block' }}>
+                                    {alert.status}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px 20px', color: sub, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                  {formatTime(alert.triggered_at)}
+                                </td>
+                                <td style={{ padding: '12px 20px', color: sub, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                  {alert.resolved_at ? formatTime(alert.resolved_at) : '—'}
+                                </td>
+                                <td style={{ padding: '12px 20px', color: txt, fontSize: '0.8rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {alert.message || '—'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </>
             );
           })()}
