@@ -473,6 +473,27 @@ class ApiService {
     return data;
   }
 
+  /**
+   * Pre-aggregated energy totals from nightly-refreshed materialized views.
+   * Much smaller payload than fetching 15-min rows: one row per week/month/year.
+   */
+  async getEnergySummary(
+    siteId: string,
+    granularity: 'weekly' | 'monthly' | 'yearly',
+    params?: { start?: string; end?: string },
+  ): Promise<any[]> {
+    const query = new URLSearchParams({ granularity });
+    if (params?.start) query.append('start', params.start);
+    if (params?.end)   query.append('end',   params.end);
+    // Cache for 1 hour — views are only refreshed nightly
+    const cacheKey = `energy_summary_${siteId}_${query.toString()}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const data = await this.request(`/sites/${siteId}/energy-summary/?${query.toString()}`);
+    cacheService.set(cacheKey, data, 60 * 60 * 1000);
+    return data;
+  }
+
   async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
     const query = new URLSearchParams();
     if (params?.date) query.append('date', params.date);
