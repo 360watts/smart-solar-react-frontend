@@ -22,11 +22,12 @@ function isChunkLoadError(error: Error): boolean {
   );
 }
 
-/** Hard-reload once to pick up the new chunk after a Vercel redeploy. */
+/** Hard-reload to pick up new chunks after a Vercel redeploy. Allows one retry per 30s. */
 function reloadOnce(): void {
   const RELOAD_KEY = 'chunk_load_reload';
-  if (!sessionStorage.getItem(RELOAD_KEY)) {
-    sessionStorage.setItem(RELOAD_KEY, '1');
+  const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0);
+  if (Date.now() - last > 30_000) {
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
     window.location.reload();
   }
 }
