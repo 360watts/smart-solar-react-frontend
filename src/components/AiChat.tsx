@@ -361,8 +361,6 @@ const AiChat: React.FC = () => {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything…"
-                rows={1}
-                disabled={streaming}
                 className="ai-textarea"
               />
               <button
@@ -653,7 +651,7 @@ const AiChat: React.FC = () => {
         .ai-panel--dark  .ai-input-area { border-top: 1px solid rgba(255,255,255,0.05); background: rgba(15,25,35,0.7); }
         .ai-input-box {
           display: flex; gap: 8px; align-items: flex-end;
-          border-radius: 14px; padding: 10px 12px;
+          border-radius: 14px; padding: 5px 7px;
           transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .ai-panel--light .ai-input-box { background: rgba(248,250,252,0.8); border: 1px solid rgba(0,0,0,0.1); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
