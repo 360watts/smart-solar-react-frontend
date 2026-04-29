@@ -475,11 +475,16 @@ class ApiService {
 
   /**
    * Pre-aggregated energy totals from nightly-refreshed materialized views.
-   * Much smaller payload than fetching 15-min rows: one row per week/month/year.
+   * Much smaller payload than fetching 15-min rows: one row per day/month/year.
+   *
+   * Granularity guide (industry convention — Enphase, SolarEdge, Fronius):
+   *   'daily'   → 1 row/day   → use for Week view (7 bars) and Month view (~30 bars)
+   *   'monthly' → 1 row/month → use for Year view (12 bars)
+   *   'yearly'  → 1 row/year  → use for Lifetime view
    */
   async getEnergySummary(
     siteId: string,
-    granularity: 'weekly' | 'monthly' | 'yearly',
+    granularity: 'daily' | 'monthly' | 'yearly',
     params?: { start?: string; end?: string },
   ): Promise<any[]> {
     const query = new URLSearchParams({ granularity });
