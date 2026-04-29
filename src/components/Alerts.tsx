@@ -2277,8 +2277,8 @@ const Alerts: React.FC = () => {
                                               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                                                 <thead>
                                                   <tr style={{ borderBottom: `1px solid ${bdr}` }}>
-                                                    {['Fault Code', 'Severity', 'Status', 'Duration', 'Freq', 'Triggered', 'Context / Insight'].map(h => (
-                                                      <th key={h} style={{ padding: h === 'Fault Code' ? '6px 12px 6px 58px' : '6px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.65rem', whiteSpace: 'nowrap' }}>{h}</th>
+                                                    {['Fault Code', 'Severity', 'Status', 'Duration', 'Cumul.', 'Freq', 'Triggered', 'Context / Insight'].map(h => (
+                                                      <th key={h} style={{ padding: h === 'Fault Code' ? '6px 12px 6px 58px' : '6px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.65rem', whiteSpace: 'nowrap' }} title={h === 'Cumul.' ? 'Total resolved time for this fault type today' : undefined}>{h}</th>
                                                     ))}
                                                   </tr>
                                                 </thead>
@@ -2303,6 +2303,9 @@ const Alerts: React.FC = () => {
                                                         </td>
                                                         <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                           {alert.duration_minutes != null ? `${alert.duration_minutes}m` : '—'}
+                                                        </td>
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }} title="Total resolved time for this fault type today">
+                                                          {alert.cumulative_duration_minutes != null ? `${alert.cumulative_duration_minutes}m` : '—'}
                                                         </td>
                                                         <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace' }}>{alert.frequency || 1}×</td>
                                                         <td style={{ padding: '7px 12px', color: sub, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{formatTime(alert.triggered_at)}</td>
