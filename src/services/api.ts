@@ -474,28 +474,37 @@ class ApiService {
   }
 
   /**
-   * Pre-aggregated energy totals from nightly-refreshed materialized views.
-   * Much smaller payload than fetching 15-min rows: one row per day/month/year.
-   *
-   * Granularity guide (industry convention — Enphase, SolarEdge, Fronius):
-   *   'daily'   → 1 row/day   → use for Week view (7 bars) and Month view (~30 bars)
-   *   'monthly' → 1 row/month → use for Year view (12 bars)
-   *   'yearly'  → 1 row/year  → use for Lifetime view
+   * Combined energy summary with today's detailed information including weather, forecasts, and user info.
    */
-  async getEnergySummary(
-    siteId: string,
-    granularity: 'daily' | 'monthly' | 'yearly',
-    params?: { start?: string; end?: string },
-  ): Promise<any[]> {
-    const query = new URLSearchParams({ granularity });
-    if (params?.start) query.append('start', params.start);
-    if (params?.end)   query.append('end',   params.end);
-    // Cache for 1 hour — views are only refreshed nightly
-    const cacheKey = `energy_summary_${siteId}_${query.toString()}`;
+  async getEnergySummaryCombined(siteId: string): Promise<{
+    meta: { site_id: string; unit: string; generated_at: string };
+    summaries: {
+      weekly: any;
+      monthly: any;
+      yearly: any;
+      energy_wallet: any;
+    };
+    today: {
+      user_full_name: string | null;
+      weather: any;
+      temperature_c: number | null;
+      generated_today_kwh: number;
+      consumed_today_kwh: number;
+      power_to_eb_kwh: number;
+      battery_percentage: number | null;
+      forecast: {
+        solar: { overall: any; hourly: any[] };
+        load: { overall: any; hourly: any[] };
+        weather: { current: any; hourly: any[] };
+      };
+    };
+    timeseries: { yesterday: any[] };
+  }> {
+    const cacheKey = `energy_summary_combined_${siteId}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
-    const data = await this.request(`/sites/${siteId}/energy-summary/?${query.toString()}`);
-    cacheService.set(cacheKey, data, 60 * 60 * 1000);
+    const data = await this.request(`/sites/${siteId}/energy-summary/?combined=true`);
+    cacheService.set(cacheKey, data, 15 * 60 * 1000); // 15 min cache
     return data;
   }
 

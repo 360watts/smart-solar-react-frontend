@@ -5,7 +5,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
   BotMessageSquare, Sparkles, X, Send, Zap, AlertTriangle, Battery, MapPin,
-  Maximize2, Minimize2, Copy, Check,
+  Maximize2, Minimize2, ShieldCheck, Activity, Clock3,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -34,11 +34,16 @@ function getAuthHeaders(): HeadersInit {
 }
 
 const SUGGESTED = [
-  { icon: Zap, label: 'Which devices are offline?' },
+  { icon: Activity, label: 'Summarize fleet health' },
   { icon: AlertTriangle, label: 'Show active alerts' },
+  { icon: Zap, label: 'Which devices are offline?' },
   { icon: Battery, label: 'Battery status at coim_001' },
-  { icon: MapPin, label: 'List all sites' },
 ];
+
+const ASSISTANT_LABEL = '360Watts Buddy';
+const ASSISTANT_TAGLINE = 'Smarter Energy Smarter Living';
+
+
 
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -49,19 +54,20 @@ function timeAgo(ts: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-  return (
-    <button onClick={copy} className="ai-copy-btn" title="Copy">
-      {copied ? <Check size={size} /> : <Copy size={size} />}
-    </button>
-  );
+function normalizeStreamFragment(fragment: string): string | null {
+  const cleaned = fragment.replace(/\u00a0/g, ' ');
+  const trimmed = cleaned.trim();
+  if (!trimmed || trimmed === '[KEEPALIVE]') return null;
+  return cleaned;
+}
+
+function normalizeAssistantContent(content: string): string {
+  return content
+    .replace(/\[KEEPALIVE\]/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimStart();
 }
 
 const AiChat: React.FC = () => {
@@ -124,7 +130,7 @@ const AiChat: React.FC = () => {
     isStreamingRef.current = true;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/ai/chat/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -158,6 +164,7 @@ const AiChat: React.FC = () => {
           if (!line.startsWith('data: ')) continue;
           const token = line.slice(6);
           if (token === '[DONE]') break;
+          if (token === '[KEEPALIVE]') continue;
           if (token.startsWith('[ERROR]')) {
             setMessages(prev => {
               const next = [...prev];
@@ -166,7 +173,8 @@ const AiChat: React.FC = () => {
             });
             break;
           }
-          const text = token.replace(/\\n/g, '\n');
+          const text = normalizeStreamFragment(token?.replace(/\\n/g, '\n') ?? '');
+          if (!text) continue;
           setMessages(prev => {
             const next = [...prev];
             const last = next[next.length - 1];
@@ -210,7 +218,7 @@ const AiChat: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
         style={{ bottom: isMobile ? 80 : 24, right: isMobile ? 16 : 24 }}
-        title="AI Assistant (Ctrl+/)"
+        title={`${ASSISTANT_LABEL} (Ctrl+/)`}
       >
         <span className="ai-fab__ring" />
         {open
@@ -244,10 +252,10 @@ const AiChat: React.FC = () => {
                 <span className="ai-avatar__pulse" />
               </div>
               <div>
-                <div className="ai-header__name">360Watts Assistant</div>
+                <div className="ai-header__name">{ASSISTANT_LABEL}</div>
                 <div className="ai-header__status">
                   <span className="ai-status-dot" />
-                  Real-time data · Read-only
+                  {ASSISTANT_TAGLINE}
                 </div>
               </div>
             </div>
@@ -266,6 +274,10 @@ const AiChat: React.FC = () => {
             </div>
           </div>
 
+          <div className="ai-hero">
+            <div className="ai-hero__eyebrow">Internal operations console</div>
+          </div>
+
           {/* Messages */}
           <div className="ai-messages">
             {messages.length === 0 && (
@@ -273,8 +285,7 @@ const AiChat: React.FC = () => {
                 <div className="ai-empty__icon">
                   <Sparkles size={26} color="white" />
                 </div>
-                <div className="ai-empty__title">How can I help?</div>
-                <div className="ai-empty__sub">Ask about devices, sites, alerts, or telemetry.</div>
+                <div className="ai-empty__title">Start with a device question</div>
                 <div className="ai-suggestions">
                   {SUGGESTED.map(({ icon: Icon, label }) => (
                     <button key={label} className="ai-chip" onClick={() => sendMessage(label)}>
@@ -311,7 +322,6 @@ const AiChat: React.FC = () => {
                                 <div className="ai-code-block">
                                   <div className="ai-code-block__header">
                                     <span>{match[1]}</span>
-                                    <CopyButton text={codeStr} size={12} />
                                   </div>
                                   <SyntaxHighlighter
                                     style={isDark ? oneDark : oneLight}
@@ -335,14 +345,11 @@ const AiChat: React.FC = () => {
                           },
                         }}
                       >
-                        {msg.content}
+                        {normalizeAssistantContent(msg.content)}
                       </ReactMarkdown>
                     </div>
                   ) : (
                     <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</span>
-                  )}
-                  {msg.role === 'assistant' && msg.content && !msg.isError && (
-                    <CopyButton text={msg.content} size={12} />
                   )}
                 </div>
                 {/* Timestamp on hover */}
@@ -360,7 +367,7 @@ const AiChat: React.FC = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything…"
+                placeholder="Ask about fleet health, alerts, sites, or telemetry…"
                 className="ai-textarea"
               />
               <button
@@ -372,7 +379,6 @@ const AiChat: React.FC = () => {
                 <Send size={14} />
               </button>
             </div>
-            <div className="ai-input-hint">Enter to send · Shift+Enter for new line · Ctrl+/ to toggle</div>
           </div>
         </div>
       )}
@@ -419,12 +425,18 @@ const AiChat: React.FC = () => {
           -webkit-backdrop-filter: blur(16px);
         }
         .ai-panel--light {
-          background: rgba(255, 255, 255, 0.85);
+          background:
+            radial-gradient(circle at top left, rgba(0,166,62,0.12), transparent 28%),
+            radial-gradient(circle at 85% 10%, rgba(15,23,42,0.08), transparent 22%),
+            rgba(255, 255, 255, 0.86);
           border: 1px solid rgba(255,255,255,0.4);
           box-shadow: 0 24px 64px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,166,62,0.08);
         }
         .ai-panel--dark {
-          background: rgba(15, 25, 35, 0.85);
+          background:
+            radial-gradient(circle at top left, rgba(0,166,62,0.16), transparent 26%),
+            radial-gradient(circle at 92% 0%, rgba(59,130,246,0.12), transparent 20%),
+            linear-gradient(180deg, rgba(12,18,28,0.96), rgba(12,18,28,0.88));
           border: 1px solid rgba(255,255,255,0.08);
           box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,166,62,0.15);
         }
@@ -440,7 +452,7 @@ const AiChat: React.FC = () => {
         .ai-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 16px 18px; flex-shrink: 0;
-          background: linear-gradient(135deg, rgba(0, 166, 62, 0.95), rgba(0, 122, 46, 0.95));
+          background: linear-gradient(135deg, rgba(0, 166, 62, 0.96), rgba(0, 122, 46, 0.96));
           border-bottom: 1px solid rgba(0,0,0,0.15);
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
@@ -465,6 +477,54 @@ const AiChat: React.FC = () => {
         @keyframes aiPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes aiAvatarPulse { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.4); opacity: 0; } }
         .ai-header__actions { display: flex; align-items: center; gap: 6px; }
+        .ai-hero {
+          padding: 16px 18px 12px;
+          border-bottom: 1px solid rgba(148,163,184,0.14);
+        }
+        .ai-panel--light .ai-hero {
+          background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(248,250,252,0.88));
+        }
+        .ai-panel--dark .ai-hero {
+          background: linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.05));
+        }
+        .ai-hero__eyebrow {
+          display: inline-flex; align-items: center;
+          padding: 4px 10px; border-radius: 999px;
+          font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+          background: rgba(0,166,62,0.12); color: #00a63e;
+          margin-bottom: 8px;
+        }
+        .ai-hero__title {
+          font-size: 1rem; line-height: 1.4; font-weight: 800; letter-spacing: -0.02em;
+          margin-bottom: 6px;
+        }
+        .ai-panel--light .ai-hero__title { color: #0f172a; }
+        .ai-panel--dark .ai-hero__title { color: #f8fafc; }
+        .ai-hero__sub {
+          font-size: 0.82rem; line-height: 1.5; margin-bottom: 12px;
+        }
+        .ai-panel--light .ai-hero__sub { color: #475569; }
+        .ai-panel--dark .ai-hero__sub { color: #94a3b8; }
+        .ai-hero__metrics {
+          display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+        }
+        .ai-metric {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 11px; border-radius: 14px;
+          border: 1px solid rgba(148,163,184,0.16);
+          background: rgba(255,255,255,0.58);
+        }
+        .ai-panel--dark .ai-metric { background: rgba(15,23,42,0.4); }
+        .ai-metric__icon {
+          width: 26px; height: 26px; border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0,166,62,0.12); color: #00a63e; flex-shrink: 0;
+        }
+        .ai-metric__copy { display: flex; flex-direction: column; min-width: 0; }
+        .ai-metric__copy span { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
+        .ai-panel--dark .ai-metric__copy span { color: #94a3b8; }
+        .ai-metric__copy strong { font-size: 0.78rem; font-weight: 700; color: #0f172a; }
+        .ai-panel--dark .ai-metric__copy strong { color: #f8fafc; }
         .ai-hdr-btn {
           background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
           color: rgba(255,255,255,0.95); border-radius: 8px; cursor: pointer;
@@ -487,7 +547,7 @@ const AiChat: React.FC = () => {
         /* ── Empty state ── */
         .ai-empty {
           flex: 1; display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 14px; padding: 32px 12px; text-align: center;
+          justify-content: center; gap: 14px; padding: 36px 12px; text-align: center;
         }
         .ai-empty__icon {
           width: 56px; height: 56px; border-radius: 18px;
@@ -502,8 +562,8 @@ const AiChat: React.FC = () => {
         }
         .ai-panel--light .ai-empty__title { font-weight: 800; font-size: 1.1rem; color: #0f172a; letter-spacing: -0.02em; }
         .ai-panel--dark  .ai-empty__title { font-weight: 800; font-size: 1.1rem; color: #f1f5f9; letter-spacing: -0.02em; }
-        .ai-panel--light .ai-empty__sub { font-size: 0.85rem; color: #64748b; max-width: 80%; line-height: 1.4; }
-        .ai-panel--dark  .ai-empty__sub { font-size: 0.85rem; color: #94a3b8; max-width: 80%; line-height: 1.4; }
+        .ai-panel--light .ai-empty__sub { font-size: 0.85rem; color: #64748b; max-width: 86%; line-height: 1.45; }
+        .ai-panel--dark  .ai-empty__sub { font-size: 0.85rem; color: #94a3b8; max-width: 86%; line-height: 1.45; }
         .ai-suggestions {
           display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 12px;
         }
@@ -613,17 +673,6 @@ const AiChat: React.FC = () => {
         .ai-panel--light .ai-code-block__header { background: #e2e8f0; color: #64748b; }
         .ai-panel--dark  .ai-code-block__header { background: #0d1117; color: #64748b; }
 
-        /* ── Copy button ── */
-        .ai-copy-btn {
-          background: transparent; border: none; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          padding: 3px; border-radius: 5px; opacity: 0.5;
-          transition: opacity 0.15s;
-        }
-        .ai-copy-btn:hover { opacity: 1; }
-        .ai-panel--light .ai-copy-btn { color: #475569; }
-        .ai-panel--dark  .ai-copy-btn { color: #94a3b8; }
-
         /* ── Typing indicator ── */
         .ai-typing {
           display: flex; gap: 4px; align-items: center;
@@ -679,9 +728,17 @@ const AiChat: React.FC = () => {
         .ai-send-btn:not(:disabled):hover { transform: scale(1.08); }
         .ai-send-btn:disabled { background: rgba(0,0,0,0.08); color: #94a3b8; cursor: not-allowed; }
         .ai-panel--dark .ai-send-btn:disabled { background: rgba(255,255,255,0.08); }
-        .ai-input-hint { font-size: 0.64rem; text-align: center; margin-top: 5px; }
+        .ai-input-hint { font-size: 0.64rem; text-align: center; margin-top: 5px; letter-spacing: 0.03em; text-transform: uppercase; }
         .ai-panel--light .ai-input-hint { color: #94a3b8; }
         .ai-panel--dark  .ai-input-hint { color: #475569; }
+        @media (max-width: 640px) {
+          .ai-hero { padding: 14px 14px 10px; }
+          .ai-hero__metrics { grid-template-columns: 1fr; }
+          .ai-suggestions { grid-template-columns: 1fr; }
+          .ai-messages { padding: 12px 10px; }
+          .ai-input-area { padding: 10px 10px 8px; }
+          .ai-msg__bubble { max-width: 86%; }
+        }
       `}</style>
     </>
   );
