@@ -85,6 +85,7 @@ const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void }> = ({ 
 import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap, Layers, BarChart2, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
+import { cacheService } from '../services/cacheService';
 import { useTheme } from '../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../constants';
 import DetailsTab from './DetailsTab';
@@ -2001,12 +2002,24 @@ const PhaseLoadTab: React.FC<{
   hours: number;
   onHoursChange: (h: number) => void;
   forecastAccuracy?: any;
-}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange, forecastAccuracy }) => {
+  onRefreshVsActual?: () => void;
+}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual }) => {
   // Allow switching between forecast chart and accuracy view
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
   const [showTotalLoad, setShowTotalLoad] = useState(false);
   const phaseLoadChartZoom = useChartZoomState();
   const loadForecastChartZoom = useChartZoomState();
+  const vsActualLoadChartZoom = useChartZoomState();
+  const [showVsActual, setShowVsActual] = useState(false);
+  const vsActualFetchedRef = useRef(false);
+
+  // Force-refresh vs-actual data (bypass cache) the first time the chart is shown
+  useEffect(() => {
+    if (showVsActual && !vsActualFetchedRef.current) {
+      vsActualFetchedRef.current = true;
+      onRefreshVsActual?.();
+    }
+  }, [showVsActual, onRefreshVsActual]);
   const { chartData, chartData15 } = useMemo(() => {
     if (!phaseLoad.length) return { chartData: [], chartData15: [] };
 
@@ -2049,6 +2062,33 @@ const PhaseLoadTab: React.FC<{
       };
     });
   }, [loadForecast]);
+
+  const vsActualChartData = useMemo(() => {
+    const ts: any[] = forecastAccuracy?.timeseries ?? [];
+    const rows = ts
+      .filter((r: any) => r.actual_kw != null && !!r.ts)
+      .map((r: any) => ({ ...r, __ms: new Date(r.ts).getTime() }))
+      .filter((r: any) => !Number.isNaN(r.__ms))
+      .sort((a: any, b: any) => a.__ms - b.__ms);
+
+    if (rows.length === 0) return [];
+
+    const latestMs = rows[rows.length - 1].__ms;
+    const cutoffMs = latestMs - 7 * 24 * 60 * 60 * 1000;
+
+    return rows
+      .filter((r: any) => r.__ms >= cutoffMs)
+      .map((r: any) => {
+        const d = new Date(r.ts);
+        return {
+          time: d.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          actual:  r.actual_kw  != null ? +Number(r.actual_kw).toFixed(2)  : null,
+          p50:     r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
+          p10:     r.p10_kw  != null ? +Number(r.p10_kw).toFixed(2)  : null,
+          p90:     r.p90_kw  != null ? +Number(r.p90_kw).toFixed(2)  : null,
+        };
+      });
+  }, [forecastAccuracy]);
 
   useEffect(() => {
     phaseLoadChartZoom.resetZoom();
@@ -2117,6 +2157,51 @@ const PhaseLoadTab: React.FC<{
     scales: {
       x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
       y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const vsActualLoadChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        display: true,
+        labels: {
+          color: isDark ? '#cbd5e1' : '#374151',
+          font: { family: 'Poppins, sans-serif', size: 11 },
+          boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14,
+          filter: (item: any) => item.text !== 'P10',
+        },
+      },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#e2e8f0' : '#334155',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: isDark ? 'rgba(0,166,62,0.3)' : 'rgba(0,166,62,0.2)',
+        borderWidth: 1, padding: 12, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: {
+          label: (item: TooltipItem<'line'>) =>
+            item.dataset.label !== 'P10' ? ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` : '',
+        },
+      },
+      zoom: createDragZoomPlugins(() => vsActualLoadChartZoom.onZoomComplete.current()),
+    } as any,
+    scales: {
+      x: {
+        offset: true,
+        ticks: {
+          color: isDark ? '#94a3b8' : '#64748b',
+          font: { size: 10 },
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 7,
+          padding: 8,
+        },
+        grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
+      },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -2257,79 +2342,156 @@ const PhaseLoadTab: React.FC<{
         )}
       </ChartCard>
 
-      {/* ── 7-Day Load Forecast / Accuracy (sub-tab) ── */}
+      {/* ── 7-Day Load Forecast / vs Actual (sub-tab) ── */}
       <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
-        {loadForecast.length > 0 ? (
-          <ChartCard
-            title="7-Day Load Forecast"
-            subtitle={(() => {
-              const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
-              if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
-              if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
-              return firstMethod;
-            })() + ' · drag to zoom'}
-            isDark={isDark}
-            isLive={false}
-            height={230}
-            accentColor="#ef4444"
-            delay={0.4}
-            headerRight={<ZoomResetButton visible={loadForecastChartZoom.isZoomed} onClick={loadForecastChartZoom.resetZoom} />}
-          >
-            <div style={{ height: 230 }}>
-              <CJLine
-                ref={loadForecastChartZoom.chartRef}
-                data={{
-                  labels: loadForecastChartData.map(d => d.time),
-                  datasets: [
-                    {
-                      label: 'P10',
-                      data: loadForecastChartData.map(d => d.p10),
-                      borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
-                    },
-                    {
-                      label: 'Forecast Load (P50)',
-                      data: loadForecastChartData.map(d => d.load),
-                      borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                      fill: '-1',
-                      backgroundColor: 'rgba(239,68,68,0.15)',
-                    },
-                    {
-                      label: 'P90',
-                      data: loadForecastChartData.map(d => d.p90),
-                      borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
-                      fill: '-1',
-                      backgroundColor: 'rgba(239,68,68,0.15)',
-                    }
-                  ],
+        <ChartCard
+          title={showVsActual ? 'Load Forecast vs Actual' : '7-Day Load Forecast'}
+          subtitle={showVsActual
+            ? 'Historical scored forecasts (15-minute slots shown in IST) · last 7 days · drag to zoom'
+            : (() => {
+                if (!loadForecast.length) return 'Predictive load forecasting';
+                const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
+                if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
+                if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
+                return firstMethod;
+              })() + ' · drag to zoom'
+          }
+          isDark={isDark}
+          isLive={false}
+          height={showVsActual ? (vsActualChartData.length > 0 ? 250 : 170) : (loadForecast.length > 0 ? 230 : 170)}
+          accentColor={showVsActual ? '#00a63e' : '#ef4444'}
+          delay={0.4}
+          headerRight={
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => setShowVsActual(v => !v)}
+                aria-pressed={showVsActual}
+                title={showVsActual ? 'Show 7-day forward forecast' : 'Show historical forecast vs actual'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', borderRadius: 8,
+                  border: `1px solid ${showVsActual
+                    ? (isDark ? 'rgba(0,166,62,0.5)' : 'rgba(0,166,62,0.4)')
+                    : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
+                  background: showVsActual
+                    ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.1)')
+                    : 'transparent',
+                  color: showVsActual
+                    ? (isDark ? '#86efac' : '#065f46')
+                    : (isDark ? '#94a3b8' : '#64748b'),
+                  cursor: 'pointer', fontWeight: 700,
+                  fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+                  transition: 'all 0.15s ease',
                 }}
-                options={loadForecastChartOptions}
+              >
+                <Activity size={12} />
+                Historical vs Actual
+              </button>
+              <ZoomResetButton
+                visible={showVsActual ? vsActualLoadChartZoom.isZoomed : loadForecastChartZoom.isZoomed}
+                onClick={showVsActual ? vsActualLoadChartZoom.resetZoom : loadForecastChartZoom.resetZoom}
               />
             </div>
-          </ChartCard>
-        ) : (
-          <ChartCard
-            title="7-Day Load Forecast"
-            subtitle="Predictive load forecasting"
-            isDark={isDark}
-            isLive={false}
-            height={170}
-            accentColor="#ef4444"
-            delay={0.4}
-          >
-            <div style={{
-              height: 170,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              color: 'var(--text-muted)',
-              fontSize: '0.85rem',
-              padding: '0 20px',
-            }}>
-              No load forecast data yet. Forecasts generated every 30 minutes by the backend.
-            </div>
-          </ChartCard>
-        )}
+          }
+        >
+          {showVsActual ? (
+            vsActualChartData.length > 0 ? (
+              <div style={{ height: 250 }}>
+                <CJLine
+                  ref={vsActualLoadChartZoom.chartRef}
+                  data={{
+                    labels: vsActualChartData.map(d => d.time),
+                    datasets: [
+                      {
+                        label: 'P10',
+                        data: vsActualChartData.map(d => d.p10),
+                        borderColor: 'transparent', borderWidth: 0,
+                        tension: 0.4, pointRadius: 0, fill: false,
+                      },
+                      {
+                        label: 'P10–P90 Band',
+                        data: vsActualChartData.map(d => d.p90),
+                        borderColor: 'transparent', borderWidth: 0,
+                        tension: 0.4, pointRadius: 0,
+                        fill: '-1',
+                        backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.1)',
+                      },
+                      {
+                        label: 'Historical Forecast (P50)',
+                        data: vsActualChartData.map(d => d.p50),
+                        borderColor: '#ef4444', borderWidth: 2,
+                        tension: 0.4, pointRadius: 0,
+                        fill: false,
+                        borderDash: [4, 3],
+                      },
+                      {
+                        label: 'Actual Load',
+                        data: vsActualChartData.map(d => d.actual),
+                        borderColor: '#00a63e', borderWidth: 2.2,
+                        tension: 0.4, pointRadius: 0,
+                        fill: false,
+                      },
+                    ],
+                  }}
+                  options={vsActualLoadChartOptions}
+                />
+              </div>
+            ) : (
+              <div style={{
+                height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0 20px',
+              }}>
+                <div>
+                  <Activity size={32} style={{ opacity: 0.25, marginBottom: 10 }} />
+                  <div>No forecast accuracy data yet.</div>
+                  <div style={{ fontSize: '0.76rem', opacity: 0.6, marginTop: 4 }}>
+                    Accuracy scores are computed daily after actuals are available (historical only).
+                  </div>
+                </div>
+              </div>
+            )
+          ) : (
+            loadForecast.length > 0 ? (
+              <div style={{ height: 230 }}>
+                <CJLine
+                  ref={loadForecastChartZoom.chartRef}
+                  data={{
+                    labels: loadForecastChartData.map(d => d.time),
+                    datasets: [
+                      {
+                        label: 'P10',
+                        data: loadForecastChartData.map(d => d.p10),
+                        borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false,
+                      },
+                      {
+                        label: 'Forecast Load (P50)',
+                        data: loadForecastChartData.map(d => d.load),
+                        borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                        fill: '-1',
+                        backgroundColor: 'rgba(239,68,68,0.15)',
+                      },
+                      {
+                        label: 'P90',
+                        data: loadForecastChartData.map(d => d.p90),
+                        borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0,
+                        fill: '-1',
+                        backgroundColor: 'rgba(239,68,68,0.15)',
+                      },
+                    ],
+                  }}
+                  options={loadForecastChartOptions}
+                />
+              </div>
+            ) : (
+              <div style={{
+                height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0 20px',
+              }}>
+                No load forecast data yet. Forecasts generated every 30 minutes by the backend.
+              </div>
+            )
+          )}
+        </ChartCard>
       </div>
       <div style={{ display: phaseForecastSubTab === 'accuracy' ? 'block' : 'none', marginBottom: 12 }}>
         <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
@@ -2485,6 +2647,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
 
+  // Force-refresh vs-actual data, bypassing the in-memory cache, when the chart is first opened
+  const refreshVsActualData = useCallback(async () => {
+    if (!siteId) return;
+    cacheService.clear(`load_forecast_accuracy_${siteId}_7`);
+    try {
+      const lfa = await apiService.getLoadForecastAccuracy(siteId, 7);
+      setLoadForecastAccuracy(lfa ?? null);
+    } catch {
+      // ignore — stale data remains if fetch fails
+    }
+  }, [siteId]);
+
   // ── Fetch latest telemetry only (silent, no loading flash) ──────────────────
   const fetchLatestTelemetry = useCallback(async () => {
     try {
@@ -2601,7 +2775,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         apiService.getForecastAccuracy(siteId, 30),
         apiService.getLoadForecast(siteId, 7),
         apiService.getWeatherAccuracy(siteId, 7),
-        apiService.getLoadForecastAccuracy(siteId, 30),
+        apiService.getLoadForecastAccuracy(siteId, 7),
       ]).then(([pl, fa, lf, wa, lfa]) => {
         if (pl.status === 'fulfilled') setPhaseLoad(Array.isArray(pl.value) ? pl.value : []);
         if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
@@ -4332,6 +4506,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   hours={phaseLoadHours}
                   onHoursChange={setPhaseLoadHours}
                   forecastAccuracy={loadForecastAccuracy}
+                  onRefreshVsActual={refreshVsActualData}
                 />
               </motion.div>
             )}

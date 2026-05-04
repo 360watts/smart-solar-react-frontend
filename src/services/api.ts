@@ -964,6 +964,13 @@ class ApiService {
     return this.request(`/devices/${deviceId}/logs/files/${fileId}/download/`);
   }
 
+  async getDeviceLogFileContent(deviceId: number, fileId: number): Promise<string> {
+    const url = `${API_BASE_URL}/devices/${deviceId}/logs/files/${fileId}/content/`;
+    const response = await fetch(url, { headers: this.getAuthHeaders() });
+    if (!response.ok) throw new Error(`Failed to fetch log content: ${response.status}`);
+    return response.text();
+  }
+
 
   async getRegisterCoverage(deviceId: number): Promise<any> {
     return this.request(`/devices/${deviceId}/register-coverage/`);

@@ -389,9 +389,7 @@ const Devices: React.FC = () => {
     setViewingFileName(filename);
     setViewingFileContent(null);
     try {
-      const { url } = await apiService.getDeviceLogFileDownloadUrl(selectedDevice!.id, fileId);
-      const res = await fetch(url);
-      const text = await res.text();
+      const text = await apiService.getDeviceLogFileContent(selectedDevice!.id, fileId);
       setViewingFileContent(text);
     } catch (err) {
       console.error('Failed to load log file', err);
