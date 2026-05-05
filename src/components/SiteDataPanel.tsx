@@ -1477,7 +1477,7 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
   );
 };
 
-const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: number | null; diffPct?: number | null }[] }) => {
+const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
   const { isDark } = useTheme();
   const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
   const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
@@ -1498,7 +1498,7 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number; actual: n
             <tr key={i} style={{ borderBottom: rowBorder }}>
               <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50.toFixed(2)}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
               <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
             </tr>
           ))}
@@ -2011,6 +2011,7 @@ const PhaseLoadTab: React.FC<{
   const loadForecastChartZoom = useChartZoomState();
   const vsActualLoadChartZoom = useChartZoomState();
   const [showVsActual, setShowVsActual] = useState(false);
+  const [vsActual7d, setVsActual7d] = useState(false);
   const vsActualFetchedRef = useRef(false);
 
   // Force-refresh vs-actual data (bypass cache) the first time the chart is shown
@@ -2073,22 +2074,25 @@ const PhaseLoadTab: React.FC<{
 
     if (rows.length === 0) return [];
 
-    const latestMs = rows[rows.length - 1].__ms;
-    const cutoffMs = latestMs - 7 * 24 * 60 * 60 * 1000;
+    const cutoffMs = vsActual7d
+      ? Date.now() - 7 * 24 * 60 * 60 * 1000
+      : (() => { const s = new Date().toLocaleDateString('en-CA', { timeZone: IST }); return new Date(s + 'T00:00:00+05:30').getTime(); })();
 
     return rows
       .filter((r: any) => r.__ms >= cutoffMs)
       .map((r: any) => {
         const d = new Date(r.ts);
         return {
-          time: d.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          time: vsActual7d
+            ? d.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST })
+            : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
           actual:  r.actual_kw  != null ? +Number(r.actual_kw).toFixed(2)  : null,
           p50:     r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
           p10:     r.p10_kw  != null ? +Number(r.p10_kw).toFixed(2)  : null,
           p90:     r.p90_kw  != null ? +Number(r.p90_kw).toFixed(2)  : null,
         };
       });
-  }, [forecastAccuracy]);
+  }, [forecastAccuracy, vsActual7d]);
 
   useEffect(() => {
     phaseLoadChartZoom.resetZoom();
@@ -2345,9 +2349,9 @@ const PhaseLoadTab: React.FC<{
       {/* ── 7-Day Load Forecast / vs Actual (sub-tab) ── */}
       <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
         <ChartCard
-          title={showVsActual ? 'Load Forecast vs Actual' : '7-Day Load Forecast'}
+          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
           subtitle={showVsActual
-            ? 'Historical scored forecasts (15-minute slots shown in IST) · last 7 days · drag to zoom'
+            ? `Historical scored forecasts (15-min slots · IST) · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
             : (() => {
                 if (!loadForecast.length) return 'Predictive load forecasting';
                 const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
@@ -2387,6 +2391,26 @@ const PhaseLoadTab: React.FC<{
                 <Activity size={12} />
                 Historical vs Actual
               </button>
+              {showVsActual && (
+                <button
+                  onClick={() => setVsActual7d(v => !v)}
+                  aria-pressed={vsActual7d}
+                  title={vsActual7d ? 'Show today only' : 'Show last 7 days'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '5px 10px', borderRadius: 8,
+                    border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
+                    background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
+                    color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#94a3b8' : '#64748b'),
+                    cursor: 'pointer', fontWeight: 700,
+                    fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Activity size={12} />
+                  Last 7 Days
+                </button>
+              )}
               <ZoomResetButton
                 visible={showVsActual ? vsActualLoadChartZoom.isZoomed : loadForecastChartZoom.isZoomed}
                 onClick={showVsActual ? vsActualLoadChartZoom.resetZoom : loadForecastChartZoom.resetZoom}
@@ -2555,6 +2579,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '7d'>('7d');
   const [historyView, setHistoryView] = useState<'chart' | 'table'>('chart');
   const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
+  const [vsActual7d, setVsActual7d] = useState(false);
 
   // Chart.js refs for zoom reset
   const historyZoom = useChartZoomState();
@@ -3097,6 +3122,28 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [forecast, telemetry]);
 
   const zoomedVsActualData = vsActualData;
+
+  // 7-day scored data from SolarForecastSlot (backend accuracy timeseries)
+  const vsActual7dData = useMemo(() => {
+    const ts: any[] = forecastAccuracy?.timeseries ?? [];
+    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return ts
+      .filter((r: any) => r.actual_kw != null && !!r.slot_ts)
+      .map((r: any) => ({ ...r, __ms: new Date(r.slot_ts).getTime() }))
+      .filter((r: any) => !Number.isNaN(r.__ms) && r.__ms >= cutoffMs)
+      .sort((a: any, b: any) => a.__ms - b.__ms)
+      .map((r: any) => ({
+        label: new Date(r.slot_ts).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
+        fTs: r.__ms,
+        p50: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
+        actual: r.actual_kw != null ? +Number(r.actual_kw).toFixed(2) : null,
+        diffPct: r.actual_kw != null && r.predicted_kw > 0
+          ? Math.round(((r.actual_kw - r.predicted_kw) / r.predicted_kw) * 100)
+          : null,
+      }));
+  }, [forecastAccuracy]);
+
+  const activeVsActualData = vsActual7d ? vsActual7dData : zoomedVsActualData;
 
   const vsActualTickValues = useMemo(
     () => buildSparseCategoryTicks(vsActualData, d => d.label, 8),
@@ -4394,9 +4441,31 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
                   <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
-                    Forecast vs Actual (Today)
+                    Forecast vs Actual — {vsActual7d ? 'Last 7 Days' : 'Today'}
                   </p>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => {
+                        cacheService.clear(`forecast_accuracy_${siteId}_30`);
+                        setForecastAccuracy(null);
+                        setVsActual7d(v => !v);
+                        apiService.getForecastAccuracy(siteId, 30).then(fa => setForecastAccuracy(fa ?? null)).catch(() => {});
+                      }}
+                      aria-pressed={vsActual7d}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '5px 10px', borderRadius: 8,
+                        border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
+                        background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
+                        color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#94a3b8' : '#64748b'),
+                        cursor: 'pointer', fontWeight: 700,
+                        fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Activity size={12} />
+                      Last 7 Days
+                    </button>
                     {(['chart', 'table'] as const).map(mode => (
                       <button
                         key={mode}
@@ -4450,28 +4519,28 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
                   }}
                 >
-                  {vsActualData.length === 0 ? (
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>No overlap points yet between forecast and telemetry for today.</p>
+                  {activeVsActualData.length === 0 ? (
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>{vsActual7d ? 'No scored forecast slots for the last 7 days yet.' : 'No overlap points yet between forecast and telemetry for today.'}</p>
                   ) : vsActualView === 'chart' ? (
                     <div style={{ width: '100%', height: 320 }}>
                       <CJLine
                         ref={vsActualZoom.chartRef}
                         data={{
-                          labels: vsActualData.map(d => d.label),
+                          labels: activeVsActualData.map(d => d.label),
                           datasets: [
                             showVsActualSeries.Actual && {
                               label: 'Actual',
-                              data: vsActualData.map(d => d.actual),
+                              data: activeVsActualData.map(d => d.actual),
                               borderColor: '#F07522', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
                             },
                             showVsActualSeries.P50 && {
                               label: 'P50',
-                              data: vsActualData.map(d => d.p50),
+                              data: activeVsActualData.map(d => d.p50),
                               borderColor: '#00a63e', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
                             },
                             showVsActualSeries.Delta && {
                               label: 'Δ %', yAxisID: 'pct',
-                              data: vsActualData.map(d => d.diffPct),
+                              data: activeVsActualData.map(d => d.diffPct),
                               borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0,
                               borderDash: [4, 4], fill: false,
                             },
@@ -4481,7 +4550,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       />
                     </div>
                   ) : (
-                    <VsActualTable data={vsActualData} />
+                    <VsActualTable data={activeVsActualData} />
                   )}
                 </div>
                 </div>
