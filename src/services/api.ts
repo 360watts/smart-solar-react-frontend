@@ -498,7 +498,7 @@ class ApiService {
         weather: { current: any; hourly: any[] };
       };
     };
-    timeseries: { yesterday: any[] };
+    timeseries: { today_overall: any[]; today_hourly: any[] };
   }> {
     const cacheKey = `energy_summary_combined_${siteId}`;
     const cached = cacheService.get(cacheKey);
