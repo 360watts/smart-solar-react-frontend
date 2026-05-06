@@ -26,15 +26,15 @@ const empAvatarColor = (s: string) => {
   for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
   return EMP_AVATAR_COLORS[Math.abs(h) % EMP_AVATAR_COLORS.length];
 };
-const empInitials = (first: string, last: string, username: string) => {
+const empInitials = (first: string, last: string) => {
   if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
   if (first) return first.substring(0, 2).toUpperCase();
-  return username.substring(0, 2).toUpperCase();
+  return '??';
 };
 
 interface Employee {
   id: number;
-  username: string;
+  username?: string;  // auto-generated, not shown in UI
   email: string;
   first_name: string;
   last_name: string;
@@ -91,9 +91,7 @@ const Employees: React.FC = () => {
     department_id: undefined as number | undefined, // NEW
   });
   const [createForm, setCreateForm] = useState({
-    username: '',
     email: '',
-    password: '',
     first_name: '',
     last_name: '',
     mobile_number: '',
@@ -206,9 +204,7 @@ const Employees: React.FC = () => {
   const handleCreate = async () => {
     try {
       await apiService.createEmployee({
-        username: createForm.username,
         email: createForm.email,
-        password: createForm.password,
         first_name: createForm.first_name,
         last_name: createForm.last_name,
         mobile_number: createForm.mobile_number,
@@ -218,9 +214,7 @@ const Employees: React.FC = () => {
       });
       setCreatingEmployee(false);
       setCreateForm({
-        username: '',
         email: '',
-        password: '',
         first_name: '',
         last_name: '',
         mobile_number: '',
@@ -325,13 +319,13 @@ const Employees: React.FC = () => {
                   <div className="table-avatar-cell">
                     <div
                       className="avatar-initials avatar-initials-sm"
-                      style={{ background: empAvatarColor(employee.username) }}
+                      style={{ background: empAvatarColor(employee.email) }}
                     >
-                      {empInitials(employee.first_name, employee.last_name, employee.username)}
+                      {empInitials(employee.first_name, employee.last_name)}
                     </div>
                     <div className="table-name-block">
                       <span className="table-name-primary">{employee.first_name} {employee.last_name}</span>
-                      <span className="table-name-secondary">@{employee.username}</span>
+                      <span className="table-name-secondary">{employee.email}</span>
                     </div>
                   </div>
                 </td>
@@ -466,7 +460,7 @@ const Employees: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
-                    {editingEmployee ? `Edit Employee: ${editingEmployee.username}` : 'Add New Employee'}
+                    {editingEmployee ? `Edit Employee: ${editingEmployee.first_name} ${editingEmployee.last_name}`.trim() || editingEmployee.email : 'Add New Employee'}
                   </div>
                   <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
                     {editingEmployee ? 'Update employee account details' : 'Create a new employee account'}
@@ -498,29 +492,9 @@ const Employees: React.FC = () => {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <input type="text" autoComplete="username" style={{ display: 'none' }} />
-                    <input type="password" autoComplete="current-password" style={{ display: 'none' }} />
                     {creatingEmployee && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Username</label>
-                          <input
-                            type="text"
-                            value={createForm.username}
-                            onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
-                            required autoComplete="off" placeholder="jdoe"
-                            style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Password</label>
-                          <input
-                            type="password"
-                            value={createForm.password}
-                            onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                            required autoComplete="new-password" placeholder="••••••••"
-                            style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
-                          />
-                        </div>
+                      <div style={{ background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)', borderRadius: 8, padding: '10px 14px', fontSize: '0.813rem', color: isDark ? '#6ee7b7' : '#065f46', marginBottom: 8 }}>
+                        Username and password will be auto-generated and sent to the employee's email.
                       </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -767,7 +741,7 @@ const Employees: React.FC = () => {
             </div>
             <div style={{ padding: '20px 24px' }}>
               <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 12 }}>
-                Are you sure you want to permanently delete <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{deleteConfirmModal.employee.username}</strong>?
+                Are you sure you want to permanently delete <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{deleteConfirmModal.employee.first_name} {deleteConfirmModal.employee.last_name || deleteConfirmModal.employee.email}</strong>?
               </p>
               <div style={{ background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: isDark ? '#fca5a5' : '#721c24' }}>
                 This action cannot be undone.
