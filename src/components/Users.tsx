@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { EmptyState } from './EmptyState';
 import { SkeletonTableRow } from './SkeletonLoader';
 import PageHeader from './PageHeader';
+import { Loader } from './ui/Loader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -64,6 +65,9 @@ const Users: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [creatingLoading, setCreatingLoading] = useState(false);
+  const [savingLoading, setSavingLoading] = useState(false);
+  const [deletingLoading, setDeletingLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userDevices, setUserDevices] = useState<Device[]>([]);
@@ -152,6 +156,7 @@ const Users: React.FC = () => {
 
   const handleCreate = async () => {
     try {
+      setCreatingLoading(true);
       await apiService.createUser(createForm);
       setCreatingUser(false);
       setCreateForm({
@@ -164,6 +169,8 @@ const Users: React.FC = () => {
       await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
+    } finally {
+      setCreatingLoading(false);
     }
   };
 
@@ -175,6 +182,7 @@ const Users: React.FC = () => {
     if (!deleteModal.user) return;
     
     try {
+      setDeletingLoading(true);
       await apiService.deleteUser(deleteModal.user.id);
       if (selectedUser?.id === deleteModal.user.id) {
         setSelectedUser(null);
@@ -189,6 +197,8 @@ const Users: React.FC = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
       setDeleteModal({ show: false, user: null });
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
@@ -976,18 +986,23 @@ const Users: React.FC = () => {
                 borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
                 flexShrink: 0,
               }}>
-                <button type="button" onClick={handleCancel} style={{
+                <button type="button" onClick={handleCancel} disabled={creatingLoading || savingLoading} style={{
                   padding: '10px 20px', borderRadius: 8,
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
                   background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
+                  opacity: creatingLoading || savingLoading ? 0.6 : 1,
                 }}>Cancel</button>
-                <button type="submit" style={{
+                <button type="submit" disabled={creatingLoading || savingLoading} style={{
                   padding: '10px 20px', borderRadius: 8, border: 'none',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  background: creatingLoading || savingLoading ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
                   boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-                }}>{editingUser ? 'Save Changes' : 'Create user'}</button>
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  {(creatingLoading || savingLoading) && <Loader size={16} />}
+                  {editingUser ? 'Save Changes' : 'Create user'}
+                </button>
               </div>
             </form>
           </div>
@@ -1078,6 +1093,7 @@ const Users: React.FC = () => {
             <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setDeleteModal({ show: false, user: null })}
+                disabled={deletingLoading}
                 style={{
                   padding: '10px 18px',
                   borderRadius: 8,
@@ -1086,13 +1102,15 @@ const Users: React.FC = () => {
                   color: isDark ? '#d1d5db' : '#374151',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
+                  opacity: deletingLoading ? 0.5 : 1,
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
+                disabled={deletingLoading}
                 style={{
                   padding: '10px 18px',
                   borderRadius: 8,
@@ -1101,11 +1119,17 @@ const Users: React.FC = () => {
                   color: 'white',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
+                  opacity: deletingLoading ? 0.7 : 1,
                   boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  justifyContent: 'center',
                 }}
               >
-                Yes, Delete
+                {deletingLoading && <Loader size={14} />}
+                {deletingLoading ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>

@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import AuditTrail from './AuditTrail';
 import PageHeader from './PageHeader';
+import { Loader } from './ui/Loader';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
@@ -71,6 +72,9 @@ const Employees: React.FC = () => {
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; employee: Employee | null }>({ show: false, employee: null });
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingEmployee, setCreatingEmployee] = useState(false);
+  const [creatingLoading, setCreatingLoading] = useState(false);
+  const [savingLoading, setSavingLoading] = useState(false);
+  const [deletingLoading, setDeletingLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
@@ -181,8 +185,8 @@ const Employees: React.FC = () => {
 
   const handleSave = async () => {
     if (!editingEmployee) return;
-
     try {
+      setSavingLoading(true);
       await apiService.updateUser(editingEmployee.id, {
         first_name: editForm.first_name,
         last_name: editForm.last_name,
@@ -198,11 +202,14 @@ const Employees: React.FC = () => {
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update employee');
+    } finally {
+      setSavingLoading(false);
     }
   };
 
   const handleCreate = async () => {
     try {
+      setCreatingLoading(true);
       await apiService.createEmployee({
         email: createForm.email,
         first_name: createForm.first_name,
@@ -222,10 +229,11 @@ const Employees: React.FC = () => {
         is_staff: true,
         department_id: undefined,
       });
-      // Refetch to get the new employee with all fields including audit trail
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create employee');
+    } finally {
+      setCreatingLoading(false);
     }
   };
 
@@ -236,6 +244,7 @@ const Employees: React.FC = () => {
   const confirmDeleteEmployee = async () => {
     if (!deleteConfirmModal.employee) return;
     try {
+      setDeletingLoading(true);
       await apiService.deleteEmployee(deleteConfirmModal.employee.id);
       setEmployees(employees.filter(e => e.id !== deleteConfirmModal.employee!.id));
       setFilteredEmployees(filteredEmployees.filter(e => e.id !== deleteConfirmModal.employee!.id));
@@ -243,6 +252,8 @@ const Employees: React.FC = () => {
     } catch (err) {
       setDeleteConfirmModal({ show: false, employee: null });
       setError(err instanceof Error ? err.message : 'Failed to delete employee');
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
@@ -699,12 +710,17 @@ const Employees: React.FC = () => {
                   background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
                   color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                 }}>Cancel</button>
-                <button type="submit" style={{
+                <button type="submit" disabled={creatingLoading || savingLoading} style={{
                   padding: '10px 20px', borderRadius: 8, border: 'none',
                   background: editingEmployee ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #10b981, #059669)',
-                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
+                  opacity: creatingLoading || savingLoading ? 0.7 : 1,
                   boxShadow: editingEmployee ? '0 4px 12px rgba(99,102,241,0.35)' : '0 4px 12px rgba(16,185,129,0.35)',
-                }}>{editingEmployee ? 'Save Changes' : 'Create Employee'}</button>
+                  display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center',
+                }}>
+                  {(creatingLoading || savingLoading) && <Loader size={16} />}
+                  {editingEmployee ? 'Save Changes' : 'Create Employee'}
+                </button>
               </div>
             </form>
           </div>
@@ -748,11 +764,44 @@ const Employees: React.FC = () => {
               </div>
             </div>
             <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setDeleteConfirmModal({ show: false, employee: null })} style={{ padding: '10px 18px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+              <button
+                onClick={() => setDeleteConfirmModal({ show: false, employee: null })}
+                disabled={deletingLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  color: isDark ? '#d1d5db' : '#374151',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
+                  opacity: deletingLoading ? 0.5 : 1,
+                }}
+              >
                 Cancel
               </button>
-              <button onClick={confirmDeleteEmployee} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #dc3545, #c82333)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(220,53,69,0.35)' }}>
-                Delete Employee
+              <button
+                onClick={confirmDeleteEmployee}
+                disabled={deletingLoading}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
+                  opacity: deletingLoading ? 0.7 : 1,
+                  boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                {deletingLoading && <Loader size={14} />}
+                {deletingLoading ? 'Deleting...' : 'Delete Employee'}
               </button>
             </div>
           </div>
