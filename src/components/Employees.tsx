@@ -236,7 +236,7 @@ const Employees: React.FC = () => {
   const confirmDeleteEmployee = async () => {
     if (!deleteConfirmModal.employee) return;
     try {
-      await apiService.deleteUser(deleteConfirmModal.employee.id);
+      await apiService.deleteEmployee(deleteConfirmModal.employee.id);
       setEmployees(employees.filter(e => e.id !== deleteConfirmModal.employee!.id));
       setFilteredEmployees(filteredEmployees.filter(e => e.id !== deleteConfirmModal.employee!.id));
       setDeleteConfirmModal({ show: false, employee: null });

@@ -202,18 +202,18 @@ const Login: React.FC = () => {
           <form onSubmit={handlePasswordLogin} className="auth-form">
             <div className="form-group">
               <label htmlFor="email">
-                <User size={16} strokeWidth={2} /> Email
+                <User size={16} strokeWidth={2} /> Email or Mobile Number
               </label>
               <div className="input-wrapper">
                 <input
-                  type="email"
+                  type="text"
                   id="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
+                  placeholder="Email or mobile number"
                   required
                   disabled={loading}
-                  autoComplete="email"
+                  autoComplete="username"
                   autoFocus
                 />
                 {email && (
