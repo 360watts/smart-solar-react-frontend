@@ -50,6 +50,7 @@ const Dashboard: React.FC = () => {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [sitesLoading, setSitesLoading] = useState(true);
   const [sitesError, setSitesError] = useState<string | null>(null);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -82,8 +83,10 @@ const Dashboard: React.FC = () => {
     try {
       const data = await apiService.getAlerts();
       setAllAlerts(Array.isArray(data) ? data : []);
-    } catch {
-      // ignore — alerts are non-critical
+      setAlertsError(null);
+    } catch (err) {
+      console.error('Failed to load alerts:', err);
+      setAlertsError('Could not load alerts');
     }
   }, []);
 
@@ -500,6 +503,41 @@ const Dashboard: React.FC = () => {
 
         {/* Site KPIs */}
         {renderSiteKPIs()}
+
+        {/* Alerts error */}
+        {alertsError && (
+          <div style={{
+            marginTop: 16,
+            padding: '12px 14px',
+            borderRadius: 10,
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+              <AlertTriangle size={16} />
+              <span>{alertsError}</span>
+            </div>
+            <button
+              onClick={() => fetchAlerts()}
+              style={{
+                padding: '4px 12px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#ef4444',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Active alerts strip */}
         {renderAlertsStrip()}

@@ -317,8 +317,10 @@ const Devices: React.FC = () => {
     try {
       const data = await apiService.getPresets();
       setPresets(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
       console.error('Failed to fetch presets:', err);
+      setError('Failed to load device presets');
     } finally {
       setPresetsLoading(false);
     }
@@ -329,8 +331,10 @@ const Devices: React.FC = () => {
       if (!silent) setAlertsLoading(true);
       const data = await apiService.getAlerts();
       setDeviceAlerts(Array.isArray(data) ? data : []);
+      if (!silent) setError(null);
     } catch (err) {
       console.error('Failed to fetch alerts for devices view:', err);
+      if (!silent) setError('Failed to load alerts');
     } finally {
       if (!silent) setAlertsLoading(false);
     }
@@ -368,10 +372,12 @@ const Devices: React.FC = () => {
       setDeviceLogFiles(response.files || []);
       setLogFilesTotal(response.total || 0);
       setLogFilesPage(page);
+      setError(null);
     } catch (err) {
       console.error('Failed to fetch log files:', err);
       setDeviceLogFiles([]);
       setLogFilesTotal(0);
+      setError('Failed to load device log files');
     } finally {
       setLogFilesLoading(false);
     }
@@ -391,10 +397,12 @@ const Devices: React.FC = () => {
     try {
       const text = await apiService.getDeviceLogFileContent(selectedDevice!.id, fileId);
       setViewingFileContent(text);
+      setError(null);
     } catch (err) {
       console.error('Failed to load log file', err);
       setViewingFileId(null);
       setViewingFileName('');
+      setError('Failed to load log file content');
     } finally {
       setViewingFileLoading(false);
     }
@@ -404,8 +412,10 @@ const Devices: React.FC = () => {
     try {
       const { url } = await apiService.getDeviceLogFileDownloadUrl(selectedDevice!.id, fileId);
       window.open(url, '_blank');
+      setError(null);
     } catch (err) {
       console.error('Failed to get download URL', err);
+      setError('Failed to download log file');
     }
   };
 
@@ -414,8 +424,10 @@ const Devices: React.FC = () => {
     try {
       const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
       await apiService.bulkDownloadLogFiles(selectedDevice!.id, toIST(fileFilterFrom), toIST(fileFilterTo));
+      setError(null);
     } catch (err) {
       console.error('Bulk download failed', err);
+      setError('Failed to download log files');
     } finally {
       setBulkDownloading(false);
     }
