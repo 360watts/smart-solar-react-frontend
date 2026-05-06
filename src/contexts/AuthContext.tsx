@@ -23,7 +23,7 @@ interface AuthTokens {
 interface AuthContextType {
   user: User | null;
   tokens: AuthTokens | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   requestOtp: (mobileNumber: string) => Promise<void>;
   verifyOtp: (mobileNumber: string, otp: string) => Promise<boolean>;
   logout: () => void;
@@ -101,11 +101,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     throw new Error(errorData.error || 'OTP verification failed');
   }, []);
 
-  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     const response = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     });
     if (response.ok) {
       const data = await response.json();

@@ -83,9 +83,7 @@ const Users: React.FC = () => {
     address: '',
   });
   const [createForm, setCreateForm] = useState({
-    username: '',
     email: '',
-    password: '',
     first_name: '',
     last_name: '',
     mobile_number: '',
@@ -157,9 +155,7 @@ const Users: React.FC = () => {
       await apiService.createUser(createForm);
       setCreatingUser(false);
       setCreateForm({
-        username: '',
         email: '',
-        password: '',
         first_name: '',
         last_name: '',
         mobile_number: '',
@@ -850,44 +846,9 @@ const Users: React.FC = () => {
                       <>
                         <input type="text" autoComplete="username" style={{display: 'none'}} />
                         <input type="password" autoComplete="current-password" style={{display: 'none'}} />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Username</label>
-                            <input
-                              type="text"
-                              value={createForm.username}
-                              onChange={(e) => setCreateForm({...createForm, username: e.target.value})}
-                              required
-                              autoComplete="off"
-                              placeholder="jdoe"
-                              style={{
-                                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                                background: isDark ? '#2a2a2a' : '#ffffff',
-                                color: isDark ? '#f3f4f6' : '#111827',
-                                fontSize: '0.875rem',
-                              }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Password</label>
-                            <input
-                              type="password"
-                              value={createForm.password}
-                              onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                              required
-                              autoComplete="new-password"
-                              placeholder="••••••••"
-                              style={{
-                                padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                                border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                                background: isDark ? '#2a2a2a' : '#ffffff',
-                                color: isDark ? '#f3f4f6' : '#111827',
-                                fontSize: '0.875rem',
-                              }}
-                            />
-                          </div>
-                        </div>
+                        <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 8 }}>
+                          Username and password will be auto-generated and sent to the user's email along with download link for the mobile app.
+                        </p>
                       </>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

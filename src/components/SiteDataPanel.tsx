@@ -4356,7 +4356,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
                 <ChartCard
                   title="Solar Generation Forecast"
-                  subtitle={`${forecastData.length} hourly slots · P10 / P50 / P90 bands`}
+                  subtitle={`${forecastData.length} × 15-min slots · P10 / P50 / P90 bands`}
                   isDark={isDark}
                   isLive={false}
                   isLoading={loading && forecastData.length === 0}

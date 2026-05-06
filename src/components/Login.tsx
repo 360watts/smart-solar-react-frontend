@@ -14,7 +14,7 @@ const RESEND_COOLDOWN = 30;
 
 const Login: React.FC = () => {
   // Password login state
-  const [username, setUsername]       = useState('');
+  const [email, setEmail]             = useState('');
   const [password, setPassword]       = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe]   = useState(false);
@@ -34,8 +34,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const saved = localStorage.getItem('rememberedUsername');
-    if (saved) { setUsername(saved); setRememberMe(true); }
+    const saved = localStorage.getItem('rememberedEmail');
+    if (saved) { setEmail(saved); setRememberMe(true); }
   }, []);
 
   useEffect(() => {
@@ -58,10 +58,10 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    if (rememberMe) localStorage.setItem('rememberedUsername', username);
-    else localStorage.removeItem('rememberedUsername');
+    if (rememberMe) localStorage.setItem('rememberedEmail', email);
+    else localStorage.removeItem('rememberedEmail');
     try {
-      const ok = await login(username, password);
+      const ok = await login(email, password);
       if (ok) navigate('/devices', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -201,23 +201,23 @@ const Login: React.FC = () => {
         {mode === 'password' && (
           <form onSubmit={handlePasswordLogin} className="auth-form">
             <div className="form-group">
-              <label htmlFor="username">
-                <User size={16} strokeWidth={2} /> Username
+              <label htmlFor="email">
+                <User size={16} strokeWidth={2} /> Email
               </label>
               <div className="input-wrapper">
                 <input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
                   required
                   disabled={loading}
-                  autoComplete="username"
+                  autoComplete="email"
                   autoFocus
                 />
-                {username && (
-                  <button type="button" className="input-clear" onClick={() => setUsername('')} aria-label="Clear">
+                {email && (
+                  <button type="button" className="input-clear" onClick={() => setEmail('')} aria-label="Clear">
                     <X size={14} strokeWidth={2} />
                   </button>
                 )}
@@ -258,7 +258,7 @@ const Login: React.FC = () => {
               </label>
             </div>
 
-            <button type="submit" className="auth-button" disabled={loading || !username || !password}>
+            <button type="submit" className="auth-button" disabled={loading || !email || !password}>
               {loading ? <><span className="spinner" /> Signing in...</> : <><LogIn size={18} strokeWidth={2} /> Sign In</>}
             </button>
 

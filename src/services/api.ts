@@ -1162,6 +1162,82 @@ class ApiService {
     const query = params.toString() ? `?${params}` : '';
     return this.request(`/fleet-health/daily-report/${query}`);
   }
+
+  // ─── Departments ────────────────────────────────────────────────────────────
+
+  async getDepartments(): Promise<{ results: any[]; count?: number; total_pages?: number }> {
+    return this.request('/departments/');
+  }
+
+  async createDepartment(data: { name: string; slug: string; description?: string }): Promise<any> {
+    return this.request('/departments/create/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDepartment(id: number, data: { name?: string; slug?: string; description?: string; is_active?: boolean }): Promise<any> {
+    return this.request(`/departments/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDepartment(id: number): Promise<any> {
+    return this.request(`/departments/${id}/delete/`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ─── Employees ──────────────────────────────────────────────────────────────
+
+  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<{ results: any[]; count?: number; total_pages?: number }> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    params.set('page', String(page));
+    params.set('page_size', String(pageSize));
+    return this.request(`/employees/?${params}`);
+  }
+
+  async createEmployee(data: {
+    username: string;
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    mobile_number?: string;
+    address?: string;
+    is_staff?: boolean;
+    department_id?: number;
+  }): Promise<any> {
+    return this.request('/employees/create/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUser(id: number, data: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    mobile_number?: string;
+    address?: string;
+    is_active?: boolean;
+    is_staff?: boolean;
+    is_superuser?: boolean;
+    department_id?: number;
+  }): Promise<any> {
+    return this.request(`/employees/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUser(id: number): Promise<any> {
+    return this.request(`/employees/${id}/delete/`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();

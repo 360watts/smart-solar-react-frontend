@@ -48,6 +48,15 @@ interface Employee {
   created_at?: string;
   updated_by_username?: string;
   updated_at?: string;
+  // NEW: Department fields
+  department?: {
+    id: number;
+    name: string;
+  };
+  role?: 'admin' | 'employee';
+  manager_id?: number;
+  employment_status?: 'active' | 'on_leave' | 'terminated';
+  timezone?: string;
 }
 
 const Employees: React.FC = () => {
@@ -63,6 +72,7 @@ const Employees: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingEmployee, setCreatingEmployee] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -78,6 +88,7 @@ const Employees: React.FC = () => {
     is_active: true,
     is_staff: true,
     is_superuser: false,
+    department_id: undefined as number | undefined, // NEW
   });
   const [createForm, setCreateForm] = useState({
     username: '',
@@ -88,13 +99,26 @@ const Employees: React.FC = () => {
     mobile_number: '',
     address: '',
     is_staff: true,
+    department_id: undefined as number | undefined, // NEW
   });
 
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+
+  // NEW: Department interface
+  interface Department {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+  }
 
   // Bust cache on mount so is_active field is always fresh
   useEffect(() => {
     cacheService.clearPattern(/^employees_/);
+    fetchDepartments(); // NEW: Load departments on mount
   }, []);
 
   useEffect(() => {
@@ -125,6 +149,19 @@ const Employees: React.FC = () => {
     }
   };
 
+  // NEW: Fetch departments
+  const fetchDepartments = async () => {
+    setLoadingDepartments(true);
+    try {
+      const response = await apiService.getDepartments();
+      setDepartments(response.results ?? []);
+    } catch (err) {
+      console.error('Failed to fetch departments:', err);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
@@ -140,6 +177,7 @@ const Employees: React.FC = () => {
       is_active: employee.is_active ?? true,
       is_staff: employee.is_staff,
       is_superuser: employee.is_superuser,
+      department_id: employee.department?.id, // NEW
     });
   };
 
@@ -147,7 +185,17 @@ const Employees: React.FC = () => {
     if (!editingEmployee) return;
 
     try {
-      await apiService.updateUser(editingEmployee.id, editForm);
+      await apiService.updateUser(editingEmployee.id, {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        email: editForm.email,
+        mobile_number: editForm.mobile_number,
+        address: editForm.address,
+        is_active: editForm.is_active,
+        is_staff: editForm.is_staff,
+        is_superuser: editForm.is_superuser,
+        department_id: editForm.department_id,
+      });
       setEditingEmployee(null);
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
@@ -157,7 +205,17 @@ const Employees: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiService.createEmployee(createForm);
+      await apiService.createEmployee({
+        username: createForm.username,
+        email: createForm.email,
+        password: createForm.password,
+        first_name: createForm.first_name,
+        last_name: createForm.last_name,
+        mobile_number: createForm.mobile_number,
+        address: createForm.address,
+        is_staff: createForm.is_staff,
+        department_id: createForm.department_id,
+      });
       setCreatingEmployee(false);
       setCreateForm({
         username: '',
@@ -168,6 +226,7 @@ const Employees: React.FC = () => {
         mobile_number: '',
         address: '',
         is_staff: true,
+        department_id: undefined,
       });
       // Refetch to get the new employee with all fields including audit trail
       await fetchEmployees(searchTerm, currentPage, pageSize);
@@ -251,6 +310,7 @@ const Employees: React.FC = () => {
             <tr>
               <th>Name</th>
               <th style={{ textAlign: 'center' }}>Role</th>
+              <th style={{ textAlign: 'center' }}>Department</th>
               <th style={{ textAlign: 'center' }}>Status</th>
               <th style={{ textAlign: 'center' }}>Email</th>
               <th style={{ textAlign: 'center' }}>Mobile</th>
@@ -279,6 +339,9 @@ const Employees: React.FC = () => {
                   <span className={`role-badge ${employee.is_superuser ? 'role-badge-admin' : 'role-badge-staff'}`}>
                     {employee.is_superuser ? 'Admin' : 'Staff'}
                   </span>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  {employee.department?.name || '-'}
                 </td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
@@ -503,6 +566,27 @@ const Employees: React.FC = () => {
                         required autoComplete="off" placeholder="Doe"
                         style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Department</label>
+                      <select
+                        value={editingEmployee ? (editForm.department_id || '') : (createForm.department_id || '')}
+                        onChange={(e) => {
+                          const value = e.target.value ? parseInt(e.target.value) : undefined;
+                          editingEmployee ? setEditForm({...editForm, department_id: value}) : setCreateForm({...createForm, department_id: value});
+                        }}
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
+                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                          background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827',
+                          fontSize: '0.875rem', cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">No Department</option>
+                        {departments.map(dept => (
+                          <option key={dept.id} value={dept.id}>{dept.name}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
