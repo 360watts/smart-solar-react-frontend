@@ -264,6 +264,7 @@ const Devices: React.FC = () => {
   const [hardResetModal, setHardResetModal] = useState<{ show: boolean; device: Device | null }>({ show: false, device: null });
   const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [deviceSiteMap, setDeviceSiteMap] = useState<Map<number, SolarSite | null>>(new Map());
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
     try {
@@ -295,6 +296,11 @@ const Devices: React.FC = () => {
         const fresh = latestRows.find((d) => d.id === prev.id);
         return fresh ? { ...prev, ...fresh } : prev;
       });
+      
+      // Fetch sites for all devices in the device list
+      if (latestRows.length > 0) {
+        fetchSites(latestRows);
+      }
       
       if (!silent) setLoading(false);
     } catch (err) {
@@ -339,6 +345,20 @@ const Devices: React.FC = () => {
       if (!silent) setAlertsLoading(false);
     }
   }, []);
+
+  const fetchSites = async (devices: Device[]) => {
+    const siteMap = new Map<number, SolarSite | null>();
+    for (const device of devices) {
+      try {
+        const site = await apiService.getDeviceSite(device.id);
+        siteMap.set(device.id, site || null);
+      } catch (err) {
+        console.error(`Failed to fetch site for device ${device.id}:`, err);
+        siteMap.set(device.id, null);
+      }
+    }
+    setDeviceSiteMap(siteMap);
+  };
 
   const activeAlerts = useMemo(() => {
     return deviceAlerts.filter((a) => a.status !== 'resolved' && !a.resolved);
@@ -2614,10 +2634,8 @@ const Devices: React.FC = () => {
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
               <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>MAC / HW ID</th>
-              <th style={{ textAlign: 'center' }}>Model</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
-              <th style={{ textAlign: 'center' }}>Config Version</th>
+              <th style={{ textAlign: 'center' }}>Site Name</th>
               <th style={{ textAlign: 'center' }}>Alerts</th>
               <th style={{ textAlign: 'center' }}>Last Seen</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
@@ -2627,7 +2645,7 @@ const Devices: React.FC = () => {
           <tbody className="stagger-children">
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
                     description={searchTerm ? 'Try a different search term.' : 'Register a device to get started.'}
@@ -2667,10 +2685,8 @@ const Devices: React.FC = () => {
                     {device.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
-                <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', color: device.hw_id ? 'inherit' : 'var(--text-muted, #9ca3af)' }}>{device.hw_id || '—'}</td>
-                <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{device.model || <span style={{ color: 'var(--text-muted, #9ca3af)' }}>—</span>}</td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>
-                <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
+                <td style={{ textAlign: 'center', fontSize: '0.875rem' }}>{deviceSiteMap.get(device.id)?.display_name || '—'}</td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
                     const count = (activeAlertsByDevice.get(device.device_serial) || []).length;
