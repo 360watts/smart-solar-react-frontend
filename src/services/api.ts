@@ -398,6 +398,16 @@ class ApiService {
     return result;
   }
 
+  async updateEmployee(id: number, data: any): Promise<any> {
+    const result = await this.request(`/employees/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    cacheService.clearPattern(/^users_/);
+    cacheService.clearPattern(/^employees_/);
+    return result;
+  }
+
   async deleteEmployee(id: number): Promise<any> {
     return this.request(`/employees/${id}/delete/`, {
       method: 'DELETE',

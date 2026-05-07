@@ -187,7 +187,7 @@ const Employees: React.FC = () => {
     if (!editingEmployee) return;
     try {
       setSavingLoading(true);
-      await apiService.updateUser(editingEmployee.id, {
+      await apiService.updateEmployee(editingEmployee.id, {
         first_name: editForm.first_name,
         last_name: editForm.last_name,
         email: editForm.email,
