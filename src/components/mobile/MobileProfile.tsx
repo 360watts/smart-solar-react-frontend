@@ -254,7 +254,7 @@ const MobileProfile: React.FC = () => {
           <div style={{ fontSize:'0.8rem', fontWeight:700, color:text, marginBottom:12 }}>Account</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
             {[
-              { label:'Role',      value:profile.is_superuser ? 'Administrator' : profile.is_staff ? 'Staff' : 'User' },
+              ...(authUser?.is_staff ? [{ label:'Role',      value:profile.is_superuser ? 'Administrator' : profile.is_staff ? 'Staff' : 'User' }] : []),
               { label:'User ID',   value:`#${profile.id}` },
               { label:'Username',  value:profile.username },
               { label:'Status',    value:'Active' },

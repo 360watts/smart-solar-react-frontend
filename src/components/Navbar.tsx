@@ -25,15 +25,15 @@ const tok = {
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 const iconProps = { size: 15 };
 
-// Customer-visible tabs
+// Customer-visible tabs (dashboard only)
 const MAIN_NAV = [
   { path: '/dashboard',      label: 'Dashboard',     icon: <LayoutDashboard {...iconProps} /> },
-  { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} /> },
-  { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} /> },
 ];
 
 // Staff-only tabs
 const STAFF_CONFIG_NAV = [
+  { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} /> },
+  { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} /> },
   { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} /> },
   { path: '/users',          label: 'Users',          icon: <Users {...iconProps} /> },
   { path: '/device-presets', label: 'Device Presets', icon: <Star {...iconProps} /> },
@@ -50,16 +50,9 @@ const STAFF_NAV = [
 ];
 
 // ─── Bottom nav primary items (always visible on mobile) ────────────────────
-// Customers see: Dashboard, Devices, Alerts
-// Staff adds: Configuration to this list
+// Customers see: Dashboard only
 const BOTTOM_NAV_PRIMARY = [
   { path: '/dashboard',     label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-  { path: '/devices',       label: 'Devices',   icon: <Monitor size={20} /> },
-  { path: '/alerts',        label: 'Alerts',    icon: <Bell size={20} /> },
-];
-
-const BOTTOM_NAV_STAFF = [
-  { path: '/configuration', label: 'Config',    icon: <Settings size={20} /> },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────

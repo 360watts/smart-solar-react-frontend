@@ -157,6 +157,7 @@ const Profile: React.FC = () => {
   const roleLabel = profile?.is_superuser ? 'Administrator' : profile?.is_staff ? 'Staff' : 'User';
   const roleBadgeClass = profile?.is_superuser ? 'role-badge-admin' : profile?.is_staff ? 'role-badge-staff' : 'role-badge-user';
   const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username : '';
+  const showRole = user?.is_staff || user?.is_superuser; // Hide role badge for customers
 
   return (
     <div className="admin-container responsive-page">
@@ -192,7 +193,7 @@ const Profile: React.FC = () => {
                 <div style={{ paddingBottom: 2 }}>
                   <h2 className="profile-hero-name">{displayName}</h2>
                   <div className="profile-hero-meta">
-                    <span className={`role-badge ${roleBadgeClass}`}>{roleLabel}</span>
+                    {showRole && <span className={`role-badge ${roleBadgeClass}`}>{roleLabel}</span>}
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                       <Calendar size={12} />
                       {profile?.date_joined
