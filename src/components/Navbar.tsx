@@ -25,11 +25,16 @@ const tok = {
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 const iconProps = { size: 15 };
 
+// Customer-visible tabs
 const MAIN_NAV = [
   { path: '/dashboard',      label: 'Dashboard',     icon: <LayoutDashboard {...iconProps} /> },
   { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} /> },
-  { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} /> },
   { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} /> },
+];
+
+// Staff-only tabs
+const STAFF_CONFIG_NAV = [
+  { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} /> },
   { path: '/users',          label: 'Users',          icon: <Users {...iconProps} /> },
   { path: '/device-presets', label: 'Device Presets', icon: <Star {...iconProps} /> },
 ];
@@ -45,10 +50,15 @@ const STAFF_NAV = [
 ];
 
 // ─── Bottom nav primary items (always visible on mobile) ────────────────────
+// Customers see: Dashboard, Devices, Alerts
+// Staff adds: Configuration to this list
 const BOTTOM_NAV_PRIMARY = [
   { path: '/dashboard',     label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { path: '/devices',       label: 'Devices',   icon: <Monitor size={20} /> },
   { path: '/alerts',        label: 'Alerts',    icon: <Bell size={20} /> },
+];
+
+const BOTTOM_NAV_STAFF = [
   { path: '/configuration', label: 'Config',    icon: <Settings size={20} /> },
 ];
 
@@ -80,6 +90,7 @@ const Navbar: React.FC = () => {
   const allNavItems = [
     ...MAIN_NAV,
     ...(isAdmin ? ADMIN_NAV : []),
+    ...((isAdmin || isStaff) ? STAFF_CONFIG_NAV : []),
     ...((isAdmin || isStaff) ? STAFF_NAV : []),
   ];
 
