@@ -45,10 +45,9 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError('');
-    apiService.getDeviceLogs(deviceId, 50)
-      .then(res => { if (!cancelled) setLogs(Array.isArray(res) ? res : (res?.results ?? [])); })
-      .catch(() => { if (!cancelled) setError('Failed to load logs'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    // DB-based logs removed (F-027). Logs are now stored as files in S3.
+    setLogs([]);
+    setLoading(false);
     return () => { cancelled = true; };
   }, [deviceId]);
 

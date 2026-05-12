@@ -939,13 +939,6 @@ class ApiService {
     });
   }
 
-  async getDeviceLogs(deviceId: number, limit: number = 500, offset: number = 0, start?: string, end?: string): Promise<any> {
-    let url = `/devices/${deviceId}/logs/?limit=${limit}&offset=${offset}`;
-    if (start) url += `&start=${encodeURIComponent(start)}`;
-    if (end) url += `&end=${encodeURIComponent(end)}`;
-    return this.request(url);
-  }
-
   async getDeviceLogFiles(deviceId: number, limit = 20, offset = 0, start?: string, end?: string): Promise<any> {
     let url = `/devices/${deviceId}/logs/files/?limit=${limit}&offset=${offset}`;
     if (start) url += `&start=${encodeURIComponent(start)}`;
