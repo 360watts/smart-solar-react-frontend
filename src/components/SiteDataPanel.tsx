@@ -1531,8 +1531,13 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
     const vals = arr.map((h: any) => h.mean_error_pct).filter((v: any) => v != null);
     return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
   };
+  const avgMae = (arr: any[]) => {
+    const vals = arr.map((h: any) => h.mae_kw).filter((v: any) => v != null);
+    return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
+  };
   const dayErrorPct  = avgPct(daytimeHourly);
-  const nightErrorPct = avgPct(nighttimeHourly);
+  const nightErrorPct = avgPct(nighttimeHourly);  // May be null due to strict threshold (0.02 kW)
+  const nightMaeKw = avgMae(nighttimeHourly);    // Use MAE instead (0.002 kW is meaningful)
 
   // Color each bar by MAE severity
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
@@ -1603,7 +1608,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
     { label: 'MAE',         value: summary.mae_kw  != null ? `${Number(summary.mae_kw).toFixed(2)} kW`  : '—', accent: '#00a63e', sub: 'Mean absolute error' },
     { label: 'RMSE',        value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(2)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
     { label: 'Day Error',   value: dayErrorPct   != null ? `${Number(dayErrorPct).toFixed(1)}%`   : '—', accent: '#f59e0b', sub: 'Avg % error (06–18 IST)' },
-    { label: 'Night Error', value: nightErrorPct != null ? `${Number(nightErrorPct).toFixed(1)}%` : '—', accent: '#8b5cf6', sub: 'Avg % error (18–06 IST)' },
+    { label: 'Night Error', value: nightMaeKw != null ? `±${Number(nightMaeKw).toFixed(3)} kW` : '—', accent: '#8b5cf6', sub: 'Avg ±error MAE (18–06 IST)' },
     { label: 'Coverage',    value: summary.coverage_pct != null ? `${Number(summary.coverage_pct).toFixed(1)}%` : '—', accent: '#06b6d4', sub: 'Actual within P10–P90' },
   ];
 
