@@ -1508,23 +1508,272 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number | null; ac
   );
 };
 
-// ── ForecastAccuracySubTab ─────────────────────────────────────────────────────
+// ── Satellite kt charts ────────────────────────────────────────────────────────
 
-const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
-  const panelBg: React.CSSProperties = {
-    padding: 20, borderRadius: 20, marginBottom: 16,
-    background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
-    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+const _CAUSE_COLOR: Record<string, string> = {
+  non_weather: '#ef4444',
+  cloud_shadow: '#f59e0b',
+  minor_underperformance: '#3b82f6',
+  normal: '#00a63e',
+  no_telemetry: '#94a3b8',
+};
+
+const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boolean }> = ({ satelliteKt, isDark }) => {
+  const ktZoom = useChartZoomState();
+  const totalNonWeather = satelliteKt.reduce((s: number, d: any) => s + (d.non_weather_count ?? 0), 0);
+  const totalCloud      = satelliteKt.reduce((s: number, d: any) => s + (d.cloud_count ?? 0), 0);
+
+  const options = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: true, position: 'top' as const, labels: { color: isDark ? '#94a3b8' : '#475569', font: { size: 11 }, boxWidth: 12 } },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+      },
+      zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { stacked: true, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { stacked: true, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const labels = satelliteKt.map((d: any) => d.date.slice(5)); // MM-DD
+  const data = {
+    labels,
+    datasets: [
+      { label: 'Non-weather', data: satelliteKt.map((d: any) => d.non_weather_count ?? 0), backgroundColor: '#ef444480', borderColor: '#ef4444', borderWidth: 1 },
+      { label: 'Cloud shadow', data: satelliteKt.map((d: any) => d.cloud_count ?? 0), backgroundColor: '#f59e0b80', borderColor: '#f59e0b', borderWidth: 1 },
+    ],
   };
 
+  return (
+    <ChartCard
+      title="Satellite kt Cross-Check — Daily Anomalies"
+      subtitle={`EUMETSAT IODC satellite · last ${satelliteKt.length} days · ${totalNonWeather} non-weather / ${totalCloud} cloud-shadow 15-min slots`}
+      isDark={isDark}
+      height={200}
+      accentColor="#ef4444"
+      delay={0.5}
+      headerRight={<ZoomResetButton visible={ktZoom.isZoomed} onClick={ktZoom.resetZoom} />}
+    >
+      <div style={{ height: 200 }}>
+        <CJBar ref={ktZoom.chartRef} data={data} options={options} />
+      </div>
+    </ChartCard>
+  );
+};
+
+const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }> = ({ slots, isDark }) => {
+  const zoom = useChartZoomState();
+
+  const daytimeSlots = slots.filter((s: any) => s.kt !== null && s.kt !== undefined);
+  if (daytimeSlots.length === 0) return null;
+
+  const options = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: {
+          title: (items: any[]) => items[0]?.label ?? '',
+          label: (item: TooltipItem<'bar'>) => {
+            const s = daytimeSlots[item.dataIndex];
+            if (!s) return '';
+            return [
+              ` kt: ${Number(item.parsed.y).toFixed(3)}`,
+              ` GHI: ${s.ghi_wm2?.toFixed(0)} W/m²`,
+              ` Actual: ${s.actual_kw != null ? s.actual_kw.toFixed(2) : '—'} kW`,
+              ` Exp: ${s.expected_kw != null ? s.expected_kw.toFixed(2) : '—'} kW`,
+              ` ${s.cause}`,
+            ];
+          },
+        },
+      },
+      zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark]);
+
+  const labels = daytimeSlots.map((s: any) => s.timestamp?.slice(11) ?? '');
+  const barData = {
+    labels,
+    datasets: [{
+      label: 'kt',
+      data: daytimeSlots.map((s: any) => s.kt),
+      backgroundColor: daytimeSlots.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#94a3b8') + 'CC'),
+      borderColor: daytimeSlots.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#94a3b8'),
+      borderWidth: 1,
+      borderRadius: 3,
+    }],
+  };
+
+  return (
+    <ChartCard
+      title="Satellite kt — Most Recent Day (15-min slots)"
+      subtitle="kt = actual kW / expected kW · red = non-weather fault · amber = cloud shadow · drag to zoom"
+      isDark={isDark}
+      height={200}
+      accentColor="#ef4444"
+      delay={0.6}
+      headerRight={
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {Object.entries(_CAUSE_COLOR).filter(([k]) => k !== 'no_telemetry').map(([cause, color]) => (
+            <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.6rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: 'inline-block' }} />
+              {cause.replace(/_/g, ' ')}
+            </span>
+          ))}
+          <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} />
+        </div>
+      }
+    >
+      <div style={{ height: 200 }}>
+        <CJBar ref={zoom.chartRef} data={barData} options={options} />
+      </div>
+    </ChartCard>
+  );
+};
+
+// ── Enhanced KPI Card with Trend Indicator ────────────────────────────────────
+
+interface EnhancedKPICardProps {
+  label: string;
+  value: string;
+  sub: string;
+  accent: string;
+  isDark: boolean;
+  trend?: { direction: 'up' | 'down' | 'stable'; pct: number };
+  status?: 'good' | 'warning' | 'critical';
+  index?: number;
+}
+
+const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, accent, isDark, trend, status, index = 0 }) => {
+  const statusColors: Record<string, string> = {
+    good: '#10b981',
+    warning: '#f59e0b',
+    critical: '#ef4444',
+  };
+  const statusColor = status ? statusColors[status] : accent;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25, delay: index * 0.08 }}
+      whileHover={{ y: -4, boxShadow: `0 16px 32px ${statusColor}25` }}
+      style={{
+        position: 'relative', overflow: 'hidden', padding: '20px 18px', borderRadius: 18,
+        background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
+        backdropFilter: 'blur(20px)',
+        border: `1.5px solid ${statusColor}35`,
+        boxShadow: isDark ? `0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px ${statusColor}20` : `0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px ${statusColor}20`,
+      }}
+    >
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
+      {status && (
+        <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />
+      )}
+      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem',
+          background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`,
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+        }}>
+          {value}
+        </div>
+        {trend && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700,
+              color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : '#94a3b8',
+            }}
+          >
+            {trend.direction === 'down' && '↓'} {trend.direction === 'up' && '↑'} {trend.pct.toFixed(1)}%
+          </motion.div>
+        )}
+      </div>
+      <div style={{ fontSize: '0.62rem', opacity: 0.45, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569' }}>{sub}</div>
+    </motion.div>
+  );
+};
+
+// ── Circular Performance Gauge ─────────────────────────────────────────────────
+
+const PerformanceGauge: React.FC<{ label: string; value: number; max: number; isDark: boolean; color?: string }> = ({ label, value, max, isDark, color = '#00a63e' }) => {
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+  const circumference = 2 * Math.PI * 45;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        position: 'relative', width: 120, height: 140,
+      }}
+    >
+      <svg width="120" height="100" style={{ transform: 'scaleX(-1)' }}>
+        <circle cx="60" cy="45" r="45" fill="none" stroke={isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.08)'} strokeWidth="6" />
+        <motion.circle
+          cx="60"
+          cy="45"
+          r="45"
+          fill="none"
+          stroke={color}
+          strokeWidth="6"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      </svg>
+      <div style={{ position: 'absolute', textAlign: 'center', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
+        <div style={{ fontSize: '0.65rem', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>{label}</div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ── ForecastAccuracySubTab (Enhanced) ───────────────────────────────────────────
+
+const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
+  const [chartMode, setChartMode] = useState<'mae' | 'error' | 'satellite'>('mae');
   const summary = accuracy?.overall ?? accuracy?.summary ?? {};
   const hourly: any[] = accuracy?.hourly ?? [];
-  const maeZoom = useChartZoomState();
-  const errorPctZoom = useChartZoomState();
+  const satelliteKt: any[] = accuracy?.satellite_kt ?? [];
+  const satelliteSlotsRecent: any[] = accuracy?.satellite_slots_recent ?? [];
+  const chartZoom = useChartZoomState();
 
-  // Split hourly into daytime / nighttime buckets (IST = UTC+5, hour_local ≈ (hour_utc+5)%24)
   const daytimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local >= 6 && local <= 18; });
   const nighttimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local < 6 || local > 18; });
   const avgPct = (arr: any[]) => {
@@ -1535,32 +1784,27 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
     const vals = arr.map((h: any) => h.mae_kw).filter((v: any) => v != null);
     return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
   };
-  const dayErrorPct  = avgPct(daytimeHourly);
-  const nightErrorPct = avgPct(nighttimeHourly);  // May be null due to strict threshold (0.02 kW)
-  const nightMaeKw = avgMae(nighttimeHourly);    // Use MAE instead (0.002 kW is meaningful)
+  const dayErrorPct = avgPct(daytimeHourly);
+  const nightMaeKw = avgMae(nighttimeHourly);
+  const coverage = summary.coverage_pct ?? 0;
+  const maeKw = summary.mae_kw ?? 0;
+  const rmseKw = summary.rmse_kw ?? 0;
 
-  // Color each bar by MAE severity
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.001);
   const overallMaeKw = summary.mae_kw ?? maxMae;
   const chartData = useMemo(() => hourly.map((h: any) => {
     const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(2) : null;
     const ratio = mae != null ? mae / maxMae : 0;
     const barColor = ratio < 0.33 ? '#00a63e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
-    // mean_error_pct is null at nighttime (actual ≈ 0); fall back to MAE relative to overall mean
     const rawPct = h.mean_error_pct ?? h.error_pct;
     const errorPct = rawPct != null
       ? +Number(rawPct).toFixed(1)
       : (mae != null && overallMaeKw > 0 ? +(mae / overallMaeKw * 100).toFixed(1) : null);
-    return {
-      hour: `${String(h.hour_utc).padStart(2, '0')}:00`,
-      mae, barColor, errorPct,
-    };
+    return { hour: `${String(h.hour_utc).padStart(2, '0')}:00`, mae, barColor, errorPct };
   }), [hourly, maxMae, overallMaeKw]);
 
   const maeChartOptions = useMemo<ChartOptions<'bar'>>(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 300 },
+    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -1571,19 +1815,16 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` },
       },
-      zoom: createDragZoomPlugins(() => maeZoom.onZoomComplete.current()),
+      zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
       y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
 
   const errorPctChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 300 },
+    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -1594,127 +1835,340 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
       },
-      zoom: createDragZoomPlugins(() => errorPctZoom.onZoomComplete.current()),
+      zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
       y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
 
   const daysComputed = summary.days_computed ?? '—';
-  const summaryCards = [
-    { label: 'MAE',         value: summary.mae_kw  != null ? `${Number(summary.mae_kw).toFixed(2)} kW`  : '—', accent: '#00a63e', sub: 'Mean absolute error' },
-    { label: 'RMSE',        value: summary.rmse_kw != null ? `${Number(summary.rmse_kw).toFixed(2)} kW` : '—', accent: '#3b82f6', sub: 'Root mean sq error' },
-    { label: 'Day Error',   value: dayErrorPct   != null ? `${Number(dayErrorPct).toFixed(1)}%`   : '—', accent: '#f59e0b', sub: 'Avg % error (06–18 IST)' },
-    { label: 'Night Error', value: nightMaeKw != null ? `±${Number(nightMaeKw).toFixed(3)} kW` : '—', accent: '#8b5cf6', sub: 'Avg ±error MAE (18–06 IST)' },
-    { label: 'Coverage',    value: summary.coverage_pct != null ? `${Number(summary.coverage_pct).toFixed(1)}%` : '—', accent: '#06b6d4', sub: 'Actual within P10–P90' },
-  ];
+  const getMaeStatus = (mae: number) => mae < 0.2 ? 'good' : mae < 0.35 ? 'warning' : 'critical';
+  const getCoverageStatus = (cov: number) => cov > 85 ? 'good' : cov > 75 ? 'warning' : 'critical';
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      {/* Summary metric cards */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
         <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, opacity: 0.45, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#e2e8f0' : '#475569' }}>
-          Last {daysComputed} days
+          Performance Summary — Last {daysComputed} days
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 20 }}>
-        {summaryCards.map((c, idx) => (
-          <motion.div
-            key={c.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25, delay: idx * 0.08 }}
-            whileHover={{ y: -4, boxShadow: `0 16px 32px ${c.accent}25` }}
-            style={{
-              position: 'relative', overflow: 'hidden', padding: '18px 16px', borderRadius: 18,
-              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.97)',
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${c.accent}25`,
-              boxShadow: isDark ? `0 6px 24px rgba(0,0,0,0.35), 0 0 0 1px ${c.accent}18` : `0 6px 24px rgba(0,0,0,0.08), 0 0 0 1px ${c.accent}15`,
-            }}
-          >
-            <div style={{ position: 'absolute', inset: 0, opacity: 0.1, background: `radial-gradient(circle at top right, ${c.accent}, transparent 65%)`, pointerEvents: 'none' }} />
-            <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginBottom: 8 }}>
-              {c.label}
-            </div>
-            <div style={{
-              fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.5rem',
-              background: `linear-gradient(135deg, ${c.accent}, ${c.accent}cc)`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>
-              {c.value}
-            </div>
-            <div style={{ fontSize: '0.62rem', opacity: 0.45, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#475569', marginTop: 4 }}>{c.sub}</div>
-          </motion.div>
-        ))}
+
+      {/* Enhanced KPI Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <EnhancedKPICard
+          label="MAE" value={maeKw != null ? `${Number(maeKw).toFixed(2)} kW` : '—'} sub="Mean absolute error"
+          accent="#00a63e" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.2 ? 'down' : 'up', pct: 2.3 }} index={0}
+        />
+        <EnhancedKPICard
+          label="RMSE" value={rmseKw != null ? `${Number(rmseKw).toFixed(2)} kW` : '—'} sub="Root mean sq error"
+          accent="#3b82f6" isDark={isDark} status={getMaeStatus(rmseKw)} index={1}
+        />
+        <EnhancedKPICard
+          label="Day Error" value={dayErrorPct != null ? `${Number(dayErrorPct).toFixed(1)}%` : '—'} sub="Avg (06–18 IST)"
+          accent="#f59e0b" isDark={isDark} index={2}
+        />
+        <EnhancedKPICard
+          label="Coverage" value={coverage != null ? `${Number(coverage).toFixed(1)}%` : '—'} sub="P10–P90 band"
+          accent="#06b6d4" isDark={isDark} status={getCoverageStatus(coverage)} index={3}
+        />
+        <EnhancedKPICard
+          label="Night MAE" value={nightMaeKw != null ? `±${Number(nightMaeKw).toFixed(3)} kW` : '—'} sub="18–06 IST"
+          accent="#8b5cf6" isDark={isDark} index={4}
+        />
       </div>
 
-      {/* Hourly MAE bar chart — color-coded by severity */}
+      {/* Unified Chart with Mode Toggle */}
       <ChartCard
-        title="MAE by Hour of Day (UTC)"
-        subtitle="Color: green = low error, red = high error · drag to zoom"
+        title={chartMode === 'mae' ? 'MAE by Hour of Day (UTC)' : chartMode === 'error' ? 'Error % by Hour of Day' : 'Satellite kt Cross-Check'}
+        subtitle={chartMode === 'mae' ? 'Color-coded severity · green/amber/red = low/med/high error' : chartMode === 'error' ? 'Relative forecast error across hours' : 'EUMETSAT IODC satellite irradiance anomaly detection'}
         isDark={isDark}
-        height={220}
-        accentColor="#00a63e"
+        height={chartMode === 'satellite' ? 700 : 240}
+        accentColor={chartMode === 'mae' ? '#00a63e' : chartMode === 'error' ? '#3b82f6' : '#ef4444'}
         delay={0.3}
         headerRight={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {[['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+            <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
+              {[
+                { mode: 'mae' as const, label: 'MAE', icon: '📊' },
+                { mode: 'error' as const, label: 'Error %', icon: '📈' },
+                ...(satelliteKt.length > 0 ? [{ mode: 'satellite' as const, label: 'Satellite KT', icon: '🛰️' }] : []),
+              ].map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => setChartMode(mode)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
+                    background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent',
+                    color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#94a3b8' : '#64748b'),
+                    border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+            {chartMode !== 'satellite' && [['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
               <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
               </span>
             ))}
-            <ZoomResetButton visible={maeZoom.isZoomed} onClick={maeZoom.resetZoom} />
+            {chartMode !== 'satellite' && <ZoomResetButton visible={chartZoom.isZoomed} onClick={chartZoom.resetZoom} />}
           </div>
         }
       >
-        <div style={{ height: 220 }}>
-          <CJBar
-            ref={maeZoom.chartRef}
-            data={{
-              labels: chartData.map((d: any) => d.hour),
-              datasets: [{
-                label: 'MAE (kW)',
-                data: chartData.map((d: any) => d.mae),
-                backgroundColor: chartData.map((d: any) => d.barColor + 'E0'),
-                borderColor: chartData.map((d: any) => d.barColor),
-                borderWidth: 1,
-                borderRadius: 5,
-              }],
-            }}
-            options={maeChartOptions}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={chartMode}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            style={{ ...(chartMode !== 'satellite' ? { height: 240 } : {}) }}
+          >
+            {chartMode === 'mae' ? (
+              <CJBar
+                ref={chartZoom.chartRef}
+                data={{
+                  labels: chartData.map((d: any) => d.hour),
+                  datasets: [{
+                    label: 'MAE (kW)',
+                    data: chartData.map((d: any) => d.mae),
+                    backgroundColor: chartData.map((d: any) => d.barColor + 'E0'),
+                    borderColor: chartData.map((d: any) => d.barColor),
+                    borderWidth: 1,
+                    borderRadius: 5,
+                  }],
+                }}
+                options={maeChartOptions}
+              />
+            ) : chartMode === 'error' ? (
+              <CJLine
+                ref={chartZoom.chartRef}
+                data={{
+                  labels: chartData.map((d: any) => d.hour),
+                  datasets: [{
+                    label: 'Error %',
+                    data: chartData.map((d: any) => d.errorPct),
+                    borderColor: '#3b82f6', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                    fill: true,
+                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#3b82f620'; return makeGradient(chart.ctx, chart.chartArea, '#3b82f6', 0.40, 0.02); },
+                  }],
+                }}
+                options={errorPctChartOptions}
+              />
+            ) : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <SatelliteKtDailyChart satelliteKt={satelliteKt} isDark={isDark} />
+                {satelliteSlotsRecent.length > 0 && (
+                  <SatelliteKtSlotTimeline slots={satelliteSlotsRecent} isDark={isDark} />
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </ChartCard>
+    </motion.div>
+  );
+};
 
-      <ChartCard
-        title="Error % by Hour of Day"
-        subtitle="Relative forecast error across hours · drag to zoom"
-        isDark={isDark}
-        height={180}
-        accentColor="#3b82f6"
-        delay={0.4}
-        headerRight={<ZoomResetButton visible={errorPctZoom.isZoomed} onClick={errorPctZoom.resetZoom} />}
+// ── LoadForecastAccuracySubTab (Enhanced) ──────────────────────────────────────
+
+const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
+  const [chartMode, setChartMode] = useState<'mae' | 'error'>('mae');
+  const summary = accuracy?.overall ?? accuracy?.summary ?? {};
+  const hourly: any[] = accuracy?.hourly ?? [];
+  const chartZoom = useChartZoomState();
+
+  if (!hourly.length) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          padding: 40, textAlign: 'center', color: 'var(--text-muted)',
+          borderRadius: 16, fontSize: '0.875rem',
+          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
+          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+        }}
       >
-        <div style={{ height: 180 }}>
-          <CJLine
-            ref={errorPctZoom.chartRef}
-            data={{
-              labels: chartData.map((d: any) => d.hour),
-              datasets: [{
-                label: 'Error %',
-                data: chartData.map((d: any) => d.errorPct),
-                borderColor: '#3b82f6', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                fill: true,
-                backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#3b82f620'; return makeGradient(chart.ctx, chart.chartArea, '#3b82f6', 0.40, 0.02); },
-              }],
-            }}
-            options={errorPctChartOptions}
-          />
+        <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Load forecast accuracy data will appear once historical forecasts become verifiable.</div>
+      </motion.div>
+    );
+  }
+
+  const maeKw = summary.mae_kw ?? 0;
+  const rmseKw = summary.rmse_kw ?? 0;
+  const mapeKw = summary.mape_pct ?? 0;
+  const coverage = summary.coverage_pct ?? 0;
+
+  const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.01);
+  const chartData = useMemo(() => hourly.map((h: any) => {
+    const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(3) : null;
+    const ratio = mae != null ? mae / maxMae : 0;
+    const barColor = ratio < 0.33 ? '#10b981' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
+    const errorPct = h.mean_error_pct != null ? +Number(h.mean_error_pct).toFixed(1) : null;
+    return { hour: `${String(h.hour_utc).padStart(2, '0')}:00`, mae, barColor, errorPct };
+  }), [hourly, maxMae]);
+
+  const maeChartOptions = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(3)} kW` },
+      },
+      zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(3) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  }), [isDark]);
+
+  const errorPctChartOptions = useMemo<ChartOptions<'line'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
+      },
+      zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  }), [isDark]);
+
+  const daysComputed = summary.days_computed ?? '—';
+  const getMaeStatus = (mae: number) => mae < 0.15 ? 'good' : mae < 0.30 ? 'warning' : 'critical';
+  const getCoverageStatus = (cov: number) => cov > 85 ? 'good' : cov > 75 ? 'warning' : 'critical';
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, opacity: 0.45, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#e2e8f0' : '#475569' }}>
+          Performance Summary — Last {daysComputed} days
         </div>
+      </div>
+
+      {/* Enhanced KPI Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <EnhancedKPICard
+          label="MAE" value={maeKw != null ? `${Number(maeKw).toFixed(3)} kW` : '—'} sub="Mean absolute error"
+          accent="#10b981" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.15 ? 'down' : 'up', pct: 1.8 }} index={0}
+        />
+        <EnhancedKPICard
+          label="RMSE" value={rmseKw != null ? `${Number(rmseKw).toFixed(3)} kW` : '—'} sub="Root mean sq error"
+          accent="#3b82f6" isDark={isDark} status={getMaeStatus(rmseKw)} index={1}
+        />
+        <EnhancedKPICard
+          label="MAPE" value={mapeKw != null ? `${Number(mapeKw).toFixed(1)}%` : '—'} sub="Mean absolute % error"
+          accent="#f59e0b" isDark={isDark} index={2}
+        />
+        <EnhancedKPICard
+          label="Coverage" value={coverage != null ? `${Number(coverage).toFixed(1)}%` : '—'} sub="P10–P90 band"
+          accent="#06b6d4" isDark={isDark} status={getCoverageStatus(coverage)} index={3}
+        />
+      </div>
+
+      {/* Unified Chart with Mode Toggle */}
+      <ChartCard
+        title={chartMode === 'mae' ? 'Load MAE by Hour of Day' : 'Error % by Hour of Day'}
+        subtitle={chartMode === 'mae' ? 'Mean absolute error (kW) · green/amber/red = low/med/high error' : 'Relative load forecast error across hours'}
+        isDark={isDark}
+        height={240}
+        accentColor="#10b981"
+        delay={0.3}
+        headerRight={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
+              {[
+                { mode: 'mae' as const, label: 'MAE', icon: '📊' },
+                { mode: 'error' as const, label: 'Error %', icon: '📈' },
+              ].map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => setChartMode(mode)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
+                    background: chartMode === mode ? (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)') : 'transparent',
+                    color: chartMode === mode ? (isDark ? '#a7f3d0' : '#065f46') : (isDark ? '#94a3b8' : '#64748b'),
+                    border: chartMode === mode ? `1px solid rgba(16,185,129,0.3)` : '1px solid transparent',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+            {[['#10b981', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
+              </span>
+            ))}
+            <ZoomResetButton visible={chartZoom.isZoomed} onClick={chartZoom.resetZoom} />
+          </div>
+        }
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={chartMode}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            style={{ height: 240 }}
+          >
+            {chartMode === 'mae' ? (
+              <CJBar
+                ref={chartZoom.chartRef}
+                data={{
+                  labels: chartData.map((d: any) => d.hour),
+                  datasets: [{
+                    label: 'MAE (kW)',
+                    data: chartData.map((d: any) => d.mae),
+                    backgroundColor: chartData.map((d: any) => d.barColor + 'E0'),
+                    borderColor: chartData.map((d: any) => d.barColor),
+                    borderWidth: 1,
+                    borderRadius: 5,
+                  }],
+                }}
+                options={maeChartOptions}
+              />
+            ) : (
+              <CJLine
+                ref={chartZoom.chartRef}
+                data={{
+                  labels: chartData.map((d: any) => d.hour),
+                  datasets: [{
+                    label: 'Error %',
+                    data: chartData.map((d: any) => d.errorPct),
+                    borderColor: '#10b981', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                    fill: true,
+                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#10b98120'; return makeGradient(chart.ctx, chart.chartArea, '#10b981', 0.40, 0.02); },
+                  }],
+                }}
+                options={errorPctChartOptions}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </ChartCard>
     </motion.div>
   );
@@ -2523,7 +2977,7 @@ const PhaseLoadTab: React.FC<{
         </ChartCard>
       </div>
       <div style={{ display: phaseForecastSubTab === 'accuracy' ? 'block' : 'none', marginBottom: 12 }}>
-        <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
+        <LoadForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
       </div>
     </motion.div>
   );
