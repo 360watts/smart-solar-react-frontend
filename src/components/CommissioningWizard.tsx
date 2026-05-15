@@ -44,12 +44,40 @@ export default function CommissioningWizard() {
   const [loggerSerial, setLoggerSerial] = useState('');
   const [dataLoggerSerial, setDataLoggerSerial] = useState('');
   const [devicePk, setDevicePk] = useState('');
-  
+  const [availableDevices, setAvailableDevices] = useState<Array<{
+    id: number;
+    device_serial: string;
+    hw_id?: string;
+    model?: string;
+    is_online: boolean;
+    last_heartbeat?: string;
+    site_id?: number | null;
+  }>>([]);
+
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdSiteId, setCreatedSiteId] = useState<string | null>(null);
   const [usersBusy, setUsersBusy] = useState(false);
   const [idBusy, setIdBusy] = useState(false);
+  const [devicesBusy, setDevicesBusy] = useState(false);
+
+  // ── Appliance Inventory (Step 3) ──
+  const [numAcUnits, setNumAcUnits] = useState(0);
+  const [acTotalCapacityKw, setAcTotalCapacityKw] = useState<number | null>(null);
+  const [acSetpointC, setAcSetpointC] = useState<number | null>(null);
+  const [numGeysers, setNumGeysers] = useState(0);
+  const [geyserTotalCapacityKw, setGeyserTotalCapacityKw] = useState<number | null>(null);
+  const [geyserType, setGeyserType] = useState('');
+  const [numRefrigerators, setNumRefrigerators] = useState(0);
+  const [numWashingMachines, setNumWashingMachines] = useState(0);
+  const [numEvChargers, setNumEvChargers] = useState(0);
+  const [evType, setEvType] = useState('');
+  const [evChargingCapacityKw, setEvChargingCapacityKw] = useState<number | null>(null);
+  const [hasWaterPump, setHasWaterPump] = useState(false);
+  const [waterPumpCapacityHp, setWaterPumpCapacityHp] = useState<number | null>(null);
+  const [hasMicrowave, setHasMicrowave] = useState(false);
+  const [hasDesertCooler, setHasDesertCooler] = useState(false);
+  const [applianceNotes, setApplianceNotes] = useState('');
 
   // ── Tokens ──
   const bg          = isDark ? '#020617' : '#f0fdf4';
@@ -120,6 +148,38 @@ export default function CommissioningWizard() {
     init();
     return () => { mounted = false; };
   }, []);
+
+  // Fetch devices when owner is selected
+  useEffect(() => {
+    let mounted = true;
+    const fetchDevices = async () => {
+      if (!ownerUserId) {
+        setAvailableDevices([]);
+        return;
+      }
+      setDevicesBusy(true);
+      try {
+        const devices = await apiService.getUserDevices(parseInt(ownerUserId, 10));
+        if (!mounted) return;
+        // Filter to show only unattached devices (site_id is null)
+        const unattached = Array.isArray(devices)
+          ? devices.filter((d: any) => !d.site_id)
+          : [];
+        setAvailableDevices(unattached);
+        // Clear device selection if owner changes
+        setDevicePk('');
+      } catch (err) {
+        if (mounted) {
+          setAvailableDevices([]);
+          // Don't show error for devices fetch, just silently fail
+        }
+      } finally {
+        if (mounted) setDevicesBusy(false);
+      }
+    };
+    fetchDevices();
+    return () => { mounted = false; };
+  }, [ownerUserId]);
 
   const filteredOwnerUsers = useMemo(() => {
     const q = ownerSearch.trim().toLowerCase();
@@ -208,6 +268,42 @@ export default function CommissioningWizard() {
     }
   };
 
+  const step3 = async () => {
+    // Save appliance data to SiteProfile
+    const targetSiteId = createdSiteId || siteId.trim();
+    if (!targetSiteId) {
+      setError('Site ID required');
+      return;
+    }
+
+    setBusy(true); setError(null);
+    try {
+      await apiService.updateSiteProfileAppliances(targetSiteId, {
+        num_ac_units: numAcUnits,
+        ac_total_capacity_kw: numAcUnits > 0 ? acTotalCapacityKw : null,
+        ac_typical_setpoint_c: numAcUnits > 0 ? acSetpointC : null,
+        num_geysers: numGeysers,
+        geyser_total_capacity_kw: numGeysers > 0 ? geyserTotalCapacityKw : null,
+        geyser_type: numGeysers > 0 ? geyserType : '',
+        num_refrigerators: numRefrigerators,
+        num_washing_machines: numWashingMachines,
+        num_ev_chargers: numEvChargers,
+        ev_type: numEvChargers > 0 ? evType : '',
+        ev_typical_charging_capacity_kw: numEvChargers > 0 ? evChargingCapacityKw : null,
+        has_water_pump: hasWaterPump,
+        water_pump_capacity_hp: hasWaterPump ? waterPumpCapacityHp : null,
+        has_microwave: hasMicrowave,
+        has_desert_cooler: hasDesertCooler,
+        appliance_notes: applianceNotes,
+      });
+      setStep(4);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save appliance data');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const sid = createdSiteId || siteId.trim();
 
   // ── Render Helpers ──
@@ -215,7 +311,8 @@ export default function CommissioningWizard() {
     const steps = [
       { num: 1, label: 'Create Site', icon: <Server size={14} /> },
       { num: 2, label: 'Assign Gateway', icon: <Wifi size={14} /> },
-      { num: 3, label: 'Complete', icon: <CheckCircle2 size={14} /> }
+      { num: 3, label: 'Appliances', icon: <LayoutDashboard size={14} /> },
+      { num: 4, label: 'Complete', icon: <CheckCircle2 size={14} /> }
     ];
 
     return (
@@ -275,12 +372,13 @@ export default function CommissioningWizard() {
         {/* Header Text */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: textMain, margin: '0 0 8px' }}>
-            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Establish Connectivity' : 'Commissioning Complete'}
+            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Establish Connectivity' : step === 3 ? 'Appliance Inventory' : 'Commissioning Complete'}
           </h2>
           <p style={{ fontSize: '0.9rem', color: textSub, margin: 0 }}>
-            {step === 1 ? 'Establish the core record for this installation before assigning equipment.' : 
-             step === 2 ? 'Link a physical gateway device to enable telemetry and monitoring.' : 
-             'The site and gateway are linked. You can now provision specific hardware.'}
+            {step === 1 ? 'Establish the core record for this installation before assigning equipment.' :
+             step === 2 ? 'Link a physical gateway device to enable telemetry and monitoring.' :
+             step === 3 ? 'Document the major appliances at this site to improve load forecasting accuracy.' :
+             'The site, gateway, and appliance inventory are complete. You can now provision specific hardware.'}
           </p>
         </div>
 
@@ -447,11 +545,35 @@ export default function CommissioningWizard() {
                 </div>
 
                 <div>
-                  <label style={labelStyle}><Wifi size={12} /> Device Primary Key (Gateway ID)</label>
+                  <label style={labelStyle}><Wifi size={12} /> Select Gateway Device</label>
                   <p style={{ fontSize: '0.75rem', color: textSub, margin: '6px 0 12px' }}>
-                    Enter the numeric ID of the gateway device. This device must be owned by the same user assigned to the site.
+                    Select an available device to attach to this site. Device must be owned by the same user assigned to the site. A site can only have one gateway device.
                   </p>
-                  <input type="number" value={devicePk} onChange={e => setDevicePk(e.target.value)} style={inputStyle} placeholder="e.g., 402" />
+                  <select
+                    value={devicePk}
+                    onChange={(e) => setDevicePk(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      cursor: 'pointer',
+                      background: nativeSelectBg,
+                      color: nativeSelectFg,
+                    }}
+                    disabled={devicesBusy}
+                  >
+                    <option value="">
+                      {devicesBusy ? 'Loading devices...' : ownerUserId ? 'Select a device' : 'Select owner first'}
+                    </option>
+                    {availableDevices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.device_serial} (ID: {device.id}){device.is_online ? ' — Online' : ' — Offline'}
+                      </option>
+                    ))}
+                  </select>
+                  {availableDevices.length === 0 && ownerUserId && !devicesBusy && (
+                    <div style={{ fontSize: '0.75rem', color: '#ff6b6b', marginTop: 8 }}>
+                      No unattached devices available for this owner.
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 32 }}>
@@ -460,15 +582,140 @@ export default function CommissioningWizard() {
                     {!busy && <ArrowRight size={16} />}
                   </button>
                   <button type="button" disabled={busy} onClick={() => setStep(3)} style={buttonStyle(true)}>
-                    Skip for now
+                    Continue to Appliances
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* ── STEP 3 ── */}
+            {/* ── STEP 3: APPLIANCE INVENTORY ── */}
             {step === 3 && (
-              <motion.div key="step3" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
+              <motion.div key="step3-appliances" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
+
+                <div style={{ display: 'grid', gap: 16 }}>
+
+                  {/* AC */}
+                  <div>
+                    <label style={labelStyle}><Server size={12} /> AC Units</label>
+                    <input type="number" min="0" max="10" value={numAcUnits} onChange={(e) => setNumAcUnits(parseInt(e.target.value) || 0)} placeholder="0" style={inputStyle} />
+                  </div>
+                  {numAcUnits > 0 && (
+                    <>
+                      <div>
+                        <label style={labelStyle}>AC Capacity (kW)</label>
+                        <input type="number" min="0" step="0.1" value={acTotalCapacityKw || ''} onChange={(e) => setAcTotalCapacityKw(e.target.value ? parseFloat(e.target.value) : null)} placeholder="e.g. 3, 5.5" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Thermostat Setpoint (°C)</label>
+                        <input type="number" min="18" max="32" value={acSetpointC || 24} onChange={(e) => setAcSetpointC(parseInt(e.target.value) || 24)} placeholder="24" style={inputStyle} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Geyser */}
+                  <div>
+                    <label style={labelStyle}>Water Heaters (Geysers)</label>
+                    <input type="number" min="0" max="10" value={numGeysers} onChange={(e) => setNumGeysers(parseInt(e.target.value) || 0)} placeholder="0" style={inputStyle} />
+                  </div>
+                  {numGeysers > 0 && (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Geyser Heating Capacity (kW)</label>
+                        <input type="number" min="0" step="0.1" value={geyserTotalCapacityKw || ''} onChange={(e) => setGeyserTotalCapacityKw(e.target.value ? parseFloat(e.target.value) : null)} placeholder="e.g. 2, 4.5, 6" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Geyser Type <span style={{ fontSize: '0.85em', opacity: 0.6 }}>(Optional)</span></label>
+                        <select value={geyserType} onChange={(e) => setGeyserType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', background: nativeSelectBg, color: nativeSelectFg }}>
+                          <option value="">-- Select --</option>
+                          <option value="instant">Instant (Tankless)</option>
+                          <option value="storage_tank">Storage Tank</option>
+                          <option value="solar_backup">Solar with Electric Backup</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Refrigerator */}
+                  <div>
+                    <label style={labelStyle}>Refrigerators</label>
+                    <input type="number" min="0" max="10" value={numRefrigerators} onChange={(e) => setNumRefrigerators(parseInt(e.target.value) || 0)} placeholder="0" style={inputStyle} />
+                  </div>
+
+                  {/* Washing Machine */}
+                  <div>
+                    <label style={labelStyle}>Washing Machines</label>
+                    <input type="number" min="0" max="10" value={numWashingMachines} onChange={(e) => setNumWashingMachines(parseInt(e.target.value) || 0)} placeholder="0" style={inputStyle} />
+                  </div>
+
+                  {/* EV Charger */}
+                  <div>
+                    <label style={labelStyle}>EV Chargers</label>
+                    <input type="number" min="0" max="5" value={numEvChargers} onChange={(e) => setNumEvChargers(parseInt(e.target.value) || 0)} placeholder="0" style={inputStyle} />
+                  </div>
+                  {numEvChargers > 0 && (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Charger Capacity (kW)</label>
+                        <input type="number" min="0" step="0.1" value={evChargingCapacityKw || ''} onChange={(e) => setEvChargingCapacityKw(e.target.value ? parseFloat(e.target.value) : null)} placeholder="e.g. 3.3, 7, 11, 22" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>EV Type</label>
+                        <select value={evType} onChange={(e) => setEvType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                          <option value="">-- Select --</option>
+                          <option value="two_wheeler">2-wheeler (e-scooter)</option>
+                          <option value="three_wheeler">3-wheeler (auto-rickshaw)</option>
+                          <option value="four_wheeler">4-wheeler (car)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Water Pump */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" id="hasPump" checked={hasWaterPump} onChange={(e) => setHasWaterPump(e.target.checked)} style={{ cursor: 'pointer' }} />
+                    <label htmlFor="hasPump" style={{ ...labelStyle, margin: 0 }}>Water Pump (Bore/Submersible)</label>
+                  </div>
+                  {hasWaterPump && (
+                    <div>
+                      <label style={labelStyle}>Pump Capacity (HP)</label>
+                      <input type="number" min="0" step="0.1" value={waterPumpCapacityHp || ''} onChange={(e) => setWaterPumpCapacityHp(e.target.value ? parseFloat(e.target.value) : null)} placeholder="e.g. 0.5, 1, 2, 3" style={inputStyle} />
+                    </div>
+                  )}
+
+                  {/* Other */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" id="hasMicrowave" checked={hasMicrowave} onChange={(e) => setHasMicrowave(e.target.checked)} style={{ cursor: 'pointer' }} />
+                    <label htmlFor="hasMicrowave" style={{ ...labelStyle, margin: 0 }}>Microwave Oven</label>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" id="hasCooler" checked={hasDesertCooler} onChange={(e) => setHasDesertCooler(e.target.checked)} style={{ cursor: 'pointer' }} />
+                    <label htmlFor="hasCooler" style={{ ...labelStyle, margin: 0 }}>Desert Cooler</label>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label style={labelStyle}>Additional Notes (Optional)</label>
+                    <textarea value={applianceNotes} onChange={(e) => setApplianceNotes(e.target.value)} placeholder="e.g., occupancy patterns, other appliances..." style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} />
+                  </div>
+
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 32 }}>
+                  <button type="button" disabled={busy} onClick={step3} style={buttonStyle()}>
+                    {busy ? <Loader2 size={16} className="animate-spin" /> : 'Save & Complete'}
+                    {!busy && <CheckCircle2 size={16} />}
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => setStep(4)} style={buttonStyle(true)}>
+                    Skip for now
+                  </button>
+                </div>
+
+              </motion.div>
+            )}
+
+            {/* ── STEP 4: COMPLETION ── */}
+            {step === 4 && (
+              <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
                 
                 <div style={{ 
                   width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,166,62,0.1)', border: '1px solid rgba(0,166,62,0.2)',

@@ -114,6 +114,47 @@ export interface DiagnoseBatchResponse {
   results: AlertDiagnosticResult[];
 }
 
+// ─── Appliance Inventory (Phase 3A) ────────────────────────────────────────
+
+export interface ApplianceInventory {
+  // AC
+  num_ac_units: number;
+  ac_total_capacity_kw: number | null;
+  ac_typical_setpoint_c: number | null;
+
+  // Water Heater / Geyser
+  num_geysers: number;
+  geyser_total_capacity_kw: number | null;
+  geyser_type: 'instant' | 'storage_tank' | 'solar_backup' | '';
+
+  // Refrigerator
+  num_refrigerators: number;
+
+  // Washing Machine
+  num_washing_machines: number;
+
+  // EV Charger
+  num_ev_chargers: number;
+  ev_type: 'two_wheeler' | 'three_wheeler' | 'four_wheeler' | '';
+  ev_typical_charging_capacity_kw: number | null;
+
+  // Water Pump
+  has_water_pump: boolean;
+  water_pump_capacity_hp: number | null;
+
+  // Other appliances
+  has_microwave: boolean;
+  has_desert_cooler: boolean;
+
+  // Survey metadata
+  estimated_household_daily_kwh: number | null;
+  appliance_notes: string;
+  appliance_inventory_source: 'installation_survey' | 'load_inference' | 'user_reported' | '';
+
+  // Audit
+  last_updated?: string;
+}
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
@@ -815,6 +856,26 @@ class ApiService {
     const result = await this.request(`/sites/${enc}/devices/${devicePk}/attach/`, { method: 'POST' });
     cacheService.clearPattern(/^sites/);
     cacheService.clearPattern(/^telemetry_/);
+    return result;
+  }
+
+  // ─── Appliance Inventory (Phase 3A) ─────────────────────────────────────
+
+  async getSiteProfileAppliances(siteId: string): Promise<ApplianceInventory> {
+    const enc = encodeURIComponent(siteId);
+    return this.request(`/sites/${enc}/profile/appliances/`);
+  }
+
+  async updateSiteProfileAppliances(
+    siteId: string,
+    data: Partial<ApplianceInventory>
+  ): Promise<ApplianceInventory> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/profile/appliances/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    cacheService.clearPattern(/^sites/);
     return result;
   }
 

@@ -9,7 +9,7 @@ import {
   Thermometer, MemoryStick, Signal,
 } from 'lucide-react';
 
-type Tab = 'overview' | 'gateway' | 'lifecycle';
+type Tab = 'overview' | 'gateway' | 'appliances' | 'lifecycle';
 const LIFECYCLE_OPTIONS = ['draft','commissioning','active','inactive','archived'];
 
 const MobileSiteDetail: React.FC = () => {
@@ -34,6 +34,21 @@ const MobileSiteDetail: React.FC = () => {
   const [busy, setBusy]                 = useState(false);
   const [editing, setEditing]           = useState(false);
   const [ownerUsers, setOwnerUsers]     = useState<any[]>([]);
+  const [applianceData, setApplianceData] = useState<any>({
+    num_ac_units: 0,
+    ac_typical_setpoint_c: null,
+    num_geysers: 0,
+    geyser_type: '',
+    num_refrigerators: 0,
+    num_washing_machines: 0,
+    num_ev_chargers: 0,
+    ev_type: '',
+    has_water_pump: false,
+    has_microwave: false,
+    has_desert_cooler: false,
+    appliance_notes: '',
+  });
+  const [appliancesLoading, setAppliancesLoading] = useState(true);
 
   // form
   const [displayName, setDisplayName]   = useState('');
@@ -63,6 +78,14 @@ const MobileSiteDetail: React.FC = () => {
   }, [siteId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    if (!siteId) return;
+    setAppliancesLoading(true);
+    apiService.getSiteProfileAppliances(siteId)
+      .then(setApplianceData)
+      .catch(e => console.warn('Failed to load appliances:', e))
+      .finally(() => setAppliancesLoading(false));
+  }, [siteId]);
   useEffect(() => {
     apiService.getUsers().then((res: any) => {
       setOwnerUsers(Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : []);
@@ -182,7 +205,7 @@ const MobileSiteDetail: React.FC = () => {
 
       {/* Tab bar */}
       <div style={{ display:'flex', background:surface, borderBottom:`1px solid ${border}`, padding:'0 4px' }}>
-        {(['overview','gateway','lifecycle'] as Tab[]).map(t => (
+        {(['overview','gateway','appliances','lifecycle'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             style={{ flex:1, padding:'11px 4px', background:'none', border:'none', cursor:'pointer',
               fontSize:'0.72rem', fontWeight:700, color: tab===t ? accent : muted,
@@ -340,6 +363,55 @@ const MobileSiteDetail: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* APPLIANCES TAB */}
+        {tab === 'appliances' && (
+          <>
+            {appliancesLoading ? (
+              <div style={{ ...card(), padding:'14px', textAlign:'center', color:muted }}>
+                <RefreshCw size={16} style={{ animation:'spin 1s linear infinite', margin:'0 auto' }} />
+              </div>
+            ) : (
+              <div style={card({ padding:'14px' })}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <Zap size={16} color={accent}/>
+                  <div style={{ fontSize:'0.85rem', fontWeight:700, color:text }}>Appliance Inventory</div>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                  {[
+                    { label:'AC Units', value: applianceData.num_ac_units ?? 0 },
+                    { label:'AC Capacity', value: applianceData.num_ac_units > 0 && applianceData.ac_total_capacity_kw ? `${applianceData.ac_total_capacity_kw} kW` : '—' },
+                    { label:'AC Setpoint', value: applianceData.num_ac_units > 0 && applianceData.ac_typical_setpoint_c ? `${applianceData.ac_typical_setpoint_c}°C` : '—' },
+                    { label:'Geysers', value: applianceData.num_geysers ?? 0 },
+                    { label:'Geyser Capacity', value: applianceData.num_geysers > 0 && applianceData.geyser_total_capacity_kw ? `${applianceData.geyser_total_capacity_kw} kW` : '—' },
+                    { label:'Geyser Type', value: applianceData.num_geysers > 0 && applianceData.geyser_type ? applianceData.geyser_type.replace(/_/g, ' ') : '—' },
+                    { label:'Refrigerators', value: applianceData.num_refrigerators ?? 0 },
+                    { label:'Washing Machines', value: applianceData.num_washing_machines ?? 0 },
+                    { label:'EV Chargers', value: applianceData.num_ev_chargers ?? 0 },
+                    { label:'Charger Capacity', value: applianceData.num_ev_chargers > 0 && applianceData.ev_typical_charging_capacity_kw ? `${applianceData.ev_typical_charging_capacity_kw} kW` : '—' },
+                    { label:'EV Type', value: applianceData.num_ev_chargers > 0 && applianceData.ev_type ? applianceData.ev_type.replace(/_/g, '-') : '—' },
+                    { label:'Water Pump', value: applianceData.has_water_pump ? 'Yes' : 'No' },
+                    { label:'Pump Capacity', value: applianceData.has_water_pump && applianceData.water_pump_capacity_hp ? `${applianceData.water_pump_capacity_hp} HP` : '—' },
+                    { label:'Microwave', value: applianceData.has_microwave ? 'Yes' : 'No' },
+                    { label:'Desert Cooler', value: applianceData.has_desert_cooler ? 'Yes' : 'No' },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <div style={{ fontSize:'0.6rem', color:muted, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:2 }}>{label}</div>
+                      <div style={{ fontSize:'0.78rem', color:sub, fontWeight:500 }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                {applianceData.appliance_notes && (
+                  <>
+                    <div style={{ height:1, background:border, margin:'12px 0' }} />
+                    <div style={{ fontSize:'0.65rem', color:muted, marginBottom:4 }}>Notes</div>
+                    <div style={{ fontSize:'0.78rem', color:sub, fontWeight:500 }}>{applianceData.appliance_notes}</div>
+                  </>
+                )}
               </div>
             )}
           </>

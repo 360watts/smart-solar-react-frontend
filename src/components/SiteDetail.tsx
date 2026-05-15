@@ -3,10 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MobileSiteDetail } from './mobile';
-import { 
-  ArrowLeft, Battery, Cpu, Server, Wifi, Activity, 
-  Settings, Save, AlertTriangle, Link as LinkIcon, 
-  Unlink, ArrowRightLeft, RefreshCw 
+import {
+  ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
+  Settings, Save, AlertTriangle, Link as LinkIcon,
+  Unlink, ArrowRightLeft, RefreshCw, Zap
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,7 +14,7 @@ import PageHeader from './PageHeader';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'gateway' | 'lifecycle';
+type Tab = 'overview' | 'gateway' | 'lifecycle' | 'appliances';
 const LIFECYCLE_OPTIONS = ['draft', 'commissioning', 'active', 'inactive', 'archived'];
 interface OwnerUser {
   id: number;
@@ -65,6 +65,25 @@ export default function SiteDetail() {
   const [loggerSerial, setLoggerSerial] = useState('');
   const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
 
+  // Appliance Inventory State
+  const [applianceData, setApplianceData] = useState<any>({
+    num_ac_units: 0,
+    ac_typical_setpoint_c: null,
+    num_geysers: 0,
+    geyser_type: '',
+    num_refrigerators: 0,
+    num_washing_machines: 0,
+    num_ev_chargers: 0,
+    ev_type: '',
+    has_water_pump: false,
+    has_microwave: false,
+    has_desert_cooler: false,
+    appliance_notes: '',
+  });
+  const [editingAppliances, setEditingAppliances] = useState(false);
+  const [applianceDraft, setApplianceDraft] = useState<Record<string, any>>({});
+  const [appliancesLoading, setAppliancesLoading] = useState(true);
+
   // ── Design Tokens ──
   const bg          = isDark ? '#020617' : '#f0fdf4';
   const surface     = isDark ? '#0f172a' : '#ffffff';
@@ -75,6 +94,8 @@ export default function SiteDetail() {
   const textMute    = isDark ? '#64748b' : '#94a3b8';
   const textSub     = isDark ? '#94a3b8' : '#475569';
   const primary     = '#00a63e';
+  const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
+  const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';
 
   const palette = {
     ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
@@ -141,6 +162,31 @@ export default function SiteDetail() {
   }, [siteId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!siteId) return;
+    let mounted = true;
+    const loadAppliances = async () => {
+      setAppliancesLoading(true);
+      try {
+        const data = await apiService.getSiteProfileAppliances(siteId);
+        if (mounted) {
+          setApplianceData(data);
+          setApplianceDraft(data);
+        }
+      } catch (e) {
+        // Appliance endpoint uses get_or_create, so error shouldn't happen
+        // But if it does, keep defaults initialized above
+        if (mounted) console.warn('Failed to load appliances:', e);
+      } finally {
+        if (mounted) setAppliancesLoading(false);
+      }
+    };
+    loadAppliances();
+    return () => {
+      mounted = false;
+    };
+  }, [siteId]);
 
   useEffect(() => {
     let mounted = true;
@@ -306,6 +352,24 @@ export default function SiteDetail() {
     }
   };
 
+  const resetAppliancesForm = () => {
+    if (applianceData) setApplianceDraft(applianceData);
+  };
+
+  const saveAppliances = async () => {
+    setBusy(true); setError(null);
+    try {
+      const updated = await apiService.updateSiteProfileAppliances(siteId, applianceDraft);
+      setApplianceData(updated);
+      setApplianceDraft(updated);
+      setEditingAppliances(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save appliances');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const gw = site?.gateway_device;
   const heartbeatHealth = gw?.heartbeat_health;
 
@@ -374,6 +438,7 @@ export default function SiteDetail() {
           {[
             { id: 'overview', label: 'Overview', icon: <Activity size={14} /> },
             { id: 'gateway', label: 'Gateway Settings', icon: <Wifi size={14} /> },
+            { id: 'appliances', label: 'Appliances', icon: <Zap size={14} /> },
             { id: 'lifecycle', label: 'Lifecycle Operations', icon: <Settings size={14} /> }
           ].map(t => (
             <button
@@ -661,6 +726,298 @@ export default function SiteDetail() {
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* APPLIANCES TAB */}
+            {tab === 'appliances' && (
+              <motion.div key="appliances" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
+                <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>Appliance Inventory</h2>
+                    {!editingAppliances ? (
+                      <button type="button" disabled={busy || appliancesLoading} onClick={() => setEditingAppliances(true)} style={buttonStyle(true)}>
+                        <Settings size={14} /> Edit
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            resetAppliancesForm();
+                            setEditingAppliances(false);
+                          }}
+                          style={buttonStyle(true)}
+                        >
+                          Cancel
+                        </button>
+                        <button type="button" disabled={busy} onClick={saveAppliances} style={buttonStyle()}>
+                          <Save size={14} /> Save
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {appliancesLoading ? (
+                    <div style={{ textAlign: 'center', padding: '40px 24px', color: textMute }}>
+                      <RefreshCw size={24} style={{ margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                      {/* AC Units */}
+                      <div>
+                        <label style={labelStyle}>Number of AC Units</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={applianceDraft.num_ac_units ?? 0}
+                          onChange={e => setApplianceDraft({ ...applianceDraft, num_ac_units: parseInt(e.target.value) || 0 })}
+                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                          disabled={!editingAppliances || busy}
+                        />
+                      </div>
+
+                      {/* AC Capacity (conditional) */}
+                      {(applianceDraft.num_ac_units ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>AC Capacity (kW)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={applianceDraft.ac_total_capacity_kw ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, ac_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                            disabled={!editingAppliances || busy}
+                            placeholder="e.g. 3, 5.5"
+                          />
+                        </div>
+                      )}
+
+                      {/* AC Setpoint (conditional) */}
+                      {(applianceDraft.num_ac_units ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>AC Typical Setpoint (°C)</label>
+                          <input
+                            type="number"
+                            min="18"
+                            max="32"
+                            step="0.5"
+                            value={applianceDraft.ac_typical_setpoint_c ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, ac_typical_setpoint_c: e.target.value ? parseFloat(e.target.value) : null })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                            placeholder="e.g. 24"
+                            disabled={!editingAppliances || busy}
+                          />
+                        </div>
+                      )}
+
+                      {/* Geysers */}
+                      <div>
+                        <label style={labelStyle}>Number of Geysers</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={applianceDraft.num_geysers ?? 0}
+                          onChange={e => setApplianceDraft({ ...applianceDraft, num_geysers: parseInt(e.target.value) || 0 })}
+                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                          disabled={!editingAppliances || busy}
+                        />
+                      </div>
+
+                      {/* Geyser Capacity (conditional) */}
+                      {(applianceDraft.num_geysers ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>Geyser Heating Capacity (kW)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={applianceDraft.geyser_total_capacity_kw ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, geyser_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                            disabled={!editingAppliances || busy}
+                            placeholder="e.g. 2, 4.5, 6"
+                          />
+                        </div>
+                      )}
+
+                      {/* Geyser Type (conditional) */}
+                      {(applianceDraft.num_geysers ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>Primary Geyser Type <span style={{ fontSize: '0.85em', opacity: 0.6 }}>(Optional)</span></label>
+                          <select
+                            value={applianceDraft.geyser_type ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, geyser_type: e.target.value })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, cursor: editingAppliances ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
+                            disabled={!editingAppliances || busy}
+                          >
+                            <option value="">Select type</option>
+                            <option value="instant">Instant (Tankless)</option>
+                            <option value="storage_tank">Storage Tank</option>
+                            <option value="solar_backup">Solar with Backup</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Refrigerators */}
+                      <div>
+                        <label style={labelStyle}>Number of Refrigerators</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={applianceDraft.num_refrigerators ?? 0}
+                          onChange={e => setApplianceDraft({ ...applianceDraft, num_refrigerators: parseInt(e.target.value) || 0 })}
+                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                          disabled={!editingAppliances || busy}
+                        />
+                      </div>
+
+                      {/* Washing Machines */}
+                      <div>
+                        <label style={labelStyle}>Number of Washing Machines</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={applianceDraft.num_washing_machines ?? 0}
+                          onChange={e => setApplianceDraft({ ...applianceDraft, num_washing_machines: parseInt(e.target.value) || 0 })}
+                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                          disabled={!editingAppliances || busy}
+                        />
+                      </div>
+
+                      {/* EV Chargers */}
+                      <div>
+                        <label style={labelStyle}>Number of EV Chargers</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={applianceDraft.num_ev_chargers ?? 0}
+                          onChange={e => setApplianceDraft({ ...applianceDraft, num_ev_chargers: parseInt(e.target.value) || 0 })}
+                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                          disabled={!editingAppliances || busy}
+                        />
+                      </div>
+
+                      {/* EV Charger Capacity (conditional) */}
+                      {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>Charger Capacity (kW)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={applianceDraft.ev_typical_charging_capacity_kw ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, ev_typical_charging_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                            disabled={!editingAppliances || busy}
+                            placeholder="e.g. 3.3, 7, 11, 22"
+                          />
+                        </div>
+                      )}
+
+                      {/* EV Type (conditional) */}
+                      {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
+                        <div>
+                          <label style={labelStyle}>Primary EV Type</label>
+                          <select
+                            value={applianceDraft.ev_type ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, ev_type: e.target.value })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, cursor: editingAppliances ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
+                            disabled={!editingAppliances || busy}
+                          >
+                            <option value="">Select type</option>
+                            <option value="two_wheeler">Two-wheeler</option>
+                            <option value="three_wheeler">Three-wheeler</option>
+                            <option value="four_wheeler">Four-wheeler</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Water Pump */}
+                      <div>
+                        <label style={labelStyle}>Has Water/Irrigation Pump</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={applianceDraft.has_water_pump ?? false}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, has_water_pump: e.target.checked })}
+                            disabled={!editingAppliances || busy}
+                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
+                          />
+                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has pump</span>
+                        </div>
+                      </div>
+
+                      {/* Pump Capacity (conditional) */}
+                      {(applianceDraft.has_water_pump ?? false) && (
+                        <div>
+                          <label style={labelStyle}>Pump Capacity (HP)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={applianceDraft.water_pump_capacity_hp ?? ''}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, water_pump_capacity_hp: e.target.value ? parseFloat(e.target.value) : null })}
+                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
+                            disabled={!editingAppliances || busy}
+                            placeholder="e.g. 0.5, 1, 2, 3"
+                          />
+                        </div>
+                      )}
+
+                      {/* Microwave */}
+                      <div>
+                        <label style={labelStyle}>Has Microwave</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={applianceDraft.has_microwave ?? false}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, has_microwave: e.target.checked })}
+                            disabled={!editingAppliances || busy}
+                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
+                          />
+                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has microwave</span>
+                        </div>
+                      </div>
+
+                      {/* Desert Cooler */}
+                      <div>
+                        <label style={labelStyle}>Has Desert Cooler</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={applianceDraft.has_desert_cooler ?? false}
+                            onChange={e => setApplianceDraft({ ...applianceDraft, has_desert_cooler: e.target.checked })}
+                            disabled={!editingAppliances || busy}
+                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
+                          />
+                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has desert cooler</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes Section */}
+                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
+                  <div>
+                    <label style={labelStyle}>Notes</label>
+                    <textarea
+                      value={applianceDraft.appliance_notes ?? ''}
+                      onChange={e => setApplianceDraft({ ...applianceDraft, appliance_notes: e.target.value })}
+                      style={{
+                        width: '100%', minHeight: 100, padding: '10px 14px',
+                        borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg,
+                        color: textMain, fontSize: '0.85rem', fontFamily: 'inherit', outline: 'none',
+                        opacity: editingAppliances ? 1 : 0.8, resize: 'vertical',
+                        transition: 'border-color 150ms'
+                      }}
+                      placeholder="Additional notes about appliances (optional)"
+                      disabled={!editingAppliances || busy}
+                    />
                   </div>
                 </div>
               </motion.div>
