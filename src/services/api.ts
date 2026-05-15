@@ -898,6 +898,15 @@ class ApiService {
     return result;
   }
 
+  async deleteSite(siteId: string): Promise<void> {
+    const enc = encodeURIComponent(siteId);
+    await this.request(`/sites/${enc}/`, {
+      method: 'DELETE',
+    });
+    cacheService.clearPattern(/^sites/);
+    cacheService.clearPattern(/^telemetry_/);
+  }
+
   // Equipment
   async getSiteEquipment(siteId: string): Promise<{ inverters: any[]; batteries: any[]; panels: any[] }> {
     return this.request(`/sites/${siteId}/equipment/`);

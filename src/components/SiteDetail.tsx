@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -6,7 +7,7 @@ import { MobileSiteDetail } from './mobile';
 import {
   ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
   Settings, Save, AlertTriangle, Link as LinkIcon,
-  Unlink, ArrowRightLeft, RefreshCw, Zap
+  Unlink, ArrowRightLeft, RefreshCw, Zap, X
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
@@ -54,6 +55,8 @@ export default function SiteDetail() {
 
   // Form State
   const [devicePk, setDevicePk] = useState('');
+  const [availableDevices, setAvailableDevices] = useState<any[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
   const [moveTarget, setMoveTarget] = useState('');
   const [lifecycleTo, setLifecycleTo] = useState('active');
   const [displayName, setDisplayName] = useState('');
@@ -64,6 +67,8 @@ export default function SiteDetail() {
   const [deyeStationId, setDeyeStationId] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
   const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
 
   // Appliance Inventory State
   const [applianceData, setApplianceData] = useState<any>({
@@ -208,6 +213,24 @@ export default function SiteDetail() {
     };
   }, []);
 
+  // Load available devices when gateway tab is opened
+  useEffect(() => {
+    if (tab !== 'gateway') return;
+    const loadDevices = async () => {
+      setDevicesLoading(true);
+      try {
+        const devices = await apiService.getDevices('', 1, 100);
+        if (Array.isArray(devices)) setAvailableDevices(devices);
+        else if (devices.results) setAvailableDevices(devices.results);
+      } catch {
+        setAvailableDevices([]);
+      } finally {
+        setDevicesLoading(false);
+      }
+    };
+    loadDevices();
+  }, [tab]);
+
   const handleAttach = async () => {
     const pk = parseInt(devicePk, 10);
     if (!pk || Number.isNaN(pk)) return;
@@ -246,7 +269,17 @@ export default function SiteDetail() {
     try {
       const data = await apiService.siteLifecycle(siteId, lifecycleTo);
       setSite(data);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Lifecycle transition failed'); } 
+    } catch (e) { setError(e instanceof Error ? e.message : 'Lifecycle transition failed'); }
+    finally { setBusy(false); }
+  };
+
+  const handleDeleteSite = async () => {
+    if (deleteConfirmationText !== 'delete') return;
+    setBusy(true); setError(null);
+    try {
+      await apiService.deleteSite(siteId);
+      window.location.href = '/sites';
+    } catch (e) { setError(e instanceof Error ? e.message : 'Site deletion failed'); }
     finally { setBusy(false); }
   };
 
@@ -564,7 +597,7 @@ export default function SiteDetail() {
                       <select
                         value={ownerUserId}
                         onChange={e => setOwnerUserId(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8, cursor: editingDetails ? 'pointer' : 'not-allowed' }}
+                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8, cursor: editingDetails ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
                         disabled={!editingDetails || busy || usersBusy}
                       >
                         <option value="">Unassigned</option>
@@ -666,11 +699,18 @@ export default function SiteDetail() {
                     <div style={{ padding: 24, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, textAlign: 'center' }}>
                       <Wifi size={28} color={textMute} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
                       <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: textMain }}>No Gateway Attached</h3>
-                      <p style={{ fontSize: '0.85rem', color: textSub, margin: '0 0 20px' }}>Enter a Device ID to link hardware telemetry to this site.</p>
-                      
+                      <p style={{ fontSize: '0.85rem', color: textSub, margin: '0 0 20px' }}>Select a device to link hardware telemetry to this site.</p>
+
                       <div style={{ display: 'flex', gap: 12, maxWidth: 400, margin: '0 auto' }}>
-                        <input type="number" value={devicePk} onChange={e => setDevicePk(e.target.value)} placeholder="Device ID (e.g. 402)" style={inputStyle} />
-                        <button type="button" disabled={busy || !devicePk} onClick={handleAttach} style={buttonStyle()}>
+                        <select value={devicePk} onChange={e => setDevicePk(e.target.value)} disabled={devicesLoading || busy} style={{ ...inputStyle, flex: 1, background: nativeSelectBg, color: nativeSelectFg }}>
+                          <option value="">-- Select Device --</option>
+                          {availableDevices.filter(d => !d.site_assigned_to).map(d => (
+                            <option key={d.id} value={String(d.id)}>
+                              {d.device_serial} (ID: {d.id})
+                            </option>
+                          ))}
+                        </select>
+                        <button type="button" disabled={busy || !devicePk || devicesLoading} onClick={handleAttach} style={buttonStyle()}>
                           <LinkIcon size={14} /> Attach
                         </button>
                       </div>
@@ -1038,9 +1078,9 @@ export default function SiteDetail() {
                   <div style={{ padding: 20, borderRadius: 12, background: inputBg, border: `1px solid ${inputBorder}` }}>
                     <label style={labelStyle}>Target Status</label>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <select 
+                      <select
                         value={lifecycleTo} onChange={e => setLifecycleTo(e.target.value)}
-                        style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+                        style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', background: nativeSelectBg, color: nativeSelectFg }}
                       >
                         {LIFECYCLE_OPTIONS.map(o => (
                           <option key={o} value={o}>{o.toUpperCase()}</option>
@@ -1051,11 +1091,97 @@ export default function SiteDetail() {
                       </button>
                     </div>
                   </div>
+
+                  <div style={{ marginTop: 24, padding: 20, borderRadius: 12, border: `2px solid ${palette.err.border}`, background: palette.err.bg }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <AlertTriangle size={18} color={palette.err.color} />
+                      <h3 style={{ margin: 0, fontSize: '1rem', color: palette.err.color }}>Delete Site</h3>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: textSub, margin: '0 0 12px' }}>
+                      Permanently delete this site and all associated data. This action cannot be undone.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => { setShowDeleteModal(true); setDeleteConfirmationText(''); }}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        border: 'none',
+                        background: palette.err.color,
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        opacity: busy ? 0.5 : 1,
+                      }}
+                    >
+                      Delete Site
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
 
           </AnimatePresence>
+
+          {/* Delete Site Confirmation Modal */}
+          {showDeleteModal && ReactDOM.createPortal(
+            <div className="portal-modal-backdrop">
+              <div className="portal-modal-container">
+                <div className="portal-modal-header">
+                  <div className="portal-modal-header-left">
+                    <div className="portal-modal-icon portal-modal-icon-danger">
+                      <AlertTriangle size={22} color="white" />
+                    </div>
+                    <span className="portal-modal-title">Delete Site</span>
+                  </div>
+                  <button onClick={() => setShowDeleteModal(false)} className="portal-modal-close-btn">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="portal-modal-body">
+                  <p>
+                    Are you sure you want to permanently delete <strong>{site?.display_name || site?.site_id}</strong>?
+                  </p>
+                  <div className="portal-modal-warning-box">
+                    <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Warning:</strong> This will permanently delete the site and all associated data. This action cannot be undone.
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: 8 }}>Type "delete" to confirm:</label>
+                    <input
+                      type="text"
+                      value={deleteConfirmationText}
+                      onChange={e => setDeleteConfirmationText(e.target.value)}
+                      placeholder='Type "delete"'
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 6,
+                        border: `1px solid ${palette.info.border || '#e0e0e0'}`,
+                        fontSize: '0.85rem',
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="portal-modal-footer">
+                  <button onClick={() => setShowDeleteModal(false)} className="portal-modal-btn portal-modal-btn-cancel">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteSite}
+                    disabled={deleteConfirmationText !== 'delete' || busy}
+                    className="portal-modal-btn portal-modal-btn-danger"
+                    style={{ opacity: (deleteConfirmationText !== 'delete' || busy) ? 0.5 : 1 }}
+                  >
+                    {busy ? 'Deleting...' : 'Yes, Delete Site'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
         </div>
       </div>
     </div>
