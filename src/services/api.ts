@@ -631,7 +631,7 @@ class ApiService {
     return data;
   }
 
-  async getLoadForecast(siteId: string, days: number = 7): Promise<any[]> {
+  async getLoadForecast(siteId: string, days: number = 2): Promise<any[]> {
     const enc = encodeURIComponent(siteId);
     const cacheKey = `load_forecast_${siteId}_${days}`;
     const cached = cacheService.get(cacheKey);

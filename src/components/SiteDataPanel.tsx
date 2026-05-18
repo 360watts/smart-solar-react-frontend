@@ -2679,7 +2679,7 @@ const PhaseLoadTab: React.FC<{
             Three Phase Load Monitoring
           </h2>
           <p style={{ margin: '2px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem', opacity: 0.55, color: isDark ? '#e2e8f0' : '#475569' }}>
-            Real-time per-phase load analysis and 7-day forecast
+            Real-time per-phase load analysis and 48-hour forecast
           </p>
           {/* Sub-tab toggle: Forecast / Accuracy */}
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load forecast sub tabs">
@@ -2808,7 +2808,7 @@ const PhaseLoadTab: React.FC<{
       {/* ── 7-Day Load Forecast / vs Actual (sub-tab) ── */}
       <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
         <ChartCard
-          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
+          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '48-Hour Load Forecast'}
           subtitle={showVsActual
             ? `Historical scored forecasts (15-min slots · IST) · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
             : (() => {
@@ -2829,7 +2829,7 @@ const PhaseLoadTab: React.FC<{
               <button
                 onClick={() => setShowVsActual(v => !v)}
                 aria-pressed={showVsActual}
-                title={showVsActual ? 'Show 7-day forward forecast' : 'Show historical forecast vs actual'}
+                title={showVsActual ? 'Show 48-hour forward forecast' : 'Show historical forecast vs actual'}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '5px 10px', borderRadius: 8,
@@ -3035,7 +3035,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate), 600); return () => clearTimeout(t); }, [customEndDate]);
   
   const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
-  const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '7d'>('7d');
+  const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '2d'>('2d');
   const [historyView, setHistoryView] = useState<'chart' | 'table'>('chart');
   const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
   const [vsActual7d, setVsActual7d] = useState(false);
@@ -3257,7 +3257,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       Promise.allSettled([
         apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw'),
         apiService.getForecastAccuracy(siteId, 30),
-        apiService.getLoadForecast(siteId, 7),
+        apiService.getLoadForecast(siteId, 2),
         apiService.getWeatherAccuracy(siteId, 7),
         apiService.getLoadForecastAccuracy(siteId, 7),
       ]).then(([pl, fa, lf, wa, lfa]) => {
@@ -3616,13 +3616,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       const forecastIST = istDate(new Date(clean));
       if (forecastWindow === 'today') return forecastIST === todayIST;
       if (forecastWindow === '3d') return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
-      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(7);
+      // '2d' — 48-hour verified accurate window (matches Lambda output)
+      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(2);
     });
     const mapped = filtered.map(row => {
       const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
       const d = new Date(clean);
       const timeLabel = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-      const dateLabel = forecastWindow === '3d'
+      const dateLabel = (forecastWindow === '3d' || forecastWindow === '2d')
         ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
         : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
       const rawDate = istDate(d);
@@ -3923,7 +3924,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             {activeTab === 'forecast' && forecastSubTab === 'chart' && (
               <select
                 value={forecastWindow}
-                onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '7d')}
+                onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '2d')}
                 style={{
                   background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
                   border: '1px solid rgba(0, 166, 62, 0.3)',
@@ -3937,8 +3938,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
               >
                 <option value="today">Today</option>
+                <option value="2d">Next 48 hours</option>
                 <option value="3d">Next 3 days</option>
-                <option value="7d">Next 7 days</option>
               </select>
             )}
           </div>
