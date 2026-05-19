@@ -82,7 +82,7 @@ const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void }> = ({ 
     </button>
   );
 };
-import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap, Layers, BarChart2, Target } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Moon, CloudRain, Cloud, Battery, Activity, Thermometer, RefreshCw, Zap, Layers, BarChart2, Target, Satellite, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 import { cacheService } from '../services/cacheService';
@@ -1515,6 +1515,7 @@ const _CAUSE_COLOR: Record<string, string> = {
   cloud_shadow: '#f59e0b',
   minor_underperformance: '#3b82f6',
   normal: '#00a63e',
+  satellite_mismatch: '#00a63e',  // classified as ok — satellite GHI underestimated (cloud gap)
   no_telemetry: '#94a3b8',
 };
 
@@ -1764,14 +1765,758 @@ const PerformanceGauge: React.FC<{ label: string; value: number; max: number; is
   );
 };
 
+// ── SatelliteKtCalendarPicker ──────────────────────────────────────────────────
+
+const _MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const SatelliteKtCalendarPicker: React.FC<{
+  availableDates: string[];
+  selectedDate: string | null;
+  onSelect: (date: string) => void;
+  isDark: boolean;
+}> = ({ availableDates, selectedDate, onSelect, isDark }) => {
+  const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const ref = selectedDate ?? availableDates[availableDates.length - 1];
+    return ref ? new Date(ref + 'T00:00:00') : new Date();
+  });
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  const fmt = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  const containerStyle: React.CSSProperties = {
+    display: 'inline-block', padding: '10px 12px', borderRadius: 10,
+    background: isDark ? 'rgba(15,23,42,0.95)' : '#fff',
+    border: `1px solid ${isDark ? 'rgba(0,166,62,0.25)' : 'rgba(0,166,62,0.2)'}`,
+    fontFamily: 'Poppins, sans-serif',
+    boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.12)',
+  };
+
+  const navBtnStyle: React.CSSProperties = {
+    background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 6, color: isDark ? '#64748b' : '#94a3b8', transition: 'all 0.15s',
+  };
+
+  return (
+    <div style={containerStyle}>
+      {/* Month nav */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <button style={navBtnStyle}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#64748b' : '#94a3b8'; }}
+          onClick={() => setCurrentMonth(new Date(year, month - 1))}
+        >
+          <ChevronLeft size={15} />
+        </button>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
+          {_MONTH_NAMES[month]} {year}
+        </span>
+        <button style={navBtnStyle}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#64748b' : '#94a3b8'; }}
+          onClick={() => setCurrentMonth(new Date(year, month + 1))}
+        >
+          <ChevronRight size={15} />
+        </button>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 30px)', gap: 2 }}>
+        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+          <div key={d} style={{ width: 30, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 600, color: isDark ? '#475569' : '#94a3b8', letterSpacing: '0.04em' }}>{d}</div>
+        ))}
+        {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ width: 30, height: 30 }} />)}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const ds = fmt(year, month, day);
+          const avail = availableSet.has(ds);
+          const selected = ds === selectedDate;
+          return (
+            <div key={ds}
+              onClick={() => avail && onSelect(ds)}
+              style={{
+                width: 30, height: 30,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.7rem', fontWeight: selected ? 700 : avail ? 500 : 400,
+                borderRadius: '50%',
+                cursor: avail ? 'pointer' : 'default',
+                color: selected ? '#fff' : avail ? '#00a63e' : (isDark ? '#334155' : '#cbd5e1'),
+                background: selected ? '#00a63e' : 'transparent',
+                transition: 'all 0.15s',
+                userSelect: 'none',
+              }}
+              onMouseEnter={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'rgba(0,166,62,0.15)'; }}
+              onMouseLeave={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 8, paddingTop: 6, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, justifyContent: 'center' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} /> Has data
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: isDark ? '#334155' : '#cbd5e1', display: 'inline-block' }} /> No data
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ── SatelliteKtTab ─────────────────────────────────────────────────────────────
+
+const _CAUSE_FILTER_OPTIONS = [
+  { key: 'all', label: 'All' },
+  { key: 'non_weather', label: 'Non-weather' },
+  { key: 'cloud_shadow', label: 'Cloud shadow' },
+  { key: 'minor_underperformance', label: 'Underperformance' },
+  { key: 'normal', label: 'Normal' },
+  { key: 'no_telemetry', label: 'No telemetry' },
+] as const;
+
+// Inner chart: 15-min slots filtered by cause, with cause-colored bars
+// no_telemetry slots (kt=null, PV data missing) are shown as grey bars at 0
+const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: string; isDark: boolean }> = ({ slots, causeFilter, isDark }) => {
+  const zoom = useChartZoomState();
+  // Include daytime slots + no_telemetry (has ghi but missing PV data); exclude true night
+  const daytimeSlots = slots.filter((s: any) => s.cause !== 'night' && s.alert !== 'night');
+  const filtered = causeFilter === 'all' ? daytimeSlots : daytimeSlots.filter((s: any) => s.cause === causeFilter);
+
+  const options = useMemo<ChartOptions<'bar'>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        titleColor: isDark ? '#f1f5f9' : '#111827',
+        bodyColor: isDark ? '#94a3b8' : '#374151',
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        callbacks: {
+          title: (items: any[]) => items[0]?.label ?? '',
+          label: (item: TooltipItem<'bar'>) => {
+            const s = filtered[item.dataIndex];
+            if (!s) return '';
+            if (s.cause === 'no_telemetry') return [
+              ` GHI: ${s.ghi_wm2?.toFixed(0)} W/m²`,
+              ` Expected: ${s.expected_kw != null ? s.expected_kw.toFixed(2) : '—'} kW`,
+              ` No PV telemetry — device offline or comms gap`,
+            ];
+            return [
+              ` kt: ${s.kt != null ? Number(s.kt).toFixed(3) : '—'}`,
+              ` GHI: ${s.ghi_wm2?.toFixed(0)} W/m²`,
+              ` Actual: ${s.actual_kw != null ? s.actual_kw.toFixed(2) : '—'} kW`,
+              ` Expected: ${s.expected_kw != null ? s.expected_kw.toFixed(2) : '—'} kW`,
+              ` ${(s.cause ?? '').replace(/_/g, ' ')}`,
+            ];
+          },
+        },
+      },
+      zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
+    },
+    scales: {
+      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [isDark, causeFilter]);
+
+  if (filtered.length === 0) {
+    return <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No slots match this filter</div>;
+  }
+
+  const barData = {
+    labels: filtered.map((s: any) => s.timestamp?.slice(11, 16) ?? ''),
+    datasets: [{
+      label: 'kt',
+      // no_telemetry slots show as a small marker at 0.02 so they're visible
+      data: filtered.map((s: any) => s.kt != null ? s.kt : (s.cause === 'no_telemetry' ? 0.02 : null)),
+      backgroundColor: filtered.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#94a3b8') + 'CC'),
+      borderColor: filtered.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#94a3b8'),
+      borderWidth: 1, borderRadius: 3,
+    }],
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} />
+      </div>
+      <div style={{ height: 220 }}>
+        <CJBar ref={zoom.chartRef} data={barData} options={options} />
+      </div>
+    </div>
+  );
+};
+
+const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
+  const [detailView, setDetailView] = useState<'day' | 'month'>('day');
+  const [analyticsView, setAnalyticsView] = useState<'overview' | 'hourly' | 'scatter' | 'weekday' | 'trend' | 'heatmap'>('overview');
+  const [causeFilter, setCauseFilter] = useState<string>('all');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [comparisonDate, setComparisonDate] = useState<string | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  // Close calendar on outside click
+  useEffect(() => {
+    if (!calendarOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [calendarOpen]);
+
+  const satelliteKt: any[] = accuracy?.satellite_kt ?? [];
+  const slotsByDate: Record<string, any[]> = accuracy?.satellite_slots_by_date ?? {};
+
+  // Available dates derived from daily summaries (most recent last)
+  const availableDates = satelliteKt.map((d: any) => d.date);
+  const latestDate = availableDates[availableDates.length - 1] ?? null;
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const activeDate = selectedDate ?? latestDate;
+  const slots: any[] = activeDate ? (slotsByDate[activeDate] ?? accuracy?.satellite_slots_recent ?? []) : [];
+
+  // Daytime = any slot that isn't classified as night (includes no_telemetry gaps)
+  const daytimeSlots = slots.filter((s: any) => s.cause !== 'night' && s.alert !== 'night');
+
+  // KPI computations
+  const normalCount  = daytimeSlots.filter((s: any) => s.cause === 'normal').length;
+  const totalDaytime = daytimeSlots.length;
+  const healthPct    = totalDaytime > 0 ? (normalCount / totalDaytime) * 100 : null;
+  const nonWeatherCount = daytimeSlots.filter((s: any) => s.cause === 'non_weather').length;
+  const cloudCount      = daytimeSlots.filter((s: any) => s.cause === 'cloud_shadow').length;
+  const underperformanceCount = daytimeSlots.filter((s: any) => s.cause === 'minor_underperformance').length;
+  const avgKt = totalDaytime > 0
+    ? daytimeSlots.filter((s: any) => s.kt !== null).reduce((sum: number, s: any) => sum + (s.kt ?? 0), 0) / daytimeSlots.filter((s: any) => s.kt !== null).length
+    : null;
+
+  // Time-to-first-fault: find first non-weather, cloud, or underperformance event
+  const firstFaultSlot = daytimeSlots.find((s: any) =>
+    s.cause === 'non_weather' || s.cause === 'cloud_shadow' || s.cause === 'minor_underperformance'
+  );
+  const timeToFirstFault = firstFaultSlot ? firstFaultSlot.timestamp?.slice(11, 16) : null;
+
+  // 7-day rolling average of health % (from satellite_kt daily summaries)
+  const last7Days = satelliteKt.slice(-7);
+  const rollingHealthPcts = last7Days.map((day: any) => {
+    const totalSlots = (day.non_weather_count || 0) + (day.cloud_count || 0) + (day.normal_count || 0);
+    return totalSlots > 0 ? ((day.normal_count || 0) / totalSlots) * 100 : 0;
+  });
+  const avgHealthPct7d = rollingHealthPcts.length > 0
+    ? rollingHealthPcts.reduce((a, b) => a + b, 0) / rollingHealthPcts.length
+    : null;
+
+  // Hourly profile: compute mean kt by hour
+  const hourlyProfile = useMemo(() => {
+    const hourMap: Record<string, { sum: number; count: number }> = {};
+    daytimeSlots.forEach((s: any) => {
+      const hour = s.timestamp?.slice(11, 13);
+      if (hour !== undefined) {
+        if (!hourMap[hour]) hourMap[hour] = { sum: 0, count: 0 };
+        if (s.kt !== null && s.kt !== undefined) {
+          hourMap[hour].sum += s.kt;
+          hourMap[hour].count += 1;
+        }
+      }
+    });
+    return Object.entries(hourMap)
+      .map(([hour, { sum, count }]) => ({ hour: `${hour}:00`, kt: sum / count }))
+      .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+  }, [daytimeSlots]);
+
+  // GHI vs kt scatter: all daytime slots with ghi and kt
+  const scatterData = daytimeSlots
+    .filter((s: any) => s.ghi_wm2 !== null && s.kt !== null && s.kt !== undefined)
+    .map((s: any) => ({
+      ghi: s.ghi_wm2,
+      kt: s.kt,
+      cause: s.cause,
+    }));
+
+  // Day-of-week profile: compute from last 7 days
+  const dayOfWeekData = useMemo(() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayStats: Record<string, { sum: number; count: number }> = {};
+
+    last7Days.forEach((day: any, idx: number) => {
+      const date = new Date(day.date);
+      const dayIndex = (date.getDay() + 6) % 7; // Mon = 0, Sun = 6
+      const dayName = days[dayIndex];
+
+      if (!dayStats[dayName]) dayStats[dayName] = { sum: 0, count: 0 };
+      const totalSlots = (day.non_weather_count || 0) + (day.cloud_count || 0) + (day.normal_count || 0);
+      if (totalSlots > 0) {
+        const dayHealth = ((day.normal_count || 0) / totalSlots) * 100;
+        dayStats[dayName].sum += dayHealth;
+        dayStats[dayName].count += 1;
+      }
+    });
+
+    return days.map(day => ({
+      day,
+      avgKt: dayStats[day] ? dayStats[day].sum / dayStats[day].count : 0,
+    }));
+  }, [last7Days]);
+
+  // Cause frequency heatmap: count by cause across last N days
+  const causeHeatmap = useMemo(() => {
+    const causes = ['normal', 'non_weather', 'cloud_shadow', 'minor_underperformance'];
+    const dates = satelliteKt.slice(-14).map((d: any) => d.date);
+
+    return dates.map((date: any) => {
+      const dayCounts = {
+        date,
+        normal: satelliteKt.find((d: any) => d.date === date)?.normal_count ?? 0,
+        non_weather: satelliteKt.find((d: any) => d.date === date)?.non_weather_count ?? 0,
+        cloud_shadow: satelliteKt.find((d: any) => d.date === date)?.cloud_count ?? 0,
+        minor_underperformance: 0, // not tracked in daily summaries
+      };
+      return dayCounts;
+    });
+  }, [satelliteKt]);
+
+  const cardBase: React.CSSProperties = {
+    flex: '1 1 140px', borderRadius: 12, padding: '14px 16px',
+    border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)'}`,
+    background: isDark ? 'rgba(15,23,42,0.7)' : 'rgba(249,250,251,0.9)',
+    display: 'flex', flexDirection: 'column', gap: 4,
+  };
+
+  const kpiCards = [
+    {
+      label: 'System Health',
+      value: healthPct != null ? `${healthPct.toFixed(1)}%` : '—',
+      sub: `${normalCount} / ${totalDaytime} slots normal`,
+      color: healthPct != null ? (healthPct >= 80 ? '#00a63e' : healthPct >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8',
+    },
+    {
+      label: 'Non-Weather Faults',
+      value: String(nonWeatherCount),
+      sub: 'Red: kt < 0.30, GHI ≥ 300 W/m²',
+      color: '#ef4444',
+    },
+    {
+      label: 'Cloud Events',
+      value: String(cloudCount),
+      sub: 'Amber: kt < 0.30, GHI < 300 W/m²',
+      color: '#f59e0b',
+    },
+    {
+      label: 'Avg Daytime kt',
+      value: avgKt != null ? avgKt.toFixed(3) : '—',
+      sub: 'kt = actual kW / expected kW',
+      color: avgKt != null ? (avgKt >= 0.70 ? '#00a63e' : avgKt >= 0.30 ? '#3b82f6' : '#ef4444') : '#94a3b8',
+    },
+    {
+      label: 'Time to 1st Fault',
+      value: timeToFirstFault ?? 'None',
+      sub: 'First non-weather/cloud event',
+      color: timeToFirstFault ? '#f59e0b' : '#00a63e',
+    },
+    {
+      label: '7-Day Health Trend',
+      value: avgHealthPct7d != null ? `${avgHealthPct7d.toFixed(1)}%` : '—',
+      sub: 'Rolling average of system health',
+      color: avgHealthPct7d != null ? (avgHealthPct7d >= 80 ? '#00a63e' : avgHealthPct7d >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8',
+    },
+  ];
+
+  // Hourly kt profile chart data
+  const hourlyChartRef = useRef<any>(null);
+  const hourlyChartData = useMemo(() => ({
+    labels: hourlyProfile.map(d => d.hour),
+    datasets: [{
+      label: 'Mean Hourly kt',
+      data: hourlyProfile.map(d => d.kt),
+      borderColor: '#00a63e',
+      backgroundColor: 'rgba(0, 166, 62, 0.1)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#00a63e',
+      pointBorderColor: isDark ? 'rgba(15,23,42,0.9)' : '#fff',
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+    }],
+  }), [hourlyProfile, isDark]);
+
+  // Trend line: 7-day rolling average
+  const trendData = useMemo(() => ({
+    labels: last7Days.map((d: any) => d.date),
+    datasets: [
+      {
+        label: 'Daily Health %',
+        data: last7Days.map((day: any) => {
+          const total = (day.non_weather_count || 0) + (day.cloud_count || 0) + (day.normal_count || 0);
+          return total > 0 ? ((day.normal_count || 0) / total) * 100 : 0;
+        }),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#3b82f6',
+        pointBorderColor: isDark ? 'rgba(15,23,42,0.9)' : '#fff',
+        pointRadius: 3,
+        borderWidth: 2,
+      },
+      {
+        label: '7-Day Rolling Avg',
+        data: rollingHealthPcts,
+        borderColor: '#f59e0b',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.4,
+        pointBackgroundColor: '#f59e0b',
+        pointBorderColor: isDark ? 'rgba(15,23,42,0.9)' : '#fff',
+        pointRadius: 3,
+      },
+    ],
+  }), [last7Days, rollingHealthPcts, isDark]);
+
+  if (!accuracy) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
+        <Satellite size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>No satellite data available</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Satellite kt data will appear once the forecast accuracy fetch completes.</div>
+      </div>
+    );
+  }
+
+  const detailCardStyle: React.CSSProperties = {
+    borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.08)'}`,
+    background: isDark ? 'rgba(15,23,42,0.7)' : 'rgba(249,250,251,0.9)',
+    overflow: 'hidden',
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* KPI cards */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        {kpiCards.map((card) => (
+          <div key={card.label} style={cardBase}>
+            <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{card.label}</div>
+            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.5rem', color: card.color, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', opacity: 0.75 }}>{card.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Analytics View Tabs */}
+      <div style={detailCardStyle}>
+        {/* Tab buttons */}
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {[
+            { id: 'overview', label: 'Overview', icon: BarChart2 },
+            { id: 'scatter', label: 'GHI vs kt', icon: TrendingUp },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = analyticsView === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setAnalyticsView(tab.id as any)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                  fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.2s',
+                  border: `1px solid ${isActive ? '#00a63e' : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`,
+                  background: isActive ? 'rgba(0,166,62,0.12)' : 'transparent',
+                  color: isActive ? '#00a63e' : 'var(--text-muted)',
+                  boxShadow: isActive ? '0 0 0 2px rgba(0,166,62,0.1)' : 'none',
+                }}
+              >
+                <Icon size={14} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ padding: '16px', minHeight: 200 }}>
+          {analyticsView === 'overview' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              {[
+                {
+                  label: 'System Health',
+                  value: `${healthPct !== null ? healthPct.toFixed(1) : '—'}%`,
+                  description: `${normalCount} / ${totalDaytime} normal slots`,
+                  color: healthPct !== null && healthPct >= 80 ? '#00a63e' : healthPct !== null && healthPct >= 60 ? '#f59e0b' : '#ef4444',
+                },
+                {
+                  label: 'Non-Weather Faults',
+                  value: nonWeatherCount,
+                  description: 'kt < 0.30, GHI ≥ 300 W/m²',
+                  color: '#ef4444',
+                },
+                {
+                  label: 'Cloud Events',
+                  value: cloudCount,
+                  description: 'kt < 0.30, GHI < 300 W/m²',
+                  color: '#f59e0b',
+                },
+                {
+                  label: 'Avg Daytime kt',
+                  value: daytimeSlots.filter((s: any) => s.kt !== null).length > 0
+                    ? (daytimeSlots.filter((s: any) => s.kt !== null).reduce((sum: number, s: any) => sum + s.kt, 0) / daytimeSlots.filter((s: any) => s.kt !== null).length).toFixed(3)
+                    : '—',
+                  description: 'Clearness index (0–1)',
+                  color: '#3b82f6',
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    padding: '20px',
+                    borderRadius: 12,
+                    border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.08)'}`,
+                    background: isDark
+                      ? `linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(15,23,42,0.3) 100%)`
+                      : `linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(249,250,251,0.6) 100%)`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    cursor: 'default',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 16px ${item.color}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = `0 1px 3px ${item.color}10`;
+                  }}
+                >
+                  {/* Background accent */}
+                  <div style={{ position: 'absolute', top: -40, right: -40, width: 100, height: 100, borderRadius: '50%', background: `${item.color}08`, pointerEvents: 'none' }} />
+
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 12 }}>
+                      {item.label}
+                    </div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '2rem', fontWeight: 900, color: item.color, lineHeight: 1, marginBottom: 8 }}>
+                      {item.value}
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', opacity: 0.65 }}>
+                      {item.description}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+
+          {analyticsView === 'scatter' && scatterData.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Normal', color: '#00a63e', count: scatterData.filter(d => d.cause === 'normal').length },
+                  { label: 'Minor Underperf', color: '#3b82f6', count: scatterData.filter(d => d.cause === 'minor_underperformance').length },
+                  { label: 'Cloud Shadow', color: '#f59e0b', count: scatterData.filter(d => d.cause === 'cloud_shadow').length },
+                  { label: 'Non-Weather', color: '#ef4444', count: scatterData.filter(d => d.cause === 'non_weather').length },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 10px', borderRadius: 6, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${item.color}40` }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color }} />
+                    <span style={{ fontWeight: 600 }}>{item.label}: {item.count}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ overflowX: 'auto', fontSize: '0.7rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem' }}>GHI Range</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#00a63e', textTransform: 'uppercase', fontSize: '0.65rem' }}>Normal</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', fontSize: '0.65rem' }}>Underperf</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', fontSize: '0.65rem' }}>Cloud</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', fontSize: '0.65rem' }}>Non-Weather</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const ranges = [
+                        { label: '0–200 W/m²', min: 0, max: 200 },
+                        { label: '200–400 W/m²', min: 200, max: 400 },
+                        { label: '400–600 W/m²', min: 400, max: 600 },
+                        { label: '600–800 W/m²', min: 600, max: 800 },
+                        { label: '800+ W/m²', min: 800, max: Infinity },
+                      ];
+                      return ranges.map(range => {
+                        const inRange = scatterData.filter(d => d.ghi >= range.min && d.ghi < range.max);
+                        const normal = inRange.filter(d => d.cause === 'normal').length;
+                        const underperf = inRange.filter(d => d.cause === 'minor_underperformance').length;
+                        const cloud = inRange.filter(d => d.cause === 'cloud_shadow').length;
+                        const nonWeather = inRange.filter(d => d.cause === 'non_weather').length;
+                        return (
+                          <tr key={range.label} style={{ borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'}` }}>
+                            <td style={{ padding: '8px', fontWeight: 500 }}>{range.label}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', background: normal > 0 ? 'rgba(0, 166, 62, 0.1)' : 'transparent' }}>{normal}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', background: underperf > 0 ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>{underperf}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', background: cloud > 0 ? 'rgba(245, 158, 11, 0.1)' : 'transparent' }}>{cloud}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', background: nonWeather > 0 ? 'rgba(239, 68, 68, 0.1)' : 'transparent' }}>{nonWeather}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{normal + underperf + cloud + nonWeather}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {analyticsView === 'scatter' && scatterData.length === 0 && (
+            <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>No scatter data available</div>
+                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Slots with both GHI and kt measurements are required</div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* Detail chart card with day/month toggle */}
+      <div style={detailCardStyle}>
+        {/* Card header */}
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: isDark ? '#f1f5f9' : '#111827' }}>
+              {detailView === 'day' ? `${activeDate ?? 'Today'} — 15-min Slot Detail` : 'Monthly — Daily Anomaly Counts'}
+            </div>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: 2 }}>
+              {detailView === 'day'
+                ? 'kt = actual kW / expected kW · EUMETSAT IODC satellite · drag to zoom'
+                : `EUMETSAT IODC · last ${satelliteKt.length} days · stacked non-weather + cloud shadow`}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Day / Month toggle */}
+            <div style={{ display: 'flex', gap: 3, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
+              {(['day', 'month'] as const).map(v => (
+                <button key={v} onClick={() => setDetailView(v)} style={{
+                  padding: '5px 12px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700,
+                  fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.15s',
+                  background: detailView === v ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.12)') : 'transparent',
+                  color: detailView === v ? '#00a63e' : 'var(--text-muted)',
+                  border: detailView === v ? '1px solid rgba(0,166,62,0.3)' : '1px solid transparent',
+                }}>
+                  {v === 'day' ? 'Day' : 'Month'}
+                </button>
+              ))}
+            </div>
+            {/* Date selector — calendar popover, only shown in day view */}
+            {detailView === 'day' && availableDates.length > 0 && (
+              <div ref={calendarRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setCalendarOpen(o => !o)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '5px 10px', borderRadius: 7, fontSize: '0.72rem', fontWeight: 600,
+                    fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+                    border: `1px solid ${calendarOpen ? '#00a63e' : (isDark ? 'rgba(0,166,62,0.35)' : 'rgba(0,166,62,0.3)')}`,
+                    background: calendarOpen ? 'rgba(0,166,62,0.12)' : (isDark ? 'rgba(15,23,42,0.9)' : '#fff'),
+                    color: isDark ? '#d1fae5' : '#065f46',
+                    outline: 'none', transition: 'all 0.15s',
+                  }}
+                >
+                  <CalendarDays size={13} />
+                  {activeDate ?? 'Select date'}
+                </button>
+                <AnimatePresence>
+                  {calendarOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50 }}
+                    >
+                      <SatelliteKtCalendarPicker
+                        availableDates={availableDates}
+                        selectedDate={activeDate}
+                        isDark={isDark}
+                        onSelect={d => { setSelectedDate(d); setCalendarOpen(false); }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+            {/* Cause filter — only shown in day view */}
+            {detailView === 'day' && (
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                {_CAUSE_FILTER_OPTIONS.map(({ key, label }) => {
+                  const activeColor = key === 'all' ? '#00a63e' : (_CAUSE_COLOR[key] ?? '#00a63e');
+                  return (
+                    <button key={key} onClick={() => setCauseFilter(key)} style={{
+                      padding: '4px 9px', borderRadius: 6, fontSize: '0.65rem', fontWeight: 600,
+                      fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.15s',
+                      border: `1px solid ${causeFilter === key ? activeColor : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`,
+                      background: causeFilter === key ? activeColor + '20' : 'transparent',
+                      color: causeFilter === key ? activeColor : 'var(--text-muted)',
+                    }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {/* Cause legend — shown in month view */}
+            {detailView === 'month' && Object.entries(_CAUSE_COLOR).filter(([k]) => k === 'non_weather' || k === 'cloud_shadow').map(([cause, color]) => (
+              <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: 'inline-block' }} />
+                {cause.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart area */}
+        <div style={{ padding: '12px 16px 16px' }}>
+          <AnimatePresence mode="wait">
+            <motion.div key={detailView} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+              {detailView === 'day' ? (
+                daytimeSlots.length > 0
+                  ? <SatelliteKtDayDetailChart slots={slots} causeFilter={causeFilter} isDark={isDark} />
+                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No daytime slot data for today</div>
+              ) : (
+                satelliteKt.length > 0
+                  ? <SatelliteKtDailyChart satelliteKt={satelliteKt} isDark={isDark} />
+                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No monthly data available</div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 // ── ForecastAccuracySubTab (Enhanced) ───────────────────────────────────────────
 
 const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
-  const [chartMode, setChartMode] = useState<'mae' | 'error' | 'satellite'>('mae');
+  const [chartMode, setChartMode] = useState<'mae' | 'error'>('mae');
   const summary = accuracy?.overall ?? accuracy?.summary ?? {};
   const hourly: any[] = accuracy?.hourly ?? [];
-  const satelliteKt: any[] = accuracy?.satellite_kt ?? [];
-  const satelliteSlotsRecent: any[] = accuracy?.satellite_slots_recent ?? [];
   const chartZoom = useChartZoomState();
 
   const daytimeHourly = hourly.filter((h: any) => { const local = (h.hour_utc + 5) % 24; return local >= 6 && local <= 18; });
@@ -1881,11 +2626,11 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
 
       {/* Unified Chart with Mode Toggle */}
       <ChartCard
-        title={chartMode === 'mae' ? 'MAE by Hour of Day (UTC)' : chartMode === 'error' ? 'Error % by Hour of Day' : 'Satellite kt Cross-Check'}
-        subtitle={chartMode === 'mae' ? 'Color-coded severity · green/amber/red = low/med/high error' : chartMode === 'error' ? 'Relative forecast error across hours' : 'EUMETSAT IODC satellite irradiance anomaly detection'}
+        title={chartMode === 'mae' ? 'MAE by Hour of Day (UTC)' : 'Error % by Hour of Day'}
+        subtitle={chartMode === 'mae' ? 'Color-coded severity · green/amber/red = low/med/high error' : 'Relative forecast error across hours'}
         isDark={isDark}
-        height={chartMode === 'satellite' ? 700 : 240}
-        accentColor={chartMode === 'mae' ? '#00a63e' : chartMode === 'error' ? '#3b82f6' : '#ef4444'}
+        height={240}
+        accentColor={chartMode === 'mae' ? '#00a63e' : '#3b82f6'}
         delay={0.3}
         headerRight={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1893,7 +2638,6 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
               {[
                 { mode: 'mae' as const, label: 'MAE', icon: '📊' },
                 { mode: 'error' as const, label: 'Error %', icon: '📈' },
-                ...(satelliteKt.length > 0 ? [{ mode: 'satellite' as const, label: 'Satellite KT', icon: '🛰️' }] : []),
               ].map(({ mode, label, icon }) => (
                 <button
                   key={mode}
@@ -1910,12 +2654,12 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                 </button>
               ))}
             </div>
-            {chartMode !== 'satellite' && [['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+            {[['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
               <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
               </span>
             ))}
-            {chartMode !== 'satellite' && <ZoomResetButton visible={chartZoom.isZoomed} onClick={chartZoom.resetZoom} />}
+            <ZoomResetButton visible={chartZoom.isZoomed} onClick={chartZoom.resetZoom} />
           </div>
         }
       >
@@ -1926,7 +2670,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.25 }}
-            style={{ ...(chartMode !== 'satellite' ? { height: 240 } : {}) }}
+            style={{ height: 240 }}
           >
             {chartMode === 'mae' ? (
               <CJBar
@@ -1944,7 +2688,7 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                 }}
                 options={maeChartOptions}
               />
-            ) : chartMode === 'error' ? (
+            ) : (
               <CJLine
                 ref={chartZoom.chartRef}
                 data={{
@@ -1959,13 +2703,6 @@ const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ 
                 }}
                 options={errorPctChartOptions}
               />
-            ) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <SatelliteKtDailyChart satelliteKt={satelliteKt} isDark={isDark} />
-                {satelliteSlotsRecent.length > 0 && (
-                  <SatelliteKtSlotTimeline slots={satelliteSlotsRecent} isDark={isDark} />
-                )}
-              </motion.div>
             )}
           </motion.div>
         </AnimatePresence>
@@ -3126,7 +3863,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [loadForecastAccuracy, setLoadForecastAccuracy] = useState<any>(null);
   const [loadForecast, setLoadForecast] = useState<any[]>([]);
   const [weatherAccuracy, setWeatherAccuracy] = useState<any>(null);
-  const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
+  const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy' | 'satellite'>('chart');
   const [weatherSubTab, setWeatherSubTab] = useState<'current' | 'accuracy'>('current');
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
@@ -4713,6 +5450,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   {([
                     { id: 'chart', label: 'Forecast', icon: <Sun size={13} /> },
                     { id: 'accuracy', label: 'Accuracy', icon: <Target size={13} /> },
+                    { id: 'satellite', label: 'Satellite', icon: <Satellite size={13} /> },
                   ] as const).map(st => (
                     <motion.button
                       key={st.id}
@@ -4737,6 +5475,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
                 <div style={{ display: forecastSubTab === 'accuracy' ? 'block' : 'none' }}>
                   <ForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
+                </div>
+                <div style={{ display: forecastSubTab === 'satellite' ? 'block' : 'none' }}>
+                  <SatelliteKtTab accuracy={forecastAccuracy} isDark={isDark} />
                 </div>
                 <div style={{ display: forecastSubTab === 'chart' ? 'block' : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>

@@ -122,3 +122,34 @@ Faults, root causes, and fixes are recorded in [`FAULT_LOG.md`](./FAULT_LOG.md) 
 | ID | Title | Status |
 |----|-------|--------|
 | F-001-UI | RS-485 freeze — amber/green staleness banners in `SiteDataPanel.tsx` | Fixed |
+
+---
+
+## Claude Code Skills & Plugins
+
+9 official skills + 5 MCP servers available. Use when they match the task.
+
+**Recommended for this frontend:**
+
+| Skill | When to Use |
+|-------|------------|
+| **frontend-design** | Building premium UI components, refining aesthetics, animations |
+| **code-review** | Auditing components before PRs, checking for accessibility/performance |
+| **code-simplifier** | SiteDataPanel (2600+ lines) or other large components need refactoring |
+| **context7** | Look up current React, Recharts, Framer Motion API docs |
+| **magic-mcp** (MCP) | Component inspiration, premium UI patterns via 21st.dev |
+| **figma** (MCP) | Design-to-code, screenshot comparisons, visual prototyping |
+
+**Example Invocations:**
+```
+# Code review for large component
+Skill(skill="code-review")
+
+# Simplify complex component
+Skill(skill="code-simplifier")
+
+# Check Chart.js / Framer Motion docs
+Skill(skill="context7", args="Chart.js scatter plots")
+```
+
+**Note:** Satellite kt analytics dashboard uses Chart.js + Framer Motion + inline styles (no Tailwind). Keep this architecture when extending.
