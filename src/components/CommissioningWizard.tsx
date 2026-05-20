@@ -278,7 +278,7 @@ export default function CommissioningWizard() {
 
     setBusy(true); setError(null);
     try {
-      await apiService.updateSiteProfileAppliances(targetSiteId, {
+      await apiService.updateSiteProfile(targetSiteId, {
         num_ac_units: numAcUnits,
         ac_total_capacity_kw: numAcUnits > 0 ? acTotalCapacityKw : null,
         ac_typical_setpoint_c: numAcUnits > 0 ? acSetpointC : null,

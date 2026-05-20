@@ -116,44 +116,53 @@ export interface DiagnoseBatchResponse {
 
 // ─── Appliance Inventory (Phase 3A) ────────────────────────────────────────
 
-export interface ApplianceInventory {
-  // AC
+export interface SiteProfile {
+  // ── Topology (Gateway Settings) ─────────────────────────────────────────
+  inverter_model: string;
+  firmware_version: string;
+  work_mode: string;
+  ct_present: boolean;
+  ct_placement: string;
+  meter_present: boolean;
+  whole_home_backup: boolean;
+  topology_type: string;
+  zero_export_enabled: boolean;
+  grid_charge_enabled: boolean;
+  time_of_use_active: boolean;
+
+  // ── Appliances (Appliances tab / CommissioningWizard) ────────────────────
   num_ac_units: number;
   ac_total_capacity_kw: number | null;
   ac_typical_setpoint_c: number | null;
-
-  // Water Heater / Geyser
   num_geysers: number;
   geyser_total_capacity_kw: number | null;
   geyser_type: 'instant' | 'storage_tank' | 'solar_backup' | '';
-
-  // Refrigerator
   num_refrigerators: number;
-
-  // Washing Machine
   num_washing_machines: number;
-
-  // EV Charger
   num_ev_chargers: number;
   ev_type: 'two_wheeler' | 'three_wheeler' | 'four_wheeler' | '';
   ev_typical_charging_capacity_kw: number | null;
-
-  // Water Pump
   has_water_pump: boolean;
   water_pump_capacity_hp: number | null;
-
-  // Other appliances
   has_microwave: boolean;
   has_desert_cooler: boolean;
-
-  // Survey metadata
   estimated_household_daily_kwh: number | null;
   appliance_notes: string;
   appliance_inventory_source: 'installation_survey' | 'load_inference' | 'user_reported' | '';
 
-  // Audit
+  // ── Inverter circuit counts ──────────────────────────────────────────────
+  ac_units_on_inverter: number | null;
+  geysers_on_inverter: number | null;
+  ev_charger_on_inverter: boolean | null;
+  pump_on_inverter: boolean | null;
+  ct_load_forecast_enabled: boolean;
+
+  // ── Audit ────────────────────────────────────────────────────────────────
   last_updated?: string;
 }
+
+// Backward-compat alias — remove once all callers use SiteProfile directly
+export type ApplianceInventory = SiteProfile;
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
@@ -859,24 +868,35 @@ class ApiService {
     return result;
   }
 
-  // ─── Appliance Inventory (Phase 3A) ─────────────────────────────────────
+  // ─── Site Profile (topology + appliances + circuit) ─────────────────────
+  // Single endpoint: GET/PATCH /api/sites/<id>/profile/
+  // Callers send only the fields they own — Gateway Settings sends topology fields,
+  // Appliances tab sends appliance/circuit fields, CommissioningWizard sends appliances.
 
-  async getSiteProfileAppliances(siteId: string): Promise<ApplianceInventory> {
+  async getSiteProfile(siteId: string): Promise<SiteProfile> {
     const enc = encodeURIComponent(siteId);
-    return this.request(`/sites/${enc}/profile/appliances/`);
+    return this.request(`/sites/${enc}/profile/`);
   }
 
-  async updateSiteProfileAppliances(
+  async updateSiteProfile(
     siteId: string,
-    data: Partial<ApplianceInventory>
-  ): Promise<ApplianceInventory> {
+    data: Partial<SiteProfile>
+  ): Promise<SiteProfile> {
     const enc = encodeURIComponent(siteId);
-    const result = await this.request(`/sites/${enc}/profile/appliances/`, {
+    const result = await this.request(`/sites/${enc}/profile/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
     cacheService.clearPattern(/^sites/);
     return result;
+  }
+
+  // Backward-compat aliases — kept so CommissioningWizard and SiteDetail compile unchanged
+  async getSiteProfileAppliances(siteId: string): Promise<SiteProfile> {
+    return this.getSiteProfile(siteId);
+  }
+  async updateSiteProfileAppliances(siteId: string, data: Partial<SiteProfile>): Promise<SiteProfile> {
+    return this.updateSiteProfile(siteId, data);
   }
 
   async siteDetachDevice(siteId: string, devicePk: number): Promise<any> {
