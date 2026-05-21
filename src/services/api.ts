@@ -667,7 +667,7 @@ class ApiService {
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
     const data = await this.request(`/sites/${enc}/load-forecast/?days=${days}`);
-    cacheService.set(cacheKey, data, 15 * 60 * 1000);
+    cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 min — scheduler runs every 15 min
     return data;
   }
 
