@@ -1,0 +1,186 @@
+import React, { useState } from 'react';
+import { X } from 'lucide-react';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { apiService, SiteMember } from '../../../services/api';
+
+interface Props {
+  siteId: string;
+  onClose: () => void;
+  onInvited: (member: SiteMember) => void;
+}
+
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  viewer: 'Can view live data, energy history, and alerts. Cannot change settings.',
+  co_owner: 'Full access — same as owner, except cannot revoke other members.',
+};
+
+const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
+  const { isDark } = useTheme();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'viewer' | 'co_owner'>('viewer');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const text = isDark ? '#f1f5f9' : '#0f172a';
+  const muted = isDark ? '#94a3b8' : '#64748b';
+  const surface = isDark ? '#1e293b' : '#ffffff';
+  const border = isDark ? '#334155' : '#e2e8f0';
+  const overlay = 'rgba(0,0,0,0.5)';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) { setError('Email is required.'); return; }
+
+    setLoading(true);
+    try {
+      const member = await apiService.inviteSiteMember(siteId, trimmed, role);
+      setSuccess(`Invite sent to ${trimmed}`);
+      onInvited(member);
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('409') || msg.toLowerCase().includes('already')) {
+        setError('A membership (active, pending, or revoked) already exists for this email.');
+      } else {
+        setError(msg || 'Failed to send invite. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: overlay,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: '16px',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: surface, border: `1px solid ${border}`,
+        borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '420px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: text }}>Invite a Member</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: muted }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {success ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <p style={{ color: '#22c55e', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>✓ {success}</p>
+            <p style={{ color: muted, fontSize: '13px', marginBottom: '20px' }}>
+              They'll receive an email with a link to accept the invitation.
+            </p>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '10px 24px', borderRadius: '8px', border: 'none',
+                background: '#22c55e', color: '#fff', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: text, marginBottom: '6px' }}>
+                Email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="family@example.com"
+                required
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: '8px',
+                  border: `1px solid ${border}`, background: surface, color: text,
+                  fontSize: '14px', boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: text, marginBottom: '8px' }}>
+                Access level
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(['viewer', 'co_owner'] as const).map(r => (
+                  <label
+                    key={r}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '10px',
+                      padding: '12px', borderRadius: '8px', cursor: 'pointer',
+                      border: `1px solid ${role === r ? '#22c55e' : border}`,
+                      background: role === r ? (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.05)') : 'transparent',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={r}
+                      checked={role === r}
+                      onChange={() => setRole(r)}
+                      style={{ marginTop: '2px' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: text }}>
+                        {r === 'viewer' ? 'Viewer' : 'Co-owner'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: muted, marginTop: '2px' }}>
+                        {ROLE_DESCRIPTIONS[r]}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px', margin: '0 0 12px' }}>
+                {error}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '10px 20px', borderRadius: '8px',
+                  border: `1px solid ${border}`, background: 'transparent',
+                  color: text, fontSize: '14px', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  padding: '10px 20px', borderRadius: '8px', border: 'none',
+                  background: loading ? '#86efac' : '#22c55e',
+                  color: '#fff', fontSize: '14px', fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loading ? 'Sending…' : 'Send Invite'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default InviteMemberModal;

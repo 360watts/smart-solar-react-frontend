@@ -1,0 +1,4 @@
+export { default as ProtectedRoute } from './ProtectedRoute';
+export { default as AdminRoute } from './AdminRoute';
+export { default as StaffRoute } from './StaffRoute';
+export { default as CustomerRoute } from './CustomerRoute';

@@ -1,5 +1,26 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
-import { DEFAULT_PAGE_SIZE } from '../constants';
+import { DEFAULT_PAGE_SIZE } from '../app/constants';
+
+// ─── Site Member Sharing ──────────────────────────────────────────────────────
+
+export interface SiteMember {
+  id: number;
+  invite_email: string;
+  role: 'viewer' | 'co_owner';
+  status: 'pending' | 'active' | 'revoked';
+  user: { id: number; first_name: string; last_name: string } | null;
+  added_by: { id: number; first_name: string } | null;
+  created_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface InviteDetails {
+  site_name: string;
+  role: 'viewer' | 'co_owner';
+  invited_by: string;
+  expires_at: string;
+}
 
 // ─── Alerts Analytics ────────────────────────────────────────────────────────
 
@@ -681,6 +702,47 @@ class ApiService {
   // Profile Management (for current logged-in user)
   async getProfile(): Promise<any> {
     return this.request('/profile/');
+  }
+
+  async getPortalSummary(): Promise<{
+    profile: any;
+    sites: any[];
+    active_alert_count: number;
+  }> {
+    return this.request('/portal/summary/');
+  }
+
+  // ── Site Member Sharing ────────────────────────────────────────────────────
+
+  async getSiteMembers(siteId: string, includeRevoked = false): Promise<SiteMember[]> {
+    const qs = includeRevoked ? '?include_revoked=1' : '';
+    return this.request(`/sites/${siteId}/members/${qs}`);
+  }
+
+  async inviteSiteMember(siteId: string, email: string, role: 'viewer' | 'co_owner'): Promise<SiteMember> {
+    return this.request(`/sites/${siteId}/members/`, {
+      method: 'POST',
+      body: JSON.stringify({ invite_email: email, role }),
+    });
+  }
+
+  async updateSiteMember(siteId: string, memberId: number, data: { role?: string; status?: string }): Promise<SiteMember> {
+    return this.request(`/sites/${siteId}/members/${memberId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resendSiteInvite(siteId: string, memberId: number): Promise<void> {
+    return this.request(`/sites/${siteId}/members/${memberId}/resend/`, { method: 'POST' });
+  }
+
+  async getInviteDetails(token: string): Promise<InviteDetails> {
+    return this.request(`/site-invites/${token}/`);
+  }
+
+  async acceptInvite(token: string): Promise<void> {
+    return this.request(`/site-invites/${token}/accept/`, { method: 'POST' });
   }
 
   async updateProfile(data: any): Promise<any> {
