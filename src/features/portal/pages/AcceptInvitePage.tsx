@@ -696,7 +696,7 @@ const AcceptInvitePage: React.FC = () => {
   const { details } = state as { type: 'invite'; details: InviteDetails };
 
   const InviteHeader = (
-    <div style={{ marginBottom: 28 }}>
+    <div style={{ marginBottom: 28, textAlign: 'center' }}>
       <p style={{
         fontFamily: "'Cormorant Garamond', serif",
         fontSize: 11, fontWeight: 400,
@@ -714,7 +714,7 @@ const AcceptInvitePage: React.FC = () => {
         Join {details.site_name}
       </h1>
       <div style={{
-        display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8,
         fontSize: 13, color: C.textSecondary,
         fontFamily: "'Epilogue', sans-serif",
       }}>
