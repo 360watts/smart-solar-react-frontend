@@ -324,6 +324,7 @@ const Card: React.FC<{ children: React.ReactNode; key?: string }> = ({ children 
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
       animation: 'card-in 0.45s cubic-bezier(0.22,1,0.36,1) both',
+      textAlign: 'center' as const,
     }}>
       {/* amber top accent line */}
       <div style={{
@@ -783,7 +784,7 @@ const AcceptInvitePage: React.FC = () => {
         <Card>
           <Wordmark />
           {InviteHeader}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14, textAlign: 'left' }}>
             {loginError && <ErrorBox msg={loginError} />}
             <SolarInput label="Email" type="email" value={loginEmail} onChange={setLoginEmail} required />
             <SolarInput
@@ -825,7 +826,7 @@ const AcceptInvitePage: React.FC = () => {
         <Card>
           <Wordmark />
           {InviteHeader}
-          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14, textAlign: 'left' }}>
             {signupError && <ErrorBox msg={signupError} />}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <SolarInput label="First name" value={signupFirstName} onChange={setSignupFirstName} required />
