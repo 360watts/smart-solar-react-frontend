@@ -13,6 +13,9 @@ export interface SiteMember {
   created_at: string;
   accepted_at: string | null;
   revoked_at: string | null;
+  invite_link?: string;
+  qr_code?: string;
+  expires_at?: string;
 }
 
 export interface InviteDetails {
@@ -20,6 +23,7 @@ export interface InviteDetails {
   role: 'viewer' | 'co_owner';
   invited_by: string;
   expires_at: string;
+  invite_email?: string;
 }
 
 // ─── Alerts Analytics ────────────────────────────────────────────────────────

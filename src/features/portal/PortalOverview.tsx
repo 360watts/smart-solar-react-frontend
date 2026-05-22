@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { AlertTriangle, Zap, Sun, RefreshCw, Battery, Activity } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
-import SiteDataPanel from '../../shared/components/SiteDataPanel';
+const SiteDataPanel = lazy(() => import('../../shared/components/SiteDataPanel'));
 
 interface PortalSummary {
   profile: {
@@ -235,9 +235,11 @@ const PortalOverview: React.FC = () => {
         <div style={{ flex: 1, height: 1, background: border }} />
       </div>
 
-      {/* Site data panel */}
+      {/* Site data panel — lazy loaded so charts don't block initial paint */}
       <div className="portal-fade-in" style={{ borderRadius: 16, border: `1px solid ${border}`, overflow: 'hidden', background: surface, padding: '0 20px 20px' }}>
-        <SiteDataPanel siteId={selectedSiteId ?? site.site_id} autoRefresh inverterCapacityKw={site.inverter_capacity_kw} />
+        <Suspense fallback={<div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4A5568', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>Loading charts…</div>}>
+          <SiteDataPanel siteId={selectedSiteId ?? site.site_id} autoRefresh inverterCapacityKw={site.inverter_capacity_kw} />
+        </Suspense>
       </div>
     </div>
   );

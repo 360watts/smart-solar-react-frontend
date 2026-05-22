@@ -4,7 +4,7 @@ import PhoneInput from '../../shared/components/PhoneInput';
 import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon, ShieldCheck, ShieldOff } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { MobileEmployees } from '../mobile';
+import MobileEmployees from '../mobile/MobileEmployees';
 import { cacheService } from '../../services/cacheService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';

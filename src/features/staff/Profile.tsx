@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import PhoneInput from '../../shared/components/PhoneInput';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { MobileProfile } from '../mobile';
+import MobileProfile from '../mobile/MobileProfile';
 
 interface ProfileData {
   id: number;

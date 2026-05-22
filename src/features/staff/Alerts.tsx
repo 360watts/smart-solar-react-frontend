@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MobileAlerts } from '../mobile';
+import MobileAlerts from '../mobile/MobileAlerts';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import {
   AlertTriangle, AlertCircle, Info, Bell,

@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, X, Zap, Battery, Sun, ChevronDown, Server } from 
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { MobileEquipment } from '../mobile';
+import MobileEquipment from '../mobile/MobileEquipment';
 import { EmptyState } from '../../shared/components/EmptyState';
 import PageHeader from '../../shared/layout/PageHeader';
 

@@ -8,7 +8,7 @@ import {
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { MobileOTA } from '../mobile';
+import MobileOTA from '../mobile/MobileOTA';
 import PageHeader from '../../shared/layout/PageHeader';
 import '../../App.css';
 

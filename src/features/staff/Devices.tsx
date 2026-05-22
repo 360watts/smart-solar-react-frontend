@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { MobileDevices } from '../mobile';
+import MobileDevices from '../mobile/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { MobileSites } from '../mobile';
+import MobileSites from '../mobile/MobileSites';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { AnimatePresence, motion } from "framer-motion";
 import {

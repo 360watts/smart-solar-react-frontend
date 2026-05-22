@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { MobileUsers } from '../mobile';
+import MobileUsers from '../mobile/MobileUsers';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';

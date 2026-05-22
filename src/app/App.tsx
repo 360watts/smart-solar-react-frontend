@@ -16,8 +16,8 @@ import { SkeletonDashboard } from '../shared/components/SkeletonLoader';
 import { ToastProvider } from '../contexts/ToastContext';
 import { ToastContainer } from '../shared/components/Toast';
 import { ThemeProvider } from '../contexts/ThemeContext';
-import AiChat from '../features/staff/AiChat';
 import StaffRoute from '../shared/guards/StaffRoute';
+const AiChat = lazy(() => import('../features/staff/AiChat'));
 
 // Lazy load components for better initial load performance
 const Dashboard = lazy(() => import('../features/staff/Dashboard'));
@@ -47,7 +47,7 @@ function StaffAiChat() {
   const { user, isAuthenticated, loading } = useAuth();
   if (loading || !isAuthenticated) return null;
   if (!user?.is_staff && !user?.is_superuser) return null;
-  return <AiChat />;
+  return <Suspense fallback={null}><AiChat /></Suspense>;
 }
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, Copy, Check as CheckIcon } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { apiService, SiteMember } from '../../../services/api';
 
@@ -21,13 +21,13 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
   const [role, setRole] = useState<'viewer' | 'co_owner'>('viewer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<SiteMember | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const text = isDark ? '#f1f5f9' : '#0f172a';
   const muted = isDark ? '#94a3b8' : '#64748b';
   const surface = isDark ? '#1e293b' : '#ffffff';
   const border = isDark ? '#334155' : '#e2e8f0';
-  const overlay = 'rgba(0,0,0,0.5)';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +38,12 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
     setLoading(true);
     try {
       const member = await apiService.inviteSiteMember(siteId, trimmed, role);
-      setSuccess(`Invite sent to ${trimmed}`);
+      setInviteResult(member);
       onInvited(member);
     } catch (err: any) {
       const msg = err?.message || '';
       if (msg.includes('409') || msg.toLowerCase().includes('already')) {
-        setError('A membership (active, pending, or revoked) already exists for this email.');
+        setError('This email already has an active or pending membership for this site.');
       } else {
         setError(msg || 'Failed to send invite. Please try again.');
       }
@@ -76,17 +76,68 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
           </button>
         </div>
 
-        {success ? (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <p style={{ color: '#22c55e', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>✓ {success}</p>
-            <p style={{ color: muted, fontSize: '13px', marginBottom: '20px' }}>
-              They'll receive an email with a link to accept the invitation.
-            </p>
+        {inviteResult ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: 600, marginBottom: 4 }}>
+              ✓ Invite sent to {inviteResult.invite_email}
+            </div>
+            <div style={{ color: muted, fontSize: '12px', marginBottom: 20 }}>
+              An email was sent. You can also share this link or QR code directly.
+            </div>
+
+            {/* QR code */}
+            {inviteResult.qr_code && (
+              <div style={{
+                display: 'inline-block', padding: 12,
+                background: '#fff', borderRadius: 12,
+                boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
+                marginBottom: 16,
+              }}>
+                <img src={inviteResult.qr_code} alt="Invite QR code" style={{ width: 160, height: 160, display: 'block' }} />
+              </div>
+            )}
+
+            {/* Copyable link */}
+            {inviteResult.invite_link && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 8,
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                border: `1px solid ${border}`,
+                marginBottom: 16,
+              }}>
+                <span style={{
+                  flex: 1, fontSize: 11, color: muted,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  textAlign: 'left',
+                }}>
+                  {inviteResult.invite_link}
+                </span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteResult.invite_link!);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#22c55e' : muted, flexShrink: 0, padding: 0 }}
+                >
+                  {copied ? <CheckIcon size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+            )}
+
+            {inviteResult.expires_at && (
+              <div style={{ fontSize: 11, color: muted, marginBottom: 20 }}>
+                Expires {new Date(inviteResult.expires_at).toLocaleString()}
+              </div>
+            )}
+
             <button
               onClick={onClose}
               style={{
-                padding: '10px 24px', borderRadius: '8px', border: 'none',
+                padding: '10px 32px', borderRadius: '8px', border: 'none',
                 background: '#22c55e', color: '#fff', fontWeight: 600, cursor: 'pointer',
+                fontSize: 14,
               }}
             >
               Done
