@@ -708,6 +708,7 @@ class ApiService {
     profile: any;
     sites: any[];
     active_alert_count: number;
+    plan_features?: { can_access_ai: boolean; can_view_history_90d: boolean };
   }> {
     return this.request('/portal/summary/');
   }

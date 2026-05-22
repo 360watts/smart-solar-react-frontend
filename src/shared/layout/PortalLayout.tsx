@@ -3,12 +3,12 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, Menu, X, Zap } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import PortalChat from '../../features/portal/PortalChat';
 
 const NAV_ITEMS = [
-  { path: '/portal',         label: 'Overview',  icon: LayoutDashboard, end: true  },
-  { path: '/portal/alerts',  label: 'Alerts',    icon: Bell,             end: false },
-  { path: '/portal/device',  label: 'My Device', icon: Cpu,              end: false },
-  { path: '/portal/profile', label: 'Profile',   icon: User,             end: false },
+  { path: '/portal',        label: 'Overview',  icon: LayoutDashboard, end: true  },
+  { path: '/portal/alerts', label: 'Alerts',    icon: Bell,             end: false },
+  { path: '/portal/device', label: 'My Device', icon: Cpu,              end: false },
 ];
 
 /* ─── Shared portal CSS (injected once) ─────────────────────────────────── */
@@ -227,15 +227,22 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
       {/* Divider */}
       <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)', margin: '0 12px' }} />
 
-      {/* User block */}
+      {/* User block — clicks through to profile */}
       <div style={{ padding: '16px 12px 8px' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '8px 10px', borderRadius: 10,
-          background: userBg,
-          border: `1px solid ${userBorder}`,
-          marginBottom: 4,
-        }}>
+        <NavLink
+          to="/portal/profile"
+          onClick={onClose}
+          style={({ isActive }) => ({
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 10px', borderRadius: 10,
+            background: isActive ? (isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)') : userBg,
+            border: isActive ? '1px solid rgba(245,158,11,0.25)' : `1px solid ${userBorder}`,
+            marginBottom: 4,
+            textDecoration: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.18s ease',
+          })}
+        >
           <div style={{
             width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
             background: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
@@ -244,7 +251,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
           }}>
             {initials}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: userText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username}
             </div>
@@ -252,7 +259,8 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
               {user?.email}
             </div>
           </div>
-        </div>
+          <User size={13} color={sideMuted} style={{ flexShrink: 0 }} />
+        </NavLink>
       </div>
 
       {/* Footer actions */}
@@ -335,6 +343,9 @@ const PortalLayout: React.FC = () => {
       }} className="portal-main">
         <Outlet />
       </main>
+
+      {/* Floating AI chat widget — always available across all portal pages */}
+      <PortalChat />
 
       <style>{`
         @media (max-width: 1023px) {

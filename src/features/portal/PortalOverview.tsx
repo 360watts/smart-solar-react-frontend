@@ -236,7 +236,7 @@ const PortalOverview: React.FC = () => {
       </div>
 
       {/* Site data panel */}
-      <div className="portal-fade-in" style={{ borderRadius: 16, border: `1px solid ${border}`, overflow: 'hidden', background: surface }}>
+      <div className="portal-fade-in" style={{ borderRadius: 16, border: `1px solid ${border}`, overflow: 'hidden', background: surface, padding: '0 20px 20px' }}>
         <SiteDataPanel siteId={selectedSiteId ?? site.site_id} autoRefresh inverterCapacityKw={site.inverter_capacity_kw} />
       </div>
     </div>

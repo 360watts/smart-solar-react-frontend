@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import { X, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { apiService, SiteMember } from '../../../services/api';
 
@@ -51,19 +52,22 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div
       style={{
-        position: 'fixed', inset: 0, background: overlay,
+        position: 'fixed', inset: 0,
+        background: isDark ? 'rgba(8,12,20,0.75)' : 'rgba(0,0,0,0.45)',
+        backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: '16px',
+        zIndex: 10000, padding: '16px',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
         background: surface, border: `1px solid ${border}`,
         borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '420px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: text }}>Invite a Member</h2>
@@ -146,9 +150,10 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
             </div>
 
             {error && (
-              <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px', margin: '0 0 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#fca5a5', fontSize: 13, marginBottom: 12 }}>
+                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
                 {error}
-              </p>
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -179,7 +184,8 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

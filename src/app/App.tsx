@@ -42,6 +42,14 @@ const PortalDevice      = lazy(() => import('../features/portal/PortalDevice'));
 const PortalProfile     = lazy(() => import('../features/portal/PortalProfile'));
 const AcceptInvitePage  = lazy(() => import('../features/portal/pages/AcceptInvitePage'));
 
+/** Renders AiChat only for staff/superusers — customers have PortalChat instead. */
+function StaffAiChat() {
+  const { user, isAuthenticated, loading } = useAuth();
+  if (loading || !isAuthenticated) return null;
+  if (!user?.is_staff && !user?.is_superuser) return null;
+  return <AiChat />;
+}
+
 /**
  * Redirects authenticated users to the correct landing page based on role.
  * Includes loading guard to prevent flash-redirect while auth state resolves.
@@ -88,7 +96,7 @@ function App() {
                 <Route index element={<Suspense fallback={null}><PortalOverview /></Suspense>} />
                 <Route path="alerts" element={<Suspense fallback={null}><PortalAlerts /></Suspense>} />
                 <Route path="device" element={<Suspense fallback={null}><PortalDevice /></Suspense>} />
-                <Route path="profile" element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
+<Route path="profile" element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
               </Route>
 
               {/* Protected routes with full layout */}
@@ -241,7 +249,7 @@ function App() {
               />
             </Routes>
             <ToastContainer />
-            <AiChat />
+            <StaffAiChat />
           </div>
         </Router>
       </NavigationProvider>

@@ -1,4 +1,5 @@
 export { default as PortalOverview } from './PortalOverview';
+export { default as PortalChat } from './PortalChat';
 export { default as PortalAlerts } from './PortalAlerts';
 export { default as PortalDevice } from './PortalDevice';
 export { default as PortalProfile } from './PortalProfile';

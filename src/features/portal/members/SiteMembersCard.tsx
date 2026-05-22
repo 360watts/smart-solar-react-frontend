@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { UserPlus, RefreshCw, RotateCcw } from 'lucide-react';
+import { UserPlus, RefreshCw, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { apiService, SiteMember } from '../../../services/api';
 import InviteMemberModal from './InviteMemberModal';
+import { usePortalFeedback } from '../PortalFeedback';
 
 interface Props {
   siteId: string;
@@ -25,6 +26,7 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const { toast, confirm: portalConfirm, PortalFeedbackUI } = usePortalFeedback(isDark);
 
   const isOwner = user?.id === ownerUserId;
 
@@ -56,21 +58,24 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
     try {
       const updated = await apiService.updateSiteMember(siteId, m.id, { role });
       setMembers(prev => prev.map(x => x.id === m.id ? updated : x));
+      toast('success', `Role updated to ${role === 'co_owner' ? 'Co-owner' : 'Viewer'}.`);
     } catch {
-      alert('Failed to update role.');
+      toast('error', 'Failed to update role. Please try again.');
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleRevoke = async (m: SiteMember) => {
-    if (!confirm(`Revoke access for ${m.invite_email}?`)) return;
+    const ok = await portalConfirm(`This will remove ${m.invite_email}'s access to your solar system.`);
+    if (!ok) return;
     setActionLoading(m.id);
     try {
       const updated = await apiService.updateSiteMember(siteId, m.id, { status: 'revoked' });
       setMembers(prev => prev.map(x => x.id === m.id ? updated : x));
+      toast('info', `Access revoked for ${m.invite_email}.`);
     } catch {
-      alert('Failed to revoke access.');
+      toast('error', 'Failed to revoke access. Please try again.');
     } finally {
       setActionLoading(null);
     }
@@ -80,9 +85,9 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
     setActionLoading(m.id);
     try {
       await apiService.resendSiteInvite(siteId, m.id);
-      alert(`Invite resent to ${m.invite_email}`);
+      toast('success', `Invite resent to ${m.invite_email}.`);
     } catch {
-      alert('Failed to resend invite.');
+      toast('error', 'Failed to resend invite. Please try again.');
     } finally {
       setActionLoading(null);
     }
@@ -97,6 +102,8 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
   };
 
   return (
+    <>
+    {PortalFeedbackUI}
     <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: '12px', padding: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: text }}>Site Members</h3>
@@ -118,7 +125,13 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
           <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading…
         </div>
       )}
-      {error && <p style={{ color: '#ef4444', fontSize: '13px' }}>{error}</p>}
+      {error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#fca5a5', fontSize: 13 }}>
+          <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+          {error}
+          <button onClick={load} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        </div>
+      )}
 
       {!loading && !error && members.length === 0 && (
         <p style={{ color: muted, fontSize: '13px', margin: 0 }}>
@@ -223,6 +236,7 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
         />
       )}
     </div>
+    </>
   );
 };
 
