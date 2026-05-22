@@ -1,363 +1,480 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Lock, Smartphone, X, Eye, EyeOff, LogIn, ArrowLeft, RefreshCw } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
-import PhoneInput from '../../../shared/components/PhoneInput';
-import logoWithFont from '../../../assets/logo_with_font.png';
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Mail, Lock, Eye, EyeOff, Check, ArrowLeft, RefreshCw } from 'lucide-react'
+import { Badge } from '@/shared/ui/badge'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/shared/ui/input-otp'
+import { useAuth } from '../../../contexts/AuthContext'
+import PhoneInput from '../../../shared/components/PhoneInput'
+import logoWithFont from '../../../assets/logo_with_font.png'
 
-const SolarScene3D = lazy(() => import('../../../shared/components/SolarScene3D'));
+type Mode = 'password' | 'otp-phone' | 'otp-verify'
 
-type Mode = 'password' | 'otp-phone' | 'otp-verify';
+const OTP_LENGTH = 6
+const RESEND_COOLDOWN = 30
 
-const OTP_LENGTH = 6;
-const RESEND_COOLDOWN = 30;
+/* ─── Particle canvas ────────────────────────────────────────────────────── */
+const ParticleCanvas: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+    resize()
+
+    interface Particle { x: number; y: number; size: number; speedY: number; opacity: number }
+    const particles: Particle[] = []
+
+    for (let i = 0; i < 60; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2.5 + 0.5,
+        speedY: -(Math.random() * 0.8 + 0.3),
+        opacity: Math.random() * 0.5 + 0.2,
+      })
+    }
+
+    let raf = 0
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // radial glow at center
+      const grd = ctx.createRadialGradient(
+        canvas.width * 0.5, canvas.height * 0.6, 0,
+        canvas.width * 0.5, canvas.height * 0.6, canvas.width * 0.5,
+      )
+      grd.addColorStop(0, 'rgba(245,158,11,0.07)')
+      grd.addColorStop(1, 'transparent')
+      ctx.fillStyle = grd
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      particles.forEach(p => {
+        ctx.fillStyle = `rgba(245,158,11,${p.opacity})`
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fill()
+        p.y += p.speedY
+        if (p.y < -4) {
+          p.y = canvas.height + 4
+          p.x = Math.random() * canvas.width
+        }
+      })
+
+      raf = requestAnimationFrame(animate)
+    }
+    animate()
+
+    const onResize = () => resize()
+    window.addEventListener('resize', onResize)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize) }
+  }, [])
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+}
+
+/* ─── Main component ──────────────────────────────────────────────────────── */
 const Login: React.FC = () => {
-  // Password login state
-  const [email, setEmail]             = useState('');
-  const [password, setPassword]       = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe]   = useState(false);
+  const navigate = useNavigate()
+  const { login, requestOtp, verifyOtp } = useAuth()
 
-  // OTP state
-  const [mobile, setMobile]           = useState('');
-  const [otp, setOtp]                 = useState<string[]>(Array(OTP_LENGTH).fill(''));
-  const [cooldown, setCooldown]       = useState(0);
-
-  // Shared state
-  const [mode, setMode]               = useState<Mode>('password');
-  const [error, setError]             = useState('');
-  const [loading, setLoading]         = useState(false);
-
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { login, requestOtp, verifyOtp, isAuthenticated, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const [mode, setMode] = useState<Mode>('password')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [otp, setOtp] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
-    const saved = localStorage.getItem('rememberedEmail');
-    if (saved) { setEmail(saved); setRememberMe(true); }
-  }, []);
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) navigate('/', { replace: true });
-  }, [isAuthenticated, authLoading, navigate]);
+  const clearError = () => setError(null)
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
-
-  const switchMode = (next: Mode) => {
-    setError('');
-    setMode(next);
-  };
-
-  // ── Password login ──
   const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    if (rememberMe) localStorage.setItem('rememberedEmail', email);
-    else localStorage.removeItem('rememberedEmail');
+    e.preventDefault()
+    clearError()
+    setLoading(true)
     try {
-      const ok = await login(email, password);
-      if (ok) navigate('/', { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const ok = await login(email, password)
+      if (ok) navigate('/', { replace: true })
+      else setError('Invalid email or password.')
+    } catch {
+      setError('Login failed. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-
-  // ── OTP: request ──
-  const handleRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!mobile || mobile.replace(/\D/g, '').length < 7) {
-      setError('Please enter a valid mobile number.');
-      return;
-    }
-    setLoading(true);
-    try {
-      await requestOtp(mobile);
-      setOtp(Array(OTP_LENGTH).fill(''));
-      setCooldown(RESEND_COOLDOWN);
-      setMode('otp-verify');
-      setTimeout(() => otpRefs.current[0]?.focus(), 80);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (cooldown > 0) return;
-    setError('');
-    setLoading(true);
-    try {
-      await requestOtp(mobile);
-      setOtp(Array(OTP_LENGTH).fill(''));
-      setCooldown(RESEND_COOLDOWN);
-      setTimeout(() => otpRefs.current[0]?.focus(), 80);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ── OTP: digit input handlers ──
-  const handleOtpChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const next = [...otp];
-    next[index] = digit;
-    setOtp(next);
-    if (digit && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus();
-    if (digit && next.every(d => d)) submitOtp(next.join(''));
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (otp[index]) { const n = [...otp]; n[index] = ''; setOtp(n); }
-      else if (index > 0) otpRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowLeft' && index > 0) otpRefs.current[index - 1]?.focus();
-    else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) otpRefs.current[index + 1]?.focus();
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
-    if (!pasted) return;
-    e.preventDefault();
-    const next = Array(OTP_LENGTH).fill('');
-    pasted.split('').forEach((d, i) => { next[i] = d; });
-    setOtp(next);
-    otpRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
-    if (pasted.length === OTP_LENGTH) submitOtp(pasted);
-  };
-
-  const submitOtp = async (code: string) => {
-    setError('');
-    setLoading(true);
-    try {
-      const ok = await verifyOtp(mobile, code);
-      if (ok) navigate('/', { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-      setOtp(Array(OTP_LENGTH).fill(''));
-      setTimeout(() => otpRefs.current[0]?.focus(), 50);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otp.join('');
-    if (code.length < OTP_LENGTH) { setError('Please enter all 6 digits.'); return; }
-    submitOtp(code);
-  };
-
-  if (authLoading) {
-    return (
-      <div className="auth-container">
-        <div className="auth-loading-screen">
-          <div className="solar-loader">
-            <img src={logoWithFont} alt="360watts" className="auth-logo-img auth-logo-img--pulse" />
-          </div>
-          <p className="loading-text">Initializing...</p>
-        </div>
-      </div>
-    );
   }
 
-  if (isAuthenticated) return null;
+  const handleOTPRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    clearError()
+    setLoading(true)
+    try {
+      await requestOtp(phone)
+      setMode('otp-verify')
+      setCooldown(RESEND_COOLDOWN)
+    } catch {
+      setError('Failed to send OTP. Check the number and try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOTPVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otp.length < OTP_LENGTH) return
+    clearError()
+    setLoading(true)
+    try {
+      const ok = await verifyOtp(phone, otp)
+      if (ok) navigate('/', { replace: true })
+      else setError('Incorrect OTP. Please try again.')
+    } catch {
+      setError('Verification failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    if (cooldown > 0) return
+    setError(null)
+    setLoading(true)
+    try {
+      await requestOtp(phone)
+      setCooldown(RESEND_COOLDOWN)
+    } catch {
+      setError('Failed to resend OTP.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="auth-container">
-      <Suspense fallback={null}>
-        <SolarScene3D />
-      </Suspense>
+    <div
+      className="login-root min-h-screen w-full flex"
+      style={{ background: '#060A12', isolation: 'isolate' }}
+    >
+      {/* ── Left panel ── */}
+      <div
+        className="hidden lg:flex lg:w-[55%] relative overflow-hidden"
+        style={{ background: '#060A12' }}
+      >
+        {/* subtle amber glow blob */}
+        <div style={{
+          position: 'absolute', width: 520, height: 520,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 70%)',
+          top: '30%', left: '10%', pointerEvents: 'none',
+        }} />
+        <ParticleCanvas />
+        <div className="relative z-10 flex flex-col w-full" style={{ gap: 0, padding: '48px 64px' }}>
+          {/* Hero — vertically centered in remaining space */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 40, paddingBottom: 40 }}>
+            <div style={{ marginBottom: 16 }}>
+              <Badge
+                className="border-green-500/30 px-3 py-1"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#4ade80', marginBottom: 20, display: 'inline-flex' }}
+              >
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+                Live System Active
+              </Badge>
 
-      <div className="auth-card">
-        <div className="auth-logo">
-          <img src={logoWithFont} alt="360watts" className="auth-logo-img" />
-        </div>
-        <div className="auth-header">
-          <p>Smart Solar Monitor &mdash; Secure Portal</p>
-        </div>
+              <div
+                style={{
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: 46,
+                  fontWeight: 800,
+                  lineHeight: 1.12,
+                  color: '#fff',
+                  marginBottom: 16,
+                }}
+              >
+                Power Your Future
+                <br />
+                <span style={{ color: '#F59E0B' }}>With Solar Energy</span>
+              </div>
 
-        {error && (
-          <div className="auth-error">
-            <span>{error}</span>
-            <button type="button" className="error-dismiss" onClick={() => setError('')} aria-label="Dismiss error">
-              <X size={18} strokeWidth={2} />
-            </button>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#8892A4', maxWidth: 360, lineHeight: 1.6 }}>
+                Monitor, manage, and optimize your solar energy systems in real-time.
+              </p>
+            </div>
+
           </div>
-        )}
 
-        {/* ── Mode: Username + Password (default) ── */}
-        {mode === 'password' && (
-          <form onSubmit={handlePasswordLogin} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="email">
-                <User size={16} strokeWidth={2} /> Email or Mobile Number
-              </label>
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  id="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Email or mobile number"
-                  required
-                  disabled={loading}
-                  autoComplete="username"
-                  autoFocus
-                />
-                {email && (
-                  <button type="button" className="input-clear" onClick={() => setEmail('')} aria-label="Clear">
-                    <X size={14} strokeWidth={2} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">
-                <Lock size={16} strokeWidth={2} /> Password
-              </label>
-              <div className="input-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  disabled={loading}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(s => !s)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff size={18} strokeWidth={2} /> : <Eye size={18} strokeWidth={2} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="form-options">
-              <label className="remember-me">
-                <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
-                <span className="checkmark" />
-                Remember me
-              </label>
-            </div>
-
-            <button type="submit" className="auth-button" disabled={loading || !email || !password}>
-              {loading ? <><span className="spinner" /> Signing in...</> : <><LogIn size={18} strokeWidth={2} /> Sign In</>}
-            </button>
-
-            <div className="auth-divider">
-              <span>or</span>
-            </div>
-
-            <button type="button" className="auth-alt-btn" onClick={() => switchMode('otp-phone')} disabled={loading}>
-              <Smartphone size={16} strokeWidth={2} />
-              Sign in with Mobile OTP
-            </button>
-          </form>
-        )}
-
-        {/* ── Mode: OTP — enter mobile ── */}
-        {mode === 'otp-phone' && (
-          <form onSubmit={handleRequestOtp} className="auth-form">
-            <div className="form-group">
-              <label>
-                <Smartphone size={16} strokeWidth={2} /> Mobile Number
-              </label>
-              <PhoneInput
-                value={mobile}
-                onChange={setMobile}
-                required
-                placeholder="98765 43210"
-                disabled={loading}
-              />
-            </div>
-
-            <button type="submit" className="auth-button" disabled={loading || !mobile}>
-              {loading ? <><span className="spinner" /> Sending OTP...</> : <>Send OTP</>}
-            </button>
-
-            <div className="auth-divider"><span>or</span></div>
-
-            <button type="button" className="auth-alt-btn" onClick={() => switchMode('password')} disabled={loading}>
-              <Lock size={16} strokeWidth={2} />
-              Sign in with Password
-            </button>
-          </form>
-        )}
-
-        {/* ── Mode: OTP — enter code ── */}
-        {mode === 'otp-verify' && (
-          <form onSubmit={handleVerifySubmit} className="auth-form">
-            <div className="otp-info">
-              <p>OTP sent to <strong>{mobile}</strong></p>
-            </div>
-
-            <div className="form-group">
-              <label>Enter 6-digit OTP</label>
-              <div className="otp-boxes" onPaste={handleOtpPaste}>
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={el => { otpRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={e => handleOtpChange(i, e.target.value)}
-                    onKeyDown={e => handleOtpKeyDown(i, e)}
-                    disabled={loading}
-                    className={`otp-box${digit ? ' otp-box--filled' : ''}`}
-                    aria-label={`OTP digit ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <button type="submit" className="auth-button" disabled={loading || otp.some(d => !d)}>
-              {loading ? <><span className="spinner" /> Verifying...</> : <><LogIn size={18} strokeWidth={2} /> Verify & Sign In</>}
-            </button>
-
-            <div className="otp-actions">
-              <button
-                type="button"
-                className="otp-back-btn"
-                onClick={() => { switchMode('otp-phone'); setOtp(Array(OTP_LENGTH).fill('')); }}
-                disabled={loading}
-              >
-                <ArrowLeft size={14} strokeWidth={2} /> Change number
-              </button>
-              <button
-                type="button"
-                className="otp-resend-btn"
-                onClick={handleResend}
-                disabled={loading || cooldown > 0}
-              >
-                <RefreshCw size={14} strokeWidth={2} />
-                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
-              </button>
-            </div>
-          </form>
-        )}
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#334155' }}>
+            © 2026 360Watts. All rights reserved.
+          </div>
+        </div>
       </div>
-    </div>
-  );
-};
 
-export default Login;
+      {/* ── Right panel ── */}
+      <div className="w-full lg:w-[45%] flex items-center justify-center p-6 lg:p-12" style={{ position: 'relative', overflow: 'hidden' }}>
+        <ParticleCanvas />
+        <div style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: 20,
+              padding: '36px 32px',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ marginBottom: 28 }}>
+              <img
+                src={logoWithFont}
+                alt="360Watts"
+                style={{ height: 82, objectFit: 'contain', display: 'block', margin: '0 auto 20px' }}
+              />
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: '#F0F4FF', marginBottom: 4 }}>
+                Welcome back
+              </div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#64748B' }}>
+                Sign in to access your solar dashboard
+              </div>
+            </div>
+
+            {/* Mode tabs */}
+            <div
+              style={{
+                display: 'flex', gap: 4, padding: 4,
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: 10, marginBottom: 24,
+              }}
+            >
+              {(['password', 'otp-phone'] as const).map(m => {
+                const active = m === 'password' ? mode === 'password' : mode !== 'password'
+                return (
+                  <button
+                    key={m}
+                    onClick={() => { setMode(m); clearError(); setOtp('') }}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 7, border: 'none', cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: active ? 600 : 500,
+                      background: active ? '#F59E0B' : 'transparent',
+                      color: active ? '#fff' : '#94A3B8',
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    {m === 'password' ? 'Password' : 'OTP'}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div
+                style={{
+                  padding: '10px 14px', borderRadius: 9, marginBottom: 16,
+                  background: 'rgba(248,113,113,0.08)',
+                  border: '1px solid rgba(248,113,113,0.25)',
+                  color: '#fca5a5',
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* ── Password form ── */}
+            {mode === 'password' && (
+              <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 6 }}>
+                    Email
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={15} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      required
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        paddingLeft: 36, paddingRight: 12, paddingTop: 10, paddingBottom: 10,
+                        borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.05)', color: '#F0F4FF',
+                        fontFamily: "'DM Sans', sans-serif", fontSize: 14, outline: 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 6 }}>
+                    Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={15} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        paddingLeft: 36, paddingRight: 40, paddingTop: 10, paddingBottom: 10,
+                        borderRadius: 9, border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.05)', color: '#F0F4FF',
+                        fontFamily: "'DM Sans', sans-serif", fontSize: 14, outline: 'none',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: 0 }}
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%', padding: '11px 0', borderRadius: 9, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                    background: loading ? 'rgba(245,158,11,0.5)' : '#F59E0B',
+                    color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                    transition: 'background 0.18s',
+                  }}
+                >
+                  {loading ? 'Signing in…' : 'Sign In'}
+                </button>
+              </form>
+            )}
+
+            {/* ── OTP phone form ── */}
+            {mode === 'otp-phone' && (
+              <form onSubmit={handleOTPRequest} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 6 }}>
+                    Phone number
+                  </label>
+                  <PhoneInput
+                    value={phone}
+                    onChange={setPhone}
+                    required
+                    isDark
+                    inlineStyle
+                    placeholder="Enter your number"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%', padding: '11px 0', borderRadius: 9, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                    background: loading ? 'rgba(245,158,11,0.5)' : '#F59E0B',
+                    color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                    transition: 'background 0.18s',
+                  }}
+                >
+                  {loading ? 'Sending…' : 'Send OTP'}
+                </button>
+              </form>
+            )}
+
+            {/* ── OTP verify form ── */}
+            {mode === 'otp-verify' && (
+              <form onSubmit={handleOTPVerify} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 4 }}>
+                    Enter 6-digit code
+                  </label>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#64748B', marginBottom: 14 }}>
+                    Sent to {phone}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <InputOTP maxLength={OTP_LENGTH} value={otp} onChange={setOtp}>
+                      <InputOTPGroup>
+                        {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                          <InputOTPSlot
+                            key={i}
+                            index={i}
+                            className="login-otp-slot bg-white/5 border-white/10 text-white"
+                          />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length < OTP_LENGTH}
+                  style={{
+                    width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+                    cursor: loading || otp.length < OTP_LENGTH ? 'not-allowed' : 'pointer',
+                    background: loading || otp.length < OTP_LENGTH ? 'rgba(245,158,11,0.4)' : '#F59E0B',
+                    color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'background 0.18s',
+                  }}
+                >
+                  <Check size={14} />
+                  {loading ? 'Verifying…' : 'Verify & Sign In'}
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('otp-phone'); setOtp(''); clearError() }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#64748B' }}
+                  >
+                    <ArrowLeft size={13} /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={cooldown > 0 || loading}
+                    style={{
+                      background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                      color: cooldown > 0 ? '#475569' : '#F59E0B',
+                    }}
+                  >
+                    <RefreshCw size={13} />
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .login-root h1, .login-root h2, .login-root h3 {
+          font-size: unset; line-height: unset; letter-spacing: unset;
+          background: none; -webkit-background-clip: unset; -webkit-text-fill-color: unset;
+          background-clip: unset; font-weight: unset; margin: 0;
+        }
+        .login-root::before, .login-root::after { display: none !important; }
+        .login-otp-slot[data-active=true] { border-color: #F59E0B !important; box-shadow: 0 0 0 3px rgba(245,158,11,0.25) !important; }
+      `}</style>
+    </div>
+  )
+}
+
+export default Login
