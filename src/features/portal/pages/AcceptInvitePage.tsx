@@ -12,8 +12,8 @@ const FONTS = `
 /* ─── keyframes ─── */
 const KEYFRAMES = `
 @keyframes corona-spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
+  from { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+  to   { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
 }
 @keyframes corona-pulse {
   0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
@@ -309,10 +309,10 @@ const SolarBg: React.FC = () => (
 /* ─── wrapper card ─── */
 const Card: React.FC<{ children: React.ReactNode; key?: string }> = ({ children }) => (
   <div style={{
-    position: 'relative', zIndex: 1,
-    minHeight: '100vh',
+    position: 'fixed', inset: 0, zIndex: 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     padding: '24px 16px',
+    overflowY: 'auto',
   }}>
     <div style={{
       width: '100%', maxWidth: 432,
