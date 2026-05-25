@@ -5,7 +5,6 @@ import { DEFAULT_PAGE_SIZE } from '../app/constants';
 
 export interface SiteMember {
   id: number;
-  invite_email: string;
   role: 'viewer' | 'co_owner';
   status: 'pending' | 'active' | 'revoked';
   user: { id: number; first_name: string; last_name: string } | null;
@@ -724,10 +723,10 @@ class ApiService {
     return this.request(`/sites/${siteId}/members/${qs}`);
   }
 
-  async inviteSiteMember(siteId: string, email: string, role: 'viewer' | 'co_owner'): Promise<SiteMember> {
+  async inviteSiteMember(siteId: string, email: string | null, role: 'viewer' | 'co_owner'): Promise<SiteMember> {
     return this.request(`/sites/${siteId}/members/`, {
       method: 'POST',
-      body: JSON.stringify({ invite_email: email, role }),
+      body: JSON.stringify({ invite_email: email ?? undefined, role }),
     });
   }
 

@@ -67,13 +67,14 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
   };
 
   const handleRevoke = async (m: SiteMember) => {
-    const ok = await portalConfirm(`This will remove ${m.invite_email}'s access to your solar system.`);
+    const label = m.status === 'pending' ? 'this pending invite' : `${displayName(m)}'s access`;
+    const ok = await portalConfirm(`This will remove ${label} to your solar system.`);
     if (!ok) return;
     setActionLoading(m.id);
     try {
       const updated = await apiService.updateSiteMember(siteId, m.id, { status: 'revoked' });
       setMembers(prev => prev.map(x => x.id === m.id ? updated : x));
-      toast('info', `Access revoked for ${m.invite_email}.`);
+      toast('info', m.status === 'pending' ? 'Invite revoked.' : `Access revoked for ${displayName(m)}.`);
     } catch {
       toast('error', 'Failed to revoke access. Please try again.');
     } finally {
@@ -96,9 +97,14 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
   const displayName = (m: SiteMember) => {
     if (m.user) {
       const name = `${m.user.first_name} ${m.user.last_name}`.trim();
-      return name || m.invite_email;
+      return name || 'Member';
     }
-    return m.invite_email;
+    return 'Pending Invite';
+  };
+
+  const displayEmail = (m: SiteMember) => {
+    if (m.user?.email) return m.user.email;
+    return 'Scan QR code or use shared link';
   };
 
   return (
@@ -159,13 +165,13 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '12px', fontWeight: 700, color: muted,
                 }}>
-                  {displayName(m).charAt(0).toUpperCase()}
+                  {m.status === 'pending' ? '?' : displayName(m).charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {displayName(m)}
                   </div>
-                  <div style={{ fontSize: '11px', color: muted }}>{m.invite_email}</div>
+                  <div style={{ fontSize: '11px', color: muted }}>{displayEmail(m)}</div>
                 </div>
               </div>
 
@@ -232,7 +238,11 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
         <InviteMemberModal
           siteId={siteId}
           onClose={() => setShowModal(false)}
-          onInvited={m => { setMembers(prev => [...prev, m]); setShowModal(false); }}
+          onInvited={m => setMembers(prev => {
+            const exists = prev.find(member => member.id === m.id);
+            if (exists) return prev; // Already in list, don't duplicate
+            return [...prev, m];
+          })}
         />
       )}
     </div>
