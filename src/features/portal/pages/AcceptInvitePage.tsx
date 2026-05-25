@@ -463,23 +463,13 @@ const AcceptInvitePage: React.FC = () => {
     setSignupError(null);
     setSignupLoading(true);
     try {
-      const res = await fetch(`${(apiService as any).baseUrl || '/api'}/auth/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: signupEmail,
-          email: signupEmail,
-          password: signupPassword,
-          first_name: signupFirstName,
-          last_name: signupLastName,
-          invite_token: token,
-        }),
+      await apiService.registerUser({
+        email: signupEmail,
+        password: signupPassword,
+        first_name: signupFirstName,
+        last_name: signupLastName,
+        invite_token: token!,
       });
-      if (!res.ok) {
-        const data = await res.json();
-        setSignupError(data?.error || data?.detail || 'Registration failed.');
-        return;
-      }
       const ok = await login(signupEmail, signupPassword);
       if (ok && token) {
         await apiService.acceptInvite(token);

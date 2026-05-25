@@ -750,6 +750,13 @@ class ApiService {
     return this.request(`/site-invites/${token}/accept/`, { method: 'POST' });
   }
 
+  async registerUser(data: { email: string; password: string; first_name?: string; last_name?: string; invite_token: string }): Promise<any> {
+    return this.request('/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async updateProfile(data: any): Promise<any> {
     return this.request('/profile/update/', {
       method: 'PUT',
