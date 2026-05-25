@@ -163,18 +163,20 @@ const DeviceCard: React.FC<{ device: DeviceItem; isDark: boolean; delay: number 
             muted={muted} text={text}
           />
         )}
-        {device.device_temp_c != null && (
-          <StatRow
-            icon={<Thermometer size={13} />}
-            label="Temperature"
-            value={
+        <StatRow
+          icon={<Thermometer size={13} />}
+          label="Temperature"
+          value={
+            device.device_temp_c != null ? (
               <span style={{ color: device.device_temp_c >= 65 ? '#FBBF24' : text }}>
-                {device.device_temp_c}°C
+                {device.device_temp_c.toFixed(1)}°C
               </span>
-            }
-            muted={muted} text={text}
-          />
-        )}
+            ) : (
+              <span style={{ color: muted, fontSize: 12 }}>Unavailable</span>
+            )
+          }
+          muted={muted} text={text}
+        />
         <StatRow
           icon={<Clock size={13} />}
           label="Last seen"

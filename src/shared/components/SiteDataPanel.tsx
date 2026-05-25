@@ -815,16 +815,17 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
   const pvKwh = Number(latest.pv_today_kwh ?? 0);
   const loadKwh = Number(latest.load_today_kwh ?? 0);
   const gridBuy = Number(latest.grid_buy_today_kwh ?? 0);
+  const gridSell = Number(latest.grid_sell_today_kwh ?? 0);
 
   if (pvKwh === 0 && loadKwh === 0) return null;
 
   const co2Kg = pvKwh * 0.82;
-  const selfSufPct = loadKwh > 0
-    ? Math.max(0, Math.min(100, Math.round(((loadKwh - gridBuy) / loadKwh) * 100)))
-    : null;
+  // Net grid = imports minus exports; clamp to 0 if site is a net exporter
+  const netGrid = Math.max(0, gridBuy - gridSell);
   const gridDepPct = loadKwh > 0
-    ? Math.max(0, Math.min(100, Math.round((gridBuy / loadKwh) * 100)))
+    ? Math.max(0, Math.min(100, Math.round((netGrid / loadKwh) * 100)))
     : null;
+  const selfSufPct = gridDepPct != null ? 100 - gridDepPct : null;
 
   const items: { icon: string; label: string; value: string; sub?: string; color: string; bg: string }[] = [];
 
@@ -844,7 +845,7 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
       icon: '⚡',
       label: 'Self-Sufficiency',
       value: `${selfSufPct}%`,
-      sub: 'load met by solar+battery',
+      sub: 'load met by solar+battery (net)',
       color,
       bg: `${color}15`,
     });
@@ -855,7 +856,7 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
       icon: '🔌',
       label: 'Grid Dependency',
       value: `${gridDepPct}%`,
-      sub: 'portion from grid',
+      sub: 'net grid import / load',
       color,
       bg: `${color}15`,
     });
