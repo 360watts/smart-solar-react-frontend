@@ -476,7 +476,13 @@ const AcceptInvitePage: React.FC = () => {
         setState({ type: 'accepted' });
         setTimeout(() => navigate('/portal'), 2200);
       }
-    } catch { setSignupError('Registration failed. Please try again.'); }
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('email already')) setSignupError('Email already registered.');
+      else if (msg.includes('username already')) setSignupError('Username already taken.');
+      else if (msg.includes('invite_token') || msg.includes('expired')) setSignupError('Invalid or expired invite link.');
+      else setSignupError(msg || 'Registration failed. Please try again.');
+    }
     finally { setSignupLoading(false); }
   }, [signupEmail, signupPassword, signupFirstName, signupLastName, login, token, navigate]);
 
