@@ -1,0 +1,50 @@
+// Design tokens matching PortalProfile
+export const getSecurityCardStyles = (isDark: boolean) => ({
+  card: {
+    background: isDark ? 'linear-gradient(145deg, #0F1623 0%, #0D1320 100%)' : '#FFFFFF',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'}`,
+    borderRadius: 16,
+    padding: '20px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
+  },
+  iconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    background: 'rgba(245,158,11,0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#F59E0B',
+  },
+  title: {
+    margin: 0,
+    fontSize: 15,
+    fontFamily: "'Outfit', sans-serif",
+    fontWeight: 700,
+    color: isDark ? '#F0F4FF' : '#0A0E1A',
+  },
+  description: {
+    margin: '0 0 16px',
+    fontSize: 13,
+    color: isDark ? '#8892A4' : '#64748B',
+  },
+  button: {
+    padding: '10px 16px',
+    background: '#F59E0B',
+    color: '#0A0E1A',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+});

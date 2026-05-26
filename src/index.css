@@ -62,12 +62,12 @@
 
 .dark-mode {
   /* Dark tokens */
-  /* Unified dark blue app background (dashboard standard) */
-  --background: #0f172a;
+  /* Unified dark app background (matches customer + staff portal) */
+  --background: #080C14;
   --foreground: oklch(0.985 0 0);
-  --card: #111c33;
+  --card: #0F1623;
   --card-foreground: oklch(0.985 0 0);
-  --popover: #111c33;
+  --popover: #0F1623;
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);

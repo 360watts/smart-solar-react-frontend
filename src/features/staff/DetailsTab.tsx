@@ -93,15 +93,15 @@ export interface DetailsTabProps {
 // ── Theme tokens ─────────────────────────────────────────────────────────────
 
 const useTokens = (isDark: boolean) => ({
-  bg: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(255, 255, 255, 0.92)',
-  bgPanel: isDark ? 'rgba(8, 15, 35, 0.8)' : 'rgba(255, 255, 255, 0.98)',
-  bgCell: isDark ? 'rgba(30, 41, 59, 0.55)' : 'rgba(248, 250, 252, 0.85)',
-  bgCellAlt: isDark ? 'rgba(30, 41, 59, 0.3)' : 'rgba(241, 245, 249, 0.7)',
-  border: isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(0, 0, 0, 0.07)',
-  borderAccent: isDark ? 'rgba(148, 163, 184, 0.22)' : 'rgba(0, 0, 0, 0.14)',
-  textPrimary: isDark ? '#f1f5f9' : '#0f172a',
-  textSecondary: isDark ? '#94a3b8' : '#64748b',
-  textMuted: isDark ? '#475569' : '#94a3b8',
+  bg: isDark ? 'rgba(15, 22, 35, 0.7)' : 'rgba(255, 255, 255, 0.92)',
+  bgPanel: isDark ? 'rgba(8, 12, 20, 0.85)' : 'rgba(255, 255, 255, 0.98)',
+  bgCell: isDark ? 'rgba(15, 22, 35, 0.6)' : 'rgba(248, 250, 252, 0.85)',
+  bgCellAlt: isDark ? 'rgba(15, 22, 35, 0.35)' : 'rgba(241, 245, 249, 0.7)',
+  border: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.07)',
+  borderAccent: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.14)',
+  textPrimary: isDark ? '#F0F4FF' : '#0f172a',
+  textSecondary: isDark ? '#8892A4' : '#64748b',
+  textMuted: isDark ? '#4A5568' : '#94a3b8',
   shadow: isDark ? '0 4px 24px rgba(0,0,0,0.45)' : '0 4px 20px rgba(0,0,0,0.08)',
   shadowActive: isDark ? '0 8px 32px rgba(0,0,0,0.6)' : '0 8px 28px rgba(0,0,0,0.14)',
 });
@@ -256,7 +256,7 @@ const MetricCell: React.FC<{
       <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fontWeight: 600, color: tok.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontSize: 18, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: accent ?? tok.textPrimary, lineHeight: 1.1 }}>
+      <div style={{ fontSize: 18, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: accent ?? tok.textPrimary, lineHeight: 1.1 }}>
         {value}
       </div>
       {subValue && (
@@ -337,7 +337,7 @@ const PhaseStrip: React.FC<{
           ].map(row => (
             <div key={row.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary }}>{row.l}</span>
-              <span style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
+              <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
             </div>
           ))}
         </div>
@@ -368,7 +368,7 @@ const EnergyRow: React.FC<{
           {i > 0 && <div style={{ position: 'absolute' }} />}
           <div style={{ textAlign: 'center', padding: '0 4px' }}>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 3 }}>{item.label}</div>
-            <div style={{ fontSize: 15, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: item.color ?? tok.textPrimary }}>{item.value}</div>
+            <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: item.color ?? tok.textPrimary }}>{item.value}</div>
           </div>
         </React.Fragment>
       ))}
@@ -406,13 +406,13 @@ const SolarDetails: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <ArcGauge pct={pct} color={accent} size={72} label="Output">
-            <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: accent }}>
+            <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent }}>
               {pvKw != null ? `${pvKw.toFixed(1)}` : '—'}
             </span>
             <span style={{ fontSize: 9, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: -1 }}>kW</span>
           </ArcGauge>
           <div>
-            <div style={{ fontSize: 22, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: accent, lineHeight: 1 }}>
+            <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent, lineHeight: 1 }}>
               {pvKw != null ? `${pvKw.toFixed(2)} kW` : '—'}
             </div>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: 4 }}>
@@ -454,7 +454,7 @@ const SolarDetails: React.FC<{
                   ].map(row => (
                     <div key={row.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                       <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary }}>{row.l}</span>
-                      <span style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
+                      <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
                     </div>
                   ))}
                   <div style={{ marginTop: 6, height: 3, borderRadius: 2, background: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
@@ -499,14 +499,14 @@ const BatteryDetails: React.FC<{
       {/* Header row with SOC gauge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <ArcGauge pct={soc ?? 0} color={socColor} size={80} label="SOC">
-          <span style={{ fontSize: 14, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: socColor }}>
+          <span style={{ fontSize: 14, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: socColor }}>
             {soc != null ? `${soc.toFixed(0)}` : '—'}
           </span>
           <span style={{ fontSize: 9, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: -1 }}>%</span>
         </ArcGauge>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 22, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: isCharging ? '#10b981' : isDischarging ? '#ef4444' : tok.textPrimary }}>
+            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: isCharging ? '#10b981' : isDischarging ? '#ef4444' : tok.textPrimary }}>
               {powerKw != null ? `${Math.abs(powerKw).toFixed(2)} kW` : '—'}
             </span>
             {(isCharging || isDischarging) && (
@@ -557,7 +557,7 @@ const BatteryDetails: React.FC<{
           ].map(item => (
             <div key={item.label} style={{ background: tok.bgCell, border: `1px solid ${tok.border}`, borderRadius: 10, padding: '10px 12px' }}>
               <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 15, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: item.color }}>{item.value}</div>
             </div>
           ))}
         </div>
@@ -593,7 +593,7 @@ const GridDetails: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 22, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: flowColor }}>
+            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: flowColor }}>
               {gKw != null ? `${Math.abs(gKw).toFixed(2)} kW` : '—'}
             </span>
             <StatusPill
@@ -652,7 +652,7 @@ const LoadDetails: React.FC<{
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: accent, marginBottom: 8 }}>
+          <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent, marginBottom: 8 }}>
             {loadKw != null ? `${loadKw.toFixed(2)} kW` : '—'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -673,7 +673,7 @@ const LoadDetails: React.FC<{
                 <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                   Phase {ph.label}
                 </div>
-                <div style={{ fontSize: 16, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tok.textPrimary }}>
+                <div style={{ fontSize: 16, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>
                   {ph.p != null ? `${Math.abs(Number(ph.p)).toFixed(0)} W` : '—'}
                 </div>
                 <PowerBar pct={totalW ? (Math.abs(Number(ph.p ?? 0)) / totalW) * 100 : 0} color={accent} isDark={isDark} />
@@ -740,7 +740,7 @@ const InverterDetails: React.FC<{
         {t.rated_power_w != null && (
           <div style={{ background: tok.bgCell, border: `1px solid ${tok.border}`, borderRadius: 10, padding: '10px 14px' }}>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 4 }}>Rated Capacity</div>
-            <div style={{ fontSize: 20, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: tok.textPrimary }}>
+            <div style={{ fontSize: 20, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>
               {(Number(t.rated_power_w) / 1000).toFixed(1)} kW
             </div>
             {acPctOfRated != null && (
@@ -766,14 +766,14 @@ const InverterDetails: React.FC<{
             {temp != null && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <ArcGauge pct={(temp / 100) * 100} color={tempColor} size={72} label="Heatsink">
-                  <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: tempColor }}>{temp.toFixed(0)}°</span>
+                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: tempColor }}>{temp.toFixed(0)}°</span>
                 </ArcGauge>
               </div>
             )}
             {dcTemp != null && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <ArcGauge pct={(dcTemp / 100) * 100} color={dcTempColor} size={72} label="DC Module">
-                  <span style={{ fontSize: 13, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: dcTempColor }}>{dcTemp.toFixed(0)}°</span>
+                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: dcTempColor }}>{dcTemp.toFixed(0)}°</span>
                 </ArcGauge>
               </div>
             )}
@@ -885,7 +885,7 @@ const SelectorCard: React.FC<{
       </div>
 
       {/* Value */}
-      <div style={{ fontSize: 17, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: isActive ? pal.accent : tok.textPrimary, lineHeight: 1.1 }}>
+      <div style={{ fontSize: 17, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: isActive ? pal.accent : tok.textPrimary, lineHeight: 1.1 }}>
         {value}
       </div>
       {subValue && (

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import SiteMembersCard from './members/SiteMembersCard';
+import SecurityCard from './security/SecurityCard';
 
 const PLAN_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
   free:    { label: 'Free',    icon: <Zap size={13} />,   color: '#8892A4', bg: 'rgba(136,146,164,0.1)', border: 'rgba(136,146,164,0.2)' },
@@ -168,7 +169,7 @@ const PortalProfile: React.FC = () => {
   const initials  = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase() || user?.username?.[0]?.toUpperCase() || '?';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 680, margin: '0 auto', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1100, margin: '0 auto', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* Page title + avatar */}
       <div className="portal-fade-in" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -223,82 +224,90 @@ const PortalProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* Personal info form */}
-      <Section title="Personal Information" icon={<User size={14} />} isDark={isDark} delay={80}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <FloatInput label="First Name" value={editForm.first_name} onChange={v => setEditForm(f => ({ ...f, first_name: v }))} isDark={isDark} />
-          <FloatInput label="Last Name"  value={editForm.last_name}  onChange={v => setEditForm(f => ({ ...f, last_name: v }))}  isDark={isDark} />
-          <FloatInput label="Email Address" type="email" value={editForm.email} onChange={v => setEditForm(f => ({ ...f, email: v }))} span isDark={isDark} />
-          <FloatInput label="Mobile Number" type="tel" value={editForm.mobile_number} onChange={v => setEditForm(f => ({ ...f, mobile_number: v }))} isDark={isDark} />
-          <FloatInput label="Address" value={editForm.address} onChange={v => setEditForm(f => ({ ...f, address: v }))} isDark={isDark} />
-        </div>
+      {/* Personal info + Change password side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
 
-        {error && (
-          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', fontSize: 13 }}>
-            {error}
+        {/* Personal info form */}
+        <Section title="Personal Information" icon={<User size={14} />} isDark={isDark} delay={80}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <FloatInput label="First Name" value={editForm.first_name} onChange={v => setEditForm(f => ({ ...f, first_name: v }))} isDark={isDark} />
+            <FloatInput label="Last Name"  value={editForm.last_name}  onChange={v => setEditForm(f => ({ ...f, last_name: v }))}  isDark={isDark} />
+            <FloatInput label="Email Address" type="email" value={editForm.email} onChange={v => setEditForm(f => ({ ...f, email: v }))} span isDark={isDark} />
+            <FloatInput label="Mobile Number" type="tel" value={editForm.mobile_number} onChange={v => setEditForm(f => ({ ...f, mobile_number: v }))} isDark={isDark} />
+            <FloatInput label="Address" value={editForm.address} onChange={v => setEditForm(f => ({ ...f, address: v }))} isDark={isDark} />
           </div>
-        )}
-        {success && (
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#34D399', fontSize: 13, fontWeight: 600 }}>
-            <Check size={14} /> {success}
-          </div>
-        )}
-        <button
-          onClick={saveProfile}
-          disabled={saving}
-          style={{
-            marginTop: 18, padding: '10px 24px', borderRadius: 10, border: 'none',
-            background: saving ? 'rgba(245,158,11,0.4)' : 'linear-gradient(135deg, #F59E0B, #FBBF24)',
-            color: '#0A0E1A', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer',
-            fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em',
-            boxShadow: saving ? 'none' : '0 4px 16px rgba(245,158,11,0.3)',
-            transition: 'all 0.18s ease',
-          }}
-        >
-          {saving ? 'Saving…' : 'Save Changes'}
-        </button>
-      </Section>
 
-      {/* Change password */}
-      <Section title="Change Password" icon={<Lock size={14} />} isDark={isDark} delay={160}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {[
-            { key: 'current_password', label: 'Current Password' },
-            { key: 'new_password',     label: 'New Password' },
-            { key: 'confirm_password', label: 'Confirm New Password' },
-          ].map(({ key, label }) => (
-            <FloatInput
-              key={key} type="password" label={label}
-              value={(pwForm as any)[key]}
-              onChange={v => setPwForm(f => ({ ...f, [key]: v }))}
-              isDark={isDark}
-            />
-          ))}
-        </div>
+          {error && (
+            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', fontSize: 13 }}>
+              {error}
+            </div>
+          )}
+          {success && (
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#34D399', fontSize: 13, fontWeight: 600 }}>
+              <Check size={14} /> {success}
+            </div>
+          )}
+          <button
+            onClick={saveProfile}
+            disabled={saving}
+            style={{
+              marginTop: 18, padding: '10px 24px', borderRadius: 10, border: 'none',
+              background: saving ? 'rgba(245,158,11,0.4)' : 'linear-gradient(135deg, #F59E0B, #FBBF24)',
+              color: '#0A0E1A', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer',
+              fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em',
+              boxShadow: saving ? 'none' : '0 4px 16px rgba(245,158,11,0.3)',
+              transition: 'all 0.18s ease',
+            }}
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </Section>
 
-        {pwError && (
-          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', fontSize: 13 }}>
-            {pwError}
+        {/* Change password */}
+        <Section title="Change Password" icon={<Lock size={14} />} isDark={isDark} delay={160}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {[
+              { key: 'current_password', label: 'Current Password' },
+              { key: 'new_password',     label: 'New Password' },
+              { key: 'confirm_password', label: 'Confirm New Password' },
+            ].map(({ key, label }) => (
+              <FloatInput
+                key={key} type="password" label={label}
+                value={(pwForm as any)[key]}
+                onChange={v => setPwForm(f => ({ ...f, [key]: v }))}
+                isDark={isDark}
+              />
+            ))}
           </div>
-        )}
-        {pwSuccess && (
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#34D399', fontSize: 13, fontWeight: 600 }}>
-            <Check size={14} /> Password changed successfully
-          </div>
-        )}
-        <button
-          onClick={changePassword}
-          style={{
-            marginTop: 18, padding: '10px 24px', borderRadius: 10,
-            border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-            background: 'transparent', color: text, fontWeight: 600, fontSize: 14,
-            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-            transition: 'all 0.18s ease',
-          }}
-        >
-          Update Password
-        </button>
-      </Section>
+
+          {pwError && (
+            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', fontSize: 13 }}>
+              {pwError}
+            </div>
+          )}
+          {pwSuccess && (
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#34D399', fontSize: 13, fontWeight: 600 }}>
+              <Check size={14} /> Password changed successfully
+            </div>
+          )}
+          <button
+            onClick={changePassword}
+            style={{
+              marginTop: 18, padding: '10px 24px', borderRadius: 10,
+              border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+              background: 'transparent', color: text, fontWeight: 600, fontSize: 14,
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              transition: 'all 0.18s ease',
+            }}
+          >
+            Update Password
+          </button>
+        </Section>
+
+        {/* Security Card */}
+        <SecurityCard />
+
+      </div>
 
       {/* Site Members — only for owned sites */}
       {portalSites.filter(s => s.owner_user != null && Number(s.owner_user) === Number(user?.id)).map(site => (

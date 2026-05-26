@@ -135,12 +135,12 @@ const Dashboard: React.FC = () => {
 
   // ── Design tokens ────────────────────────────────────────────────────────
 
-  const bg       = isDark ? '#020617' : '#f0fdf4';
-  const surface  = isDark ? '#0f172a' : '#ffffff';
+  const bg       = isDark ? '#080C14' : '#f0fdf4';
+  const surface  = isDark ? '#0F1623' : '#ffffff';
   const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
-  const textMain = isDark ? '#f1f5f9' : '#0f172a';
-  const textMute = isDark ? '#64748b' : '#94a3b8';
-  const textSub  = isDark ? '#94a3b8' : '#475569';
+  const textMain = isDark ? '#F0F4FF' : '#0f172a';
+  const textMute = isDark ? '#8892A4' : '#94a3b8';
+  const textSub  = isDark ? '#8892A4' : '#475569';
 
   const onlineDot = (online: boolean): React.CSSProperties => ({
     width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
@@ -271,7 +271,7 @@ const Dashboard: React.FC = () => {
                 </span>
               </div>
               <div style={{ fontSize: '0.78rem', color: textSub, marginBottom: 4, fontWeight: 500 }}>{label}</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
+              <div className="staff-data" style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
               <div style={{ fontSize: '0.72rem', color: textMute }}>{sub}</div>
               <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
             </div>
@@ -352,7 +352,7 @@ const Dashboard: React.FC = () => {
               <AlertTriangle size={13} color={p.color} style={{ flexShrink: 0 }} />
               {alert.fault_code && (
                 <span style={{
-                  fontSize: '0.65rem', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '0.65rem', fontWeight: 700, fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
                   padding: '1px 6px', borderRadius: 4,
                   background: p.bg, border: `1px solid ${p.border}`, color: p.color, flexShrink: 0,
                 }}>
@@ -469,7 +469,7 @@ const Dashboard: React.FC = () => {
                             <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {site.display_name}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: textMute, fontFamily: 'JetBrains Mono, monospace', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.7rem', color: textMute, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {site.devices.length === 0 ? 'No devices' : site.devices.map(d => d.device_serial).join(' · ')}
                             </div>
                           </div>

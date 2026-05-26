@@ -188,6 +188,77 @@ export interface SiteProfile {
 // Backward-compat alias — remove once all callers use SiteProfile directly
 export type ApplianceInventory = SiteProfile;
 
+// ── Product Catalog types ──────────────────────────────────────────────────
+export interface ProductCatalogItem {
+  id: number;
+  category: 'panels' | 'inverters' | 'batteries';
+  brand: string;
+  model_name: string;
+  specs: Record<string, unknown>;          // {wp, dcr, technology} | {kw, phases, type} | {kwh, chemistry}
+  price_per_unit: string;                  // decimal string from DRF
+  price_unit: string;                      // 'Wp' | 'nos' | 'kWh'
+  display_label: string;                   // computed by backend
+  unit_price_per_panel: number;            // price_per_unit × specs.wp (panels only)
+  in_stock: boolean;
+  stock_notes: string;
+  retail_or_pallet: string;
+  dealer_name: string;
+  dealer_location: string;
+  price_updated_on: string | null;
+  margin_pct: string;
+  gst_pct: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
+// ── Quotation types ────────────────────────────────────────────────────────
+export interface QuotationListItem {
+  id: number;
+  public_id: string;
+  quote_number: string;
+  revision_number: number;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  customer_name: string;
+  customer_phone: string;
+  system_type: string;
+  system_kw: string;
+  net_investment: string;
+  currency: string;
+  valid_until: string;
+  pdf_status: string;
+  is_archived: boolean;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuotationDetail extends QuotationListItem {
+  schema_version: number;
+  version: number;
+  site_address: string;
+  snapshot_hash: string;
+  form_data: Record<string, unknown>;
+  pricing_snapshot: Record<string, unknown>;
+  root_quote_number: string | null;
+  parent_quote_number: string | null;
+  pdf_url: string | null;
+  pdf_checksum: string;
+  pdf_generated_at: string | null;
+  pdf_status_updated_at: string | null;
+  notes: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  events: QuotationEvent[];
+}
+
+export interface QuotationEvent {
+  id: number;
+  event_type: string;
+  actor_name: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
@@ -219,10 +290,16 @@ class ApiService {
       const body = JSON.parse(text);
       if (body?.error) return body.error;
       if (body?.detail) return typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+      // DRF field-level validation errors: { field: ["msg", ...], ... }
+      if (typeof body === 'object' && body !== null) return JSON.stringify(body);
     } catch {
       // ignore
     }
     return text || `API request failed: ${response.status} ${response.statusText}`;
+  }
+
+  async request_(endpoint: string, options: RequestInit = {}): Promise<any> {
+    return this.request(endpoint, options);
   }
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
@@ -1359,6 +1436,154 @@ class ApiService {
     return this.request(`/departments/${id}/delete/`, {
       method: 'DELETE',
     });
+  }
+
+  async getEquipmentPrices(): Promise<any[]> {
+    return this.request('/equipment-prices/');
+  }
+
+  async createEquipmentPrice(data: Record<string, unknown>): Promise<any> {
+    return this.request('/equipment-prices/', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateEquipmentPrice(id: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/equipment-prices/${id}/`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async deleteEquipmentPrice(id: number): Promise<void> {
+    return this.request(`/equipment-prices/${id}/`, { method: 'DELETE' });
+  }
+
+  // ── Product Catalog ────────────────────────────────────────────────────────
+
+  async getProductCatalog(category?: 'panels' | 'inverters' | 'batteries'): Promise<ProductCatalogItem[]> {
+    const url = category ? `/product-catalog/?category=${category}` : '/product-catalog/';
+    return this.request(url);
+  }
+
+  async createProductCatalogItem(data: Partial<ProductCatalogItem>): Promise<ProductCatalogItem> {
+    return this.request('/product-catalog/', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateProductCatalogItem(id: number, data: Partial<ProductCatalogItem>): Promise<ProductCatalogItem> {
+    return this.request(`/product-catalog/${id}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+
+  async deleteProductCatalogItem(id: number): Promise<void> {
+    return this.request(`/product-catalog/${id}/`, { method: 'DELETE' });
+  }
+
+  // ── Quotation API ──────────────────────────────────────────────────────────
+
+  async listQuotations(params?: {
+    status?: string;
+    customer_name?: string;
+    search?: string;
+    cursor?: string;
+  }): Promise<{ results: QuotationListItem[]; next_cursor: string | null }> {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.customer_name) qs.set('customer_name', params.customer_name);
+    if (params?.search) qs.set('search', params.search);
+    if (params?.cursor) qs.set('cursor', params.cursor);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request(`/v1/quotations/${query}`);
+  }
+
+  async createQuotation(data: Record<string, unknown>, idempotencyKey?: string): Promise<QuotationDetail> {
+    const headers: Record<string, string> = {};
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+    return this.request('/v1/quotations/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers,
+    });
+  }
+
+  async getQuotation(publicId: string): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/`);
+  }
+
+  async patchQuotation(publicId: string, data: Record<string, unknown>): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async sendQuotation(publicId: string, data: { delivery_method: string; recipient_contact?: string; message?: string }): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/send/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async acceptQuotation(publicId: string, data?: { notes?: string }): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/accept/`, {
+      method: 'POST',
+      body: JSON.stringify(data ?? {}),
+    });
+  }
+
+  async rejectQuotation(publicId: string, data: { reason: string }): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/reject/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async reviseQuotation(publicId: string, data: Record<string, unknown>, idempotencyKey?: string): Promise<QuotationDetail> {
+    const headers: Record<string, string> = {};
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+    return this.request(`/v1/quotations/${publicId}/revise/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers,
+    });
+  }
+
+  async extendQuotationValidity(publicId: string, data: { valid_until: string }): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/extend-validity/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async archiveQuotation(publicId: string): Promise<QuotationDetail> {
+    return this.request(`/v1/quotations/${publicId}/archive/`, { method: 'POST', body: '{}' });
+  }
+
+  async getQuotationPdf(publicId: string): Promise<{ pdf_status: string; pdf_url: string | null; pdf_generated_at: string | null }> {
+    return this.request(`/v1/quotations/${publicId}/pdf/`);
+  }
+
+  async requestQuotationPdf(publicId: string): Promise<{ detail: string; pdf_status: string }> {
+    return this.request(`/v1/quotations/${publicId}/pdf/`, { method: 'POST', body: '{}' });
+  }
+
+  async getQuotationEvents(publicId: string): Promise<QuotationEvent[]> {
+    return this.request(`/v1/quotations/${publicId}/events/`);
+  }
+
+  // Password management
+  async changePassword(data: {
+    current_password: string;
+    new_password: string;
+    confirm_password: string;
+  }): Promise<{ message: string; access_token: string }> {
+    return this.request('/api/profile/change-password/', { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async requestPasswordResetOTP(data: { email: string }): Promise<{ message: string; expires_in_seconds: number }> {
+    return this.request('/api/auth/password/request-otp/', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async verifyPasswordResetOTP(data: { email: string; otp: string }): Promise<{ reset_token: string; expires_in_seconds: number }> {
+    return this.request('/api/auth/password/verify-otp/', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async resetPassword(data: { reset_token: string; new_password: string; confirm_password: string }): Promise<{ message: string; login_url: string }> {
+    return this.request('/api/auth/password/reset/', { method: 'POST', body: JSON.stringify(data) });
   }
 }
 

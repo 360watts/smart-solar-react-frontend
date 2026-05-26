@@ -1,16 +1,12 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import '../App.css';
-import '../MobileSidebarOverrides.css'; /* Load after App.css so mobile drawer overrides win */
-import '../TopNavbar.css'; /* Load last — overrides sidebar layout with top nav */
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import AdminRoute from '../shared/guards/AdminRoute';
 import CustomerRoute from '../shared/guards/CustomerRoute';
 import Login from '../features/auth/components/Login';
-import Navbar from '../shared/layout/Navbar';
 import NavigationProgress from '../shared/layout/NavigationProgress';
-import PageTransition from '../shared/layout/PageTransition';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { SkeletonDashboard } from '../shared/components/SkeletonLoader';
 import { ToastProvider } from '../contexts/ToastContext';
@@ -33,9 +29,14 @@ const Equipment = lazy(() => import('../features/staff/Equipment'));
 const Sites = lazy(() => import('../features/staff/Sites'));
 const SiteDetail = lazy(() => import('../features/staff/SiteDetail'));
 const CommissioningWizard = lazy(() => import('../features/staff/CommissioningWizard'));
+const QuotationPage = lazy(() => import('../features/quotation/QuotationPage'));
+const QuotationHistoryPage = lazy(() => import('../features/quotation/QuotationHistoryPage'));
 
-// Customer portal (lazy — separate bundle)
+// Layouts (lazy — separate bundles)
+const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
 const PortalLayout      = lazy(() => import('../shared/layout/PortalLayout'));
+
+// Customer portal
 const PortalOverview    = lazy(() => import('../features/portal/PortalOverview'));
 const PortalAlerts      = lazy(() => import('../features/portal/PortalAlerts'));
 const PortalDevice      = lazy(() => import('../features/portal/PortalDevice'));
@@ -99,154 +100,34 @@ function App() {
 <Route path="profile" element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
               </Route>
 
-              {/* Protected routes with full layout */}
+              {/* Staff portal — sidebar layout */}
               <Route
-                path="*"
                 element={
-                  <>
+                  <StaffRoute>
                     <NavigationProgress />
-                    <Navbar />
-                    <PageTransition>
-                      <main className="main-content">
-                        <Routes>
-                          {/* Protected routes */}
-                          <Route path="/" element={<RoleRedirect />} />
-                          <Route
-                            path="/dashboard"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Dashboard />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/devices"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Devices />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/configuration"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Configuration />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/alerts"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Alerts />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/users"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Users />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/employees"
-                            element={
-                              <AdminRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Employees />
-                                </Suspense>
-                              </AdminRoute>
-                            }
-                          />
-                          <Route
-                            path="/device-presets"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <DevicePresets />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/ota"
-                            element={
-                              <AdminRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <OTA />
-                                </Suspense>
-                              </AdminRoute>
-                            }
-                          />
-                          <Route
-                            path="/sites/commissioning"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <CommissioningWizard />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/sites/:siteId"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <SiteDetail />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/sites"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Sites />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/equipment"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Equipment />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                          <Route
-                            path="/profile"
-                            element={
-                              <StaffRoute>
-                                <Suspense fallback={<SkeletonDashboard />}>
-                                  <Profile />
-                                </Suspense>
-                              </StaffRoute>
-                            }
-                          />
-                        </Routes>
-                      </main>
-                    </PageTransition>
-                  </>
+                    <Suspense fallback={<div className="loading">Loading…</div>}>
+                      <StaffLayout />
+                    </Suspense>
+                  </StaffRoute>
                 }
-              />
+              >
+                <Route path="/" element={<RoleRedirect />} />
+                <Route path="/dashboard" element={<Suspense fallback={<SkeletonDashboard />}><Dashboard /></Suspense>} />
+                <Route path="/devices" element={<Suspense fallback={<SkeletonDashboard />}><Devices /></Suspense>} />
+                <Route path="/configuration" element={<Suspense fallback={<SkeletonDashboard />}><Configuration /></Suspense>} />
+                <Route path="/alerts" element={<Suspense fallback={<SkeletonDashboard />}><Alerts /></Suspense>} />
+                <Route path="/users" element={<Suspense fallback={<SkeletonDashboard />}><Users /></Suspense>} />
+                <Route path="/employees" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Employees /></Suspense></AdminRoute>} />
+                <Route path="/device-presets" element={<Suspense fallback={<SkeletonDashboard />}><DevicePresets /></Suspense>} />
+                <Route path="/ota" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><OTA /></Suspense></AdminRoute>} />
+                <Route path="/sites/commissioning" element={<Suspense fallback={<SkeletonDashboard />}><CommissioningWizard /></Suspense>} />
+                <Route path="/sites/:siteId" element={<Suspense fallback={<SkeletonDashboard />}><SiteDetail /></Suspense>} />
+                <Route path="/sites" element={<Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense>} />
+                <Route path="/equipment" element={<Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense>} />
+                <Route path="/quotation" element={<Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense>} />
+                <Route path="/quotation/history" element={<Suspense fallback={<SkeletonDashboard />}><QuotationHistoryPage /></Suspense>} />
+                <Route path="/profile" element={<Suspense fallback={<SkeletonDashboard />}><Profile /></Suspense>} />
+              </Route>
             </Routes>
             <ToastContainer />
             <StaffAiChat />

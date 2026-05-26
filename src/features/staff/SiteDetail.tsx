@@ -94,13 +94,13 @@ export default function SiteDetail() {
   const [appliancesLoading, setAppliancesLoading] = useState(true);
 
   // ── Design Tokens ──
-  const bg          = isDark ? '#020617' : '#f0fdf4';
-  const surface     = isDark ? '#0f172a' : '#ffffff';
+  const bg          = isDark ? '#080C14' : '#f0fdf4';
+  const surface     = isDark ? '#0F1623' : '#ffffff';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
-  const textMain    = isDark ? '#f1f5f9' : '#0f172a';
-  const textMute    = isDark ? '#64748b' : '#94a3b8';
+  const textMain    = isDark ? '#F0F4FF' : '#0f172a';
+  const textMute    = isDark ? '#8892A4' : '#94a3b8';
   const textSub     = isDark ? '#94a3b8' : '#475569';
   const primary     = '#00a63e';
   const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';

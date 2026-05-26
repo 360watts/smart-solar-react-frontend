@@ -1154,7 +1154,7 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
         padding: '10px 14px 14px',
         marginBottom: 16,
         borderRadius: 14,
-        background: isDark ? '#0f172a' : '#ffffff',
+        background: isDark ? '#0F1623' : '#ffffff',
         border: `0.6px solid ${isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0'}`,
         boxShadow: isDark
           ? '0 4px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.03)'

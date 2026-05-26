@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, ArrowLeft, LogOut, Moon, Sun, X, Menu,
-  Server, Building2,
+  Server, Building2, FileText,
   ChevronDown, User, MoreHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,13 +13,13 @@ import finalLogo from '../../assets/finalLogo.png';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const tok = {
-  bg:          (d: boolean) => d ? '#0B1222'  : '#FFFFFF',
-  border:      (d: boolean) => d ? 'rgba(255,255,255,0.08)' : '#e4e7eb',
-  text:        (d: boolean) => d ? '#F1F5F9'  : '#1c1e2e',
-  muted:       (d: boolean) => d ? '#64748B'  : '#64748B',
-  hover:       (d: boolean) => d ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-  dropdownBg:  (d: boolean) => d ? '#111827'  : '#FFFFFF',
-  mobileBg:    (d: boolean) => d ? '#0D1526'  : '#F8FAFC',
+  bg:          (d: boolean) => d ? '#080C14'  : '#FFFFFF',
+  border:      (d: boolean) => d ? 'rgba(255,255,255,0.07)' : '#e4e7eb',
+  text:        (d: boolean) => d ? '#F0F4FF'  : '#1c1e2e',
+  muted:       (d: boolean) => d ? '#8892A4'  : '#64748B',
+  hover:       (d: boolean) => d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+  dropdownBg:  (d: boolean) => d ? '#0F1623'  : '#FFFFFF',
+  mobileBg:    (d: boolean) => d ? '#0D1422'  : '#F8FAFC',
 };
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -46,6 +46,7 @@ const ADMIN_NAV = [
 const STAFF_NAV = [
   { path: '/sites', label: 'Sites', icon: <Building2 {...iconProps} /> },
   { path: '/equipment', label: 'Equipment', icon: <Server {...iconProps} /> },
+  { path: '/quotation', label: 'Quotation', icon: <FileText {...iconProps} /> },
   { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
 ];
 
