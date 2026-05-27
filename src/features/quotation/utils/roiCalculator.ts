@@ -154,3 +154,25 @@ export function formatINR(value: number): string {
   if (value >= 1_00_000) return `₹${(value / 1_00_000).toFixed(2)}L`;
   return `₹${Math.round(value).toLocaleString('en-IN')}`;
 }
+
+/**
+ * PM Surya Ghar Muft Bijli Yojana — Central Financial Assistance (CFA)
+ * Only residential single-phase / small rooftop systems are eligible.
+ * Commercial, industrial, and three-phase systems get ₹0.
+ *
+ * Slabs (MNRE 2025):
+ *   ≤ 1 kW  → ₹30,000
+ *   ≤ 2 kW  → ₹60,000
+ *   > 2 kW  → ₹78,000 (capped)
+ */
+export function calcSubsidy(
+  systemKw: number,
+  customerType: 'residential' | 'commercial',
+  phase: 'single' | 'three',
+): number {
+  if (customerType !== 'residential' || phase !== 'single') return 0;
+  if (systemKw <= 0) return 0;
+  if (systemKw <= 1) return 30_000;
+  if (systemKw <= 2) return 60_000;
+  return 78_000;
+}

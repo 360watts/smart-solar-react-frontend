@@ -510,7 +510,9 @@
   outline: none;
   border-radius: 4px;
   transition: background 0.12s;
+  text-transform: uppercase;
 }
+.sq-bom-input.mono { text-transform: none; }
 
 .sq-bom-input::-webkit-outer-spin-button,
 .sq-bom-input::-webkit-inner-spin-button { -webkit-appearance: none; }
@@ -945,11 +947,133 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   margin: 0 0 4px;
 }
 
-/* Load more */
+/* Load more (legacy — kept for compat) */
 .sq-history-load-more {
   display: flex;
   justify-content: center;
   padding: 24px 0 8px;
+}
+
+/* Result count */
+.sq-history-count {
+  font-family: var(--mono, monospace);
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  align-self: center;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Delete button in action cell */
+.sq-history-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sq-history-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Pagination */
+.sq-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 0 8px;
+}
+.sq-page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line, rgba(0,0,0,0.1));
+  background: var(--card, #fff);
+  color: var(--fg);
+  font-size: 0.8rem;
+  font-family: var(--mono, monospace);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sq-page-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+}
+.sq-page-btn.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+.sq-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.sq-page-ellipsis {
+  min-width: 32px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+}
+
+/* Delete confirm modal */
+.sq-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+.sq-modal {
+  background: var(--card, #fff);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.sq-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--fg);
+  margin-bottom: 12px;
+}
+.sq-modal-body {
+  font-size: 0.88rem;
+  color: var(--fg-muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.sq-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.sq-btn-danger {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+.sq-btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 /* Skeleton */
@@ -1028,3 +1152,252 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   box-shadow: 0 2px 8px rgba(0,166,62,0.08);
 }
 .sq-quote-row > div:first-child { flex: 1; min-width: 0; }
+
+/* ═══════════════════════════════════════════════════════════
+   CATALOG SELECTOR — Step 3 BoM dropdowns
+═══════════════════════════════════════════════════════════ */
+
+/* 2-column grid wrapper */
+.sq-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+}
+
+/* Individual selector card */
+.sq-catalog-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0,0,0,0.08));
+  border-radius: 8px;
+  padding: 7px 9px;
+  transition: border-color 0.15s;
+}
+
+.sq-catalog-selector:focus-within {
+  border-color: var(--green, #00a63e);
+  box-shadow: 0 0 0 2px var(--green-soft, rgba(0,166,62,0.10));
+}
+
+/* Header: label left, search right */
+.sq-catalog-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sq-catalog-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green, #00a63e);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+.sq-catalog-search {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line, rgba(0,0,0,0.08));
+  color: var(--fg, #0f172a);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 1px 4px;
+  outline: none;
+  transition: border-color 0.12s;
+  min-width: 0;
+}
+
+.sq-catalog-search:focus {
+  border-bottom-color: var(--green, #00a63e);
+}
+
+.sq-catalog-search::placeholder {
+  color: var(--fg-muted, #64748b);
+  opacity: 0.45;
+}
+
+.sq-catalog-search:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Dropdown */
+.sq-catalog-select {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--fg, #0f172a);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 2px 2px;
+  outline: none;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.sq-catalog-select:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sq-catalog-select option {
+  background: var(--card, #ffffff);
+  color: var(--fg, #0f172a);
+  text-transform: uppercase;
+}
+
+/* ── Share Panel (Step 4) ─────────────────────────────────────────────────── */
+.sq-share-panel {
+  margin-top: 20px;
+  border: 1px solid var(--line, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sq-share-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line, rgba(0,0,0,0.06));
+}
+.sq-share-section:last-child { border-bottom: none; }
+.sq-share-section-label {
+  font-family: var(--mono, monospace);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 10px;
+}
+.sq-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.sq-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  background: var(--card);
+  color: var(--fg);
+}
+.sq-share-btn:disabled { opacity: 0.5; cursor: default; }
+.sq-share-btn-send   { border-color: var(--blue, #3b82f6);  color: var(--blue, #3b82f6); }
+.sq-share-btn-send:hover   { background: rgba(59,130,246,0.08); }
+.sq-share-btn-accept { border-color: var(--green); color: var(--green); }
+.sq-share-btn-accept:hover { background: rgba(34,197,94,0.08); }
+.sq-share-btn-reject { border-color: #ef4444; color: #ef4444; }
+.sq-share-btn-reject:hover { background: rgba(239,68,68,0.08); }
+.sq-share-btn-wa     { border-color: #25D366; color: #25D366; }
+.sq-share-btn-wa:hover { background: rgba(37,211,102,0.08); }
+.sq-share-btn-email  { border-color: var(--fg-muted); color: var(--fg-muted); }
+.sq-share-btn-email:hover { border-color: var(--fg); color: var(--fg); }
+.sq-share-btn-copy   { border-color: var(--fg-muted); color: var(--fg-muted); }
+.sq-share-btn-copy:hover { border-color: var(--fg); color: var(--fg); }
+.sq-share-reject-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+.sq-share-status-note {
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+/* ── Row actions kebab menu ───────────────────────────────────────────────── */
+.sq-row-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 200;
+  background: var(--card, #fff);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  min-width: 168px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.sq-row-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  color: var(--fg);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  text-align: left;
+}
+.sq-row-menu-item:hover { background: var(--raised, rgba(0,0,0,0.04)); }
+.sq-row-menu-accept { color: var(--green); }
+.sq-row-menu-reject { color: #ef4444; }
+.sq-row-menu-danger { color: #ef4444; }
+.sq-row-menu-danger:hover { background: rgba(239,68,68,0.07); }
+.sq-row-menu-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 3px 0;
+}
+
+/* Share cards (Step 4 side-by-side) */
+.sq-share-cards {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sq-share-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  min-width: 80px;
+}
+.sq-share-card:hover {
+  border-color: var(--green);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.sq-share-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+.sq-share-card-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.sq-share-card:hover .sq-share-card-label { color: var(--fg); }

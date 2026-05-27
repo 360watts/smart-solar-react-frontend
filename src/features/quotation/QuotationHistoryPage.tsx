@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import './quotation.css';
 import { apiService, QuotationListItem } from '../../services/api';
 
@@ -39,80 +40,148 @@ function SkeletonRow() {
   );
 }
 
+function ConfirmDeleteModal({ quote, onConfirm, onCancel }: {
+  quote: QuotationListItem;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="sq-modal-backdrop" onClick={onCancel}>
+      <div className="sq-modal" onClick={e => e.stopPropagation()}>
+        <h3 className="sq-modal-title">Delete Quotation</h3>
+        <p className="sq-modal-body">
+          Are you sure you want to delete <strong>{quote.quote_number}</strong> for{' '}
+          <strong>{quote.customer_name}</strong>? This cannot be undone.
+        </p>
+        <div className="sq-modal-actions">
+          <button className="sq-btn sq-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="sq-btn sq-btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+
+  const pages: (number | '…')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="sq-pagination">
+      <button
+        className="sq-page-btn"
+        disabled={page === 1}
+        onClick={() => onChange(page - 1)}
+      >
+        <ChevronLeft style={{ width: 14, height: 14 }} />
+      </button>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <span key={`ellipsis-${i}`} className="sq-page-ellipsis">…</span>
+        ) : (
+          <button
+            key={p}
+            className={`sq-page-btn ${page === p ? 'active' : ''}`}
+            onClick={() => onChange(p as number)}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        className="sq-page-btn"
+        disabled={page === totalPages}
+        onClick={() => onChange(page + 1)}
+      >
+        <ChevronRight style={{ width: 14, height: 14 }} />
+      </button>
+    </div>
+  );
+}
+
 export default function QuotationHistoryPage() {
   const [items, setItems] = useState<QuotationListItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<QuotationListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchRef = useRef(search);
-  const statusRef = useRef(status);
   const requestIdRef = useRef(0);
-  searchRef.current = search;
-  statusRef.current = status;
 
-  const fetchQuotations = useCallback(async (opts: {
-    search: string;
-    status: StatusFilter;
-    cursor?: string;
-    append?: boolean;
-  }) => {
+  const fetchPage = useCallback(async (p: number, q: string, s: StatusFilter) => {
     const reqId = ++requestIdRef.current;
     setError(null);
-    if (opts.append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
+    setLoading(true);
     try {
-      const params: Record<string, string> = {};
-      if (opts.search) params.search = opts.search;
-      if (opts.status !== 'all') params.status = opts.status;
-      if (opts.cursor) params.cursor = opts.cursor;
-
-      const data = await apiService.listQuotations(params as Parameters<typeof apiService.listQuotations>[0]);
+      const params: Parameters<typeof apiService.listQuotations>[0] = { page: p };
+      if (q) params.search = q;
+      if (s !== 'all') params.status = s;
+      const data = await apiService.listQuotations(params);
       if (reqId !== requestIdRef.current) return;
-      if (opts.append) {
-        setItems(prev => [...prev, ...data.results]);
-      } else {
-        setItems(data.results);
-      }
-      setNextCursor(data.next_cursor);
+      setItems(data.results);
+      setPage(data.page);
+      setTotalPages(data.total_pages);
+      setTotal(data.total);
     } catch {
       if (reqId !== requestIdRef.current) return;
       setError('Failed to load quotations. Please try again.');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (reqId === requestIdRef.current) setLoading(false);
     }
   }, []);
 
-  // Initial load and filter changes
+  // Filter/status change resets to page 1
   useEffect(() => {
-    fetchQuotations({ search, status });
+    setPage(1);
+    fetchPage(1, search, status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  // Debounced search
+  // Debounced search resets to page 1
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      fetchQuotations({ search: searchRef.current, status: statusRef.current });
+      setPage(1);
+      fetchPage(1, search, status);
     }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  const handleLoadMore = () => {
-    if (nextCursor) {
-      fetchQuotations({ search, status, cursor: nextCursor, append: true });
-    }
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    fetchPage(p, search, status);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiService.deleteQuotation(deleteTarget.public_id);
+      setDeleteTarget(null);
+      fetchPage(page, search, status);
+    } catch {
+      setError('Failed to delete quotation.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="sq-root sq-page">
@@ -148,6 +217,9 @@ export default function QuotationHistoryPage() {
               </option>
             ))}
           </select>
+          {!loading && total > 0 && (
+            <span className="sq-history-count">{total} quote{total !== 1 ? 's' : ''}</span>
+          )}
         </div>
 
         {/* Table */}
@@ -167,11 +239,7 @@ export default function QuotationHistoryPage() {
             </thead>
             <tbody>
               {loading ? (
-                <>
-                  <SkeletonRow />
-                  <SkeletonRow />
-                  <SkeletonRow />
-                </>
+                <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
               ) : error ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>
@@ -182,7 +250,7 @@ export default function QuotationHistoryPage() {
                 <tr>
                   <td colSpan={8} className="sq-history-empty">
                     <div>
-                      <p>No quotations yet. Create your first quote.</p>
+                      <p>No quotations found.</p>
                       <Link to="/quotation" className="sq-btn sq-btn-primary" style={{ marginTop: 12, display: 'inline-block' }}>
                         + New Quotation
                       </Link>
@@ -194,47 +262,48 @@ export default function QuotationHistoryPage() {
                   const validUntil = formatDate(item.valid_until);
                   return (
                     <tr key={item.id} className="sq-history-row">
-                      {/* Quote # */}
                       <td className="sq-history-td">
                         <Link to={`/quotation/${item.public_id}`} className="sq-history-quote-link">
                           {item.quote_number}
                         </Link>
                       </td>
-                      {/* Customer */}
                       <td className="sq-history-td">
                         <span className="sq-history-customer-name">{item.customer_name}</span>
                         <span className="sq-history-customer-phone">{item.customer_phone}</span>
                       </td>
-                      {/* System */}
                       <td className="sq-history-td">
                         <span className="sq-history-kw">{item.system_kw} kW</span>
                         <span className="sq-history-system-badge">{item.system_type}</span>
                       </td>
-                      {/* Amount */}
                       <td className="sq-history-td sq-history-amount">
                         {INR.format(Number(item.net_investment))}
                       </td>
-                      {/* Status */}
                       <td className="sq-history-td">
                         <StatusBadge status={item.status} />
                       </td>
-                      {/* Valid Until */}
                       <td className="sq-history-td">
                         <span className={validUntil.past ? 'sq-history-date-past' : ''}>
                           {validUntil.text}
                         </span>
                       </td>
-                      {/* PDF */}
                       <td className="sq-history-td">
                         <span className="sq-history-pdf-status" title={item.pdf_status}>
                           {item.pdf_status === 'ready' ? '📄' : item.pdf_status === 'pending' ? '⏳' : '—'}
                         </span>
                       </td>
-                      {/* Actions */}
                       <td className="sq-history-td">
-                        <Link to={`/quotation/${item.public_id}`} className="sq-history-action-link">
-                          View
-                        </Link>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <Link to={`/quotation/${item.public_id}`} className="sq-history-action-link">
+                            View
+                          </Link>
+                          <button
+                            className="sq-history-delete-btn"
+                            title="Delete quotation"
+                            onClick={() => setDeleteTarget(item)}
+                          >
+                            <Trash2 style={{ width: 13, height: 13 }} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -244,19 +313,20 @@ export default function QuotationHistoryPage() {
           </table>
         </div>
 
-        {/* Load More */}
-        {nextCursor && !loading && (
-          <div className="sq-history-load-more">
-            <button
-              className="sq-btn sq-btn-ghost"
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </button>
-          </div>
+        {/* Pagination */}
+        {!loading && !error && (
+          <Pagination page={page} totalPages={totalPages} onChange={handlePageChange} />
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          quote={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

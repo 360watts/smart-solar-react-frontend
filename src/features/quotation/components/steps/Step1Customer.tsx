@@ -3,6 +3,11 @@ import { UseFormReturn } from 'react-hook-form';
 import { Upload, X } from 'lucide-react';
 import type { QuotationData } from '../../types/quotation';
 
+const CUSTOMER_TYPES = [
+  { value: 'residential', label: 'Residential', desc: 'Home / apartment' },
+  { value: 'commercial',  label: 'Commercial',  desc: 'Business / office' },
+];
+
 interface Props { form: UseFormReturn<QuotationData> }
 
 const SYSTEM_TYPES = [
@@ -13,9 +18,10 @@ const SYSTEM_TYPES = [
 
 export function Step1Customer({ form }: Props) {
   const { register, watch, setValue, formState: { errors } } = form;
-  const fileRef   = useRef<HTMLInputElement>(null);
-  const photo     = watch('customer.sitePhotoBase64');
-  const sysType   = watch('customer.systemType');
+  const fileRef    = useRef<HTMLInputElement>(null);
+  const photo      = watch('customer.sitePhotoBase64');
+  const sysType    = watch('customer.systemType');
+  const custType   = watch('customer.customerType');
 
   function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,6 +77,24 @@ export function Step1Customer({ form }: Props) {
               type="button"
               onClick={() => setValue('customer.systemType', t.value as any)}
               className={`sq-type-btn ${sysType === t.value ? 'selected' : ''}`}
+            >
+              <div className="sq-type-name">{t.label}</div>
+              <div className="sq-type-desc">{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Customer type */}
+      <div className="sq-field">
+        <label className="sq-label">Customer Type</label>
+        <div className="sq-type-grid">
+          {CUSTOMER_TYPES.map(t => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setValue('customer.customerType', t.value as any)}
+              className={`sq-type-btn ${custType === t.value ? 'selected' : ''}`}
             >
               <div className="sq-type-name">{t.label}</div>
               <div className="sq-type-desc">{t.desc}</div>

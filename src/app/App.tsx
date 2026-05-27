@@ -30,7 +30,6 @@ const Sites = lazy(() => import('../features/staff/Sites'));
 const SiteDetail = lazy(() => import('../features/staff/SiteDetail'));
 const CommissioningWizard = lazy(() => import('../features/staff/CommissioningWizard'));
 const QuotationPage = lazy(() => import('../features/quotation/QuotationPage'));
-const QuotationHistoryPage = lazy(() => import('../features/quotation/QuotationHistoryPage'));
 
 // Layouts (lazy — separate bundles)
 const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
@@ -125,7 +124,6 @@ function App() {
                 <Route path="/sites" element={<Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense>} />
                 <Route path="/equipment" element={<Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense>} />
                 <Route path="/quotation" element={<Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense>} />
-                <Route path="/quotation/history" element={<Suspense fallback={<SkeletonDashboard />}><QuotationHistoryPage /></Suspense>} />
                 <Route path="/profile" element={<Suspense fallback={<SkeletonDashboard />}><Profile /></Suspense>} />
               </Route>
             </Routes>

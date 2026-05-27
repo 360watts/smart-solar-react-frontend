@@ -111,6 +111,33 @@ export function Step2EbBill({ form }: Props) {
         ))}
       </div>
 
+      {/* Phase selection */}
+      <div className="sq-field" style={{ marginBottom: 4 }}>
+        <label className="sq-label">Supply Phase</label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+          {(['single', 'three'] as const).map(p => (
+            <label
+              key={p}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: 8,
+                border: `1px solid ${watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--line-2, rgba(0,0,0,0.14))'}`,
+                background: watch('ebBill.phase') === p ? 'var(--green-soft, rgba(0,166,62,0.08))' : 'var(--card, #ffffff)',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--mono)',
+                color: watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--fg-muted, #64748b)',
+                transition: 'all 0.15s',
+              }}
+            >
+              <input type="radio" value={p} {...register('ebBill.phase')} style={{ display: 'none' }} />
+              {p === 'single' ? 'Single Phase' : 'Three Phase'}
+            </label>
+          ))}
+        </div>
+        <p className="sq-hint">Determines inverter type and DCDB/ACDB selection</p>
+      </div>
+
       {/* PSH + DC/AC ratio */}
       <div className="sq-grid-3">
         <div className="sq-field">

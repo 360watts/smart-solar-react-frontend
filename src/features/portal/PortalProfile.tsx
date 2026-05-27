@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Shield, Lock, Check, Zap, Star, Crown } from 'lucide-react';
+import { User, Shield, Check, Zap, Star, Crown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
@@ -100,9 +100,6 @@ const PortalProfile: React.FC = () => {
   const [success, setSuccess]         = useState<string | null>(null);
   const [error, setError]             = useState<string | null>(null);
   const [editForm, setEditForm]       = useState({ first_name: '', last_name: '', email: '', mobile_number: '', address: '' });
-  const [pwForm, setPwForm]           = useState({ current_password: '', new_password: '', confirm_password: '' });
-  const [pwError, setPwError]         = useState<string | null>(null);
-  const [pwSuccess, setPwSuccess]     = useState(false);
 
   const text    = isDark ? '#F0F4FF' : '#0A0E1A';
   const muted   = isDark ? '#8892A4' : '#64748B';
@@ -134,20 +131,6 @@ const PortalProfile: React.FC = () => {
       setError(e?.message || 'Failed to save');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const changePassword = async () => {
-    setPwError(null);
-    if (pwForm.new_password !== pwForm.confirm_password) { setPwError('Passwords do not match'); return; }
-    if (pwForm.new_password.length < 8) { setPwError('Password must be at least 8 characters'); return; }
-    try {
-      await apiService.changePassword({ current_password: pwForm.current_password, new_password: pwForm.new_password });
-      setPwSuccess(true);
-      setPwForm({ current_password: '', new_password: '', confirm_password: '' });
-      setTimeout(() => setPwSuccess(false), 3000);
-    } catch (e: any) {
-      setPwError(e?.message || 'Failed to change password');
     }
   };
 
@@ -260,47 +243,6 @@ const PortalProfile: React.FC = () => {
             }}
           >
             {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </Section>
-
-        {/* Change password */}
-        <Section title="Change Password" icon={<Lock size={14} />} isDark={isDark} delay={160}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {[
-              { key: 'current_password', label: 'Current Password' },
-              { key: 'new_password',     label: 'New Password' },
-              { key: 'confirm_password', label: 'Confirm New Password' },
-            ].map(({ key, label }) => (
-              <FloatInput
-                key={key} type="password" label={label}
-                value={(pwForm as any)[key]}
-                onChange={v => setPwForm(f => ({ ...f, [key]: v }))}
-                isDark={isDark}
-              />
-            ))}
-          </div>
-
-          {pwError && (
-            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', fontSize: 13 }}>
-              {pwError}
-            </div>
-          )}
-          {pwSuccess && (
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#34D399', fontSize: 13, fontWeight: 600 }}>
-              <Check size={14} /> Password changed successfully
-            </div>
-          )}
-          <button
-            onClick={changePassword}
-            style={{
-              marginTop: 18, padding: '10px 24px', borderRadius: 10,
-              border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-              background: 'transparent', color: text, fontWeight: 600, fontSize: 14,
-              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-              transition: 'all 0.18s ease',
-            }}
-          >
-            Update Password
           </button>
         </Section>
 

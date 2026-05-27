@@ -5,6 +5,17 @@ import React from 'react';
 import type { QuotationData } from '../types/quotation';
 import { ProposalDocument } from '../components/pdf/ProposalDocument';
 
+async function toBase64(url: string): Promise<string> {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function usePdfExport() {
   const [generating, setGenerating] = useState(false);
 
@@ -16,9 +27,17 @@ export function usePdfExport() {
       const origin = window.location.origin;
       const logoUrl = `${origin}/logo_with_font.png`;
       const finalLogoUrl = `${origin}/finalLogo.png`;
-      const qrCodeUrl = `${origin}/assets/whatsapp-qr.png`;
+      const [appScreen1, appScreen2, phoneCover, qrCodeUrl, ref6kw, ref8kw, ref20kw] = await Promise.all([
+        toBase64(`${origin}/app-screen-energy.png`),
+        toBase64(`${origin}/app-screen-dashboard.png`),
+        toBase64(`${origin}/phonecover.png`),
+        toBase64(`${origin}/whatsapp.png`),
+        toBase64(`${origin}/6kw_ref.png`),
+        toBase64(`${origin}/8kw_ref.png`),
+        toBase64(`${origin}/20kw_ref.png`),
+      ]);
 
-      const doc = React.createElement(ProposalDocument, { data, logoUrl, finalLogoUrl, qrCodeUrl }) as any;
+      const doc = React.createElement(ProposalDocument, { data, logoUrl, finalLogoUrl, qrCodeUrl, appScreen1, appScreen2, phoneCover, ref6kw, ref8kw, ref20kw }) as any;
       const blob = await pdf(doc).toBlob();
 
       const date = new Date().toISOString().slice(0, 10);

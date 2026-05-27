@@ -1,35 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Plus, FileText, Clock, CheckCircle, XCircle, Send, Archive, ChevronRight, RotateCcw } from 'lucide-react';
-import { apiService } from '../../services/api';
-import { formatINR } from './utils/roiCalculator';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Plus, FileText, Clock, CheckCircle, XCircle, Send, Archive, ChevronRight, RotateCcw, Trash2, ChevronLeft, MoreVertical, MessageCircle, Mail, Copy, CheckCheck } from 'lucide-react';
+import { apiService, QuotationListItem } from '../../services/api';
 import QuotationWizard from './QuotationWizard';
 import './quotation.css';
 
-interface QuotationSummary {
-  public_id: string;
-  quote_number: string;
-  revision_number: number;
-  status: string;
-  customer_name: string;
-  customer_phone: string;
-  system_type: string;
-  system_kw: string;
-  net_investment: string;
-  currency: string;
-  valid_until: string;
-  pdf_status: string;
-  created_by_name: string | null;
-  created_at: string;
-  updated_at: string;
-}
+const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
+type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
-const STATUS_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  draft:    { label: 'Draft',    icon: Clock,        color: 'var(--fg-muted, #64748b)' },
-  sent:     { label: 'Sent',     icon: Send,         color: 'var(--blue, #3b82f6)' },
-  accepted: { label: 'Accepted', icon: CheckCircle,  color: 'var(--green, #00a63e)' },
-  rejected: { label: 'Rejected', icon: XCircle,      color: 'var(--red, #ef4444)' },
-  revised:  { label: 'Revised',  icon: RotateCcw,    color: 'var(--amber, #f59e0b)' },
-  archived: { label: 'Archived', icon: Archive,      color: 'var(--fg-muted, #64748b)' },
+const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+const STATUS_META: Record<string, { icon: React.ElementType; color: string }> = {
+  draft:    { icon: Clock,        color: 'var(--fg-muted, #64748b)' },
+  sent:     { icon: Send,         color: 'var(--blue, #3b82f6)' },
+  accepted: { icon: CheckCircle,  color: 'var(--green, #00a63e)' },
+  rejected: { icon: XCircle,      color: 'var(--red, #ef4444)' },
+  revised:  { icon: RotateCcw,    color: 'var(--amber, #f59e0b)' },
+  archived: { icon: Archive,      color: 'var(--fg-muted, #64748b)' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -42,40 +29,276 @@ function StatusBadge({ status }: { status: string }) {
       color: meta.color,
     }}>
       <Icon style={{ width: 10, height: 10 }} />
-      {meta.label}
+      {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+function SkeletonRow() {
+  return (
+    <tr>
+      {Array.from({ length: 7 }).map((_, i) => (
+        <td key={i} className="sq-history-td"><div className="sq-skeleton-cell" /></td>
+      ))}
+    </tr>
+  );
+}
+
+function ConfirmDeleteModal({ quote, onConfirm, onCancel }: {
+  quote: QuotationListItem;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="sq-modal-backdrop" onClick={onCancel}>
+      <div className="sq-modal" onClick={e => e.stopPropagation()}>
+        <h3 className="sq-modal-title">Delete Quotation</h3>
+        <p className="sq-modal-body">
+          Are you sure you want to delete <strong>{quote.quote_number}</strong> for{' '}
+          <strong>{quote.customer_name}</strong>? This cannot be undone.
+        </p>
+        <div className="sq-modal-actions">
+          <button className="sq-btn sq-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="sq-btn sq-btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  const pages: (number | '…')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push('…');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+  return (
+    <div className="sq-pagination">
+      <button className="sq-page-btn" disabled={page === 1} onClick={() => onChange(page - 1)}>
+        <ChevronLeft style={{ width: 14, height: 14 }} />
+      </button>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <span key={`e${i}`} className="sq-page-ellipsis">…</span>
+        ) : (
+          <button key={p} className={`sq-page-btn ${page === p ? 'active' : ''}`} onClick={() => onChange(p as number)}>{p}</button>
+        )
+      )}
+      <button className="sq-page-btn" disabled={page === totalPages} onClick={() => onChange(page + 1)}>
+        <ChevronRight style={{ width: 14, height: 14 }} />
+      </button>
+    </div>
+  );
+}
+
+function RowActionsMenu({ item, onStatusChange, onDelete }: {
+  item: QuotationListItem;
+  onStatusChange: (id: string, status: string) => void;
+  onDelete: (item: QuotationListItem) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const [actioning, setActioning] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false);
+    }
+    function onScroll() { setOpen(false); }
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('scroll', onScroll, true);
+    };
+  }, [open]);
+
+  function openMenu() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setOpen(v => !v);
+  }
+
+  const quoteUrl = `${window.location.origin}/quotation/${item.public_id}`;
+  const phoneClean = (item.customer_phone ?? '').replace(/\D/g, '');
+  const waMsg = encodeURIComponent(`Hi, please find your solar proposal ${item.quote_number} here: ${quoteUrl}`);
+  const mailSubject = encodeURIComponent(`Solar Proposal — ${item.quote_number}`);
+  const mailBody = encodeURIComponent(`Dear Customer,\n\nPlease find your solar proposal (${item.quote_number}) at:\n${quoteUrl}\n\nRegards,\n360Watts Energy Solutions`);
+
+  async function action(type: string) {
+    setActioning(type);
+    setOpen(false);
+    try {
+      if (type === 'sent') await apiService.sendQuotation(item.public_id, { delivery_method: 'manual' });
+      if (type === 'accepted') await apiService.acceptQuotation(item.public_id, {});
+      if (type === 'rejected') await apiService.rejectQuotation(item.public_id, { reason: 'Rejected' });
+      onStatusChange(item.public_id, type);
+    } catch { /* ignore */ }
+    finally { setActioning(null); }
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(quoteUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className="sq-history-delete-btn"
+        title="Actions"
+        onClick={openMenu}
+        disabled={!!actioning}
+      >
+        {actioning ? <Loader2 style={{ width: 13, height: 13 }} className="animate-spin" /> : <MoreVertical style={{ width: 13, height: 13 }} />}
+      </button>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="sq-row-menu"
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+        >
+          {/* Status actions */}
+          {item.status === 'draft' && (
+            <button className="sq-row-menu-item" onClick={() => action('sent')}>
+              <Send style={{ width: 12, height: 12 }} /> Mark as Sent
+            </button>
+          )}
+          {item.status === 'sent' && (
+            <>
+              <button className="sq-row-menu-item sq-row-menu-accept" onClick={() => action('accepted')}>
+                <CheckCircle style={{ width: 12, height: 12 }} /> Mark Accepted
+              </button>
+              <button className="sq-row-menu-item sq-row-menu-reject" onClick={() => action('rejected')}>
+                <XCircle style={{ width: 12, height: 12 }} /> Mark Rejected
+              </button>
+            </>
+          )}
+          <div className="sq-row-menu-divider" />
+          {/* Share */}
+          {phoneClean && (
+            <a className="sq-row-menu-item" href={`https://wa.me/${phoneClean}?text=${waMsg}`} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+          )}
+          <a className="sq-row-menu-item" href={`mailto:?subject=${mailSubject}&body=${mailBody}`} onClick={() => setOpen(false)}>
+            <svg width="13" height="10" viewBox="52 42 88 66"><path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6"/><path fill="#34a853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15"/><path fill="#fbbc04" d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2"/><path fill="#ea4335" d="M72 74V48l24 18 24-18v26L96 92"/><path fill="#c5221f" d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2"/></svg>
+            Email
+          </a>
+          <button className="sq-row-menu-item" onClick={copyLink}>
+            {copied ? <CheckCheck style={{ width: 12, height: 12 }} /> : <Copy style={{ width: 12, height: 12 }} />}
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+          <div className="sq-row-menu-divider" />
+          <button className="sq-row-menu-item sq-row-menu-danger" onClick={() => { setOpen(false); onDelete(item); }}>
+            <Trash2 style={{ width: 12, height: 12 }} /> Delete
+          </button>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function Loader2({ style, className }: { style?: React.CSSProperties; className?: string }) {
+  return <svg style={style} className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 }
 
 export default function QuotationPage() {
   const [view, setView] = useState<'list' | 'wizard'>('list');
   const [editId, setEditId] = useState<string | null>(null);
-  const [quotes, setQuotes] = useState<QuotationSummary[]>([]);
+
+  // List state
+  const [items, setItems] = useState<QuotationListItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<QuotationListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
-  function loadQuotes(cursor?: string) {
+  const fetchPage = useCallback(async (p: number, q: string, s: StatusFilter) => {
+    const reqId = ++requestIdRef.current;
+    setError(null);
     setLoading(true);
-    const params = new URLSearchParams();
-    if (cursor) params.set('cursor', cursor);
-    apiService.request_(`/v1/quotations/${params.toString() ? '?' + params : ''}`)
-      .then((res: { results: QuotationSummary[]; next_cursor: string | null }) => {
-        setQuotes(prev => cursor ? [...prev, ...res.results] : res.results);
-        setNextCursor(res.next_cursor);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }
+    try {
+      const params: Parameters<typeof apiService.listQuotations>[0] = { page: p };
+      if (q) params.search = q;
+      if (s !== 'all') params.status = s;
+      const data = await apiService.listQuotations(params);
+      if (reqId !== requestIdRef.current) return;
+      setItems(data.results);
+      setPage(data.page);
+      setTotalPages(data.total_pages);
+      setTotal(data.total);
+    } catch {
+      if (reqId !== requestIdRef.current) return;
+      setError('Failed to load quotations. Please try again.');
+    } finally {
+      if (reqId === requestIdRef.current) setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { loadQuotes(); }, []);
+  useEffect(() => {
+    if (view !== 'list') return;
+    setPage(1);
+    fetchPage(1, search, status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, view]);
+
+  useEffect(() => {
+    if (view !== 'list') return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      fetchPage(1, search, status);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   function openNew() { setEditId(null); setView('wizard'); }
   function openEdit(id: string) { setEditId(id); setView('wizard'); }
-  function backToList() { setView('list'); loadQuotes(); }
+  function backToList() { setView('list'); }
+
+  function handleStatusChange(id: string, newStatus: string) {
+    setItems(prev => prev.map(i => i.public_id === id ? { ...i, status: newStatus as QuotationListItem['status'] } : i));
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiService.deleteQuotation(deleteTarget.public_id);
+      setDeleteTarget(null);
+      fetchPage(page, search, status);
+    } catch {
+      setError('Failed to delete quotation.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (view === 'wizard') {
     return (
@@ -102,82 +325,140 @@ export default function QuotationPage() {
 
   return (
     <div className="sq-root sq-page">
-      <div className="sq-page-inner">
+      <div className="sq-history-page">
 
-        <header className="sq-header">
-          <div className="sq-header-left">
+        {/* Header */}
+        <div className="sq-history-header">
+          <div>
             <p className="sq-header-eyebrow">360Watts CRM</p>
             <h1 className="sq-header-title">Solar <em>Quotations</em></h1>
           </div>
-          <button type="button" className="sq-btn-primary" onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button type="button" className="sq-btn sq-btn-primary" onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus style={{ width: 14, height: 14 }} />
             New Quotation
           </button>
-        </header>
+        </div>
 
-        {loading && quotes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--fg-muted)' }}>Loading…</div>
-        ) : quotes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <FileText style={{ width: 40, height: 40, color: 'var(--fg-muted)', margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--fg-muted)', fontSize: '0.9rem' }}>No quotations yet</p>
-            <button type="button" className="sq-btn-primary" onClick={openNew} style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Plus style={{ width: 14, height: 14 }} /> Create your first quotation
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="sq-quote-list">
-              {quotes.map(q => (
-                <button
-                  key={q.public_id}
-                  type="button"
-                  className="sq-quote-row"
-                  onClick={() => openEdit(q.public_id)}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: '0.7rem', color: 'var(--fg-muted)' }}>{q.quote_number}</span>
-                      <StatusBadge status={q.status} />
+        {/* Filters */}
+        <div className="sq-history-filters">
+          <input
+            type="text"
+            className="sq-input sq-history-search"
+            placeholder="Search by customer or quote #…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select className="sq-select" value={status} onChange={e => setStatus(e.target.value as StatusFilter)}>
+            {STATUS_OPTIONS.map(s => (
+              <option key={s} value={s}>
+                {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+              </option>
+            ))}
+          </select>
+          {!loading && total > 0 && (
+            <span className="sq-history-count">{total} quote{total !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+
+        {/* Table */}
+        <div className="sq-history-table-wrap">
+          <table className="sq-history-table">
+            <thead>
+              <tr>
+                <th className="sq-history-th">Quote #</th>
+                <th className="sq-history-th">Customer</th>
+                <th className="sq-history-th">System</th>
+                <th className="sq-history-th">Amount</th>
+                <th className="sq-history-th">Status</th>
+                <th className="sq-history-th">Updated</th>
+                <th className="sq-history-th">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
+              ) : error ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>{error}</td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="sq-history-empty">
+                    <div>
+                      <FileText style={{ width: 36, height: 36, color: 'var(--fg-muted)', margin: '0 auto 12px' }} />
+                      <p>No quotations found.</p>
+                      <button type="button" className="sq-btn sq-btn-primary" onClick={openNew} style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Plus style={{ width: 14, height: 14 }} /> New Quotation
+                      </button>
                     </div>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {q.customer_name || '—'}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--fg-muted)' }}>
-                      {q.system_kw} kWp · {q.system_type.replace('_', '-').toUpperCase()}
-                    </span>
-                  </div>
+                  </td>
+                </tr>
+              ) : (
+                items.map(item => (
+                  <tr key={item.id} className="sq-history-row">
+                    <td className="sq-history-td">
+                      <button
+                        type="button"
+                        className="sq-history-quote-link"
+                        onClick={() => openEdit(item.public_id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        {item.quote_number}
+                      </button>
+                    </td>
+                    <td className="sq-history-td">
+                      <span className="sq-history-customer-name">{item.customer_name}</span>
+                      <span className="sq-history-customer-phone">{item.customer_phone}</span>
+                    </td>
+                    <td className="sq-history-td">
+                      <span className="sq-history-kw">{item.system_kw} kW</span>
+                      <span className="sq-history-system-badge">{item.system_type}</span>
+                    </td>
+                    <td className="sq-history-td sq-history-amount">
+                      {INR.format(Number(item.net_investment))}
+                    </td>
+                    <td className="sq-history-td">
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="sq-history-td">
+                      {new Date(item.updated_at ?? item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="sq-history-td">
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="sq-history-action-link"
+                          onClick={() => openEdit(item.public_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        >
+                          Edit
+                        </button>
+                        <RowActionsMenu
+                          item={item}
+                          onStatusChange={handleStatusChange}
+                          onDelete={setDeleteTarget}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--fg)' }}>
-                      {Number(q.net_investment) > 0 ? formatINR(Number(q.net_investment)) : '—'}
-                    </span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--fg-muted)' }}>{formatDate(q.updated_at)}</span>
-                    {q.created_by_name && (
-                      <span style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', opacity: 0.7 }}>{q.created_by_name}</span>
-                    )}
-                  </div>
-
-                  <ChevronRight style={{ width: 14, height: 14, color: 'var(--fg-muted)', flexShrink: 0 }} />
-                </button>
-              ))}
-            </div>
-
-            {nextCursor && (
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <button
-                  type="button"
-                  className="sq-btn-secondary"
-                  onClick={() => loadQuotes(nextCursor)}
-                  disabled={loading}
-                >
-                  {loading ? 'Loading…' : 'Load more'}
-                </button>
-              </div>
-            )}
-          </>
+        {!loading && !error && (
+          <Pagination page={page} totalPages={totalPages} onChange={p => { setPage(p); fetchPage(p, search, status); }} />
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          quote={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

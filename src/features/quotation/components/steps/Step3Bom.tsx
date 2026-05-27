@@ -2,7 +2,7 @@ import { useFieldArray, UseFormReturn } from 'react-hook-form';
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { calcBomRow, calcBomTotals, calcEbBill, formatINR } from '../../utils/roiCalculator';
+import { calcBomRow, calcBomTotals, calcEbBill, calcSubsidy, formatINR } from '../../utils/roiCalculator';
 import { apiService } from '../../../../services/api';
 import type { ProductCatalogItem } from '../../../../services/api';
 import type { QuotationData, BomRow } from '../../types/quotation';
@@ -28,87 +28,119 @@ export function newRows(): BomRow[] {
   return DEFAULT_ROWS.map(r => ({ ...r, id: uuid() }));
 }
 
-// ── Catalog selector ──────────────────────────────────────────────────────
+// ── Row item name → catalog category mapping ──────────────────────────────
+
+type CatalogCategory =
+  | 'panels' | 'inverters' | 'batteries'
+  | 'dcdb' | 'acdb' | 'mounting' | 'earthing'
+  | 'lightning' | 'mc4' | 'wiring' | 'accessories'
+  | 'installation' | 'iot';
+
+const ITEM_TO_CATEGORY: Record<string, CatalogCategory> = {
+  'panels':             'panels',
+  'inverter':           'inverters',
+  'dcdb':               'dcdb',
+  'acdb':               'acdb',
+  'mounting structure': 'mounting',
+  'earthing rod':       'earthing',
+  'lightning arrestor': 'lightning',
+  'mc4 connectors':     'mc4',
+  'wiring':             'wiring',
+  'accessories':        'accessories',
+  'installation':       'installation',
+  'iot hub':            'iot',
+};
+
+const CATEGORY_LABEL: Record<CatalogCategory, string> = {
+  panels:       'Panel',
+  inverters:    'Inverter',
+  batteries:    'Battery',
+  dcdb:         'DCDB',
+  acdb:         'ACDB',
+  mounting:     'Mounting',
+  earthing:     'Earthing',
+  lightning:    'Lightning',
+  mc4:          'MC4',
+  wiring:       'Wiring',
+  accessories:  'Accessories',
+  installation: 'Installation',
+  iot:          'IoT Hub',
+};
+
+// ── Generic catalog selector ──────────────────────────────────────────────
 
 interface CatalogSelectorProps {
-  category: 'panels' | 'inverters';
+  category: CatalogCategory;
   onSelect: (item: ProductCatalogItem) => void;
-  recommendedKw?: number;
+  autoPickFn?: (items: ProductCatalogItem[]) => ProductCatalogItem | undefined;
 }
 
-function pickBestPanel(items: ProductCatalogItem[]): ProductCatalogItem | undefined {
-  const inStock = items.filter(i => i.in_stock !== false);
-  const pool = inStock.length ? inStock : items;
-  return pool.reduce<ProductCatalogItem | undefined>((best, cur) => {
-    const curWp = (cur.specs.wp as number) ?? 0;
-    const bestWp = best ? ((best.specs.wp as number) ?? 0) : -1;
-    return curWp > bestWp ? cur : best;
-  }, undefined);
-}
-
-function pickBestInverter(items: ProductCatalogItem[], recommendedKw: number): ProductCatalogItem | undefined {
-  const inStock = items.filter(i => i.in_stock !== false);
-  const pool = inStock.length ? inStock : items;
-  // Prefer exact match, then next size up
-  const sorted = [...pool].sort((a, b) => ((a.specs.kw as number) ?? 0) - ((b.specs.kw as number) ?? 0));
-  return sorted.find(i => ((i.specs.kw as number) ?? 0) >= recommendedKw) ?? sorted[sorted.length - 1];
-}
-
-function CatalogSelector({ category, onSelect, recommendedKw = 0 }: CatalogSelectorProps) {
+function CatalogSelector({ category, onSelect, autoPickFn }: CatalogSelectorProps) {
   const [items, setItems] = useState<ProductCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string>('');
+  const [query, setQuery] = useState('');
   const autoSelected = useRef(false);
 
   useEffect(() => {
     apiService.getProductCatalog(category)
       .then(fetched => {
         setItems(fetched);
-        if (!autoSelected.current && fetched.length > 0) {
+        if (!autoSelected.current && fetched.length > 0 && autoPickFn) {
           autoSelected.current = true;
-          const best = category === 'panels'
-            ? pickBestPanel(fetched)
-            : pickBestInverter(fetched, recommendedKw);
-          if (best) {
-            setSelectedId(String(best.id));
-            onSelect(best);
-          }
+          const best = autoPickFn(fetched);
+          if (best) { setSelectedId(String(best.id)); onSelect(best); }
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const label = category === 'panels' ? 'Panel' : 'Inverter';
-  const placeholder = loading ? 'Loading…' : items.length === 0 ? 'No catalog items' : `Pick ${label.toLowerCase()}…`;
+  const label = CATEGORY_LABEL[category];
+  const filtered = query.trim()
+    ? items.filter(i =>
+        (i.display_label || i.model_name).toLowerCase().includes(query.toLowerCase()) ||
+        i.brand.toLowerCase().includes(query.toLowerCase())
+      )
+    : items;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-        {label}
-      </span>
+    <div className="sq-catalog-selector">
+      {/* Header row: label + search */}
+      <div className="sq-catalog-header">
+        <span className="sq-catalog-label">{label}</span>
+        <input
+          className="sq-catalog-search"
+          type="text"
+          placeholder="Search…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          disabled={loading || items.length === 0}
+        />
+      </div>
+      {/* Dropdown */}
       <select
-        className="sq-bom-input"
-        style={{ fontSize: '0.7rem', minWidth: 260 }}
+        className="sq-catalog-select"
         value={selectedId}
         disabled={loading || items.length === 0}
         onChange={e => {
           const id = e.target.value;
           setSelectedId(id);
           const item = items.find(i => String(i.id) === id);
-          if (item) onSelect(item);
+          if (item) { onSelect(item); setQuery(''); }
         }}
       >
-        <option value="" disabled>{placeholder}</option>
-        {items.map(item => (
+        <option value="" disabled>
+          {loading ? 'Loading…' : items.length === 0 ? 'No items' : filtered.length === 0 ? 'No match' : 'Pick…'}
+        </option>
+        {filtered.map(item => (
           <option key={item.id} value={String(item.id)}>
-            {item.display_label}
-            {item.in_stock ? '' : ' ✗ OOS'}
-            {' — '}
+            {(item.display_label || item.model_name).toUpperCase()}
+            {item.in_stock ? '' : ' ✗'}
+            {'  '}
             {item.price_unit === 'Wp'
               ? `₹${item.price_per_unit}/Wp`
               : `₹${Number(item.price_per_unit).toLocaleString('en-IN')}`}
-            {item.dealer_name ? ` (${item.dealer_name})` : ''}
           </option>
         ))}
       </select>
@@ -121,50 +153,152 @@ function CatalogSelector({ category, onSelect, recommendedKw = 0 }: CatalogSelec
 function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFormReturn<QuotationData> }) {
   const { register, watch, control, setValue } = form;
   const ebBill = form.getValues('ebBill');
-  const { inverterKw } = calcEbBill(ebBill);
+  const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
   const { fields, append, remove } = useFieldArray({ control, name: `${prefix}.rows` as any });
   const liveRows: BomRow[] = watch(`${prefix}.rows`) ?? [];
   const subsidy: number    = watch(`${prefix}.subsidy`) ?? 78000;
+
+  // Auto-populate subsidy when system size, customer type, or phase changes
+  const customerType = watch('customer.customerType') ?? 'residential';
+  const phase        = watch('ebBill.phase') ?? 'single';
+  useEffect(() => {
+    if (prefix !== 'optionA') return;
+    const computed = calcSubsidy(recommendedSystemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three');
+    setValue(`${prefix}.subsidy`, computed);
+  }, [recommendedSystemKw, customerType, phase]); // eslint-disable-line react-hooks/exhaustive-deps
   const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy);
-  const isRecommended: boolean   = watch(`${prefix}.isRecommended`);
+  const isRecommended: boolean    = watch(`${prefix}.isRecommended`);
   const expansionPossible: boolean = watch(`${prefix}.expansionPossible`);
 
-  function applyPanelFromCatalog(item: ProductCatalogItem) {
+  // Generic apply: match row by item name (case-insensitive), patch fields from catalog item
+  function applyFromCatalog(category: CatalogCategory, item: ProductCatalogItem) {
     const rows: BomRow[] = form.getValues(`${prefix}.rows`);
-    const wp = item.specs.wp as number ?? 0;
-    // price per panel = Wp × price_per_Wp
-    const unitPrice = item.price_unit === 'Wp' ? wp * parseFloat(item.price_per_unit) : parseFloat(item.price_per_unit);
-    const description = `${wp}Wp ${item.model_name} ${item.specs.dcr ? 'DCR' : 'non-DCR'}`.trim();
+    const rowKey = Object.entries(ITEM_TO_CATEGORY).find(([, c]) => c === category)?.[0] ?? '';
+    const unitPrice = parseFloat(item.price_per_unit);
+
+    let description = item.model_name;
+    if (category === 'panels') {
+      const wp = item.specs.wp as number ?? 0;
+      const unitPriceCalc = item.price_unit === 'Wp' ? wp * unitPrice : unitPrice;
+      description = `${wp}Wp ${item.model_name} ${item.specs.dcr ? 'DCR' : 'non-DCR'}`.trim();
+      const updated = rows.map(r =>
+        r.item.toLowerCase() === rowKey
+          ? { ...r, brand: item.brand, description, unitPrice: unitPriceCalc, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
+          : r
+      );
+      setValue(`${prefix}.rows`, updated);
+      return;
+    }
+    if (category === 'inverters') {
+      const kw = item.specs.kw as number ?? '';
+      const phases = item.specs.phases as number ?? 1;
+      const type = item.specs.type as string ?? 'On-Grid';
+      description = `${kw}kW ${phases === 3 ? '3-ph' : '1-ph'} ${type}`;
+    }
+
     const updated = rows.map(r =>
-      r.item.toLowerCase() === 'panels'
+      r.item.toLowerCase() === rowKey
         ? { ...r, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
         : r
     );
     setValue(`${prefix}.rows`, updated);
   }
 
-  function applyInverterFromCatalog(item: ProductCatalogItem) {
-    const rows: BomRow[] = form.getValues(`${prefix}.rows`);
-    const kw = item.specs.kw as number ?? '';
-    const phases = item.specs.phases as number ?? 1;
-    const type = item.specs.type as string ?? 'On-Grid';
-    const description = `${kw}kW ${phases === 3 ? '3-ph' : '1-ph'} ${type}`;
-    const unitPrice = parseFloat(item.price_per_unit);
-    const updated = rows.map(r =>
-      r.item.toLowerCase() === 'inverter'
-        ? { ...r, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
-        : r
-    );
-    setValue(`${prefix}.rows`, updated);
+  const systemType = form.getValues('customer.systemType') ?? 'ON-GRID';
+  const isThreePhase = (form.getValues('ebBill.phase') ?? 'single') === 'three';
+
+  function inStock(items: ProductCatalogItem[]) {
+    const s = items.filter(i => i.in_stock !== false);
+    return s.length ? s : items;
   }
+
+  function pickBestPanel(items: ProductCatalogItem[]) {
+    return inStock(items).reduce<ProductCatalogItem | undefined>((best, cur) =>
+      ((cur.specs.wp as number) ?? 0) > ((best?.specs.wp as number) ?? -1) ? cur : best, undefined);
+  }
+
+  function pickBestInverter(items: ProductCatalogItem[]) {
+    // Filter by system type (On-Grid / Hybrid) and phase, then pick closest kW ≥ recommended
+    const typeStr = systemType === 'HYBRID' ? 'hybrid' : 'on-grid';
+    const phaseStr = isThreePhase ? 'three phase' : 'single phase';
+    const pool = inStock(items).filter(i => {
+      const mn = (i.model_name ?? '').toLowerCase();
+      return mn.includes(typeStr) && mn.includes(phaseStr);
+    });
+    const candidates = pool.length ? pool : inStock(items);
+    const sorted = [...candidates].sort((a, b) => ((a.specs.kw as number) ?? 0) - ((b.specs.kw as number) ?? 0));
+    return sorted.find(i => ((i.specs.kw as number) ?? 0) >= inverterKw) ?? sorted[sorted.length - 1];
+  }
+
+  // Parse kWp range from description text like "5 to 8 kWp, Three Phase" → [5, 8]
+  function parseKwRange(text: string): [number, number] {
+    const rangeMatch = text.match(/(\d+(?:\.\d+)?)\s+to\s+(\d+(?:\.\d+)?)\s*kwp/i);
+    if (rangeMatch) return [parseFloat(rangeMatch[1]), parseFloat(rangeMatch[2])];
+    const singleMatch = text.match(/(\d+(?:\.\d+)?)\s*kwp/i);
+    if (singleMatch) { const v = parseFloat(singleMatch[1]); return [v, v]; }
+    return [0, Infinity];
+  }
+
+  function pickBomsBySize(items: ProductCatalogItem[], forHybrid = false) {
+    const phaseStr = isThreePhase ? 'three phase' : 'single phase';
+    // For ACDB: filter by hybrid/on-grid first
+    let pool = inStock(items);
+    if (forHybrid) {
+      const hybrid = pool.filter(i => (i.specs as any)?.type === 'hybrid' || (i.model_name ?? '').toLowerCase().includes('change over'));
+      if (hybrid.length) pool = hybrid;
+    } else {
+      const ongrid = pool.filter(i => (i.specs as any)?.type !== 'hybrid' && !(i.model_name ?? '').toLowerCase().includes('change over'));
+      if (ongrid.length) pool = ongrid;
+    }
+
+    const scored = pool.map(item => {
+      const mn = (item.model_name ?? '').toLowerCase();
+      // Phase match
+      const phaseMatch = mn.includes(phaseStr) ? 2 : mn.includes('phase') ? 0 : 1;
+      // kWp range
+      const [lo, hi] = parseKwRange(mn);
+      const hasRange = lo > 0 || hi < Infinity;
+      const inRange = hasRange && inverterKw >= lo && inverterKw <= hi ? 3 : 0;
+      // Penalise items with no parseable range (generic entries) — prefer specific ones
+      const specificBonus = hasRange ? 1 : -2;
+      // Proximity of midpoint
+      const mid = hi < Infinity ? (lo + hi) / 2 : lo;
+      const proximity = 1 / (1 + Math.abs(mid - inverterKw));
+      return { item, score: phaseMatch + inRange + specificBonus + proximity };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0]?.item ?? items[0];
+  }
+
+  function pickFirstInStock(items: ProductCatalogItem[]) {
+    return inStock(items)[0] ?? items[0];
+  }
+
+  // Categories that have catalog entries — drives which selectors to show
+  const CATALOG_CATEGORIES: CatalogCategory[] = [
+    'panels', 'inverters', 'dcdb', 'acdb', 'mounting',
+    'earthing', 'lightning', 'mc4', 'wiring', 'accessories', 'installation', 'iot',
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* Catalog selectors */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <CatalogSelector category="panels"    onSelect={applyPanelFromCatalog} />
-        <CatalogSelector category="inverters" onSelect={applyInverterFromCatalog} recommendedKw={inverterKw} />
+      {/* Catalog selectors — 2-column grid */}
+      <div className="sq-catalog-grid">
+        {CATALOG_CATEGORIES.map(cat => (
+          <CatalogSelector
+            key={cat}
+            category={cat}
+            onSelect={item => applyFromCatalog(cat, item)}
+            autoPickFn={
+              cat === 'panels'    ? pickBestPanel    :
+              cat === 'inverters' ? pickBestInverter  :
+              cat === 'dcdb'      ? (items) => pickBomsBySize(items, false) :
+              cat === 'acdb'      ? (items) => pickBomsBySize(items, systemType === 'HYBRID') :
+              pickFirstInStock
+            }
+          />
+        ))}
       </div>
 
       <div className="sq-table-wrap">
@@ -248,7 +382,6 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
 
       {/* Options row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', paddingTop: 4 }}>
-        {/* Subsidy */}
         <div className="sq-field">
           <label className="sq-label">Subsidy (₹)</label>
           <input
@@ -259,31 +392,23 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
           />
         </div>
 
-        {/* Recommended toggle */}
         <button
           type="button"
           style={{ marginTop: 20 }}
           onClick={() => form.setValue(`${prefix}.isRecommended`, !isRecommended)}
           className={`sq-toggle ${isRecommended ? 'on-yellow' : ''}`}
         >
-          {isRecommended
-            ? <ToggleRight style={{ width: 15, height: 15 }} />
-            : <ToggleLeft  style={{ width: 15, height: 15 }} />
-          }
+          {isRecommended ? <ToggleRight style={{ width: 15, height: 15 }} /> : <ToggleLeft style={{ width: 15, height: 15 }} />}
           Recommended
         </button>
 
-        {/* Expansion toggle */}
         <button
           type="button"
           style={{ marginTop: 20 }}
           onClick={() => form.setValue(`${prefix}.expansionPossible`, !expansionPossible)}
           className={`sq-toggle ${expansionPossible ? 'on-green' : ''}`}
         >
-          {expansionPossible
-            ? <ToggleRight style={{ width: 15, height: 15 }} />
-            : <ToggleLeft  style={{ width: 15, height: 15 }} />
-          }
+          {expansionPossible ? <ToggleRight style={{ width: 15, height: 15 }} /> : <ToggleLeft style={{ width: 15, height: 15 }} />}
           Expansion Possible
         </button>
       </div>
@@ -338,7 +463,6 @@ export function Step3Bom({ form }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-      {/* Option A */}
       <div>
         <div className="sq-section-title">
           Option A
@@ -347,7 +471,6 @@ export function Step3Bom({ form }: Props) {
         <BomTable prefix="optionA" form={form} />
       </div>
 
-      {/* Option B toggle */}
       <div style={{ borderTop: '1px solid var(--line, rgba(0,0,0,0.08))', paddingTop: 16 }}>
         <button
           type="button"
@@ -355,10 +478,7 @@ export function Step3Bom({ form }: Props) {
           className={`sq-toggle ${hasOptionB ? 'on-blue' : ''}`}
           style={hasOptionB ? { borderColor: 'rgba(91,155,213,0.3)', background: 'rgba(91,155,213,0.06)', color: 'var(--blue, #3b82f6)' } : {}}
         >
-          {hasOptionB
-            ? <ToggleRight style={{ width: 15, height: 15 }} />
-            : <ToggleLeft  style={{ width: 15, height: 15 }} />
-          }
+          {hasOptionB ? <ToggleRight style={{ width: 15, height: 15 }} /> : <ToggleLeft style={{ width: 15, height: 15 }} />}
           {hasOptionB ? 'Option B Enabled' : 'Add Option B'}
         </button>
       </div>

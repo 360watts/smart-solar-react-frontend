@@ -1,636 +1,987 @@
 import React from 'react';
 import {
-  Document, Page, View, Text, Image, Svg, Rect, Polygon, Circle, Line,
+  Document, Page, View, Text, Image, Svg,
+  Rect, Polygon, Line, Path, G,
   StyleSheet,
 } from '@react-pdf/renderer';
-import type { QuotationData, QuoteOption, BomRow } from '../../types/quotation';
+import type { QuotationData, BomRow, QuoteOption, YearlyROIPoint } from '../../types/quotation';
 import { calcBomTotals, calcEbBill, calcROI } from '../../utils/roiCalculator';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Page dimensions ──────────────────────────────────────────────────────────
 const W = 960;
 const H = 540;
-const PAD = 44;
-const NAVY = '#1C3D5A';
-const ORANGE = '#F97316';
-const GREEN = '#22C55E';
-const WHITE = '#FFFFFF';
-const INK = '#111111';
-const GRAY = '#444444';
-const MUTED = '#888888';
-const BORDER = '#E5E7EB';
-const LIGHT = '#F8F9FA';
 
+// ─── Light Luxury palette ─────────────────────────────────────────────────────
+const BG     = '#FAFAF8';   // warm off-white base
+const WHITE  = '#FFFFFF';
+const BLACK  = '#000000';   // solid black
+const BLACK2 = '#1A1A1A';   // near-black
+const ORANGE = '#F97316';   // brand accent
+const GREEN  = '#22C55E';   // brand green
+const TEXT   = '#1C1917';   // warm near-black
+const MUTED  = '#64748B';   // slate-500 muted
+const LIGHT  = '#F1F5F9';   // light grey card surface
+const RULE   = '#E2E8F0';   // thin divider
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
 const S = StyleSheet.create({
   page: { width: W, height: H, backgroundColor: WHITE, fontFamily: 'Helvetica', position: 'relative', overflow: 'hidden' },
-  abs: { position: 'absolute' },
-  row: { flexDirection: 'row' },
-  col: { flexDirection: 'column' },
+  abs:  { position: 'absolute' },
+  row:  { flexDirection: 'row' },
+  col:  { flexDirection: 'column' },
+  flex1: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center' },
 });
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
-function SlideNum({ n, logoUrl }: { n: number; logoUrl: string }) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(n: number) { return Math.round(n).toLocaleString('en-IN'); }
+function fmtI(n: number) { return `Rs. ${fmt(n)}`; }
+
+function getSystemKw(rows: BomRow[]): number {
+  const inv = rows.find(r => r.item.toLowerCase() === 'inverter');
+  if (inv) {
+    const m = inv.description.match(/(\d+(?:\.\d+)?)\s*kw/i);
+    if (m) return parseFloat(m[1]);
+  }
+  const panels = rows.find(r => r.item.toLowerCase() === 'panels');
+  if (panels) {
+    const m = panels.description.match(/(\d+)\s*[Ww]p/);
+    const wp = m ? parseInt(m[1]) : 615;
+    return parseFloat(((panels.qty * wp) / 1000).toFixed(1));
+  }
+  return 0;
+}
+
+// ─── Shared layout primitives ─────────────────────────────────────────────────
+
+function GoldRule({ x = 0, y = 0, width = 48, thick = 1.5 }: { x?: number; y?: number; width?: number; thick?: number }) {
+  return (
+    <Svg style={{ position: 'absolute', top: y, left: x, width, height: thick + 1 }}>
+      <Rect x={0} y={0} width={width} height={thick} fill={GREEN} />
+    </Svg>
+  );
+}
+
+function SlideFooter({ n, total, logoUrl, finalLogoUrl }: { n: number; total: number; logoUrl: string; finalLogoUrl: string }) {
   return (
     <>
-      <View style={[S.abs, { top: 20, right: PAD, border: '1.5pt solid ' + ORANGE, borderRadius: 5, padding: '4pt 14pt' }]}>
-        <Text style={{ color: ORANGE, fontSize: 14, fontFamily: 'Helvetica-Bold' }}>{n}</Text>
-      </View>
-      <View style={[S.abs, { bottom: 18, right: PAD }]}>
-        <Image src={logoUrl} style={{ height: 32 }} />
+      <View style={[S.abs, { bottom: 0, left: 0, right: 0, height: 36, backgroundColor: BLACK, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40 }]}>
+        <Image src={finalLogoUrl} style={{ height: 30, opacity: 0.9, marginRight: 10 }} />
+        <Text style={{ color: WHITE, fontSize: 8, fontFamily: 'Helvetica', opacity: 0.6, flex: 1 }}>
+          360WATTS  ·  srinath@360watts.com  ·  +91 90876 10051
+        </Text>
+        <Text style={{ color: GREEN, fontSize: 8, fontFamily: 'Helvetica', letterSpacing: 1 }}>
+          {String(n).padStart(2, '0')} / {String(total).padStart(2, '0')}
+        </Text>
       </View>
     </>
   );
 }
 
-function NavyTriangleCover() {
-  // Extends full height on right: diagonal from ~42% width at top to full bottom-right
-  const pts = `${W * 0.42},0 ${W},0 ${W},${H}`;
+function SectionLabel({ label, color = ORANGE, x = 48, y = 52 }: { label: string; color?: string; x?: number; y?: number }) {
   return (
-    <Svg style={[S.abs, { top: 0, left: 0, width: W, height: H }]}>
-      <Polygon points={pts} fill={NAVY} />
-    </Svg>
-  );
-}
-
-function NavyTriangleThanks() {
-  // Bottom-right triangle: diagonal from bottom-left sweeping up to top-right
-  const pts = `${W * 0.58},${H} ${W},${H * 0.35} ${W},${H}`;
-  return (
-    <Svg style={[S.abs, { top: 0, left: 0, width: W, height: H }]}>
-      <Polygon points={pts} fill={NAVY} />
-    </Svg>
-  );
-}
-
-function OrangeBadge({ children, style }: { children: React.ReactNode; style?: object }) {
-  return (
-    <View style={[{ border: '1.5pt solid ' + ORANGE, borderRadius: 6, padding: '5pt 14pt', alignSelf: 'flex-start' }, style]}>
-      {children}
+    <View style={[S.abs, { top: y, left: x, flexDirection: 'row', alignItems: 'center' }]}>
+      <View style={{ width: 20, height: 2, backgroundColor: color, marginRight: 8 }} />
+      <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color, letterSpacing: 2.5 }}>{label.toUpperCase()}</Text>
     </View>
   );
 }
 
-function ColorCircle({ bg, label, size = 80 }: { bg: string; label: string; size?: number }) {
+function MetricBox({ label, value, sub, color = BLACK, x = 0, y = 0, w = 160, h = 80 }:
+  { label: string; value: string; sub?: string; color?: string; x?: number; y?: number; w?: number; h?: number }) {
   return (
-    <View style={[S.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
-      <Text style={{ color: WHITE, fontSize: size * 0.115, fontFamily: 'Helvetica-Bold', textAlign: 'center', lineHeight: 1.3 }}>
-        {label}
-      </Text>
+    <View style={[S.abs, { top: y, left: x, width: w, height: h, backgroundColor: color, padding: 14 }]}>
+      <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 1.5, marginBottom: 6 }}>{label.toUpperCase()}</Text>
+      <Text style={{ fontSize: 26, fontFamily: 'Times-Bold', color: WHITE, lineHeight: 1 }}>{value}</Text>
+      {sub && <Text style={{ fontSize: 8, color: WHITE, opacity: 0.65, marginTop: 4 }}>{sub}</Text>}
     </View>
   );
 }
 
-// ─── Charts ───────────────────────────────────────────────────────────────────
-function BreakevenBarChart({ data }: { data: { year: number; breakeven: number }[] }) {
-  const CW = 390; const CH = 240;
-  const topPad = 20; const botPad = 28; const leftPad = 36;
-  const innerH = CH - topPad - botPad;
-  const innerW = CW - leftPad - 8;
-  const barSlot = innerW / data.length;
-  const barW = barSlot * 0.55;
-  const maxAbs = Math.max(...data.map(d => Math.abs(d.breakeven)), 1);
-  const toY = (v: number) => topPad + innerH / 2 - (v / maxAbs) * (innerH / 2);
-  const zeroY = topPad + innerH / 2;
-  const toL = (v: number) => (v / 100000).toFixed(0) + 'L';
-  const beYear = data.find(d => d.breakeven >= 0)?.year;
-
-  return (
-    <Svg width={CW} height={CH}>
-      {[-1, -0.5, 0, 0.5, 1].map((frac, i) => {
-        const y = topPad + innerH / 2 - frac * innerH / 2;
-        return (
-          <React.Fragment key={i}>
-            <Line x1={leftPad} y1={y} x2={CW - 8} y2={y}
-              stroke={frac === 0 ? NAVY : BORDER} strokeWidth={frac === 0 ? 1 : 0.5}
-              strokeDasharray={frac === 0 ? undefined : '2,2'} />
-          </React.Fragment>
-        );
-      })}
-      {data.map((d, i) => {
-        const x = leftPad + i * barSlot + (barSlot - barW) / 2;
-        const yVal = toY(d.breakeven);
-        const barH = Math.abs(zeroY - yVal);
-        const barY = d.breakeven >= 0 ? yVal : zeroY;
-        return <Rect key={i} x={x} y={barY} width={barW} height={Math.max(barH, 1)} fill={d.breakeven >= 0 ? GREEN : '#F87171'} rx={1} />;
-      })}
-      {beYear && (
-        <Line
-          x1={leftPad + (beYear - 1) * barSlot + barSlot / 2}
-          y1={topPad} x2={leftPad + (beYear - 1) * barSlot + barSlot / 2} y2={CH - botPad}
-          stroke={ORANGE} strokeWidth={1.5} strokeDasharray="3,2" />
-      )}
-    </Svg>
-  );
-}
-
-function CumulativeAreaChart({ data }: { data: { year: number; cumNoSolar: number; cumSolar: number }[] }) {
-  const CW = 390; const CH = 240;
-  const topPad = 20; const botPad = 28; const leftPad = 36;
-  const innerH = CH - topPad - botPad;
-  const innerW = CW - leftPad - 8;
-  const maxVal = Math.max(...data.map(d => d.cumNoSolar), 1);
-  const toX = (i: number) => leftPad + (i / (data.length - 1)) * innerW;
-  const toY = (v: number) => topPad + innerH - (v / maxVal) * innerH;
-
-  const noSolarPts = data.map((d, i) => `${toX(i)},${toY(d.cumNoSolar)}`).join(' ');
-  const solarPts = data.map((d, i) => `${toX(i)},${toY(d.cumSolar)}`).join(' ');
-  const noSolarFill = `${noSolarPts} ${toX(data.length - 1)},${CH - botPad} ${leftPad},${CH - botPad}`;
-  const solarFill = `${solarPts} ${toX(data.length - 1)},${CH - botPad} ${leftPad},${CH - botPad}`;
-
-  return (
-    <Svg width={CW} height={CH}>
-      {[0, 0.25, 0.5, 0.75, 1].map((f, i) => {
-        const y = topPad + innerH * (1 - f);
-        return <Line key={i} x1={leftPad} y1={y} x2={CW - 8} y2={y} stroke={BORDER} strokeWidth={0.5} strokeDasharray="2,2" />;
-      })}
-      <Polygon points={noSolarFill} fill="#E5E7EB" opacity={0.7} />
-      <Polygon points={solarFill} fill="#DCFCE7" opacity={0.8} />
-      <Polygon points={noSolarPts} fill="none" stroke="#9CA3AF" strokeWidth={1.5} />
-      <Polygon points={solarPts} fill="none" stroke={GREEN} strokeWidth={2} />
-    </Svg>
-  );
-}
-
-// ─── BOM helpers ──────────────────────────────────────────────────────────────
-const PRIMARY_KEYS = ['panels', 'inverter', 'iot hub'];
-function isPrimary(r: BomRow) { return PRIMARY_KEYS.some(k => r.item.toLowerCase().includes(k)); }
-
-// ─── SLIDE 1: Cover ───────────────────────────────────────────────────────────
-function CoverSlide({ data, logoUrl }: { data: QuotationData; logoUrl: string }) {
-  const { customer, ebBill } = data;
-  const calc = calcEbBill(ebBill);
-  const kw = calc.inverterKw > 0 ? `${calc.inverterKw}` : '—';
-  const addrLines = customer.address ? customer.address.split(',').map(s => s.trim()).filter(Boolean) : [];
+// ─── Slide 1: Cover ───────────────────────────────────────────────────────────
+function CoverSlide({ data, logoUrl, finalLogoUrl }: { data: QuotationData; logoUrl: string; finalLogoUrl: string }) {
+  const { customer, ebBill, optionA } = data;
+  const { inverterKw } = calcEbBill(ebBill);
+  const systemKw = getSystemKw(optionA.rows) || inverterKw;
+  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy);
+  const systemTypeLabel = { 'ON-GRID': 'On-Grid System', 'HYBRID': 'Hybrid System', 'OFF-GRID': 'Off-Grid System' }[customer.systemType];
 
   return (
     <Page size={[W, H]} style={S.page}>
-      <NavyTriangleCover />
+      {/* Right navy panel */}
+      <View style={[S.abs, { top: 0, right: 0, width: 420, height: H, backgroundColor: BLACK }]} />
 
-      {/* Logo top-left — 100% bigger */}
-      <View style={[S.abs, { top: 26, left: PAD }]}>
-        <Image src={logoUrl} style={{ height: 104 }} />
-      </View>
-
-      {/* Site photo — inside navy triangle area */}
+      {/* Site photo on right panel — full panel, reduced opacity overlay */}
       {customer.sitePhotoBase64 ? (
-        <View style={[S.abs, { top: 16, right: 60, width: 240, height: 256, borderRadius: 6, overflow: 'hidden' }]}>
-          <Image src={customer.sitePhotoBase64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <View style={[S.abs, { top: 0, right: 0, width: 420, height: H, overflow: 'hidden' }]}>
+          <Image src={customer.sitePhotoBase64} style={{ width: 420, height: H, objectFit: 'cover', opacity: 0.75 }} />
         </View>
-      ) : (
-        <View style={[S.abs, { top: 16, right: 60, width: 240, height: 256, borderRadius: 6, backgroundColor: '#2D5580', alignItems: 'center', justifyContent: 'center' }]}>
-          <Text style={{ color: '#64748B', fontSize: 13 }}>Site Photo</Text>
-        </View>
-      )}
+      ) : null}
 
-      {/* Main heading — fonts +30% */}
-      <View style={[S.abs, { bottom: 120, left: PAD, maxWidth: 380 }]}>
-        <Text style={{ fontSize: 57, fontFamily: 'Helvetica-Bold', color: INK, lineHeight: 1.02 }}>
-          Smart Solar{'\n'}Proposal
+      {/* Dark scrim so text stays readable over photo */}
+      <View style={[S.abs, { top: 0, right: 0, width: 420, height: H, backgroundColor: BLACK, opacity: 0.15 }]} />
+
+      {/* kW hero on right */}
+      <View style={[S.abs, { top: 80, right: 0, width: 420, height: H - 116, alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 4, marginBottom: 8 }}>S Y S T E M  C A P A C I T Y</Text>
+        <Text style={{ fontSize: 120, fontFamily: 'Times-Bold', color: GREEN, lineHeight: 1, textAlign: 'center' }}>
+          {systemKw % 1 === 0 ? systemKw.toFixed(0) : systemKw.toFixed(1)}
         </Text>
-        <Text style={{ fontSize: 22, color: GRAY, marginTop: 12, fontFamily: 'Helvetica' }}>
-          for customer{' '}
-          <Text style={{ fontFamily: 'Helvetica-Bold', color: INK }}>{customer.name || 'Customer Name'}</Text>
+        <Text style={{ fontSize: 24, fontFamily: 'Times-Bold', color: WHITE, letterSpacing: 4, marginTop: -8 }}>kWp</Text>
+        <View style={{ width: 40, height: 1.5, backgroundColor: GREEN, marginTop: 18, marginBottom: 14 }} />
+        <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: WHITE, letterSpacing: 3 }}>
+          {systemTypeLabel.toUpperCase().split('').join(' ')}
         </Text>
+        {netInvestment > 0 && (
+          <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: GREEN, marginTop: 12, letterSpacing: 0.5 }}>
+            Net Investment: {fmtI(netInvestment)}
+          </Text>
+        )}
       </View>
 
-      {/* kW badge — bottom left */}
-      <View style={[S.abs, { bottom: 40, left: PAD, flexDirection: 'row', alignItems: 'baseline', border: '2.5pt solid ' + GREEN, borderRadius: 7, padding: '8pt 24pt' }]}>
-        <Text style={{ fontSize: 44, fontFamily: 'Helvetica-Bold', color: GREEN, lineHeight: 1 }}>{kw}</Text>
-        <Text style={{ fontSize: 21, fontFamily: 'Helvetica-Bold', color: GREEN, marginLeft: 6 }}>kW</Text>
+      {/* Left content panel */}
+      {/* Logo */}
+      <View style={[S.abs, { top: 40, left: 52 }]}>
+        <Image src={logoUrl} style={{ height: 52 }} />
       </View>
 
-      {/* Address — inside blue triangle (bottom-right, white text) */}
-      {(addrLines.length > 0 || customer.phone) && (
-        <View style={[S.abs, { bottom: 40, right: 56, maxWidth: 260, alignItems: 'flex-end' }]}>
-          {addrLines.map((line, i) => (
-            <Text key={i} style={{ color: WHITE, fontSize: 12, lineHeight: 1.7 }}>{line}{i < addrLines.length - 1 ? ',' : ''}</Text>
-          ))}
-          {customer.phone && (
-            <Text style={{ color: WHITE, fontSize: 12, lineHeight: 1.7, marginTop: 3 }}>{customer.phone}</Text>
-          )}
-        </View>
-      )}
-    </Page>
-  );
-}
+      {/* Orange accent bar */}
+      <View style={[S.abs, { top: 0, left: 0, width: 4, height: H - 36, backgroundColor: ORANGE }]} />
 
-// ─── SLIDE 2: Company ─────────────────────────────────────────────────────────
-function CompanySlide({ logoUrl, finalLogoUrl }: { logoUrl: string; finalLogoUrl: string }) {
-  return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD}pt ${PAD}pt ${PAD}pt ${PAD}pt` }]}>
-      <SlideNum n={2} logoUrl={finalLogoUrl} />
+      {/* SOLAR PROPOSAL label */}
+      <View style={[S.abs, { top: 110, left: 52, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={{ width: 24, height: 1.5, backgroundColor: GREEN, marginRight: 10 }} />
+        <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 3 }}>SOLAR PROPOSAL</Text>
+      </View>
 
-      <Text style={{ fontSize: 52, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 20, letterSpacing: -1 }}>
-        COMPANY OVERVIEW
+      {/* Customer name */}
+      <Text style={[S.abs, { top: 136, left: 52, fontSize: 44, fontFamily: 'Times-Bold', color: TEXT, lineHeight: 1.1, width: 470 }]}>
+        {customer.name || 'Customer Name'}
       </Text>
 
-      <View style={[S.row, { flex: 1, gap: 36 }]}>
-        <View style={{ flex: 1 }}>
-          {[
-            '360watts is a technology-led solar energy company that makes solar simple and stress-free.',
-            'We design and install smart solar PV systems that bring more energy savings — track and control your energy through our mobile app.',
-            'We remain your single point of contact for installation, monitoring, service and upgrades — for the next 20+ years.',
-            'We work with trusted partners to ensure high-quality execution and long-term performance.',
-          ].map((t, i) => (
-            <Text key={i} style={{ fontSize: 15, color: GRAY, lineHeight: 1.7, marginBottom: 8 }}>{t}</Text>
-          ))}
+      {/* Thin gold rule */}
+      <GoldRule x={52} y={210} width={380} thick={1} />
 
-          {/* Circles — larger */}
-          <View style={[S.row, { gap: 28, marginTop: 'auto', paddingTop: 14 }]}>
-            {[
-              { bg: NAVY, label: '20+ years\nof solar' },
-              { bg: ORANGE, label: 'Modular home\nautomation' },
-              { bg: GREEN, label: 'Single contact\nfor services' },
-            ].map(c => (
-              <ColorCircle key={c.bg} bg={c.bg} label={c.label} size={104} />
-            ))}
-          </View>
+      {/* Address */}
+      <Text style={[S.abs, { top: 224, left: 52, fontSize: 11, fontFamily: 'Helvetica', color: MUTED, width: 400, lineHeight: 1.6 }]}>
+        {customer.address || '—'}
+      </Text>
 
-          <Text style={{ fontSize: 17, color: GRAY, marginTop: 14, lineHeight: 1.5 }}>
-            Designed for today's <Text style={{ color: GREEN, fontFamily: 'Helvetica-Bold' }}>savings</Text>
-            {' '}and tomorrow's <Text style={{ color: ORANGE, fontFamily: 'Helvetica-Bold' }}>energy independence</Text>.
+      {/* Phone */}
+      {customer.phone ? (
+        <Text style={[S.abs, { top: 272, left: 52, fontSize: 10, fontFamily: 'Helvetica', color: MUTED }]}>
+          {customer.phone}
+        </Text>
+      ) : null}
+
+      {/* Date badge */}
+      <View style={[S.abs, { top: 306, left: 52, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={{ backgroundColor: LIGHT, paddingHorizontal: 12, paddingVertical: 6 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica', color: MUTED, letterSpacing: 0.5 }}>
+            Prepared on {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
           </Text>
         </View>
-
-        <View style={[S.center, { width: 210 }]}>
-          <Image src={logoUrl} style={{ width: 192 }} />
-          <Text style={{ fontSize: 15, color: MUTED, marginTop: 12, textAlign: 'center' }}>Drive what's next.</Text>
-        </View>
       </View>
+
+      {/* Validity note */}
+      <Text style={[S.abs, { top: 348, left: 52, fontSize: 9, fontFamily: 'Helvetica', color: MUTED, opacity: 0.7 }]}>
+        This proposal is valid for 14 days from the date of issue.
+      </Text>
+
+      {/* Decorative bottom-left squares */}
+      <Svg style={{ position: 'absolute', bottom: 36, left: 0, width: 100, height: 60 }}>
+        <Rect x={4} y={20} width={14} height={14} fill={GREEN} opacity={0.25} />
+        <Rect x={22} y={28} width={10} height={10} fill={ORANGE} opacity={0.18} />
+        <Rect x={12} y={36} width={8} height={8} fill={BLACK} opacity={0.12} />
+      </Svg>
+
+      <SlideFooter n={1} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
     </Page>
   );
 }
 
-// ─── SLIDE 3/4: Quote ─────────────────────────────────────────────────────────
-function QuoteSlide({ data, option, slideNum, finalLogoUrl }: {
-  data: QuotationData; option: QuoteOption; slideNum: number; finalLogoUrl: string;
-}) {
-  const calc = calcEbBill(data.ebBill);
-  const { grossTotal, netInvestment } = calcBomTotals(option.rows, option.subsidy);
-  const roi = calcROI(netInvestment, calc.annualSaving);
-  const primaryRows = option.rows.filter(isPrimary);
-  const secondaryRows = option.rows.filter(r => !isPrimary(r));
-  const notIncluded = option.notIncluded ? option.notIncluded.split('\n').filter(Boolean) : [];
-  const factors = option.factorsNote ? option.factorsNote.split('\n').filter(Boolean) : [];
-
-  const TH = { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#555', padding: '6pt 7pt', backgroundColor: LIGHT, borderBottom: '1pt solid ' + BORDER };
-  const TD = { fontSize: 13, color: INK, padding: '6pt 7pt', borderBottom: '0.5pt solid ' + BORDER };
+// ─── Slide 2: Company Overview ────────────────────────────────────────────────
+function CompanySlide({ logoUrl, finalLogoUrl }: { logoUrl: string; finalLogoUrl: string }) {
+  const stats = [
+    { value: '2019', label: 'Founded' },
+    { value: '150+', label: 'Systems Installed' },
+    { value: '1.2 MW', label: 'Total Capacity' },
+    { value: '98%', label: 'Customer Satisfaction' },
+  ];
+  const pillars = [
+    { icon: 'o', title: 'Solar Energy', body: "Grid-tied, hybrid and off-grid systems engineered for Coimbatore's climate, maximising every peak sun hour." },
+    { icon: 'o', title: 'IoT Automation', body: 'Smart home energy automation via 360Watts hub — real-time monitoring, appliance control, predictive analytics.' },
+    { icon: 'o', title: 'Service & Support', body: '5-year comprehensive AMC, 24/7 remote monitoring and field response within 48 hours across Tamil Nadu.' },
+  ];
 
   return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD - 8}pt ${PAD}pt ${PAD - 8}pt ${PAD}pt` }]}>
-      <SlideNum n={slideNum} logoUrl={finalLogoUrl} />
+    <Page size={[W, H]} style={[S.page, { backgroundColor: BG }]}>
+      {/* Top navy bar */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 6, backgroundColor: BLACK }]} />
 
-      <View style={[S.row, { alignItems: 'center', gap: 12, marginBottom: 16, marginRight: 60 }]}>
-        <Text style={{ fontSize: 34, fontFamily: 'Helvetica-Bold', color: INK, flex: 1 }}>
-          Quotation — {calc.inverterKw > 0 ? `${calc.inverterKw}kW` : '—'} {data.customer.systemType.replace('_', '-')} System
-        </Text>
-        {option.isRecommended && (
-          <View style={{ backgroundColor: ORANGE, borderRadius: 4, padding: '4pt 14pt' }}>
-            <Text style={{ color: WHITE, fontSize: 12, fontFamily: 'Helvetica-Bold' }}>RECOMMENDED</Text>
+      {/* Logo + company name */}
+      <View style={[S.abs, { top: 30, left: 52 }]}>
+        <Image src={logoUrl} style={{ height: 24 }} />
+      </View>
+
+      <SectionLabel label="Who We Are" x={52} y={72} />
+
+      {/* Heading */}
+      <Text style={[S.abs, { top: 96, left: 52, fontSize: 32, fontFamily: 'Times-Bold', color: ORANGE, width: 420, lineHeight: 1.2 }]}>
+        POWERING TAMIL NADU{'\n'}WITH CLEAN ENERGY
+      </Text>
+
+      {/* Stats — side by side, compact, left side only */}
+      <View style={[S.abs, { top: 230, left: 52, right: 296, flexDirection: 'row' }]}>
+        {stats.slice(0, 3).map((s, i) => (
+          <View key={i} style={{ flex: 1, paddingRight: i < 2 ? 10 : 0, borderLeftWidth: i === 0 ? 0 : 1, borderLeftColor: RULE, borderLeftStyle: 'solid', paddingLeft: i === 0 ? 0 : 10 }}>
+            <View style={{ width: 20, height: 2.5, backgroundColor: i === 0 ? ORANGE : i === 1 ? GREEN : BLACK, marginBottom: 6 }} />
+            <Text style={{ fontSize: 18, fontFamily: 'Times-Bold', color: BLACK, lineHeight: 1 }}>{s.value}</Text>
+            <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 0.5, marginTop: 4 }}>{s.label.toUpperCase()}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* 3 pillars — stacked vertically on white left side */}
+      <View style={[S.abs, { top: 296, left: 52, right: 296, flexDirection: 'column' }]}>
+        {pillars.map((p, i) => (
+          <View key={i} style={{ marginBottom: i < pillars.length - 1 ? 16 : 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <View style={{ width: 5, height: 5, backgroundColor: GREEN, marginRight: 8 }} />
+              <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: BLACK }}>{p.title}</Text>
+            </View>
+            <Text style={{ fontSize: 9, fontFamily: 'Helvetica', color: MUTED, lineHeight: 1.6, paddingLeft: 13 }}>{p.body}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Right decorative panel */}
+      <View style={[S.abs, { top: 6, right: 0, width: 280, height: H - 6 - 36, backgroundColor: BLACK }]}>
+
+        <View style={{ padding: 36, paddingTop: 52 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2, marginBottom: 16 }}>OUR MISSION</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Times-Italic', color: WHITE, lineHeight: 1.7, opacity: 0.9 }}>
+            "To make every rooftop a{'\n'}power plant — sustainable,{'\n'}smart and profitable."
+          </Text>
+          <View style={{ width: 32, height: 1.5, backgroundColor: GREEN, marginTop: 20, marginBottom: 20 }} />
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica', color: WHITE, opacity: 0.65, lineHeight: 1.8 }}>
+            Certified Solar Installer{'\n'}
+            MNRE Empanelled{'\n'}
+            TANGEDCO Approved{'\n'}
+            ISO 9001:2015
+          </Text>
+        </View>
+      </View>
+
+      <SlideFooter n={2} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+    </Page>
+  );
+}
+
+// ─── Slides 3 & 4: Quotation ──────────────────────────────────────────────────
+function QuotationSlide({ option, label, slideNum, data, logoUrl, finalLogoUrl }: {
+  option: QuoteOption; label: string; slideNum: number; data: QuotationData; logoUrl: string; finalLogoUrl: string;
+}) {
+  const { customer, ebBill } = data;
+  const { inverterKw } = calcEbBill(ebBill);
+  const { grossTotal, netInvestment } = calcBomTotals(option.rows, option.subsidy);
+  const systemKw = getSystemKw(option.rows) || inverterKw;
+  const annualSaving = calcEbBill(ebBill).annualSaving;
+  const payback = annualSaving > 0 ? (netInvestment / annualSaving).toFixed(1) : '—';
+
+  const visibleRows = option.rows.filter(r => r.qty > 0 || r.unitPrice > 0);
+
+  return (
+    <Page size={[W, H]} style={S.page}>
+      {/* Navy header band */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 72, backgroundColor: BLACK, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 48 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2, marginBottom: 6 }}>{label.toUpperCase()}{option.isRecommended ? '  ·  RECOMMENDED' : ''}</Text>
+          <Text style={{ fontSize: 20, fontFamily: 'Times-Bold', color: WHITE }}>{customer.name || 'Customer'}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 9, color: GREEN, fontFamily: 'Helvetica-Bold', letterSpacing: 1, marginBottom: 4 }}>{systemKw} kWp  ·  {customer.systemType}</Text>
+          <Text style={{ fontSize: 9, color: WHITE, fontFamily: 'Helvetica', opacity: 0.65 }}>{customer.address?.split('\n')[0] || ''}</Text>
+        </View>
+      </View>
+
+      {/* Orange left accent */}
+      <View style={[S.abs, { top: 72, left: 0, width: 3, height: H - 72 - 36, backgroundColor: ORANGE }]} />
+
+      {/* BoM table */}
+      <View style={[S.abs, { top: 82, left: 16, width: 596, bottom: 42 }]}>
+        {/* Table header */}
+        <View style={{ flexDirection: 'row', backgroundColor: LIGHT, paddingVertical: 6, paddingHorizontal: 8, marginBottom: 2 }}>
+          {['Item', 'Brand / Specs', 'Qty'].map((h, i) => (
+            <Text key={i} style={{
+              fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLACK, letterSpacing: 0.5,
+              flex: [3.5, 4.5, 0.8][i], textAlign: i === 2 ? 'right' : 'left',
+            }}>{h.toUpperCase()}</Text>
+          ))}
+        </View>
+
+        {/* Table rows */}
+        {visibleRows.slice(0, 10).map((row, i) => (
+          <View key={row.id} style={{ flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 8, backgroundColor: i % 2 === 0 ? WHITE : BG }}>
+            <Text style={{ flex: 3.5, fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: TEXT }}>{row.item}</Text>
+            <Text style={{ flex: 4.5, fontSize: 8, fontFamily: 'Helvetica', color: MUTED }}>{row.brand ? `${row.brand} · ` : ''}{row.description}</Text>
+            <Text style={{ flex: 0.8, fontSize: 8.5, fontFamily: 'Helvetica', color: TEXT, textAlign: 'right' }}>{row.qty}</Text>
+          </View>
+        ))}
+
+        {/* Gross total row */}
+        <View style={{ flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, backgroundColor: LIGHT, marginTop: 3 }}>
+          <Text style={{ flex: 8.8, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLACK }}>Gross Total (incl. GST)</Text>
+          <Text style={{ flex: 1.4, fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLACK, textAlign: 'right' }}>{fmtI(grossTotal)}</Text>
+        </View>
+
+        {/* Subsidy row */}
+        <View style={{ flexDirection: 'row', paddingVertical: 6, paddingHorizontal: 8 }}>
+          <Text style={{ flex: 8.8, fontSize: 8.5, fontFamily: 'Helvetica', color: BLACK }}>PM Surya Ghar Subsidy (deduction)</Text>
+          <Text style={{ flex: 1.4, fontSize: 8.5, fontFamily: 'Helvetica', color: BLACK, textAlign: 'right' }}>− {fmtI(option.subsidy)}</Text>
+        </View>
+
+        {/* Net total row */}
+        <View style={{ flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 8, backgroundColor: WHITE, marginTop: 2 }}>
+          <Text style={{ flex: 8.8, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: BLACK }}>Net Total (after subsidy)</Text>
+          <Text style={{ flex: 1.4, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: GREEN, textAlign: 'right' }}>{fmtI(netInvestment)}</Text>
+        </View>
+      </View>
+
+      {/* Right metrics panel */}
+      <View style={[S.abs, { top: 72, right: 0, width: 348, bottom: 36, backgroundColor: BG, padding: 28 }]}>
+        <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: ORANGE, letterSpacing: 2, marginBottom: 16 }}>NET INVESTMENT</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 40, fontFamily: 'Times-Bold', color: BLACK, lineHeight: 1 }}>{fmtI(netInvestment)}</Text>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica', color: MUTED, marginLeft: 6, marginBottom: 6 }}>(INCL. GST)</Text>
+        </View>
+        <View style={{ width: 40, height: 1.5, backgroundColor: GREEN, marginTop: 10, marginBottom: 18 }} />
+
+        {/* Metric chips */}
+        {[
+          { label: 'System Size', val: `${systemKw} kWp` },
+          { label: 'Payback Period', val: `${payback} yrs` },
+          { label: 'Annual Savings', val: fmtI(annualSaving) },
+          { label: 'Subsidy Benefit', val: fmtI(option.subsidy) },
+        ].map((m, i) => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid' }}>
+            <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica', color: MUTED }}>{m.label}</Text>
+            <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: BLACK }}>{m.val}</Text>
+          </View>
+        ))}
+
+        {/* Expansion note */}
+        {option.expansionPossible && (
+          <View style={{ marginTop: 14, flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ width: 6, height: 6, backgroundColor: GREEN, marginTop: 3, marginRight: 8 }} />
+            <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: MUTED, flex: 1, lineHeight: 1.6 }}>Future expansion possible</Text>
+          </View>
+        )}
+
+        {/* Not included */}
+        {option.notIncluded && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: MUTED, marginBottom: 4, letterSpacing: 0.5 }}>NOT INCLUDED</Text>
+            {option.notIncluded.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: 2 }}>
+                <Text style={{ fontSize: 7.5, color: MUTED, marginRight: 4 }}>·</Text>
+                <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica', color: MUTED, flex: 1, lineHeight: 1.5 }}>{line}</Text>
+              </View>
+            ))}
           </View>
         )}
       </View>
 
-      <View style={[S.row, { flex: 1, gap: 22 }]}>
-        {/* Primary */}
-        <View style={{ width: 230 }}>
-          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Primary Components</Text>
-          <View style={{ border: '0.75pt solid ' + BORDER, borderRadius: 4 }}>
-            <View style={[S.row, { borderBottom: '1pt solid ' + BORDER }]}>
-              <Text style={[TH, { flex: 2 }]}>Item</Text>
-              <Text style={[TH, { flex: 1 }]}>Brand</Text>
-              <Text style={[TH, { width: 30 }]}>Qty</Text>
+      <SlideFooter n={slideNum} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+    </Page>
+  );
+}
+
+// ─── Slide 5: Terms & Conditions ─────────────────────────────────────────────
+function TermsSlide({ logoUrl, finalLogoUrl }: { logoUrl: string; finalLogoUrl: string }) {
+  const warranties = [
+    { years: '25', label: 'Panel Performance Warranty', body: 'Minimum 80% output guaranteed over 25 years by manufacturer.' },
+    { years: '10', label: 'Panel Product Warranty', body: 'Manufacturing defects covered for 10 years.' },
+    { years: '5', label: 'Inverter Warranty', body: 'Full parts and labour warranty on grid-tied inverter.' },
+    { years: '1', label: 'Installation Warranty', body: 'Workmanship and civil warranty on mounting structure and wiring.' },
+  ];
+  const terms = [
+    '50% advance, balance on commissioning.',
+    'TANGEDCO net-metering application assistance included.',
+    'AMC contract available at Rs.5,000/year post-warranty.',
+    'Delivery: 15–21 working days from advance payment.',
+    'Prices include GST; subject to change without prior notice.',
+    'Generation estimates based on 4.5 PSH and TANGEDCO tariff.',
+  ];
+
+  return (
+    <Page size={[W, H]} style={[S.page, { backgroundColor: BG }]}>
+      {/* Top accent */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 5, backgroundColor: GREEN }]} />
+
+      <SectionLabel label="Terms & Warranty" x={52} y={28} />
+
+      <Text style={[S.abs, { top: 48, left: 52, fontSize: 24, fontFamily: 'Times-Bold', color: ORANGE, lineHeight: 1.2 }]}>
+        OUR COMMITMENT TO YOU
+      </Text>
+
+      {/* Warranties — stacked vertically on white left side */}
+      <View style={[S.abs, { top: 112, left: 52, right: 244, flexDirection: 'column' }]}>
+        {warranties.map((w, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: RULE, borderBottomStyle: 'solid' }}>
+            <View style={{ width: 44, flexShrink: 0, marginRight: 14 }}>
+              <Text style={{ fontSize: 26, fontFamily: 'Times-Bold', color: i < 2 ? BLACK : GREEN, lineHeight: 1 }}>{w.years}</Text>
+              <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 0.5 }}>YR{w.years !== '1' ? 'S' : ''}</Text>
             </View>
-            {primaryRows.map(row => (
-              <View key={row.id} style={[S.row]}>
-                <View style={{ flex: 2, padding: '6pt 7pt', borderBottom: '0.5pt solid ' + BORDER }}>
-                  <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: INK }}>
-                    {row.item.toLowerCase() === 'panels' ? 'Solar Panel' : row.item.toLowerCase() === 'inverter' ? 'On-Grid Inverter' : row.item}
-                  </Text>
-                  {row.description && <Text style={{ fontSize: 11, color: GRAY, marginTop: 2 }}>{row.description}</Text>}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: TEXT, marginBottom: 3 }}>{w.label}</Text>
+              <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica', color: MUTED, lineHeight: 1.6 }}>{w.body}</Text>
+            </View>
+          </View>
+        ))}
+
+        {/* T&C — two sections below warranties */}
+        <View style={{ marginTop: 14, flexDirection: 'row' }}>
+          {[{ heading: 'PAYMENT & DELIVERY', items: terms.slice(0, 3) }, { heading: 'ADDITIONAL TERMS', items: terms.slice(3) }].map((col, ci) => (
+            <View key={ci} style={{ flex: 1, paddingRight: ci === 0 ? 20 : 0 }}>
+              <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLACK, letterSpacing: 1.5, marginBottom: 8 }}>{col.heading}</Text>
+              {col.items.map((t, ti) => (
+                <View key={ti} style={{ flexDirection: 'row', marginBottom: 6 }}>
+                  <View style={{ width: 4, height: 4, backgroundColor: GREEN, marginTop: 3, marginRight: 8, flexShrink: 0 }} />
+                  <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: MUTED, flex: 1, lineHeight: 1.6 }}>{t}</Text>
                 </View>
-                <Text style={[TD, { flex: 1 }]}>{row.brand || '—'}</Text>
-                <Text style={[TD, { width: 30 }]}>{row.qty}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Secondary */}
-        <View style={{ width: 210 }}>
-          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Secondary Components</Text>
-          <View style={{ border: '0.75pt solid ' + BORDER, borderRadius: 4 }}>
-            {secondaryRows.map((row, i) => (
-              <View key={row.id} style={{ padding: '6pt 8pt', borderBottom: i < secondaryRows.length - 1 ? '0.5pt solid ' + BORDER : undefined }}>
-                <Text style={{ fontSize: 13, color: INK }}>{row.item}</Text>
-                {row.description && <Text style={{ fontSize: 10, color: GRAY, marginTop: 2 }}>{row.description}</Text>}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Right: pricing */}
-        <View style={{ flex: 1, gap: 12 }}>
-          <View>
-            <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>Total Amount</Text>
-            <View style={{ backgroundColor: '#FFF3E0', border: '1.5pt solid ' + ORANGE, borderRadius: 6, padding: '9pt 14pt' }}>
-              <Text style={{ fontSize: 21, fontFamily: 'Helvetica-Bold', color: ORANGE }}>
-                ₹ {grossTotal.toLocaleString('en-IN')} <Text style={{ fontSize: 14, fontFamily: 'Helvetica' }}>(incl. GST)</Text>
-              </Text>
-            </View>
-          </View>
-          {option.subsidy > 0 && (
-            <View>
-              <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>After Subsidy</Text>
-              <View style={{ border: '1.5pt solid ' + GREEN, borderRadius: 6, padding: '9pt 14pt' }}>
-                <Text style={{ fontSize: 21, fontFamily: 'Helvetica-Bold', color: GREEN }}>₹ {netInvestment.toLocaleString('en-IN')}</Text>
-              </View>
-            </View>
-          )}
-          <View>
-            <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>Payback Period</Text>
-            <View style={{ border: '1.5pt solid ' + GREEN, borderRadius: 6, padding: '9pt 14pt' }}>
-              <Text style={{ fontSize: 21, fontFamily: 'Helvetica-Bold', color: GREEN }}>
-                {roi.paybackYears} years{roi.paybackMonths > 0 ? `, ${roi.paybackMonths} mo` : ''}
-              </Text>
-            </View>
-          </View>
-          <View style={[S.row, { gap: 10, alignItems: 'center' }]}>
-            <Text style={{ fontSize: 13, color: GRAY }}>Future expansion:</Text>
-            <View style={{ border: '1.5pt solid ' + GREEN, borderRadius: 4, padding: '3pt 10pt' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: GREEN }}>{option.expansionPossible ? 'Yes' : 'No'}</Text>
-            </View>
-          </View>
-          {notIncluded.length > 0 && (
-            <View>
-              <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>Not Included</Text>
-              {notIncluded.map((l, i) => (
-                <Text key={i} style={{ fontSize: 12, color: GRAY, lineHeight: 1.7 }}>{i + 1}. {l}</Text>
               ))}
             </View>
-          )}
+          ))}
         </View>
       </View>
 
-      {factors.length > 0 && (
-        <View style={{ marginTop: 10, borderTop: '0.75pt solid ' + BORDER, paddingTop: 8 }}>
-          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 4 }}>Factors taken into calculation:</Text>
-          {factors.map((l, i) => (
-            <Text key={i} style={{ fontSize: 12, color: GRAY, lineHeight: 1.6 }}>{i + 1}. {l}</Text>
+      {/* Right accent panel */}
+      <View style={[S.abs, { top: 5, right: 0, width: 220, height: H - 5 - 36, backgroundColor: BLACK }]}>
+        <View style={{ padding: 28, paddingTop: 36 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2, marginBottom: 20 }}>CERTIFICATIONS</Text>
+          {['MNRE Empanelled', 'TANGEDCO Approved', 'MSME Registered', 'ISO 9001:2015'].map((c, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ width: 4, height: 4, backgroundColor: GREEN, marginRight: 10 }} />
+              <Text style={{ fontSize: 9, fontFamily: 'Helvetica', color: WHITE, opacity: 0.85 }}>{c}</Text>
+            </View>
           ))}
+          <View style={{ width: 40, height: 1, backgroundColor: GREEN, marginTop: 12, marginBottom: 16, opacity: 0.4 }} />
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: WHITE, opacity: 0.55, lineHeight: 1.7 }}>
+            All installations comply{'\n'}with CEA regulations{'\n'}and IEC standards.
+          </Text>
+        </View>
+      </View>
+
+      <SlideFooter n={5} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+    </Page>
+  );
+}
+
+// ─── Slide 6: ROI Charts ──────────────────────────────────────────────────────
+function ChartsSlide({ data, logoUrl, finalLogoUrl }: { data: QuotationData; logoUrl: string; finalLogoUrl: string }) {
+  const { ebBill, optionA } = data;
+  const { annualSaving } = calcEbBill(ebBill);
+  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy);
+  const roi = calcROI(netInvestment, annualSaving);
+  const pts = roi.yearlyData;
+  const breakEvenYr = pts.find(p => p.breakeven >= 0)?.year ?? 0;
+  const totalSaving20 = pts[19]?.breakeven ?? 0;
+
+  // ── Layout constants ──
+  // Metric cards row: top 64–120
+  // Charts row: top 128–360
+  // Labels/legends: top 362+
+
+  // Bar chart — annual bill without solar (growing) vs with solar (tiny residual)
+  // Show year-by-year EB bill savings
+  const BX = 48, BY = 172, BW = 420, BH = 180;
+  const maxBarVal = Math.max(...pts.map(p => p.billNoSolar));
+  const bw = (BW - 8) / 20; // bar slot width
+  const bToY = (v: number) => BY + BH - (v / (maxBarVal || 1)) * BH;
+
+  // Area chart — cumulative
+  const AX = 504, AY = 172, AW = 420, AH = 180;
+  const maxCum = Math.max(...pts.map(p => Math.max(p.cumNoSolar, p.cumSolar)));
+  const aToX = (yr: number) => AX + ((yr - 1) / 19) * AW;
+  const aToY = (v: number) => AY + AH - (v / (maxCum || 1)) * AH;
+
+  const noSolarLinePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${aToX(p.year).toFixed(1)},${aToY(p.cumNoSolar).toFixed(1)}`).join(' ');
+  const solarLinePath   = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${aToX(p.year).toFixed(1)},${aToY(p.cumSolar).toFixed(1)}`).join(' ');
+  const noSolarArea = noSolarLinePath + ` L${aToX(20).toFixed(1)},${AY + AH} L${AX},${AY + AH} Z`;
+  const solarArea   = solarLinePath   + ` L${aToX(20).toFixed(1)},${AY + AH} L${AX},${AY + AH} Z`;
+
+  // Y-axis nice ticks for bar chart
+  const barTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    val: f * maxBarVal,
+    y: BY + BH - f * BH,
+  }));
+
+  // Y-axis nice ticks for area chart
+  const cumTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    val: f * maxCum,
+    y: AY + AH - f * AH,
+  }));
+
+  function fmtL(v: number) {
+    if (v >= 1_00_000) return `${(v / 1_00_000).toFixed(1)}L`;
+    if (v >= 1000) return `${(v / 1000).toFixed(0)}K`;
+    return `${Math.round(v)}`;
+  }
+
+  return (
+    <Page size={[W, H]} style={[S.page, { backgroundColor: BG }]}>
+      {/* Navy header */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 52, backgroundColor: BLACK, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 48 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2 }}>FINANCIAL ANALYSIS</Text>
+          <Text style={{ fontSize: 15, fontFamily: 'Times-Bold', color: WHITE, marginTop: 3 }}>20-Year Solar Returns</Text>
+        </View>
+        <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: WHITE, opacity: 0.5 }}>Based on current TANGEDCO tariff · 3% annual escalation</Text>
+      </View>
+
+      {/* ── 4 metric cards ── */}
+      {([
+        { label: 'Net Investment', val: fmtI(netInvestment), sub: 'after subsidy', color: WHITE, textColor: GREEN, valColor: GREEN },
+        { label: 'Annual Savings', val: fmtI(annualSaving), sub: 'year 1 estimate', color: WHITE, textColor: BLACK, valColor: BLACK },
+        { label: 'Payback Period', val: `${roi.paybackYears} yrs ${roi.paybackMonths} mo`, sub: 'break-even point', color: ORANGE, textColor: WHITE, valColor: WHITE },
+        { label: '20-Year Net Gain', val: fmtI(totalSaving20), sub: 'total profit', color: WHITE, textColor: BLACK, valColor: GREEN },
+      ] as const).map((m, i) => (
+        <View key={i} style={[S.abs, {
+          top: 60, left: 48 + i * 222, width: 210, height: 68,
+          backgroundColor: m.color,
+          borderWidth: m.color === WHITE ? 1 : 0,
+          borderColor: RULE,
+          borderStyle: 'solid',
+          padding: 12,
+        }]}>
+          <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: m.color === WHITE ? MUTED : m.valColor, letterSpacing: 1, marginBottom: 5, opacity: m.color === WHITE ? 1 : 0.75 }}>{m.label.toUpperCase()}</Text>
+          <Text style={{ fontSize: 17, fontFamily: 'Times-Bold', color: m.valColor, lineHeight: 1 }}>{m.val}</Text>
+          <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica', color: m.color === WHITE ? MUTED : m.textColor, opacity: 0.7, marginTop: 3 }}>{m.sub}</Text>
+        </View>
+      ))}
+
+      {/* ── Chart titles ── */}
+      <Text style={[S.abs, { top: BY - 28, left: BX, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLACK, letterSpacing: 1 }]}>
+        ANNUAL ELECTRICITY BILL  —  WITH vs. WITHOUT SOLAR  (Rs.)
+      </Text>
+      <Text style={[S.abs, { top: BY - 28, left: AX, fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: BLACK, letterSpacing: 1 }]}>
+        CUMULATIVE COST COMPARISON OVER 20 YEARS  (Rs.)
+      </Text>
+
+      <Svg style={{ position: 'absolute', top: 0, left: 0, width: W, height: H }}>
+
+        {/* ════ BAR CHART ════ */}
+
+        {/* Grid lines */}
+        {barTicks.map((t, i) => (
+          <Line key={i} x1={BX} y1={t.y} x2={BX + BW} y2={t.y} stroke={RULE} strokeWidth={i === 0 ? 0 : 0.5} strokeDasharray={i === 0 ? '' : '3,4'} />
+        ))}
+        {/* Axes */}
+        <Line x1={BX} y1={BY} x2={BX} y2={BY + BH} stroke={'#CBD5E1'} strokeWidth={1} />
+        <Line x1={BX} y1={BY + BH} x2={BX + BW} y2={BY + BH} stroke={'#CBD5E1'} strokeWidth={1} />
+
+        {/* Bars — without solar (light) and with solar (navy) side by side */}
+        {pts.map((p, i) => {
+          const slotX = BX + 4 + i * bw;
+          const barPairW = bw - 4;
+          const noSolarH = Math.max(((p.billNoSolar / (maxBarVal || 1)) * BH), 1);
+          const solarH   = Math.max(((p.billSolar   / (maxBarVal || 1)) * BH), 1);
+          const halfW = barPairW / 2 - 1;
+          return (
+            <G key={i}>
+              {/* Without solar — grey */}
+              <Rect x={slotX} y={BY + BH - noSolarH} width={halfW} height={noSolarH} fill={'#94A3B8'} opacity={0.55} />
+              {/* With solar — navy */}
+              <Rect x={slotX + halfW + 1} y={BY + BH - solarH} width={halfW} height={solarH} fill={BLACK} opacity={0.85} />
+            </G>
+          );
+        })}
+
+        {/* Break-even dashed vertical line */}
+        {breakEvenYr > 0 && breakEvenYr <= 20 && (
+          <Line
+            x1={BX + 4 + (breakEvenYr - 1) * bw}
+            y1={BY - 2}
+            x2={BX + 4 + (breakEvenYr - 1) * bw}
+            y2={BY + BH}
+            stroke={ORANGE} strokeWidth={1.5} strokeDasharray="4,3"
+          />
+        )}
+
+        {/* ════ AREA CHART ════ */}
+
+        {/* Grid lines */}
+        {cumTicks.map((t, i) => (
+          <Line key={i} x1={AX} y1={t.y} x2={AX + AW} y2={t.y} stroke={RULE} strokeWidth={i === 0 ? 0 : 0.5} strokeDasharray={i === 0 ? '' : '3,4'} />
+        ))}
+        {/* Axes */}
+        <Line x1={AX} y1={AY} x2={AX} y2={AY + AH} stroke={'#CBD5E1'} strokeWidth={1} />
+        <Line x1={AX} y1={AY + AH} x2={AX + AW} y2={AY + AH} stroke={'#CBD5E1'} strokeWidth={1} />
+
+        {/* Fill areas */}
+        <Path d={noSolarArea} fill={'#94A3B8'} opacity={0.15} />
+        <Path d={solarArea}   fill={BLACK}       opacity={0.12} />
+
+        {/* Lines */}
+        <Path d={noSolarLinePath} stroke={'#64748B'} strokeWidth={2} fill="none" />
+        <Path d={solarLinePath}   stroke={BLACK}      strokeWidth={2.5} fill="none" />
+
+        {/* Crossover / gap annotation at year 20 */}
+        {pts[19] && (
+          <>
+            <Line x1={aToX(20)} y1={aToY(pts[19].cumSolar)} x2={aToX(20)} y2={aToY(pts[19].cumNoSolar)}
+              stroke={GREEN} strokeWidth={2} strokeDasharray="3,2" />
+          </>
+        )}
+
+        {/* Break-even marker on area chart */}
+        {breakEvenYr > 0 && breakEvenYr <= 20 && (
+          <>
+            <Line x1={aToX(breakEvenYr)} y1={AY} x2={aToX(breakEvenYr)} y2={AY + AH}
+              stroke={ORANGE} strokeWidth={1.5} strokeDasharray="4,3" />
+            <Rect x={aToX(breakEvenYr) - 1} y={aToY(pts[breakEvenYr - 1]?.cumSolar ?? 0) - 5} width={8} height={8} fill={ORANGE} />
+          </>
+        )}
+      </Svg>
+
+      {/* ── Bar chart Y-axis labels ── */}
+      {barTicks.map((t, i) => (
+        <Text key={i} style={[S.abs, { top: t.y - 5, left: BX - 38, fontSize: 6.5, fontFamily: 'Helvetica', color: MUTED, width: 34, textAlign: 'right' }]}>
+          {i === 0 ? '' : `${fmtL(t.val)}`}
+        </Text>
+      ))}
+
+      {/* ── Bar chart X-axis year labels ── */}
+      {[1, 3, 5, 7, 10, 13, 15, 18, 20].map(yr => (
+        <Text key={yr} style={[S.abs, { top: BY + BH + 4, left: BX + 4 + (yr - 1) * bw - 4, fontSize: 6.5, fontFamily: 'Helvetica', color: MUTED }]}>{yr}</Text>
+      ))}
+
+      {/* ── Break-even badge (bar chart) ── */}
+      {breakEvenYr > 0 && breakEvenYr <= 20 && (
+        <View style={[S.abs, {
+          top: BY - 16,
+          left: BX + 4 + (breakEvenYr - 1) * bw - 18,
+          backgroundColor: ORANGE, paddingHorizontal: 5, paddingVertical: 2,
+        }]}>
+          <Text style={{ fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: WHITE }}>Break-even Yr {breakEvenYr}</Text>
         </View>
       )}
-    </Page>
-  );
-}
 
-// ─── SLIDE 5: Terms ───────────────────────────────────────────────────────────
-function TermsSlide({ finalLogoUrl }: { finalLogoUrl: string }) {
-  return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD}pt ${PAD}pt ${PAD}pt ${PAD}pt` }]}>
-      <SlideNum n={5} logoUrl={finalLogoUrl} />
-      <Text style={{ fontSize: 52, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 26, letterSpacing: -1 }}>
-        TERMS & CONDITIONS
-      </Text>
-      <View style={[S.row, { alignItems: 'center', gap: 26, marginBottom: 32 }]}>
-        <ColorCircle bg={NAVY} label={'12\nmonths'} size={94} />
-        <Text style={{ fontSize: 19, color: GRAY, lineHeight: 1.5, flex: 1 }}>
-          Take-back promise if unsatisfied with solar performance{'\n'}
-          <Text style={{ fontSize: 15, color: MUTED }}>(all except labour costs)</Text>
+      {/* ── Area chart Y-axis labels ── */}
+      {cumTicks.map((t, i) => (
+        <Text key={i} style={[S.abs, { top: t.y - 5, left: AX - 38, fontSize: 6.5, fontFamily: 'Helvetica', color: MUTED, width: 34, textAlign: 'right' }]}>
+          {i === 0 ? '' : `${fmtL(t.val)}`}
         </Text>
+      ))}
+
+      {/* ── Area chart X-axis year labels ── */}
+      {[1, 5, 10, 15, 20].map(yr => (
+        <Text key={yr} style={[S.abs, { top: AY + AH + 4, left: aToX(yr) - 4, fontSize: 6.5, fontFamily: 'Helvetica', color: MUTED }]}>{yr}</Text>
+      ))}
+
+      {/* ── 20-yr gap label on area chart ── */}
+      {pts[19] && (
+        <View style={[S.abs, { top: aToY((pts[19].cumNoSolar + pts[19].cumSolar) / 2) - 8, left: AX + AW - 60 }]}>
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: GREEN }}>Save {fmtL(pts[19].cumNoSolar - pts[19].cumSolar)}</Text>
+        </View>
+      )}
+
+      {/* ── Legends ── */}
+      <View style={[S.abs, { top: BY + BH + 16, left: BX, flexDirection: 'row' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 10, height: 10, backgroundColor: '#94A3B8', opacity: 0.7, marginRight: 5 }} />
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica', color: MUTED }}>Without Solar</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 10, height: 10, backgroundColor: BLACK, opacity: 0.85, marginRight: 5 }} />
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica', color: MUTED }}>With Solar</Text>
+        </View>
       </View>
-      <View style={[S.row, { gap: 52 }]}>
-        {[
-          { label: 'Solar\nInverter', sub1: '10 years of warranty', sub2: '' },
-          { label: 'Solar\nPanels', sub1: '12 years performance guarantee', sub2: '20–25 years product warranty' },
-          { label: 'Repair &\nService', sub1: '5 years of warranty', sub2: '' },
-        ].map(w => (
-          <View key={w.label} style={[S.col, { alignItems: 'center', gap: 14 }]}>
-            <ColorCircle bg={GREEN} label={w.label} size={124} />
-            <Text style={{ fontSize: 14, color: INK, textAlign: 'center', lineHeight: 1.5, maxWidth: 160, fontFamily: 'Helvetica-Bold' }}>{w.sub1}</Text>
-            {w.sub2 && <Text style={{ fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.4, maxWidth: 160 }}>{w.sub2}</Text>}
+
+      <View style={[S.abs, { top: AY + AH + 16, left: AX, flexDirection: 'row' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+          <View style={{ width: 16, height: 2, backgroundColor: '#64748B', marginRight: 5 }} />
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica', color: MUTED }}>Without Solar (cumulative spend)</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 16, height: 2.5, backgroundColor: BLACK, marginRight: 5 }} />
+          <Text style={{ fontSize: 7, fontFamily: 'Helvetica', color: MUTED }}>With Solar (cumulative spend)</Text>
+        </View>
+      </View>
+
+      <SlideFooter n={6} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+    </Page>
+  );
+}
+
+// ─── Slide 7: Next Steps ──────────────────────────────────────────────────────
+function NextStepsSlide({ logoUrl, finalLogoUrl }: { logoUrl: string; finalLogoUrl: string }) {
+  const steps = [
+    { n: '01', title: 'Confirm & Advance', body: '50% advance payment to confirm your order and lock in the current price.' },
+    { n: '02', title: 'Site Survey', body: 'Our engineer visits for final structural assessment, shading analysis and panel placement planning.' },
+    { n: '03', title: 'TANGEDCO Application', body: 'We file the net-meter and sanctioned-load application on your behalf.' },
+    { n: '04', title: 'Installation', body: 'Panels, inverter, DCDB/ACDB, wiring and IoT hub installed within 2–3 days by our certified team.' },
+    { n: '05', title: 'Commissioning', body: 'System tested, inverter commissioned, 360Watts app configured and handover walkthrough completed.' },
+    { n: '06', title: 'Net Metering', body: 'TANGEDCO meter installation (15–45 days) — you start exporting excess power to the grid.' },
+  ];
+
+  return (
+    <Page size={[W, H]} style={S.page}>
+      {/* Left black panel — wider */}
+      <View style={[S.abs, { top: 0, left: 0, width: 300, height: H - 36, backgroundColor: BLACK }]}>
+        <View style={{ padding: 44, paddingTop: 56 }}>
+          <View style={{ width: 24, height: 2, backgroundColor: GREEN, marginBottom: 16 }} />
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2, marginBottom: 10 }}>YOUR JOURNEY</Text>
+          <Text style={{ fontSize: 28, fontFamily: 'Times-Bold', color: WHITE, lineHeight: 1.3, marginBottom: 24 }}>
+            From{'\n'}Proposal{'\n'}to Power
+          </Text>
+          <Text style={{ fontSize: 9.5, fontFamily: 'Helvetica', color: WHITE, opacity: 0.65, lineHeight: 1.9 }}>
+            Typical time from{'\n'}advance to first{'\n'}unit generated:
+          </Text>
+          <Text style={{ fontSize: 26, fontFamily: 'Times-Bold', color: GREEN, marginTop: 8 }}>21 days</Text>
+        </View>
+      </View>
+
+      {/* Steps — vertical list */}
+      <View style={[S.abs, { top: 24, left: 324, right: 36, bottom: 52 }]}>
+        {steps.map((step, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 11, borderBottomWidth: i < steps.length - 1 ? 1 : 0, borderBottomColor: RULE, borderBottomStyle: 'solid' }}>
+            <Text style={{ fontSize: 26, fontFamily: 'Times-Bold', color: GREEN, marginRight: 18, lineHeight: 1, width: 38 }}>{step.n}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: BLACK, marginBottom: 4 }}>{step.title}</Text>
+              <Text style={{ fontSize: 10.5, fontFamily: 'Helvetica', color: MUTED, lineHeight: 1.65 }}>{step.body}</Text>
+            </View>
           </View>
         ))}
       </View>
-      <Text style={[S.abs, { bottom: 22, left: PAD, fontSize: 11, color: MUTED }]}>
-        * Does not cover accidental and other damages caused by natural or man-made events.
-      </Text>
+
+      <SlideFooter n={7} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
     </Page>
   );
 }
 
-// ─── SLIDE 6: Charts ──────────────────────────────────────────────────────────
-function ChartsSlide({ data, finalLogoUrl }: { data: QuotationData; finalLogoUrl: string }) {
-  const calc = calcEbBill(data.ebBill);
-  const { netInvestment } = calcBomTotals(data.optionA.rows, data.optionA.subsidy);
-  const roi = calcROI(netInvestment, calc.annualSaving);
-  const beYear = roi.yearlyData.find(y => y.breakeven >= 0)?.year;
+// ─── Slide 8: App Features ────────────────────────────────────────────────────
+function AppSlide({ logoUrl, finalLogoUrl, appScreen1, appScreen2, phoneCover }: { logoUrl: string; finalLogoUrl: string; appScreen1: string; appScreen2: string; phoneCover: string }) {
+  const features = [
+    { title: 'Live Energy Monitor', body: 'Real-time solar generation, consumption and grid import/export in a clean dashboard.' },
+    { title: 'Smart Automation', body: 'Schedule appliances to run on solar-peak hours, cutting bills further.' },
+    { title: 'Savings Tracker', body: 'CO₂ avoided, rupees saved, payback progress — all visualised beautifully.' },
+    { title: 'Alerts & Reports', body: 'Instant notifications for faults; monthly PDF reports for your records.' },
+    { title: 'Remote Control', body: 'Switch appliances on/off from anywhere with secure device control.' },
+  ];
+
+  // Carousel layout: center phone large + prominent, flanking phones smaller + dimmed
+  // Right zone: x=480 to x=960 (480pt wide)
+  const CPW = 175;  // center phone width
+  const CPH = Math.round(CPW * 636 / 329); // ~339
+  const SPW = 120;  // side phone width
+  const SPH = Math.round(SPW * 636 / 329); // ~252
+  const GAP = 2;
+  // Center phone x, vertically centred in content area
+  const CPX = 480 + Math.round((480 - (SPW + GAP + CPW + GAP + SPW)) / 2) + SPW + GAP;
+  const CPY = Math.round((H - 36 - CPH) / 2) - 20;
+  // Side phones vertically aligned with center phone mid-point
+  const SPY = CPY + Math.round((CPH - SPH) / 2);
+  const SP1X = CPX - GAP - SPW;
+  const SP2X = CPX + CPW + GAP;
+  // Screenshot insets — proportional to phone size
+  const cScrW = Math.round(CPW * 0.75) - 2; const cScrH = Math.round(CPH * 0.83) - 4;
+  const cScrL = Math.round(CPW * 0.13); const cScrT = Math.round(CPH * 0.08) + 3;
+  const sScrW = Math.round(SPW * 0.75) - 3; const sScrH = Math.round(SPH * 0.83) - 5;
+  const sScrL = Math.round(SPW * 0.13) + 0.5; const sScrT = Math.round(SPH * 0.08) + 3;
+  // Dot indicators
+  const dotY = CPY + CPH + 14;
+  const dotCX = CPX + Math.round(CPW / 2);
 
   return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD}pt ${PAD}pt ${PAD - 8}pt ${PAD}pt` }]}>
-      <SlideNum n={6} logoUrl={finalLogoUrl} />
-      <Text style={{ fontSize: 52, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 18, letterSpacing: -1 }}>
-        WHY SOLAR IS A GOOD INVESTMENT
-      </Text>
-      <View style={[S.row, { flex: 1, gap: 36 }]}>
-        <View style={{ flex: 1 }}>
-          <BreakevenBarChart data={roi.yearlyData} />
-          <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: INK, marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Investment Savings & Breakeven Year
-          </Text>
-          {beYear && <Text style={{ fontSize: 13, color: ORANGE, marginTop: 4 }}>Break-even at year {beYear}</Text>}
-        </View>
-        <View style={{ flex: 1 }}>
-          <CumulativeAreaChart data={roi.yearlyData} />
-          <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: INK, marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Cumulative 20-year Cost
-          </Text>
-          <View style={[S.row, { gap: 18, marginTop: 6 }]}>
-            <View style={[S.row, { alignItems: 'center', gap: 6 }]}>
-              <View style={{ width: 14, height: 4, backgroundColor: '#9CA3AF', borderRadius: 2 }} />
-              <Text style={{ fontSize: 11, color: MUTED }}>Without Solar</Text>
-            </View>
-            <View style={[S.row, { alignItems: 'center', gap: 6 }]}>
-              <View style={{ width: 14, height: 4, backgroundColor: GREEN, borderRadius: 2 }} />
-              <Text style={{ fontSize: 11, color: MUTED }}>With Solar</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    </Page>
-  );
-}
+    <Page size={[W, H]} style={[S.page, { backgroundColor: BLACK }]}>
+      {/* Gold accent top */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 4, backgroundColor: GREEN }]} />
 
-// ─── SLIDE 7: Next Steps ──────────────────────────────────────────────────────
-function NextStepsSlide({ finalLogoUrl }: { finalLogoUrl: string }) {
-  return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD}pt ${PAD}pt ${PAD}pt ${PAD}pt` }]}>
-      <SlideNum n={7} logoUrl={finalLogoUrl} />
-      <Text style={{ fontSize: 52, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 26, letterSpacing: -1 }}>
-        NEXT STEPS
-      </Text>
-      <View style={[S.row, { gap: 48, flex: 1 }]}>
-        {[
-          { label: 'Completion in 7–10 days', steps: ['Site visit & technical assessment', 'Proposal finalisation & customer approval', 'Payment (70%)', 'On-site installation'], start: 1 },
-          { label: 'Completion in 11–25 days', steps: ['Submission of applications\n(sanctioned load extension + solar net meter)', 'Approval & commissioning by TNEB', 'Remaining payment (30%)'], start: 5 },
-        ].map(phase => (
-          <View key={phase.label} style={{ flex: 1 }}>
-            <OrangeBadge style={{ marginBottom: 18 }}>
-              <Text style={{ color: ORANGE, fontSize: 15, fontFamily: 'Helvetica-Bold' }}>{phase.label}</Text>
-            </OrangeBadge>
-            {phase.steps.map((step, i) => (
-              <View key={i} style={[S.row, { gap: 12, marginBottom: 14, alignItems: 'flex-start' }]}>
-                <View style={[S.center, { width: 28, height: 28, borderRadius: 14, backgroundColor: NAVY, flexShrink: 0, marginTop: 1 }]}>
-                  <Text style={{ color: WHITE, fontSize: 13, fontFamily: 'Helvetica-Bold' }}>{phase.start + i}</Text>
-                </View>
-                <Text style={{ fontSize: 17, color: GRAY, lineHeight: 1.5, flex: 1 }}>{step}</Text>
-              </View>
-            ))}
+      {/* Left: heading + feature list */}
+      <View style={[S.abs, { top: 24, left: 44, width: 430, bottom: 44 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <View style={{ width: 20, height: 2, backgroundColor: GREEN, marginRight: 10 }} />
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2 }}>SMART SOLAR APP</Text>
+        </View>
+        <Text style={{ fontSize: 26, fontFamily: 'Times-Bold', color: WHITE, lineHeight: 1.2, marginBottom: 8 }}>
+          Your Solar Plant{'\n'}in Your Pocket
+        </Text>
+        <Text style={{ fontSize: 9.5, fontFamily: 'Helvetica', color: WHITE, opacity: 0.7, lineHeight: 1.7, marginBottom: 16, textAlign: 'left' }}>
+          Complete visibility and control over your solar system — anytime, anywhere, on iOS and Android.
+        </Text>
+
+        {features.map((f, i) => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: i < features.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.1)', borderBottomStyle: 'solid' }}>
+            <View style={{ width: 5, height: 5, backgroundColor: GREEN, marginTop: 5, marginRight: 12, flexShrink: 0 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: WHITE, marginBottom: 3 }}>{f.title}</Text>
+              <Text style={{ fontSize: 9.5, fontFamily: 'Helvetica', color: WHITE, opacity: 0.6, lineHeight: 1.55 }}>{f.body}</Text>
+            </View>
           </View>
         ))}
       </View>
+
+      {/* Right: carousel-style 3-phone layout — center prominent, flanks dimmed */}
+      {/* Left side phone (dimmed) — clip bottom 24pt to hide shadow in phonecover asset */}
+      <View style={[S.abs, { top: SPY, left: SP1X, width: SPW, height: SPH - 24, overflow: 'hidden', opacity: 0.85 }]}>
+        <Image src={appScreen2} style={{ position: 'absolute', top: sScrT, left: sScrL, width: sScrW, height: sScrH }} />
+        <Image src={phoneCover} style={{ position: 'absolute', top: 0, left: 0, width: SPW, height: SPH, objectFit: 'cover' }} />
+      </View>
+      {/* Center phone (prominent) */}
+      <View style={[S.abs, { top: CPY, left: CPX, width: CPW, height: CPH - 30, overflow: 'hidden' }]}>
+        <Image src={appScreen1} style={{ position: 'absolute', top: cScrT, left: cScrL, width: cScrW, height: cScrH }} />
+        <Image src={phoneCover} style={{ position: 'absolute', top: 0, left: 0, width: CPW, height: CPH, objectFit: 'cover' }} />
+      </View>
+      {/* Right side phone (dimmed) */}
+      <View style={[S.abs, { top: SPY, left: SP2X, width: SPW, height: SPH - 22, overflow: 'hidden', opacity: 0.85 }]}>
+        <Image src={appScreen2} style={{ position: 'absolute', top: sScrT, left: sScrL, width: sScrW, height: sScrH }} />
+        <Image src={phoneCover} style={{ position: 'absolute', top: 0, left: 0, width: SPW, height: SPH, objectFit: 'cover' }} />
+      </View>
+
+      {/* iOS / Android badges below carousel */}
+      <View style={[S.abs, { top: dotY, left: dotCX - 90, width: 180, flexDirection: 'row', justifyContent: 'center', gap: 12 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderStyle: 'solid' }}>
+          <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: WHITE }}> iOS</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderStyle: 'solid' }}>
+          <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: WHITE }}> Android</Text>
+        </View>
+      </View>
+
+      <SlideFooter n={8} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
     </Page>
   );
 }
 
-// ─── SLIDE 8: App ─────────────────────────────────────────────────────────────
-function AppSlide({ finalLogoUrl }: { finalLogoUrl: string }) {
+// ─── Slide 9: Reference Sites ─────────────────────────────────────────────────
+function ReferenceSlide({ logoUrl, finalLogoUrl, ref6kw, ref8kw, ref20kw }: { logoUrl: string; finalLogoUrl: string; ref6kw: string; ref8kw: string; ref20kw: string }) {
+  const sites = [
+    { kw: '6 kWp', type: 'Residential · On-Grid', loc: 'Saravanampatti, Coimbatore', saving: 'Rs.72,000/yr', img: ref6kw },
+    { kw: '8 kWp', type: 'Commercial · Hybrid', loc: 'RS Puram, Coimbatore', saving: 'Rs.1.25L/yr', img: ref8kw },
+    { kw: '20 kWp', type: 'Industrial · On-Grid', loc: 'Ganapathy, Coimbatore', saving: 'Rs.2.40L/yr', img: ref20kw },
+  ];
+
   return (
-    <Page size={[W, H]} style={[S.page, { padding: `${PAD - 4}pt ${PAD}pt ${PAD - 4}pt ${PAD}pt` }]}>
-      <SlideNum n={8} logoUrl={finalLogoUrl} />
-      <Text style={{ fontSize: 42, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 18, letterSpacing: -0.5, lineHeight: 1.1 }}>
-        SMART SOLAR + SMART HOME{'\n'}WITH 360WATTS APP
+    <Page size={[W, H]} style={[S.page, { backgroundColor: BG }]}>
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 5, backgroundColor: ORANGE }]} />
+
+      <SectionLabel label="Our Work" x={52} y={28} />
+
+      <Text style={[S.abs, { top: 50, left: 52, fontSize: 28, fontFamily: 'Times-Bold', color: ORANGE }]}>
+        INSTALLATIONS ACROSS COIMBATORE
       </Text>
-      <View style={[S.row, { flex: 1, gap: 28 }]}>
-        <View style={{ width: 230, gap: 14 }}>
-          <View style={{ backgroundColor: '#F0FDF4', border: '1.5pt solid ' + GREEN, borderRadius: 10, padding: '16pt 18pt' }}>
-            <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#166534', marginBottom: 12 }}>PV Solar + IoT Energy Hub</Text>
-            <View style={[S.row, { gap: 24, justifyContent: 'center' }]}>
-              {['☀️\nPV solar\nsystem', '📡\nIoT Energy\nhub'].map((label, i) => (
-                <View key={i} style={[S.center, { gap: 4 }]}>
-                  <Text style={{ fontSize: 24 }}>{label.split('\n')[0]}</Text>
-                  <Text style={{ fontSize: 11, color: '#166534', textAlign: 'center' }}>{label.split('\n').slice(1).join('\n')}</Text>
-                </View>
-              ))}
+      <Text style={[S.abs, { top: 86, left: 52, fontSize: 10, fontFamily: 'Helvetica', color: MUTED }]}>
+        Real systems, real savings — our portfolio speaks for itself.
+      </Text>
+
+      {/* Site cards */}
+      <View style={[S.abs, { top: 116, left: 52, right: 52, bottom: 52, flexDirection: 'row' }]}>
+        {sites.map((site, i) => (
+          <View key={i} style={{ flex: 1, marginRight: i < sites.length - 1 ? 16 : 0, backgroundColor: WHITE, overflow: 'hidden' }}>
+            {/* Site photo */}
+            <View style={{ height: 200, overflow: 'hidden' }}>
+              {site.img ? (
+                <Image src={site.img} style={{ width: '100%', height: 200, objectFit: 'cover' }} />
+              ) : (
+                <View style={{ height: 200, backgroundColor: BLACK }} />
+              )}
             </View>
-          </View>
-          <View style={{ backgroundColor: NAVY, borderRadius: 10, padding: '16pt 18pt', flex: 1 }}>
-            <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#E2E8F0', marginBottom: 8 }}>Smart Appliances</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Washing machine, AC, water heater…</Text>
-            <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginBottom: 12 }}>— or —</Text>
-            <View style={[S.row, { gap: 20, justifyContent: 'center' }]}>
-              {[{ icon: '🔌', label: 'Smart plugs' }, { icon: '🔲', label: 'Smart switches' }].map(item => (
-                <View key={item.label} style={[S.center, { gap: 4 }]}>
-                  <Text style={{ fontSize: 22 }}>{item.icon}</Text>
-                  <Text style={{ fontSize: 11, color: '#CBD5E1', textAlign: 'center' }}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-        <View style={[S.row, { flex: 1, gap: 14 }]}>
-          {['Monitor Solar', 'Track Financials', 'Predictive Diagnosis', 'Monitor Energy'].map(label => (
-            <View key={label} style={[S.col, { flex: 1, alignItems: 'center', gap: 8 }]}>
-              <View style={{ flex: 1, width: '100%', backgroundColor: NAVY, borderRadius: 18, border: '2pt solid #2D5580', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 10, color: '#475569', textAlign: 'center' }}>App Screen</Text>
+            <View style={{ padding: 14, flex: 1 }}>
+              <Text style={{ fontSize: 20, fontFamily: 'Times-Bold', color: BLACK, lineHeight: 1 }}>{site.kw}</Text>
+              <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: ORANGE, letterSpacing: 0.5, marginTop: 4 }}>{site.type.toUpperCase()}</Text>
+              <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica', color: MUTED, marginTop: 6, lineHeight: 1.6 }}>{site.loc}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                <View style={{ width: 4, height: 4, backgroundColor: GREEN, marginRight: 6 }} />
+                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: GREEN }}>{site.saving}</Text>
               </View>
-              <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: GREEN, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <SlideFooter n={9} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+    </Page>
+  );
+}
+
+// ─── Slide 10: Thank You ──────────────────────────────────────────────────────
+function ThanksSlide({ data, logoUrl, finalLogoUrl, qrCodeUrl }: {
+  data: QuotationData; logoUrl: string; finalLogoUrl: string; qrCodeUrl: string;
+}) {
+  const { customer } = data;
+
+  return (
+    <Page size={[W, H]} style={S.page}>
+      {/* Background watermark */}
+      <Svg style={{ position: 'absolute', top: 0, left: 0, width: W, height: H }}>
+        <Polygon points={`${W},0 ${W},${H} ${W * 0.55},0`} fill={BLACK} opacity={0.04} />
+        <Polygon points={`0,${H} ${W * 0.45},${H} 0,0`} fill={LIGHT} opacity={0.6} />
+      </Svg>
+
+      {/* Thin gold top accent */}
+      <View style={[S.abs, { top: 0, left: 0, right: 0, height: 4, backgroundColor: GREEN }]} />
+
+      {/* Left content */}
+      <View style={[S.abs, { top: 60, left: 80, width: 440 }]}>
+        <Image src={logoUrl} style={{ height: 40, width: 40, marginBottom: 18 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+          <View style={{ width: 20, height: 2, backgroundColor: GREEN, marginRight: 10 }} />
+          <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: GREEN, letterSpacing: 2 }}>THANK YOU</Text>
+        </View>
+
+        <Text style={{ fontSize: 52, fontFamily: 'Times-Bold', color: BLACK, lineHeight: 1, marginBottom: 6 }}>
+          {customer.name ? `Dear ${customer.name.split(' ')[0]},` : 'Dear Customer,'}
+        </Text>
+
+        <View style={{ width: 56, height: 2, backgroundColor: ORANGE, marginBottom: 20 }} />
+
+        <Text style={{ fontSize: 11, fontFamily: 'Times-Italic', color: TEXT, lineHeight: 1.8, opacity: 0.85, marginBottom: 24 }}>
+          Thank you for considering 360Watts for your solar journey.{'\n'}
+          We look forward to powering your home with clean energy.
+        </Text>
+
+        {/* Contact strip */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {[
+            { label: 'Phone', val: '+91 90876 10051' },
+            { label: 'Email', val: 'srinath@360watts.com' },
+            { label: 'Web', val: 'www.360watts.com' },
+          ].map((c, i) => (
+            <View key={i} style={{ marginRight: 36, marginBottom: 10 }}>
+              <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: MUTED, letterSpacing: 1.5, marginBottom: 5 }}>{c.label.toUpperCase()}</Text>
+              <Text style={{ fontSize: 11, fontFamily: 'Helvetica', color: TEXT }}>{c.val}</Text>
             </View>
           ))}
         </View>
       </View>
-    </Page>
-  );
-}
 
-// ─── SLIDE 9: Reference ───────────────────────────────────────────────────────
-function ReferenceSlide({ overrides = [] }: { overrides?: (string | null)[] }) {
-  const defaults = [
-    { label: '6 kWp — Residential', src: '/assets/ref-6kw.jpg' },
-    { label: '8 kWp — Residential', src: '/assets/ref-8kw.jpg' },
-    { label: '20 kWp — Commercial', src: '/assets/ref-20kw.jpg' },
-  ];
-  const sites = defaults.map((s, i) => ({ ...s, src: overrides[i] || s.src }));
+      {/* Right panel */}
+      <View style={[S.abs, { top: 4, right: 0, width: 340, height: H - 4 - 36, backgroundColor: BLACK }]}>
+        <View style={[S.abs, { top: 40, left: 52 }]}>
+          <View style={{ width: 40, height: 1, backgroundColor: GREEN, marginBottom: 24, opacity: 0.4 }} />
 
-  return (
-    <Page size={[W, H]} style={S.page}>
-      <View style={{ backgroundColor: NAVY, padding: `24pt ${PAD}pt 20pt` }}>
-        <Text style={{ fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Our Work</Text>
-        <Text style={{ fontSize: 47, fontFamily: 'Helvetica-Bold', color: WHITE, letterSpacing: -0.5 }}>Reference Installations</Text>
-      </View>
-      <View style={[S.row, { flex: 1, padding: `18pt ${PAD}pt 22pt`, gap: 16 }]}>
-        {sites.map(site => (
-          <View key={site.label} style={{ flex: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: '#E2E8F0', position: 'relative' }}>
-            <Image src={site.src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <View style={[S.abs, { bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', padding: '10pt 14pt' }]}>
-              <Text style={{ color: WHITE, fontSize: 17, fontFamily: 'Helvetica-Bold' }}>{site.label}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-      <View style={[S.row, { height: 6 }]}>
-        <View style={{ flex: 1, backgroundColor: NAVY }} />
-        <View style={{ flex: 1, backgroundColor: ORANGE }} />
-        <View style={{ flex: 1, backgroundColor: GREEN }} />
-      </View>
-    </Page>
-  );
-}
-
-// ─── SLIDE 10: Thanks ─────────────────────────────────────────────────────────
-function ThanksSlide({ finalLogoUrl, qrCodeUrl }: { finalLogoUrl: string; qrCodeUrl?: string }) {
-  const contacts = [
-    { label: 'srinath@360watts.com' },
-    { label: 'www.360watts.com' },
-    { label: '+91 9087610051' },
-    { label: 'Matterless Technologies (OPC) Private Limited\nc/o Forge, KCT Techpark,\nCoimbatore, Tamil Nadu\nGST: 3388TCM6353J1ZZ' },
-  ];
-
-  return (
-    <Page size={[W, H]} style={S.page}>
-      <NavyTriangleThanks />
-
-      {/* THANK YOU — top left */}
-      <View style={[S.abs, { top: PAD, left: PAD }]}>
-        <Text style={{ fontSize: 108, fontFamily: 'Helvetica-Bold', color: INK, lineHeight: 1, letterSpacing: -2 }}>
-          THANK{'\n'}YOU!
-        </Text>
-      </View>
-
-      {/* Get in touch block — bottom left */}
-      <View style={[S.abs, { bottom: PAD, left: PAD }]}>
-        <Text style={{ fontSize: 24, color: GRAY, marginBottom: 18, fontFamily: 'Helvetica' }}>Get in touch</Text>
-
-        <View style={[S.row, { gap: 24, alignItems: 'flex-start' }]}>
           {/* QR code */}
-          <View style={{ width: 110, height: 110, borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}>
-            {qrCodeUrl
-              ? <Image src={qrCodeUrl} style={{ width: 110, height: 110 }} />
-              : (
-                <View style={[S.center, { width: 110, height: 110, backgroundColor: LIGHT, border: '1pt solid ' + BORDER, borderRadius: 6 }]}>
-                  <Text style={{ fontSize: 9, color: MUTED, textAlign: 'center' }}>WhatsApp{'\n'}QR Code</Text>
-                </View>
-              )
-            }
+          <View style={{ backgroundColor: WHITE, padding: 6, marginBottom: 16, width: 120, height: 120 }}>
+            <Image src={qrCodeUrl} style={{ width: 108, height: 108, objectFit: 'contain' }} />
           </View>
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: WHITE, opacity: 0.55, letterSpacing: 0.5, textAlign: 'center' }}>
+            SCAN TO CHAT ON WHATSAPP
+          </Text>
 
-          {/* Contact rows */}
-          <View style={{ gap: 11 }}>
-            {contacts.map((c, i) => (
-              <View key={i} style={[S.row, { gap: 10, alignItems: 'flex-start' }]}>
-                {/* Coloured dot as icon substitute */}
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: GREEN, marginTop: 5, flexShrink: 0 }} />
-                <Text style={{ fontSize: 16, color: INK, lineHeight: 1.5 }}>{c.label}</Text>
-              </View>
-            ))}
-          </View>
+          <View style={{ width: 40, height: 1, backgroundColor: GREEN, marginTop: 24, marginBottom: 20, opacity: 0.4 }} />
+
+          <Text style={{ fontSize: 8, fontFamily: 'Helvetica', color: WHITE, opacity: 0.6, lineHeight: 1.9 }}>
+            Matterless Technologies (OPC) Pvt Ltd{'\n'}
+            c/o Forge, KCT Techpark,{'\n'}
+            Coimbatore, Tamil Nadu{'\n'}
+            GST: 3388TCM6353J1ZZ
+          </Text>
         </View>
       </View>
 
-      {/* Small logo bottom-right (on navy area) */}
-      <View style={[S.abs, { bottom: 18, right: PAD }]}>
-        <Image src={finalLogoUrl} style={{ height: 32 }} />
-      </View>
+      <SlideFooter n={10} total={10} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
     </Page>
   );
 }
@@ -640,24 +991,32 @@ interface Props {
   data: QuotationData;
   logoUrl: string;
   finalLogoUrl: string;
-  qrCodeUrl?: string;
+  qrCodeUrl: string;
+  appScreen1: string;
+  appScreen2: string;
+  phoneCover: string;
+  ref6kw: string;
+  ref8kw: string;
+  ref20kw: string;
 }
 
-export function ProposalDocument({ data, logoUrl, finalLogoUrl, qrCodeUrl }: Props) {
+export function ProposalDocument({ data, logoUrl, finalLogoUrl, qrCodeUrl, appScreen1, appScreen2, phoneCover, ref6kw, ref8kw, ref20kw }: Props) {
+  const hasOptionB = !!data.optionB;
+
   return (
-    <Document>
-      <CoverSlide data={data} logoUrl={logoUrl} />
-      <CompanySlide logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
-      <QuoteSlide data={data} option={data.optionA} slideNum={3} finalLogoUrl={finalLogoUrl} />
-      {data.optionB && (
-        <QuoteSlide data={data} option={data.optionB} slideNum={4} finalLogoUrl={finalLogoUrl} />
+    <Document title={`360Watts Solar Proposal — ${data.customer.name}`} author="360Watts Energy Solutions">
+      <CoverSlide    data={data} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      <CompanySlide  logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      <QuotationSlide option={data.optionA} label="Option A" slideNum={3} data={data} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      {hasOptionB && (
+        <QuotationSlide option={data.optionB!} label="Option B" slideNum={4} data={data} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
       )}
-      <TermsSlide finalLogoUrl={finalLogoUrl} />
-      <ChartsSlide data={data} finalLogoUrl={finalLogoUrl} />
-      <NextStepsSlide finalLogoUrl={finalLogoUrl} />
-      <AppSlide finalLogoUrl={finalLogoUrl} />
-      <ReferenceSlide />
-      <ThanksSlide finalLogoUrl={finalLogoUrl} qrCodeUrl={qrCodeUrl} />
+      <TermsSlide     logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      <ChartsSlide    data={data} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      <NextStepsSlide logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} />
+      <AppSlide       logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} appScreen1={appScreen1} appScreen2={appScreen2} phoneCover={phoneCover} />
+      <ReferenceSlide logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} ref6kw={ref6kw} ref8kw={ref8kw} ref20kw={ref20kw} />
+      <ThanksSlide    data={data} logoUrl={logoUrl} finalLogoUrl={finalLogoUrl} qrCodeUrl={qrCodeUrl} />
     </Document>
   );
 }

@@ -1479,15 +1479,19 @@ class ApiService {
     status?: string;
     customer_name?: string;
     search?: string;
-    cursor?: string;
-  }): Promise<{ results: QuotationListItem[]; next_cursor: string | null }> {
+    page?: number;
+  }): Promise<{ results: QuotationListItem[]; total: number; page: number; page_size: number; total_pages: number; next_cursor: string | null }> {
     const qs = new URLSearchParams();
     if (params?.status) qs.set('status', params.status);
     if (params?.customer_name) qs.set('customer_name', params.customer_name);
     if (params?.search) qs.set('search', params.search);
-    if (params?.cursor) qs.set('cursor', params.cursor);
+    if (params?.page) qs.set('page', String(params.page));
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return this.request(`/v1/quotations/${query}`);
+  }
+
+  async deleteQuotation(publicId: string): Promise<void> {
+    await this.archiveQuotation(publicId);
   }
 
   async createQuotation(data: Record<string, unknown>, idempotencyKey?: string): Promise<QuotationDetail> {
@@ -1571,19 +1575,19 @@ class ApiService {
     new_password: string;
     confirm_password: string;
   }): Promise<{ message: string; access_token: string }> {
-    return this.request('/api/profile/change-password/', { method: 'PUT', body: JSON.stringify(data) });
+    return this.request('/profile/change-password/', { method: 'PUT', body: JSON.stringify(data) });
   }
 
   async requestPasswordResetOTP(data: { email: string }): Promise<{ message: string; expires_in_seconds: number }> {
-    return this.request('/api/auth/password/request-otp/', { method: 'POST', body: JSON.stringify(data) });
+    return this.request('/auth/password/request-otp/', { method: 'POST', body: JSON.stringify(data) });
   }
 
   async verifyPasswordResetOTP(data: { email: string; otp: string }): Promise<{ reset_token: string; expires_in_seconds: number }> {
-    return this.request('/api/auth/password/verify-otp/', { method: 'POST', body: JSON.stringify(data) });
+    return this.request('/auth/password/verify-otp/', { method: 'POST', body: JSON.stringify(data) });
   }
 
   async resetPassword(data: { reset_token: string; new_password: string; confirm_password: string }): Promise<{ message: string; login_url: string }> {
-    return this.request('/api/auth/password/reset/', { method: 'POST', body: JSON.stringify(data) });
+    return this.request('/auth/password/reset/', { method: 'POST', body: JSON.stringify(data) });
   }
 }
 

@@ -30,6 +30,7 @@ export interface CustomerData {
   phone: string;
   sitePhotoBase64: string;
   systemType: 'ON-GRID' | 'HYBRID' | 'OFF-GRID';
+  customerType: 'residential' | 'commercial';
 }
 
 export interface EbBillData {
@@ -37,6 +38,7 @@ export interface EbBillData {
   peakSunHours: number;
   powerFactor: number;
   dcAcRatio: number;
+  phase: 'single' | 'three';
 }
 
 export interface QuotationData {
