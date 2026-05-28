@@ -5,7 +5,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/MobileProfile';
-import SecurityCard from '../portal/security/SecurityCard';
 
 interface ProfileData {
   id: number;
@@ -49,8 +48,6 @@ const getInitials = (first: string, last: string, username: string) => {
 
 const Profile: React.FC = () => {
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileProfile />;
-
   const { user } = useAuth();
   const { isDark } = useTheme();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -156,6 +153,8 @@ const Profile: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  if (isMobile) return <MobileProfile />;
 
   if (loading) {
     return (
@@ -487,11 +486,7 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        {/* Security section */}
-        <div style={{ marginTop: 40 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: text, margin: '0 0 20px', fontFamily: "'Outfit', sans-serif" }}>Security</h2>
-          <SecurityCard />
-        </div>
+
       </div>
     </div>
   );
