@@ -840,13 +840,6 @@ class ApiService {
     });
   }
 
-  async changePassword(data: { current_password: string; new_password: string }): Promise<any> {
-    return this.request('/profile/change-password/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
   async uploadProfilePicture(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('avatar', file);
