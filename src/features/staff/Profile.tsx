@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/MobileProfile';
+import SecurityCard from '../portal/security/SecurityCard';
 
 interface ProfileData {
   id: number;
@@ -328,17 +329,9 @@ const Profile: React.FC = () => {
               </button>
               <button
                 onClick={() => {}}
-                style={{
-                  padding: '10px 20px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                  background: 'transparent', color: text,
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Lock size={16} />
-                Change Password
-              </button>
+                style={{ display: 'none' }}
+              />
+              <SecurityCard triggerOnly />
             </div>
           </div>
         </div>
