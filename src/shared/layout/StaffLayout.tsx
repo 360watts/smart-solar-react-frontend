@@ -139,6 +139,13 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const location = useLocation();
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const expandedActionsRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (profileOpen && expandedActionsRef.current) {
+      expandedActionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [profileOpen]);
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -313,7 +320,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
         {/* Expanded actions */}
         {profileOpen && (
-          <div style={{
+          <div ref={expandedActionsRef} style={{
             marginTop: 6, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
             borderRadius: 10, border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
             padding: '4px 4px',

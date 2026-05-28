@@ -847,6 +847,37 @@ class ApiService {
     });
   }
 
+  async uploadProfilePicture(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    // Don't use this.request() for FormData because it adds JSON Content-Type
+    // Instead, use fetch directly with only Authorization header
+    const tokens = localStorage.getItem('authTokens');
+    const headers: HeadersInit = {};
+    if (tokens) {
+      try {
+        const parsedTokens = JSON.parse(tokens);
+        headers['Authorization'] = `Bearer ${parsedTokens.access}`;
+      } catch (error) {
+        console.error('Error parsing auth tokens:', error);
+      }
+    }
+
+    const url = `${API_BASE_URL}/profile-picture/`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   // Customer Management (separate from staff users/employees)
   async getCustomers(search?: string): Promise<any[]> {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';

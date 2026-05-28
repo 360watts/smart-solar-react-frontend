@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Shield, Lock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Shield, Lock, Edit3, X, Check, AlertCircle, Building2, Briefcase, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import PhoneInput from '../../shared/components/PhoneInput';
+import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/MobileProfile';
+import SecurityCard from '../portal/security/SecurityCard';
 
 interface ProfileData {
   id: number;
@@ -14,25 +15,32 @@ interface ProfileData {
   last_name: string;
   mobile_number?: string;
   address?: string;
+  avatar_url?: string | null;
   is_staff: boolean;
   is_superuser: boolean;
   date_joined: string;
+  role?: string;
+  department?: any;
+  manager_id?: number;
+  employment_status?: string;
+  timezone?: string;
 }
 
-// ── Avatar helpers ─────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
-  'linear-gradient(135deg, #6366f1, #8b5cf6)',
-  'linear-gradient(135deg, #10b981, #059669)',
-  'linear-gradient(135deg, #f59e0b, #d97706)',
-  'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-  'linear-gradient(135deg, #ec4899, #be185d)',
-  'linear-gradient(135deg, #14b8a6, #0f766e)',
+  'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+  'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+  'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+  'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)',
+  'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
+  'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)',
 ];
+
 const getAvatarColor = (str: string) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
+
 const getInitials = (first: string, last: string, username: string) => {
   if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
   if (first) return first.substring(0, 2).toUpperCase();
@@ -42,13 +50,18 @@ const getInitials = (first: string, last: string, username: string) => {
 const Profile: React.FC = () => {
   const isMobile = useIsMobile();
   if (isMobile) return <MobileProfile />;
-  const { user, updateUser } = useAuth();
+
+  const { user } = useAuth();
+  const { isDark } = useTheme();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editForm, setEditForm] = useState({
     first_name: '',
@@ -58,12 +71,6 @@ const Profile: React.FC = () => {
     address: '',
   });
 
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: '',
-  });
-
   useEffect(() => { fetchProfile(); }, []);
 
   const fetchProfile = async () => {
@@ -71,6 +78,7 @@ const Profile: React.FC = () => {
       setLoading(true);
       const data = await apiService.getProfile();
       setProfile(data);
+      setAvatarUrl(data.avatar_url || null);
       setEditForm({
         first_name: data.first_name || '',
         last_name: data.last_name || '',
@@ -80,7 +88,6 @@ const Profile: React.FC = () => {
       });
       setError(null);
     } catch (err) {
-      console.error('Profile fetch error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);
@@ -93,42 +100,10 @@ const Profile: React.FC = () => {
       const updatedProfile = await apiService.updateProfile(editForm);
       setProfile(updatedProfile);
       setIsEditing(false);
-      setSuccess('Profile updated successfully!');
-      if (updateUser) {
-        updateUser({
-          ...user,
-          first_name: updatedProfile.first_name,
-          last_name: updatedProfile.last_name,
-          email: updatedProfile.email,
-        });
-      }
+      setSuccess('Profile updated successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
-    }
-  };
-
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setError('New passwords do not match');
-      return;
-    }
-    if (passwordForm.new_password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-    try {
-      await apiService.changePassword({
-        current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password,
-      });
-      setIsChangingPassword(false);
-      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
-      setSuccess('Password changed successfully!');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password');
     }
   };
 
@@ -145,228 +120,378 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleCancelPassword = () => {
-    setIsChangingPassword(false);
-    setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    setUploadingAvatar(true);
+    try {
+      const response = await apiService.uploadProfilePicture(file);
+      setSuccess('Profile picture updated successfully');
+      if (response.avatar_url) {
+        setAvatarUrl(response.avatar_url);
+      }
+      setTimeout(() => setAvatarPreview(null), 2000);
+    } catch (err) {
+      setError('Failed to upload profile picture');
+      setAvatarPreview(null);
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
-  if (loading) return <div className="loading">Loading profile...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : '#F5F7FA' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto 20px' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', border: '3px solid rgba(34,197,94,0.15)', borderTop: '3px solid #22C55E', animation: 'spin 1s linear infinite' }} />
+          </div>
+          <p style={{ color: isDark ? '#8892A4' : '#64748B', fontSize: 14 }}>Loading your profile...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
-  const initials = profile ? getInitials(profile.first_name, profile.last_name, profile.username) : '??';
-  const avatarColor = profile ? getAvatarColor(profile.username) : AVATAR_COLORS[0];
-  const roleLabel = profile?.is_superuser ? 'Administrator' : profile?.is_staff ? 'Staff' : 'User';
-  const roleBadgeClass = profile?.is_superuser ? 'role-badge-admin' : profile?.is_staff ? 'role-badge-staff' : 'role-badge-user';
-  const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username : '';
-  const showRole = user?.is_staff || user?.is_superuser; // Hide role badge for customers
+  if (!profile) {
+    return (
+      <div style={{ padding: '40px 20px', background: isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : '#F5F7FA', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px', background: isDark ? 'rgba(15, 22, 35, 0.9)' : '#fff', borderRadius: 16, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, textAlign: 'center' }}>
+          <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#F87171' }} />
+          <p style={{ fontSize: 16, fontWeight: 600, color: isDark ? '#F0F4FF' : '#0A0E1A', margin: '0 0 8px' }}>Unable to Load Profile</p>
+          <p style={{ fontSize: 14, color: isDark ? '#8892A4' : '#64748B', marginBottom: 24 }}>{error}</p>
+          <button onClick={fetchProfile} style={{ padding: '10px 24px', background: '#22C55E', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  const bgGradient = isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)';
+  const cardBg = isDark ? 'rgba(15, 22, 35, 0.85)' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+  const text = isDark ? '#F0F4FF' : '#0A0E1A';
+  const muted = isDark ? '#8892A4' : '#64748B';
+  const inputBg = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)';
+  const inputBorder = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+  const initials = getInitials(profile.first_name, profile.last_name, profile.username);
+  const avatarGradient = getAvatarColor(initials);
+  const displayName = `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
+  const roleLabel = profile.is_superuser ? 'Admin' : profile.is_staff ? 'Staff' : 'Employee';
 
   return (
-    <div className="admin-container responsive-page">
-      <h1>My Profile</h1>
+    <div style={{ background: bgGradient, minHeight: '100vh', padding: '40px 20px', transition: 'background 0.3s ease' }}>
+      <style>{`
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .profile-container { animation: slideUp 0.5s ease both; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(34,197,94,0.15); }
+        .edit-mode { animation: fadeIn 0.3s ease; }
+      `}</style>
 
-      {error && (
-        <div className="alert alert-error" style={{ marginBottom: '20px' }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-        </div>
-      )}
-      {success && (
-        <div className="alert alert-success" style={{ marginBottom: '20px' }}>
-          {success}
-        </div>
-      )}
+      <div style={{ maxWidth: 1000, margin: '0 auto' }} className="profile-container">
+        {/* Header with avatar and quick info */}
+        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 32, marginBottom: 40, alignItems: 'start' }}>
+          {/* Avatar & Status */}
+          <div style={{ position: 'relative' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarSelect}
+              style={{ display: 'none' }}
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: 200,
+                height: 200,
+                borderRadius: 16,
+                backgroundImage: avatarPreview ? `url(${avatarPreview})` : avatarUrl ? `url(${avatarUrl})` : !avatarPreview && !avatarUrl ? avatarGradient : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 64,
+                fontWeight: 700,
+                color: '#fff',
+                boxShadow: '0 20px 40px rgba(34,197,94,0.25)',
+                position: 'relative',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              } as React.CSSProperties}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.85)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.filter = 'brightness(1)';
+              }}
+            >
+              {!avatarPreview && !avatarUrl && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent)' }} />}
 
-      {/* ── Account Card ─────────────────────────────────────────────── */}
-      <div className="card" style={{ marginBottom: '20px', overflow: 'hidden' }}>
-
-        {/* Hero banner + avatar */}
-        {!isEditing && (
-          <>
-            <div className="profile-hero-banner" />
-            <div className="profile-hero-body">
-              <div className="profile-hero-row">
-                <div
-                  className="avatar-initials avatar-initials-lg"
-                  style={{ background: avatarColor }}
-                >
-                  {initials}
-                </div>
-                <div style={{ paddingBottom: 2 }}>
-                  <h2 className="profile-hero-name">{displayName}</h2>
-                  <div className="profile-hero-meta">
-                    {showRole && <span className={`role-badge ${roleBadgeClass}`}>{roleLabel}</span>}
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                      <Calendar size={12} />
-                      {profile?.date_joined
-                        ? `Since ${new Date(profile.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
-                        : ''}
-                    </span>
-                  </div>
-                </div>
+              {/* Upload overlay */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(0,0,0,0.4)',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                opacity: 0,
+                transition: 'opacity 0.3s ease',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.opacity = '1';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.opacity = '0';
+              }}
+              className="upload-overlay"
+              >
+                <Upload size={32} style={{ color: '#fff', marginBottom: 8 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Upload Photo</span>
               </div>
+
+              {uploadingAvatar && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(0,0,0,0.6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid #fff', animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+
+              {!avatarPreview && !avatarUrl && initials}
             </div>
-          </>
+            {/* Status badge */}
+            <div style={{
+              position: 'absolute', bottom: 12, right: 12,
+              background: '#22C55E', color: '#fff',
+              padding: '4px 12px', borderRadius: 20,
+              fontSize: 11, fontWeight: 700,
+              boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
+            }}>
+              {profile.employment_status || 'Active'}
+            </div>
+          </div>
+
+          {/* Name, role, actions */}
+          <div>
+            <div style={{ marginBottom: 24 }}>
+              <h1 style={{ fontSize: 36, fontWeight: 700, color: text, margin: '0 0 8px', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>{displayName}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 16, fontWeight: 600, color: '#22C55E', fontFamily: "'DM Sans', sans-serif" }}>{roleLabel}</span>
+                {profile.department && (
+                  <span style={{ fontSize: 13, color: muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Building2 size={14} /> {typeof profile.department === 'object' ? profile.department.name : profile.department}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 13, color: muted, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{profile.email}</p>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                style={{
+                  padding: '10px 20px', borderRadius: 8, border: 'none',
+                  background: isEditing ? 'rgba(244,63,94,0.1)' : 'rgba(34,197,94,0.1)',
+                  color: isEditing ? '#F43F5E' : '#22C55E',
+                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {isEditing ? <X size={16} /> : <Edit3 size={16} />}
+                {isEditing ? 'Cancel' : 'Edit Profile'}
+              </button>
+              <button
+                onClick={() => {}}
+                style={{
+                  padding: '10px 20px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                  background: 'transparent', color: text,
+                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Lock size={16} />
+                Change Password
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Success/Error messages */}
+        {success && (
+          <div style={{ padding: 16, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10, animation: 'slideUp 0.3s ease' }}>
+            <Check size={20} style={{ color: '#22C55E', flexShrink: 0 }} />
+            <span style={{ fontSize: 14, color: '#22C55E', fontWeight: 500 }}>{success}</span>
+          </div>
+        )}
+        {error && (
+          <div style={{ padding: 16, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 8, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AlertCircle size={20} style={{ color: '#F43F5E', flexShrink: 0 }} />
+            <span style={{ fontSize: 14, color: '#F43F5E', fontWeight: 500 }}>{error}</span>
+          </div>
         )}
 
-        {/* Card header */}
-        <div className="card-header" style={isEditing ? {} : { borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-4)' }}>
-          <h2>Account Information</h2>
-          {!isEditing && (
-            <button onClick={() => setIsEditing(true)} className="btn">
-              Edit Profile
-            </button>
-          )}
-        </div>
-
-        {isEditing ? (
-          <form onSubmit={handleEditSubmit}>
-            <div className="form-section" style={{ padding: '0 var(--space-5) var(--space-4)' }}>
-              <h4 className="form-section-title">Account</h4>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Username</label>
-                  <input type="text" value={profile?.username || ''} disabled className="input-disabled" />
-                  <small className="form-hint">Username cannot be changed</small>
+        {/* Stats grid */}
+        {!isEditing && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 40 }} className="stat-card">
+            {[
+              { icon: Calendar, label: 'Joined', value: new Date(profile.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
+              { icon: Briefcase, label: 'Role', value: profile.role || 'Employee' },
+              { icon: MapPin, label: 'Timezone', value: profile.timezone || 'Asia/Kolkata' },
+              { icon: Shield, label: 'Status', value: profile.employment_status || 'Active' },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: 20, borderRadius: 12,
+                  background: cardBg, border: `1px solid ${cardBorder}`,
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <stat.icon size={16} style={{ color: '#22C55E' }} />
+                  <span style={{ fontSize: 12, color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
                 </div>
+                <p style={{ fontSize: 16, fontWeight: 700, color: text, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{stat.value}</p>
               </div>
-            </div>
+            ))}
+          </div>
+        )}
 
-            <div className="form-section" style={{ padding: '0 var(--space-5) var(--space-4)' }}>
-              <h4 className="form-section-title">Personal Details</h4>
-              <div className="form-grid form-grid-2">
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input type="text" value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} required placeholder="John" />
+        {/* Contact details */}
+        {!isEditing && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 40 }}>
+            {[
+              { icon: Mail, label: 'Email', value: profile.email },
+              { icon: Phone, label: 'Phone', value: profile.mobile_number || 'Not provided' },
+              { icon: MapPin, label: 'Address', value: profile.address || 'Not provided' },
+            ].map((item, i) => (
+              <div key={i} style={{ padding: 16, borderRadius: 12, background: cardBg, border: `1px solid ${cardBorder}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <item.icon size={14} style={{ color: '#22C55E' }} />
+                  <span style={{ fontSize: 11, color: muted, fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</span>
                 </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input type="text" value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} required placeholder="Doe" />
-                </div>
+                <p style={{ fontSize: 14, color: text, margin: 0, fontFamily: "'Fira Code', monospace", wordBreak: 'break-all' }}>{item.value}</p>
               </div>
-            </div>
+            ))}
+          </div>
+        )}
 
-            <div className="form-section" style={{ padding: '0 var(--space-5) var(--space-4)' }}>
-              <h4 className="form-section-title">Contact Information</h4>
-              <div className="form-grid form-grid-2">
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} required placeholder="john.doe@example.com" />
-                </div>
-                <div className="form-group">
-                  <label>Mobile Number</label>
-                  <PhoneInput
-                    value={editForm.mobile_number}
-                    onChange={(v) => setEditForm({ ...editForm, mobile_number: v })}
+        {/* Edit mode form */}
+        {isEditing && (
+          <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, padding: 40 }} className="edit-mode">
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: text, margin: '0 0 32px', fontFamily: "'Outfit', sans-serif" }}>Edit Profile</h2>
+            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginBottom: 32 }}>
+              {[
+                { key: 'first_name', label: 'First Name', type: 'text' },
+                { key: 'last_name', label: 'Last Name', type: 'text' },
+                { key: 'email', label: 'Email', type: 'email' },
+                { key: 'mobile_number', label: 'Phone', type: 'tel' },
+              ].map(field => (
+                <div key={field.key} style={{ gridColumn: field.key === 'address' ? '1 / -1' : undefined }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.type}
+                    value={(editForm as any)[field.key]}
+                    onChange={e => setEditForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: 8,
+                      border: `1.5px solid ${inputBorder}`,
+                      background: inputBg, color: text,
+                      fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+                      transition: 'border-color 0.2s ease',
+                      outline: 'none',
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = '#22C55E'}
+                    onBlur={e => e.currentTarget.style.borderColor = inputBorder}
                   />
                 </div>
-                <div className="form-group full-width">
-                  <label>Address</label>
-                  <textarea value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} rows={3} placeholder="123 Solar Street..." />
-                </div>
+              ))}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Address
+                </label>
+                <textarea
+                  value={editForm.address}
+                  onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: 8,
+                    border: `1.5px solid ${inputBorder}`,
+                    background: inputBg, color: text,
+                    fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+                    transition: 'border-color 0.2s ease',
+                    outline: 'none', minHeight: 100, resize: 'vertical',
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#22C55E'}
+                  onBlur={e => e.currentTarget.style.borderColor = inputBorder}
+                />
               </div>
-            </div>
 
-            <div className="form-actions">
-              <button type="submit" className="btn">Save Changes</button>
-              <button type="button" onClick={handleCancelEdit} className="btn btn-secondary">Cancel</button>
-            </div>
-          </form>
-        ) : (
-          /* Info grid — icon + label + value */
-          <div className="profile-info-grid">
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><User size={15} /></div>
-              <div>
-                <div className="profile-info-label">Username</div>
-                <div className="profile-info-value">{profile?.username}</div>
+              {/* Form actions */}
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  style={{
+                    padding: '10px 24px', borderRadius: 8,
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                    background: 'transparent', color: text,
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '10px 24px', borderRadius: 8, border: 'none',
+                    background: '#22C55E', color: '#fff',
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <Check size={16} />
+                  Save Changes
+                </button>
               </div>
-            </div>
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><Mail size={15} /></div>
-              <div>
-                <div className="profile-info-label">Email</div>
-                <div className="profile-info-value">{profile?.email || '—'}</div>
-              </div>
-            </div>
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><Phone size={15} /></div>
-              <div>
-                <div className="profile-info-label">Mobile</div>
-                <div className="profile-info-value">{profile?.mobile_number || '—'}</div>
-              </div>
-            </div>
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><MapPin size={15} /></div>
-              <div>
-                <div className="profile-info-label">Address</div>
-                <div className="profile-info-value">{profile?.address || '—'}</div>
-              </div>
-            </div>
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><Shield size={15} /></div>
-              <div>
-                <div className="profile-info-label">Role</div>
-                <div className="profile-info-value">{roleLabel}</div>
-              </div>
-            </div>
-            <div className="profile-info-row">
-              <div className="profile-info-icon"><Calendar size={15} /></div>
-              <div>
-                <div className="profile-info-label">Member Since</div>
-                <div className="profile-info-value">
-                  {profile?.date_joined ? new Date(profile.date_joined).toLocaleDateString() : '—'}
-                </div>
-              </div>
-            </div>
+            </form>
           </div>
         )}
-      </div>
 
-      {/* ── Security Card ────────────────────────────────────────────── */}
-      <div className="card">
-        <div className="card-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger-color)', flexShrink: 0 }}>
-              <Lock size={16} />
-            </div>
-            <h2 style={{ margin: 0 }}>Security</h2>
-          </div>
-          {!isChangingPassword && (
-            <button onClick={() => setIsChangingPassword(true)} className="btn">
-              Change Password
-            </button>
-          )}
+        {/* Security section */}
+        <div style={{ marginTop: 40 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: text, margin: '0 0 20px', fontFamily: "'Outfit', sans-serif" }}>Security</h2>
+          <SecurityCard />
         </div>
-
-        {isChangingPassword ? (
-          <form onSubmit={handlePasswordSubmit}>
-            <div className="form-section" style={{ padding: '0 var(--space-5) var(--space-4)' }}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Current Password</label>
-                  <input type="password" value={passwordForm.current_password} onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })} required autoComplete="current-password" />
-                </div>
-                <div className="form-group">
-                  <label>New Password</label>
-                  <input type="password" value={passwordForm.new_password} onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })} required autoComplete="new-password" minLength={8} />
-                  <small className="form-hint">Must be at least 8 characters</small>
-                </div>
-                <div className="form-group">
-                  <label>Confirm New Password</label>
-                  <input type="password" value={passwordForm.confirm_password} onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} required autoComplete="new-password" />
-                </div>
-              </div>
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn">Change Password</button>
-              <button type="button" onClick={handleCancelPassword} className="btn btn-secondary">Cancel</button>
-            </div>
-          </form>
-        ) : (
-          <div style={{ padding: 'var(--space-5)' }}>
-            <p style={{ margin: '0 0 6px', color: 'var(--text-secondary)' }}>Change your password to keep your account secure.</p>
-            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Use a strong password that you don't use on other websites.</p>
-          </div>
-        )}
       </div>
     </div>
   );
