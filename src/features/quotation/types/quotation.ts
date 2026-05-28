@@ -28,6 +28,7 @@ export interface CustomerData {
   name: string;
   address: string;
   phone: string;
+  email: string;
   sitePhotoBase64: string;
   systemType: 'ON-GRID' | 'HYBRID' | 'OFF-GRID';
   customerType: 'residential' | 'commercial';

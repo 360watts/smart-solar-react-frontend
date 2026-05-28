@@ -55,6 +55,17 @@ export function Step1Customer({ form }: Props) {
         </div>
       </div>
 
+      {/* Row 2 — email */}
+      <div className="sq-field">
+        <label className="sq-label">Email Address</label>
+        <input
+          className="sq-input"
+          type="email"
+          placeholder="ramesh@example.com"
+          {...register('customer.email')}
+        />
+      </div>
+
       {/* Address */}
       <div className="sq-field">
         <label className="sq-label">Site Address *</label>

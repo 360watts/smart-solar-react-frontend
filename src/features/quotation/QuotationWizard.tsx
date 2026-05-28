@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Package, Loader2, Save, Eye, Send, CheckCircle, XCircle, MessageCircle, Mail, Copy, CheckCheck } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Package, Loader2, Save, Eye } from 'lucide-react';
 import { Step1Customer } from './components/steps/Step1Customer';
 import { Step2EbBill } from './components/steps/Step2EbBill';
 import { Step3Bom, newRows } from './components/steps/Step3Bom';
@@ -56,9 +57,10 @@ function SharePanel({ quoteNumber, customerPhone, getFormData }: SharePanelProps
           const msg = encodeURIComponent(`Hi, please find your solar proposal (${quoteNumber}) attached.`);
           window.open(`https://wa.me/${phoneClean}?text=${msg}`, '_blank');
         } else if (channel === 'email') {
+          const customerEmail = data.customer.email ?? '';
           const subject = encodeURIComponent(`Solar Proposal — ${quoteNumber}`);
           const body = encodeURIComponent(`Dear Customer,\n\nPlease find your solar proposal (${quoteNumber}) attached.\n\nRegards,\n360Watts Energy Solutions`);
-          window.location.href = `mailto:?subject=${subject}&body=${body}`;
+          window.location.href = `mailto:${customerEmail}?subject=${subject}&body=${body}`;
         }
         toast.success('PDF downloaded — attach it to your message.', { id: toastId });
       }
@@ -125,7 +127,7 @@ const DEFAULT_NOT_INCLUDED =
 
 function getDefaults(): QuotationData {
   return {
-    customer: { name: '', address: '', phone: '', sitePhotoBase64: '', systemType: 'ON-GRID', customerType: 'residential' },
+    customer: { name: '', address: '', phone: '', email: '', sitePhotoBase64: '', systemType: 'ON-GRID', customerType: 'residential' },
     ebBill: {
       readings: [
         { period: '', units: 0, billAmount: 0 },
@@ -385,9 +387,9 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
                   <Step4Review form={form} />
                   {savedPublicId && quoteNumber && (
                     <SharePanel
-                      publicId={savedPublicId}
                       quoteNumber={quoteNumber}
                       customerPhone={form.watch('customer.phone')}
+                      getFormData={form.getValues}
                     />
                   )}
                 </>
