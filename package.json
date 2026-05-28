@@ -43,6 +43,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "buffer": "^6.0.3",
     "chart.js": "^4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",
     "class-variance-authority": "^0.7.1",
