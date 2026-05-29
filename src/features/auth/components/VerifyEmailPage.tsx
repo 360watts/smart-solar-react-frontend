@@ -1,54 +1,36 @@
 import React, { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/shared/ui/input-otp'
+import { useSearchParams } from 'react-router-dom'
 import { apiService } from '../../../services/api'
 import logoWithFont from '../../../assets/logo_with_font.png'
 
 /**
- * Standalone email verification page — /verify-email?email=...&otp=...
- * Linked from the pre-creation OTP email. Customer lands here, sees their
- * email pre-filled (and OTP if provided in URL), confirms, and sees success.
- * Staff gets unblocked to create the account once the token is confirmed.
- *
- * Note: this page confirms email ownership only — it does NOT log the user in
- * (no account exists yet). It calls confirm_precreation_otp and shows success.
+ * /verify-email?email=...&otp=...
+ * Customer lands here from the activation link in their email.
+ * Silently submits the OTP and shows success/error — no interaction needed.
  */
-const OTP_LENGTH = 6
-
 const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-
   const urlEmail = searchParams.get('email') ?? ''
   const urlOtp   = searchParams.get('otp')   ?? ''
 
-  const [otp, setOtp]         = useState(urlOtp.replace(/\D/g, '').slice(0, OTP_LENGTH))
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [done, setDone]       = useState(false)
+  const [state, setState] = useState<'loading' | 'done' | 'error'>('loading')
+  const [errorMsg, setErrorMsg] = useState('')
 
-  // Auto-submit if OTP came pre-filled from the URL
   useEffect(() => {
-    if (urlOtp.replace(/\D/g, '').length === OTP_LENGTH && urlEmail) {
-      handleVerify(urlOtp.replace(/\D/g, '').slice(0, OTP_LENGTH))
+    if (!urlEmail || !urlOtp) {
+      setState('error')
+      setErrorMsg('Invalid verification link. Please contact support.')
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    apiService.confirmPrecreationOtp(urlEmail, urlOtp)
+      .then(() => setState('done'))
+      .catch((err: any) => {
+        setErrorMsg(err?.message ?? 'Verification failed. The link may have expired.')
+        setState('error')
+      })
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const handleVerify = async (code = otp) => {
-    if (code.length !== OTP_LENGTH || !urlEmail) return
-    setError(null)
-    setLoading(true)
-    try {
-      await apiService.confirmPrecreationOtp(urlEmail, code)
-      setDone(true)
-    } catch (err: any) {
-      setError(err?.message ?? 'Verification failed. Please try again.')
-      setOtp('')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div style={{
@@ -56,103 +38,68 @@ const VerifyEmailPage: React.FC = () => {
       background: '#080C14', padding: 20, fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{
-        width: '100%', maxWidth: 420,
+        width: '100%', maxWidth: 400, textAlign: 'center',
         background: 'linear-gradient(145deg, rgba(30,41,59,0.95), rgba(15,23,42,0.98))',
         borderRadius: 20, border: '1px solid rgba(148,163,184,0.12)',
         boxShadow: '0 25px 80px rgba(0,0,0,0.5)',
-        padding: '40px 36px',
+        padding: '44px 36px',
       }}>
-        <img src={logoWithFont} alt="360Watts" style={{ height: 56, display: 'block', margin: '0 auto 28px' }} />
+        <img src={logoWithFont} alt="360Watts" style={{ height: 52, display: 'block', margin: '0 auto 32px' }} />
 
-        {done ? (
-          /* ── Success state ── */
-          <div style={{ textAlign: 'center' }}>
+        {state === 'loading' && (
+          <>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              border: '3px solid rgba(240,117,34,0.2)', borderTop: '3px solid #F07522',
+              animation: 'spin 0.9s linear infinite',
+              margin: '0 auto 20px',
+            }} />
+            <p style={{ margin: 0, fontSize: 15, color: '#94a3b8' }}>Confirming your email…</p>
+          </>
+        )}
+
+        {state === 'done' && (
+          <>
             <div style={{
               width: 64, height: 64, borderRadius: '50%',
-              background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.4)',
+              background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px', fontSize: 28,
             }}>✓</div>
             <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
               Email confirmed!
             </h2>
-            <p style={{ margin: '0 0 24px', fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
-              Your email address has been verified. Your 360Watts account is being set up —
+            <p style={{ margin: 0, fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
+              Your email has been verified. Your 360Watts account is being set up —
               you'll receive your login credentials shortly.
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#475569' }}>
-              You can close this tab.
-            </p>
-          </div>
-        ) : (
-          /* ── OTP entry state ── */
+            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#475569' }}>You can close this tab.</p>
+          </>
+        )}
+
+        {state === 'error' && (
           <>
-            <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif", textAlign: 'center' }}>
-              Confirm your email
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', fontSize: 26,
+            }}>✕</div>
+            <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
+              Verification failed
             </h2>
-            <p style={{ margin: '0 0 28px', fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 1.5 }}>
-              Enter the 6-digit code sent to<br />
-              <strong style={{ color: '#cbd5e1' }}>{urlEmail}</strong>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>
+              {errorMsg}
             </p>
-
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-              <InputOTP
-                maxLength={OTP_LENGTH}
-                value={otp}
-                onChange={v => {
-                  setOtp(v)
-                  setError(null)
-                  if (v.length === OTP_LENGTH) setTimeout(() => handleVerify(v), 80)
-                }}
-              >
-                <InputOTPGroup>
-                  {Array.from({ length: OTP_LENGTH }).map((_, i) => (
-                    <InputOTPSlot
-                      key={i}
-                      index={i}
-                      className="login-otp-slot bg-white/5 border-white/10 text-white"
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-
-            {error && (
-              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171', textAlign: 'center' }}>{error}</p>
-            )}
-
-            <button
-              onClick={() => handleVerify()}
-              disabled={loading || otp.length < OTP_LENGTH}
-              style={{
-                width: '100%', padding: '12px 0', borderRadius: 9, border: 'none',
-                background: loading || otp.length < OTP_LENGTH ? 'rgba(240,117,34,0.35)' : '#F07522',
-                color: '#fff', fontSize: 14, fontWeight: 700,
-                cursor: loading || otp.length < OTP_LENGTH ? 'not-allowed' : 'pointer',
-                transition: 'background 0.18s',
-              }}
-            >
-              {loading ? 'Verifying…' : 'Confirm Email'}
-            </button>
-
-            <p style={{ margin: '16px 0 0', fontSize: 12, color: '#475569', textAlign: 'center' }}>
-              Wrong page?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                style={{ background: 'none', border: 'none', color: '#F07522', cursor: 'pointer', fontSize: 12, padding: 0 }}
-              >
-                Go to login
-              </button>
+            <p style={{ margin: 0, fontSize: 13, color: '#475569' }}>
+              Ask your 360Watts administrator to resend the verification link.
             </p>
           </>
         )}
       </div>
 
       <style>{`
-        .login-otp-slot[data-active=true] {
-          border-color: #F07522 !important;
-          box-shadow: 0 0 0 3px rgba(240,117,34,0.25) !important;
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   )
