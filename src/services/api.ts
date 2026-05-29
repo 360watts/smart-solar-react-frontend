@@ -529,8 +529,12 @@ class ApiService {
     return this.request('/auth/send-precreation-otp/', { method: 'POST', body: JSON.stringify({ email }) });
   }
 
-  async confirmPrecreationOtp(email: string, otp: string): Promise<{ verified_token: string }> {
+  async confirmPrecreationOtp(email: string, otp: string): Promise<{ verified: boolean }> {
     return this.request('/auth/confirm-precreation-otp/', { method: 'POST', body: JSON.stringify({ email, otp }) });
+  }
+
+  async checkEmailVerified(email: string): Promise<{ verified: boolean }> {
+    return this.request(`/auth/check-email-verified/?email=${encodeURIComponent(email)}`);
   }
 
   async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
