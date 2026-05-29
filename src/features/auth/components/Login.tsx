@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, Check, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/shared/ui/input-otp'
@@ -83,9 +83,14 @@ const ParticleCanvas: React.FC = () => {
 /* ─── Main component ──────────────────────────────────────────────────────── */
 const Login: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login, requestOtp, verifyOtp } = useAuth()
 
-  const [mode, setMode] = useState<Mode>('password')
+  // Initialise from URL params (?verify=1&email=...) — set by activation link in email
+  const urlVerifyEmail = searchParams.get('email') ?? ''
+  const urlVerify = searchParams.get('verify') === '1'
+
+  const [mode, setMode] = useState<Mode>(urlVerify && urlVerifyEmail ? 'email-verify' : 'password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -94,7 +99,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cooldown, setCooldown] = useState(0)
-  const [verifyEmail, setVerifyEmail] = useState('')  // email pending verification
+  const [verifyEmail, setVerifyEmail] = useState(urlVerify ? urlVerifyEmail : '')
   const [verifyOtpVal, setVerifyOtpVal] = useState('')
 
   useEffect(() => {
