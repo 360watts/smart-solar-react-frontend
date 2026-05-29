@@ -34,7 +34,8 @@ const VerifyEmailPage: React.FC = () => {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flex: 1, minHeight: '100vh', width: '100%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: '#080C14', padding: 20, fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{
