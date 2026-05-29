@@ -2010,6 +2010,12 @@ p {
   to { transform: rotate(360deg); }
 }
 
+@keyframes scanSlide {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(250%); }
+  100% { transform: translateX(-100%); }
+}
+
 /* Auth Particles */
 .auth-particles {
   display: none;

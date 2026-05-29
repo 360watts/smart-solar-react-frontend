@@ -228,9 +228,12 @@ const Devices: React.FC = () => {
   const [fileFilterFrom, setFileFilterFrom] = useState('');
   const [fileFilterTo, setFileFilterTo] = useState('');
   const LOG_FILES_PAGE_SIZE = 20;
-  const [scanModalFile, setScanModalFile] = useState<{ id: number; filename: string } | null>(null);
-  const [scanResults, setScanResults] = useState<{ errors: { line: number; text: string }[]; warnings: { line: number; text: string }[] } | null>(null);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [scanDate, setScanDate] = useState('');
+  const [scanDateLabel, setScanDateLabel] = useState('');
+  const [scanResults, setScanResults] = useState<{ filename: string; errors: { line: number; text: string }[]; warnings: { line: number; text: string }[]; fetch_error?: boolean }[] | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
+  const [scanMeta, setScanMeta] = useState<{ files_scanned: number; total_errors: number; total_warnings: number } | null>(null);
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -442,26 +445,21 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleScanLogFile = async (fileId: number, filename: string) => {
-    setScanModalFile({ id: fileId, filename });
+  const handleScanDay = async () => {
+    if (!selectedDevice || !scanDate) return;
+    const label = new Date(scanDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    setScanModalOpen(true);
+    setScanDateLabel(label);
     setScanResults(null);
+    setScanMeta(null);
     setScanLoading(true);
     try {
-      const text = await apiService.getDeviceLogFileContent(selectedDevice!.id, fileId);
-      const lines = text.split('\n');
-      const errors: { line: number; text: string }[] = [];
-      const warnings: { line: number; text: string }[] = [];
-      lines.forEach((raw, idx) => {
-        const upper = raw.toUpperCase();
-        if (/\b(ERROR|CRITICAL|FATAL|EXCEPTION|TRACEBACK)\b/.test(upper)) {
-          errors.push({ line: idx + 1, text: raw.trim() });
-        } else if (/\b(WARN|WARNING)\b/.test(upper)) {
-          warnings.push({ line: idx + 1, text: raw.trim() });
-        }
-      });
-      setScanResults({ errors, warnings });
-    } catch (err) {
-      setScanResults({ errors: [], warnings: [] });
+      const data = await apiService.scanDeviceLogFiles(selectedDevice.id, scanDate);
+      setScanResults(data.results);
+      setScanMeta({ files_scanned: data.files_scanned, total_errors: data.total_errors, total_warnings: data.total_warnings });
+    } catch {
+      setScanResults([]);
+      setScanMeta({ files_scanned: 0, total_errors: 0, total_warnings: 0 });
     } finally {
       setScanLoading(false);
     }
@@ -1829,6 +1827,14 @@ const Devices: React.FC = () => {
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: (bulkDownloading || logFilesTotal === 0) ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: (bulkDownloading || logFilesTotal === 0) ? 0.5 : 1 }}>
                 {bulkDownloading ? 'Downloading…' : 'Download All'}
               </button>
+              <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)}
+                title="Pick a date to scan all logs for that day"
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1px solid rgba(239,68,68,0.25)', background: isDark ? '#1a1a1a' : '#fff8f8', color: isDark ? '#fca5a5' : '#b91c1c', outline: 'none' }} />
+              <button onClick={handleScanDay} disabled={scanLoading || !scanDate}
+                title="Scan all log files for the selected date (server-side, no pagination limit)"
+                style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 700, cursor: (scanLoading || !scanDate) ? 'not-allowed' : 'pointer', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.09)', color: '#f87171', opacity: (scanLoading || !scanDate) ? 0.5 : 1, letterSpacing: '0.01em' }}>
+                {scanLoading ? '…' : '⚡ Scan'}
+              </button>
             </div>
 
             {logFilesLoading && <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>Loading…</p>}
@@ -1862,11 +1868,6 @@ const Devices: React.FC = () => {
                               <button onClick={() => handleDownloadLogFile(f.id)}
                                 style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b' }}>
                                 Download
-                              </button>
-                              <button onClick={() => handleScanLogFile(f.id, f.filename)}
-                                title="Scan for errors & warnings"
-                                style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171', fontWeight: 600, letterSpacing: '0.01em' }}>
-                                ⚡ Scan
                               </button>
                             </div>
                           </td>
@@ -2599,14 +2600,14 @@ const Devices: React.FC = () => {
         )}
         {editDevicePortal}
 
-        {/* ── Log scan modal ── */}
-        {scanModalFile !== null && ReactDOM.createPortal(
+        {/* ── Log scan modal (day-wise) ── */}
+        {scanModalOpen && ReactDOM.createPortal(
           <div
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: 20 }}
-            onClick={() => { setScanModalFile(null); setScanResults(null); }}
+            onClick={() => { if (!scanLoading) { setScanModalOpen(false); setScanResults(null); } }}
           >
             <div
-              style={{ background: '#080C14', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)', width: '100%', maxWidth: 780, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(239,68,68,0.1), 0 32px 80px rgba(0,0,0,0.7)' }}
+              style={{ background: '#080C14', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)', width: '100%', maxWidth: 820, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(239,68,68,0.1), 0 32px 80px rgba(0,0,0,0.7)' }}
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
@@ -2614,82 +2615,80 @@ const Devices: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>⚡</div>
                   <div>
-                    <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Log Scan</div>
-                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: '#475569', marginTop: 1 }}>{scanModalFile.filename}</div>
+                    <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Day Scan — {scanDateLabel}</div>
+                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: '#475569', marginTop: 1 }}>
+                      {scanLoading ? 'Scanning all files for the day…' : scanMeta ? `${scanMeta.files_scanned} file${scanMeta.files_scanned !== 1 ? 's' : ''} scanned` : ''}
+                    </div>
                   </div>
                 </div>
-                {scanResults && !scanLoading && (
+                {scanMeta && !scanLoading && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 12 }}>
                     <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.73rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
-                      {scanResults.errors.length} error{scanResults.errors.length !== 1 ? 's' : ''}
+                      {scanMeta.total_errors} error{scanMeta.total_errors !== 1 ? 's' : ''}
                     </span>
                     <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: '0.73rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
-                      {scanResults.warnings.length} warning{scanResults.warnings.length !== 1 ? 's' : ''}
+                      {scanMeta.total_warnings} warning{scanMeta.total_warnings !== 1 ? 's' : ''}
                     </span>
                   </div>
                 )}
                 <button
-                  onClick={() => { setScanModalFile(null); setScanResults(null); }}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>✕</button>
+                  onClick={() => { if (!scanLoading) { setScanModalOpen(false); setScanResults(null); } }}
+                  disabled={scanLoading}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#64748b', cursor: scanLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0, opacity: scanLoading ? 0.4 : 1 }}>✕</button>
               </div>
+
+              {/* Indeterminate progress bar while loading */}
+              {scanLoading && (
+                <div style={{ height: 3, background: 'rgba(239,68,68,0.1)', flexShrink: 0, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: '40%', background: '#ef4444', animation: 'scanSlide 1.2s ease-in-out infinite' }} />
+                </div>
+              )}
 
               {/* Body */}
               <div style={{ overflowY: 'auto', flex: 1, padding: '0 0 16px' }}>
                 {scanLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 14 }}>
                     <div style={{ width: 36, height: 36, border: '3px solid rgba(239,68,68,0.2)', borderTop: '3px solid #ef4444', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ color: '#475569', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Scanning for errors & warnings…</span>
+                    <span style={{ color: '#475569', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
                   </div>
-                ) : scanResults ? (
-                  <>
-                    {/* Errors section */}
-                    {scanResults.errors.length > 0 && (
-                      <div style={{ padding: '16px 20px 0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <div style={{ width: 3, height: 16, borderRadius: 2, background: '#ef4444' }} />
-                          <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Errors</span>
-                          <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#374151', background: 'rgba(239,68,68,0.08)', padding: '1px 7px', borderRadius: 10 }}>{scanResults.errors.length}</span>
+                ) : scanResults ? (() => {
+                  const filesWithIssues = scanResults.filter(r => r.errors.length > 0 || r.warnings.length > 0);
+                  if (filesWithIssues.length === 0) return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 20px', gap: 12 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#22c55e' }}>Clean day</div>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#475569', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
+                    </div>
+                  );
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {filesWithIssues.map((file, fi) => (
+                        <div key={fi} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          {/* File header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 8px', background: 'rgba(255,255,255,0.02)' }}>
+                            <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#94a3b8' }}>{file.filename}</span>
+                            {file.errors.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.errors.length}E</span>}
+                            {file.warnings.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.warnings.length}W</span>}
+                          </div>
+                          <div style={{ padding: '0 20px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {file.errors.map((entry, i) => (
+                              <div key={`e${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.14)' }}>
+                                <div style={{ padding: '5px 10px', background: 'rgba(239,68,68,0.1)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.1)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fca5a5', background: 'rgba(239,68,68,0.04)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
+                              </div>
+                            ))}
+                            {file.warnings.map((entry, i) => (
+                              <div key={`w${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(251,191,36,0.1)' }}>
+                                <div style={{ padding: '5px 10px', background: 'rgba(251,191,36,0.07)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.08)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fde68a', background: 'rgba(251,191,36,0.03)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {scanResults.errors.map((entry, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.15)' }}>
-                              <div style={{ padding: '7px 10px', background: 'rgba(239,68,68,0.1)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', minWidth: 52, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.12)' }}>{entry.line}</div>
-                              <div style={{ padding: '7px 12px', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#fca5a5', background: 'rgba(239,68,68,0.05)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Warnings section */}
-                    {scanResults.warnings.length > 0 && (
-                      <div style={{ padding: '16px 20px 0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <div style={{ width: 3, height: 16, borderRadius: 2, background: '#f59e0b' }} />
-                          <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Warnings</span>
-                          <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#374151', background: 'rgba(251,191,36,0.08)', padding: '1px 7px', borderRadius: 10 }}>{scanResults.warnings.length}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          {scanResults.warnings.map((entry, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(251,191,36,0.12)' }}>
-                              <div style={{ padding: '7px 10px', background: 'rgba(251,191,36,0.08)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', minWidth: 52, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.1)' }}>{entry.line}</div>
-                              <div style={{ padding: '7px 12px', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#fde68a', background: 'rgba(251,191,36,0.04)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Clean state */}
-                    {scanResults.errors.length === 0 && scanResults.warnings.length === 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 20px', gap: 12 }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#22c55e' }}>No issues found</div>
-                        <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#475569', textAlign: 'center' }}>This log file contains no ERROR or WARNING lines.</div>
-                      </div>
-                    )}
-                  </>
-                ) : null}
+                      ))}
+                    </div>
+                  );
+                })() : null}
               </div>
             </div>
           </div>,

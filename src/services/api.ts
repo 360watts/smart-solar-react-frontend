@@ -1244,6 +1244,16 @@ class ApiService {
     return response.text();
   }
 
+  async scanDeviceLogFiles(deviceId: number, date: string): Promise<{
+    date: string;
+    files_scanned: number;
+    total_errors: number;
+    total_warnings: number;
+    results: { filename: string; errors: { line: number; text: string }[]; warnings: { line: number; text: string }[]; fetch_error?: boolean }[];
+  }> {
+    return this.request(`/devices/${deviceId}/logs/files/scan/?date=${date}`);
+  }
+
 
   async getRegisterCoverage(deviceId: number): Promise<any> {
     return this.request(`/devices/${deviceId}/register-coverage/`);
