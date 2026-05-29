@@ -94,6 +94,12 @@ const Users: React.FC = () => {
     address: '',
   });
 
+  // Email verification state for create flow
+  const [emailVerifyStep, setEmailVerifyStep] = useState<'idle' | 'sending' | 'otp' | 'verified'>('idle');
+  const [emailVerifyOtp, setEmailVerifyOtp] = useState('');
+  const [verifiedToken, setVerifiedToken] = useState('');
+  const [emailVerifyError, setEmailVerifyError] = useState('');
+
   // Modern modal states
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; user: User | null }>({ show: false, user: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -154,18 +160,45 @@ const Users: React.FC = () => {
     }
   };
 
+  const handleSendVerificationOtp = async () => {
+    const email = createForm.email.trim();
+    if (!email) { setEmailVerifyError('Enter an email address first'); return; }
+    setEmailVerifyError('');
+    setEmailVerifyStep('sending');
+    try {
+      await apiService.sendPrecreationOtp(email);
+      setEmailVerifyStep('otp');
+      setEmailVerifyOtp('');
+    } catch (err) {
+      setEmailVerifyError(err instanceof Error ? err.message : 'Failed to send code');
+      setEmailVerifyStep('idle');
+    }
+  };
+
+  const handleConfirmVerificationOtp = async () => {
+    setEmailVerifyError('');
+    try {
+      const { verified_token } = await apiService.confirmPrecreationOtp(createForm.email.trim(), emailVerifyOtp.trim());
+      setVerifiedToken(verified_token);
+      setEmailVerifyStep('verified');
+    } catch (err) {
+      setEmailVerifyError(err instanceof Error ? err.message : 'Invalid code');
+    }
+  };
+
   const handleCreate = async () => {
+    if (!verifiedToken) {
+      setError('Please verify the email address before creating the account.');
+      return;
+    }
     try {
       setCreatingLoading(true);
-      await apiService.createUser(createForm);
+      await apiService.createUser({ ...createForm, verified_token: verifiedToken });
       setCreatingUser(false);
-      setCreateForm({
-        email: '',
-        first_name: '',
-        last_name: '',
-        mobile_number: '',
-        address: '',
-      });
+      setCreateForm({ email: '', first_name: '', last_name: '', mobile_number: '', address: '' });
+      setEmailVerifyStep('idle');
+      setVerifiedToken('');
+      setEmailVerifyOtp('');
       await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
@@ -225,6 +258,10 @@ const Users: React.FC = () => {
   const handleCancel = () => {
     setEditingUser(null);
     setCreatingUser(false);
+    setEmailVerifyStep('idle');
+    setVerifiedToken('');
+    setEmailVerifyOtp('');
+    setEmailVerifyError('');
   };
 
   if (loading) {
@@ -862,22 +899,107 @@ const Users: React.FC = () => {
                       </>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Email Address</label>
-                      <input
-                        type="email"
-                        value={editingUser ? editForm.email : createForm.email}
-                        onChange={(e) => editingUser ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
-                        required
-                        autoComplete="off"
-                        placeholder="john.doe@example.com"
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
-                          fontSize: '0.875rem',
-                        }}
-                      />
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                        Email Address
+                        {!editingUser && emailVerifyStep === 'verified' && (
+                          <span style={{ marginLeft: 8, color: '#22c55e', fontSize: '0.75rem', fontWeight: 700 }}>✓ Verified</span>
+                        )}
+                      </label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="email"
+                          value={editingUser ? editForm.email : createForm.email}
+                          onChange={(e) => {
+                            if (editingUser) { setEditForm({...editForm, email: e.target.value}); }
+                            else {
+                              setCreateForm({...createForm, email: e.target.value});
+                              // Reset verification if email changes
+                              if (emailVerifyStep !== 'idle') { setEmailVerifyStep('idle'); setVerifiedToken(''); setEmailVerifyOtp(''); setEmailVerifyError(''); }
+                            }
+                          }}
+                          required
+                          autoComplete="off"
+                          placeholder="john.doe@example.com"
+                          disabled={!editingUser && emailVerifyStep === 'verified'}
+                          style={{
+                            flex: 1, padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                            border: !editingUser && emailVerifyStep === 'verified'
+                              ? '1px solid rgba(34,197,94,0.4)'
+                              : isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                            background: !editingUser && emailVerifyStep === 'verified'
+                              ? 'rgba(34,197,94,0.07)'
+                              : isDark ? '#2a2a2a' : '#ffffff',
+                            color: isDark ? '#f3f4f6' : '#111827',
+                            fontSize: '0.875rem',
+                          }}
+                        />
+                        {/* Verify button — only on create form */}
+                        {!editingUser && emailVerifyStep !== 'verified' && (
+                          <button
+                            type="button"
+                            onClick={handleSendVerificationOtp}
+                            disabled={emailVerifyStep === 'sending' || !createForm.email.trim()}
+                            style={{
+                              padding: '10px 14px', borderRadius: 8, border: 'none', flexShrink: 0,
+                              background: emailVerifyStep === 'sending' ? 'rgba(99,102,241,0.4)' : '#6366f1',
+                              color: '#fff', fontSize: '0.8rem', fontWeight: 700, cursor: emailVerifyStep === 'sending' ? 'not-allowed' : 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {emailVerifyStep === 'sending' ? 'Sending…' : emailVerifyStep === 'otp' ? 'Resend' : 'Send Code'}
+                          </button>
+                        )}
+                        {!editingUser && emailVerifyStep === 'verified' && (
+                          <button
+                            type="button"
+                            onClick={() => { setEmailVerifyStep('idle'); setVerifiedToken(''); setEmailVerifyError(''); }}
+                            style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.3)', background: 'transparent', color: '#22c55e', fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            Change
+                          </button>
+                        )}
+                      </div>
+
+                      {/* OTP input row */}
+                      {!editingUser && emailVerifyStep === 'otp' && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="Enter 6-digit code"
+                            value={emailVerifyOtp}
+                            onChange={e => setEmailVerifyOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            style={{
+                              flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.4)',
+                              background: isDark ? '#1a1a2e' : '#f5f5ff', color: isDark ? '#c7d2fe' : '#3730a3',
+                              fontSize: '1rem', fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'monospace',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleConfirmVerificationOtp}
+                            disabled={emailVerifyOtp.length !== 6}
+                            style={{
+                              padding: '9px 16px', borderRadius: 8, border: 'none',
+                              background: emailVerifyOtp.length === 6 ? '#22c55e' : 'rgba(34,197,94,0.3)',
+                              color: '#fff', fontSize: '0.8rem', fontWeight: 700,
+                              cursor: emailVerifyOtp.length === 6 ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      )}
+
+                      {emailVerifyError && (
+                        <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#f87171' }}>{emailVerifyError}</p>
+                      )}
+                      {!editingUser && emailVerifyStep === 'otp' && !emailVerifyError && (
+                        <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                          Code sent to <strong>{createForm.email}</strong> — ask the customer to check their inbox.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -993,15 +1115,22 @@ const Users: React.FC = () => {
                   color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
                   opacity: creatingLoading || savingLoading ? 0.6 : 1,
                 }}>Cancel</button>
-                <button type="submit" disabled={creatingLoading || savingLoading} style={{
-                  padding: '10px 20px', borderRadius: 8, border: 'none',
-                  background: creatingLoading || savingLoading ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
+                <button
+                  type="submit"
+                  disabled={creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified')}
+                  title={!editingUser && emailVerifyStep !== 'verified' ? 'Verify the email address first' : undefined}
+                  style={{
+                    padding: '10px 20px', borderRadius: 8, border: 'none',
+                    background: (creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified'))
+                      ? 'rgba(99,102,241,0.4)'
+                      : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', fontSize: '0.875rem', fontWeight: 600,
+                    cursor: (creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified')) ? 'not-allowed' : 'pointer',
+                    boxShadow: (!editingUser && emailVerifyStep !== 'verified') ? 'none' : '0 4px 12px rgba(99,102,241,0.35)',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
                   {(creatingLoading || savingLoading) && <Loader size={16} />}
-                  {editingUser ? 'Save Changes' : 'Create user'}
+                  {editingUser ? 'Save Changes' : 'Create User'}
                 </button>
               </div>
             </form>

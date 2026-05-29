@@ -525,6 +525,14 @@ class ApiService {
     return result;
   }
 
+  async sendPrecreationOtp(email: string): Promise<{ message: string }> {
+    return this.request('/auth/send-precreation-otp/', { method: 'POST', body: JSON.stringify({ email }) });
+  }
+
+  async confirmPrecreationOtp(email: string, otp: string): Promise<{ verified_token: string }> {
+    return this.request('/auth/confirm-precreation-otp/', { method: 'POST', body: JSON.stringify({ email, otp }) });
+  }
+
   async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
     const cacheKey = `employees_${search || 'all'}_${page}_${pageSize}`;
     const cached = cacheService.get(cacheKey);

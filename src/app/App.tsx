@@ -6,6 +6,7 @@ import { NavigationProvider } from '../contexts/NavigationContext';
 import AdminRoute from '../shared/guards/AdminRoute';
 import CustomerRoute from '../shared/guards/CustomerRoute';
 import Login from '../features/auth/components/Login';
+import VerifyEmailPage from '../features/auth/components/VerifyEmailPage';
 import NavigationProgress from '../shared/layout/NavigationProgress';
 import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { SkeletonDashboard } from '../shared/components/SkeletonLoader';
@@ -78,6 +79,9 @@ function App() {
             <Routes>
               {/* Public login route - no navbar, breadcrumbs, or page transition */}
               <Route path="/login" element={<Login />} />
+
+              {/* Email verification — linked from pre-creation OTP email */}
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
 
               {/* Public invite acceptance — no auth required, standalone page */}
               <Route path="/invite/:token" element={<Suspense fallback={null}><AcceptInvitePage /></Suspense>} />
