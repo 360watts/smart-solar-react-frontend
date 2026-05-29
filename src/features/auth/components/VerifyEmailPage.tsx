@@ -61,18 +61,33 @@ const VerifyEmailPage: React.FC = () => {
         {state === 'done' && (
           <>
             <div style={{
-              width: 64, height: 64, borderRadius: '50%',
+              width: 72, height: 72, borderRadius: '50%',
               background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px', fontSize: 28,
-            }}>✓</div>
-            <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
-              Email confirmed!
+              margin: '0 auto 24px',
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
+              Verification successful!
             </h2>
-            <p style={{ margin: 0, fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
-              Your email has been verified. Your 360Watts account is being set up —
-              you'll receive your login credentials shortly.
+            <p style={{ margin: '0 0 20px', fontSize: 15, color: '#94a3b8', lineHeight: 1.7 }}>
+              Your email address has been confirmed.
             </p>
+            <div style={{
+              padding: '16px 20px', borderRadius: 10,
+              background: 'rgba(240,117,34,0.08)', border: '1px solid rgba(240,117,34,0.2)',
+              textAlign: 'left',
+            }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 700, color: '#fb923c' }}>
+                What happens next?
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                You will receive another email with your <strong style={{ color: '#cbd5e1' }}>login credentials</strong> once your account has been set up. This usually takes just a few minutes.
+              </p>
+            </div>
             <p style={{ margin: '20px 0 0', fontSize: 12, color: '#475569' }}>You can close this tab.</p>
           </>
         )}
