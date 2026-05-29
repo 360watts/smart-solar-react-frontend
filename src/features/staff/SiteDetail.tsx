@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import PageHeader from '../../shared/layout/PageHeader';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ export default function SiteDetail() {
   const { siteId: siteIdParam } = useParams<{ siteId: string }>();
   const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const { isDark } = useTheme();
+  const { user } = useAuth();
 
   // ── State ──
   const [tab, setTab] = useState<Tab>('overview');
@@ -94,7 +96,6 @@ export default function SiteDetail() {
   const [appliancesLoading, setAppliancesLoading] = useState(true);
 
   // ── Design Tokens ──
-  const bg          = isDark ? '#080C14' : '#f0fdf4';
   const surface     = isDark ? '#0F1623' : '#ffffff';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
@@ -198,6 +199,7 @@ export default function SiteDetail() {
   }, [siteId]);
 
   useEffect(() => {
+    if (!user?.is_staff) return;  // customers cannot call /api/users/ — would trigger 401 logout
     let mounted = true;
     const loadUsers = async () => {
       setUsersBusy(true);
@@ -215,7 +217,7 @@ export default function SiteDetail() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user]);
 
   // Load available devices and sites when gateway tab is opened
   useEffect(() => {

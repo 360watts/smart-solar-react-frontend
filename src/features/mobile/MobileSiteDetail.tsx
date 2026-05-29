@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   ArrowLeft, RefreshCw, Wifi, WifiOff, Server, Activity,
   Settings, Save, X, MapPin, Zap, Clock, Link as LinkIcon,
@@ -17,6 +18,7 @@ const MobileSiteDetail: React.FC = () => {
   const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { user } = useAuth();
 
   const bg      = isDark ? '#060d18' : '#f0fdf4';
   const surface = isDark ? '#0d1829' : '#ffffff';
@@ -87,10 +89,11 @@ const MobileSiteDetail: React.FC = () => {
       .finally(() => setAppliancesLoading(false));
   }, [siteId]);
   useEffect(() => {
+    if (!user?.is_staff) return;  // customers cannot call /api/users/ — would trigger 401 logout
     apiService.getUsers().then((res: any) => {
       setOwnerUsers(Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : []);
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   const handleSaveDetails = async () => {
     setBusy(true); setError(null);
