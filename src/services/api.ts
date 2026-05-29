@@ -1623,6 +1623,14 @@ class ApiService {
   async resetPassword(data: { reset_token: string; new_password: string; confirm_password: string }): Promise<{ message: string; login_url: string }> {
     return this.request('/auth/password/reset/', { method: 'POST', body: JSON.stringify(data) });
   }
+
+  async verifyEmail(data: { email: string; otp: string }): Promise<{ access: string; refresh: string; user: any }> {
+    return this.request('/auth/verify-email/', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async resendVerificationEmail(data: { email: string }): Promise<{ message: string }> {
+    return this.request('/auth/resend-verification/', { method: 'POST', body: JSON.stringify(data) });
+  }
 }
 
 export const apiService = new ApiService();

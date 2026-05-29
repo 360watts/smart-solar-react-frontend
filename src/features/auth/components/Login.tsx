@@ -6,8 +6,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/shared/ui/input-otp'
 import { useAuth } from '../../../contexts/AuthContext'
 import PhoneInput from '../../../shared/components/PhoneInput'
 import logoWithFont from '../../../assets/logo_with_font.png'
+import { apiService } from '../../../services/api'
 
-type Mode = 'password' | 'otp-phone' | 'otp-verify'
+type Mode = 'password' | 'otp-phone' | 'otp-verify' | 'email-verify'
 
 const OTP_LENGTH = 6
 const RESEND_COOLDOWN = 30
@@ -93,6 +94,8 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cooldown, setCooldown] = useState(0)
+  const [verifyEmail, setVerifyEmail] = useState('')  // email pending verification
+  const [verifyOtpVal, setVerifyOtpVal] = useState('')
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -110,10 +113,49 @@ const Login: React.FC = () => {
       const ok = await login(email, password)
       if (ok) navigate('/', { replace: true })
       else setError('Invalid email or password.')
-    } catch {
-      setError('Login failed. Please try again.')
+    } catch (err: any) {
+      // Backend returns error='EMAIL_NOT_VERIFIED' with the user's email
+      const body = err?.response ? await err.response.json().catch(() => null) : null
+      const msg = body?.error ?? err?.message ?? ''
+      if (msg === 'EMAIL_NOT_VERIFIED' || (body?.email && msg.includes('verify'))) {
+        setVerifyEmail(body?.email ?? email)
+        setVerifyOtpVal('')
+        setMode('email-verify')
+      } else {
+        setError('Login failed. Please try again.')
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEmailVerify = async () => {
+    if (verifyOtpVal.length !== OTP_LENGTH) return
+    clearError()
+    setLoading(true)
+    try {
+      const data = await apiService.verifyEmail({ email: verifyEmail, otp: verifyOtpVal })
+      // Store tokens and navigate — mirror what login() does
+      localStorage.setItem('authTokens', JSON.stringify({ access: data.access, refresh: data.refresh }))
+      localStorage.setItem('authUser', JSON.stringify(data.user))
+      navigate('/', { replace: true })
+    } catch (err: any) {
+      setError(err?.message ?? 'Verification failed. Please try again.')
+      setVerifyOtpVal('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (cooldown > 0) return
+    try {
+      await apiService.resendVerificationEmail({ email: verifyEmail })
+      setCooldown(RESEND_COOLDOWN)
+      setVerifyOtpVal('')
+      clearError()
+    } catch {
+      setError('Failed to resend code.')
     }
   }
 
@@ -241,10 +283,10 @@ const Login: React.FC = () => {
                 style={{ height: 82, objectFit: 'contain', display: 'block', margin: '0 auto 20px' }}
               />
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: '#F0F4FF', marginBottom: 4 }}>
-                Welcome back
+                {mode === 'email-verify' ? 'Verify your email' : 'Welcome back'}
               </div>
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#64748B' }}>
-                Sign in to access your solar dashboard
+                {mode === 'email-verify' ? 'Enter the code sent to your inbox' : 'Sign in to access your solar dashboard'}
               </div>
             </div>
 
@@ -459,6 +501,72 @@ const Login: React.FC = () => {
                   </button>
                 </div>
               </form>
+            )}
+
+            {/* ── Email verification (new account) ── */}
+            {mode === 'email-verify' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>📧</span>
+                  <div>
+                    <p style={{ margin: 0, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 700, color: '#86efac' }}>Check your email</p>
+                    <p style={{ margin: '4px 0 0', fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
+                      A 6-digit verification code was sent to <strong style={{ color: '#CBD5E1' }}>{verifyEmail}</strong>. Enter it below to activate your account.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 12 }}>
+                    Verification code
+                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <InputOTP maxLength={OTP_LENGTH} value={verifyOtpVal} onChange={v => { setVerifyOtpVal(v); if (v.length === OTP_LENGTH) setTimeout(handleEmailVerify, 80) }}>
+                      <InputOTPGroup>
+                        {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+                          <InputOTPSlot key={i} index={i} className="login-otp-slot bg-white/5 border-white/10 text-white" />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleEmailVerify}
+                  disabled={loading || verifyOtpVal.length < OTP_LENGTH}
+                  style={{
+                    width: '100%', padding: '11px 0', borderRadius: 9, border: 'none',
+                    cursor: loading || verifyOtpVal.length < OTP_LENGTH ? 'not-allowed' : 'pointer',
+                    background: loading || verifyOtpVal.length < OTP_LENGTH ? 'rgba(34,197,94,0.3)' : '#22c55e',
+                    color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'background 0.18s',
+                  }}
+                >
+                  <Check size={14} />
+                  {loading ? 'Activating…' : 'Activate Account'}
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('password'); setVerifyOtpVal(''); clearError() }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#64748B' }}
+                  >
+                    <ArrowLeft size={13} /> Back to login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={cooldown > 0 || loading}
+                    style={{ background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: cooldown > 0 ? '#475569' : '#22c55e' }}
+                  >
+                    <RefreshCw size={13} />
+                    {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
