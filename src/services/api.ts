@@ -537,6 +537,11 @@ class ApiService {
     return this.request(`/auth/check-email-verified/?email=${encodeURIComponent(email)}`);
   }
 
+  async checkContactAvailable(field: 'email' | 'phone', value: string): Promise<{ available: boolean; field: string }> {
+    const param = field === 'email' ? `email=${encodeURIComponent(value)}` : `phone=${encodeURIComponent(value)}`;
+    return this.request(`/auth/check-contact/?${param}`);
+  }
+
   async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
     const cacheKey = `employees_${search || 'all'}_${page}_${pageSize}`;
     const cached = cacheService.get(cacheKey);

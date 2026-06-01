@@ -5,21 +5,33 @@ import { getSecurityCardStyles } from './styles';
 import PasswordChangeModal from './PasswordChangeModal';
 
 interface SecurityCardProps {
-  /** When true, renders only the "Change Password" button (no card wrapper). */
   triggerOnly?: boolean;
+  /** Use orange accent for customer portal (default: green for staff). */
+  customerMode?: boolean;
 }
 
-const SecurityCard: React.FC<SecurityCardProps> = ({ triggerOnly = false }) => {
+const SecurityCard: React.FC<SecurityCardProps> = ({ triggerOnly = false, customerMode = false }) => {
   const { isDark } = useTheme();
   const [showModal, setShowModal] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const styles = getSecurityCardStyles(isDark);
+  const accent = customerMode ? '#F07522' : '#4CAF82';
 
   const button = (
     <button
       onClick={() => setShowModal(true)}
-      style={styles.button as React.CSSProperties}
+      style={{
+        ...(styles.button as React.CSSProperties),
+        display: 'flex', alignItems: 'center', gap: 8,
+        color: hovered ? '#fff' : accent,
+        border: `1.5px solid ${accent}`,
+        background: hovered ? accent : 'transparent',
+        boxShadow: hovered ? `0 2px 10px ${accent}30` : 'none',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <Lock size={14} style={{ marginRight: 6 }} />
+      <Lock size={14} />
       Change Password
     </button>
   );
