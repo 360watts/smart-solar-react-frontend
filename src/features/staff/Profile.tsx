@@ -1,488 +1,185 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Shield, Lock, Edit3, X, Check, AlertCircle, Building2, Briefcase, Upload } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import ReactDOM from 'react-dom';
+import { Upload, Mail, Phone, MapPin, Calendar, Edit2, Save, X, AlertCircle, Check, Building2, ShieldCheck } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/MobileProfile';
 import SecurityCard from '../portal/security/SecurityCard';
 
-interface ProfileData {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  mobile_number?: string;
-  address?: string;
-  avatar_url?: string | null;
-  is_staff: boolean;
-  is_superuser: boolean;
-  date_joined: string;
-  role?: string;
-  department?: any;
-  manager_id?: number;
-  employment_status?: string;
-  timezone?: string;
-}
+const GREEN='#4CAF82',GREEN_D='#3d8a68',NAVY='#2B4A6B',ORANGE='#F07522';
+const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
 
-const AVATAR_COLORS = [
-  'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
-  'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-  'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-  'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)',
-  'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
-  'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)',
-];
+interface ProfileData{id:number;username:string;email:string;first_name:string;last_name:string;mobile_number?:string;address?:string;avatar_url?:string|null;is_staff:boolean;is_superuser:boolean;date_joined:string;role?:string;department?:any;employment_status?:string;timezone?:string;}
 
-const getAvatarColor = (str: string) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+const AV=['linear-gradient(135deg,#4CAF82 0%,#2e6b53 100%)','linear-gradient(135deg,#2B4A6B 0%,#1a2e42 100%)','linear-gradient(135deg,#3B82F6 0%,#1D4ED8 100%)','linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%)','linear-gradient(135deg,#14B8A6 0%,#0F766E 100%)'];
+const gac=(s:string)=>{let h=0;for(let i=0;i<s.length;i++)h=s.charCodeAt(i)+((h<<5)-h);return AV[Math.abs(h)%AV.length];};
+const gin=(a:string,b:string,c:string)=>{if(a&&b)return`${a[0]}${b[0]}`.toUpperCase();if(a)return a.substring(0,2).toUpperCase();return c.substring(0,2).toUpperCase();};
+
+const OTPInput:React.FC<{value:string;onChange:(v:string)=>void;accent:string;dark:boolean}>=({value,onChange,accent,dark})=>{
+  const tok=tokens(dark);
+  const r=[useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null),useRef<HTMLInputElement>(null)];
+  const d=value.padEnd(6,'').split('').slice(0,6);
+  const hk=(i:number,e:React.KeyboardEvent<HTMLInputElement>)=>{if(e.key==='Backspace'){onChange(d.map((x,idx)=>idx===i?'':x).join(''));if(i>0)r[i-1].current?.focus();}};
+  const hc=(i:number,v:string)=>{const ch=v.replace(/\D/g,'').slice(-1);onChange(d.map((x,idx)=>idx===i?ch:x).join(''));if(ch&&i<5)r[i+1].current?.focus();};
+  const hp=(e:React.ClipboardEvent)=>{const p=e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);onChange(p.padEnd(6,''));r[Math.min(p.length,5)].current?.focus();e.preventDefault();};
+  return(<div style={{display:'flex',gap:8,justifyContent:'center'}}>{r.map((ref,i)=>(<input key={i} ref={ref} type="text" inputMode="numeric" maxLength={1} value={d[i]||''} onChange={e=>hc(i,e.target.value)} onKeyDown={e=>hk(i,e)} onPaste={hp} style={{width:44,height:52,textAlign:'center',fontSize:22,fontWeight:700,background:tok.inputBg,border:`2px solid ${d[i]?accent:tok.border}`,borderRadius:8,color:tok.text,outline:'none',transition:'border-color 0.15s',fontFamily:"'Fira Code',monospace",cursor:'text'}} onFocus={e=>e.currentTarget.style.borderColor=accent} onBlur={e=>e.currentTarget.style.borderColor=d[i]?accent:tok.border}/>))}</div>);
 };
 
-const getInitials = (first: string, last: string, username: string) => {
-  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
-  if (first) return first.substring(0, 2).toUpperCase();
-  return username.substring(0, 2).toUpperCase();
+interface EMProps{profile:ProfileData;dark:boolean;accent:string;onSave:(f:any)=>Promise<void>;onClose:()=>void;}
+const EditModal:React.FC<EMProps>=({profile,dark,accent,onSave,onClose})=>{
+  const tok=tokens(dark);const aD=accent===GREEN?GREEN_D:'#d66419';
+  const [step,setStep]=useState<'form'|'otp'>('form');
+  const [form,setForm]=useState({first_name:profile.first_name||'',last_name:profile.last_name||'',email:profile.email||'',mobile_number:profile.mobile_number||'',address:profile.address||''});
+  const [otp,setOtp]=useState('');const [saving,setSaving]=useState(false);const [sending,setSending]=useState(false);
+  const [err,setErr]=useState<string|null>(null);const [otpErr,setOtpErr]=useState<string|null>(null);
+  const emailChanged=form.email!==profile.email;const phoneChanged=form.mobile_number!==(profile.mobile_number||'');
+  const sensitive=emailChanged||phoneChanged;
+  const handleNext=async(e:React.FormEvent)=>{
+    e.preventDefault();setErr(null);
+    if(sensitive){
+      setSending(true);
+      try{
+        if(emailChanged){const r=await apiService.checkContactAvailable('email',form.email);if(!r.available){setErr(`This email is already registered to another account.`);return;}}
+        if(phoneChanged&&form.mobile_number){const r=await apiService.checkContactAvailable('phone',form.mobile_number);if(!r.available){setErr(`This phone number is already registered to another account.`);return;}}
+        await apiService.requestPasswordResetOTP({email:profile.email});setStep('otp');
+      }catch(e:any){setErr(e?.message||'Failed to send code');}finally{setSending(false);}
+    }else{setSaving(true);try{await onSave(form);onClose();}catch(e:any){setErr(e?.message||'Failed to save');}finally{setSaving(false);}}
+  };
+  const handleVerify=async(e:React.FormEvent)=>{
+    e.preventDefault();if(otp.replace(/\D/g,'').length<6){setOtpErr('Enter the 6-digit code');return;}
+    setSaving(true);setOtpErr(null);
+    try{await apiService.verifyPasswordResetOTP({email:profile.email,otp:otp.replace(/\D/g,'')});await onSave(form);onClose();}
+    catch(e:any){setOtpErr(e?.message||'Invalid or expired code');}finally{setSaving(false);}
+  };
+  const inp={width:'100%',padding:'10px 13px',background:tok.inputBg,border:`1px solid ${tok.border}`,borderRadius:8,color:tok.text,fontSize:14,boxSizing:'border-box' as const,fontFamily:'inherit',outline:'none',transition:'border-color 0.2s,box-shadow 0.2s'};
+  const lbl={display:'block' as const,fontSize:11,color:tok.muted,fontWeight:600 as const,textTransform:'uppercase' as const,letterSpacing:'0.06em',marginBottom:7};
+  const fo=(e:any,override?:string)=>{e.currentTarget.style.borderColor=accent;e.currentTarget.style.boxShadow=`0 0 0 3px ${accent}18`;};
+  const fb=(e:any,override?:string)=>{e.currentTarget.style.borderColor=override||tok.border;e.currentTarget.style.boxShadow='none';};
+  return ReactDOM.createPortal(
+    <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)'}} onClick={onClose}/>
+      <div style={{position:'relative',width:'100%',maxWidth:540,background:tok.surface,border:`1px solid ${accent}55`,borderRadius:16,padding:32,boxShadow:`0 32px 80px rgba(0,0,0,0.35),0 0 0 1px ${accent}15`,animation:'em-in 0.2s ease'}}>
+        <style>{`@keyframes em-in{from{opacity:0;transform:scale(0.96) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}`}</style>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:38,height:38,borderRadius:10,background:`${accent}18`,border:`1px solid ${accent}38`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {step==='form'?<Edit2 size={17} color={accent}/>:<ShieldCheck size={17} color={accent}/>}
+            </div>
+            <div><h2 style={{fontSize:18,fontWeight:700,color:tok.text,margin:0}}>{step==='form'?'Edit Profile':'Verify Identity'}</h2>
+              <p style={{fontSize:12,color:tok.muted,margin:'3px 0 0'}}>{step==='form'?'Update your account details':`Code sent to ${profile.email}`}</p></div>
+          </div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',cursor:'pointer',color:tok.muted,padding:6,borderRadius:8,display:'flex'}} onMouseEnter={e=>{(e.currentTarget as any).style.color=tok.text;}} onMouseLeave={e=>{(e.currentTarget as any).style.color=tok.muted;}}><X size={20}/></button>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:22}}>
+          {['Details','Verify'].map((label,i)=>(<React.Fragment key={i}><div style={{display:'flex',alignItems:'center',gap:6}}>
+            <div style={{width:22,height:22,borderRadius:'50%',background:(i===0&&step==='form')||(i===1&&step==='otp')?accent:i<(step==='otp'?1:0)?`${accent}60`:tok.border,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>
+              {i<(step==='otp'?1:0)?<Check size={12}/>:i+1}</div>
+            <span style={{fontSize:11,color:(i===0&&step==='form')||(i===1&&step==='otp')?tok.text:tok.muted,fontWeight:500}}>{label}</span>
+          </div>{i===0&&<div style={{flex:1,height:1,background:step==='otp'?`${accent}50`:tok.border,maxWidth:40}}/>}</React.Fragment>))}
+        </div>
+        {step==='form'&&(<form onSubmit={handleNext}>
+          {err&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'rgba(248,81,73,0.1)',border:'1px solid rgba(248,81,73,0.3)',borderRadius:8,marginBottom:14}}><AlertCircle size={14} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{err}</span></div>}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
+            {[{k:'first_name',l:'First Name',t:'text'},{k:'last_name',l:'Last Name',t:'text'}].map(f=>(<div key={f.k}><label style={lbl}>{f.l}</label><input type={f.t} value={(form as any)[f.k]} onChange={e=>setForm(x=>({...x,[f.k]:e.target.value}))} style={inp} onFocus={fo} onBlur={e=>fb(e)}/></div>))}
+            <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Email Address {emailChanged&&<span style={{marginLeft:6,fontSize:10,color:ORANGE,fontWeight:700}}>⚠ requires verification</span>}</label>
+              <input type="email" value={form.email} onChange={e=>setForm(x=>({...x,email:e.target.value}))} style={{...inp,borderColor:emailChanged?ORANGE:tok.border}} onFocus={fo} onBlur={e=>fb(e,emailChanged?ORANGE:undefined)}/></div>
+            <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Phone Number {phoneChanged&&<span style={{marginLeft:6,fontSize:10,color:ORANGE,fontWeight:700}}>⚠ requires verification</span>}</label>
+              <input type="tel" value={form.mobile_number} onChange={e=>setForm(x=>({...x,mobile_number:e.target.value}))} style={{...inp,borderColor:phoneChanged?ORANGE:tok.border}} onFocus={fo} onBlur={e=>fb(e,phoneChanged?ORANGE:undefined)}/></div>
+            <div style={{gridColumn:'1 / -1'}}><label style={lbl}>Address</label><textarea value={form.address} onChange={e=>setForm(x=>({...x,address:e.target.value}))} style={{...inp,minHeight:68,resize:'vertical' as const}} onFocus={fo} onBlur={e=>fb(e)}/></div>
+          </div>
+          {sensitive&&<div style={{padding:'10px 14px',background:`${ORANGE}0d`,border:`1px solid ${ORANGE}28`,borderRadius:8,marginBottom:14,display:'flex',alignItems:'flex-start',gap:8}}><ShieldCheck size={14} color={ORANGE} style={{marginTop:1,flexShrink:0}}/><p style={{fontSize:12,color:tok.muted,margin:0,lineHeight:1.5}}>We will check availability and send a code to <strong style={{color:tok.text}}>{profile.email}</strong> to verify your identity.</p></div>}
+          <div style={{display:'flex',gap:10}}>
+            <button type="submit" disabled={sending||saving} style={{flex:1,padding:'11px 16px',background:sending||saving?`${accent}65`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:sending||saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background 0.2s'}} onMouseEnter={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=aD;}} onMouseLeave={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=accent;}}>
+              {sending?'Checking…':sensitive?<><ShieldCheck size={14}/>Continue</>:<><Save size={14}/>Save Changes</>}
+            </button>
+            <button type="button" onClick={onClose} style={{padding:'11px 20px',background:'transparent',color:tok.muted,border:`1px solid ${tok.border}`,borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',transition:'all 0.2s'}} onMouseEnter={e=>{(e.currentTarget as any).style.borderColor=tok.muted;(e.currentTarget as any).style.color=tok.text;}} onMouseLeave={e=>{(e.currentTarget as any).style.borderColor=tok.border;(e.currentTarget as any).style.color=tok.muted;}}>Cancel</button>
+          </div>
+        </form>)}
+        {step==='otp'&&(<form onSubmit={handleVerify}>
+          <p style={{fontSize:14,color:tok.muted,textAlign:'center',marginBottom:28,lineHeight:1.6}}>Enter the 6-digit code sent to<br/><strong style={{color:tok.text}}>{profile.email}</strong></p>
+          <OTPInput value={otp} onChange={setOtp} accent={accent} dark={dark}/>
+          {otpErr&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'rgba(248,81,73,0.1)',border:'1px solid rgba(248,81,73,0.3)',borderRadius:8,marginTop:14}}><AlertCircle size={14} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{otpErr}</span></div>}
+          <div style={{display:'flex',gap:10,marginTop:22}}>
+            <button type="button" onClick={()=>{setStep('form');setOtp('');setOtpErr(null);}} style={{padding:'11px 16px',background:'transparent',color:tok.muted,border:`1px solid ${tok.border}`,borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{(e.currentTarget as any).style.borderColor=tok.muted;(e.currentTarget as any).style.color=tok.text;}} onMouseLeave={e=>{(e.currentTarget as any).style.borderColor=tok.border;(e.currentTarget as any).style.color=tok.muted;}}>← Back</button>
+            <button type="submit" disabled={saving||otp.replace(/\D/g,'').length<6} style={{flex:1,padding:'11px 16px',background:saving||otp.replace(/\D/g,'').length<6?`${accent}50`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onMouseEnter={e=>{if(!saving)(e.currentTarget as any).style.background=aD;}} onMouseLeave={e=>{if(!saving)(e.currentTarget as any).style.background=accent;}}><Save size={14}/>{saving?'Saving…':'Confirm & Save'}</button>
+          </div>
+          <p style={{textAlign:'center',marginTop:14,fontSize:12,color:tok.muted}}>Didn't receive it? <button type="button" style={{background:'none',border:'none',color:accent,fontSize:12,cursor:'pointer',fontWeight:600}} onClick={async()=>{try{await apiService.requestPasswordResetOTP({email:profile.email});}catch{}}}>Resend code</button></p>
+        </form>)}
+      </div>
+    </div>,document.body
+  );
 };
 
-const Profile: React.FC = () => {
-  const isMobile = useIsMobile();
-  const { user } = useAuth();
-  const { isDark } = useTheme();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const Profile:React.FC=()=>{
+  const isMobile=useIsMobile();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=GREEN;
+  const [profile,setProfile]=useState<ProfileData|null>(null);const [loading,setLoading]=useState(true);
+  const [error,setError]=useState<string|null>(null);const [success,setSuccess]=useState<string|null>(null);
+  const [showEdit,setShowEdit]=useState(false);const [avPrev,setAvPrev]=useState<string|null>(null);
+  const [avUrl,setAvUrl]=useState<string|null>(null);const [upAv,setUpAv]=useState(false);
+  const fileRef=useRef<HTMLInputElement>(null);
 
-  const [editForm, setEditForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile_number: '',
-    address: '',
-  });
+  useEffect(()=>{(async()=>{try{setLoading(true);const d=await apiService.getProfile();setProfile(d);setAvUrl(d.avatar_url||null);}catch(e:any){setError(e?.message||'Failed to load');}finally{setLoading(false);}})();},[]);
 
-  useEffect(() => { fetchProfile(); }, []);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const data = await apiService.getProfile();
-      setProfile(data);
-      setAvatarUrl(data.avatar_url || null);
-      setEditForm({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        email: data.email || '',
-        mobile_number: data.mobile_number || '',
-        address: data.address || '',
-      });
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
+  const handleSave=async(form:any)=>{const u=await apiService.updateProfile(form);setProfile(u);setSuccess('Profile updated');setTimeout(()=>setSuccess(null),3000);};
+  const handleAv=async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const f=e.currentTarget.files?.[0];if(!f)return;
+    if(!f.type.startsWith('image/')){setError('Please select an image file');return;}
+    if(f.size>5*1024*1024){setError('Image must be less than 5MB');return;}
+    const r=new FileReader();r.onload=(ev)=>setAvPrev(ev.target?.result as string);r.readAsDataURL(f);
+    setUpAv(true);try{const res=await apiService.uploadProfilePicture(f);if(res.avatar_url)setAvUrl(res.avatar_url);setSuccess('Photo updated');setTimeout(()=>setAvPrev(null),2000);}catch{setError('Upload failed');setAvPrev(null);}finally{setUpAv(false);if(fileRef.current)fileRef.current.value='';}
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const updatedProfile = await apiService.updateProfile(editForm);
-      setProfile(updatedProfile);
-      setIsEditing(false);
-      setSuccess('Profile updated successfully');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
-    }
-  };
+  if(isMobile)return<MobileProfile/>;
+  if(loading)return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:tok.bg}}><div style={{textAlign:'center'}}><div style={{width:44,height:44,borderRadius:'50%',border:`3px solid ${ACCENT}20`,borderTop:`3px solid ${ACCENT}`,animation:'pspin 1s linear infinite',margin:'0 auto 14px'}}/><p style={{color:tok.muted,fontSize:13}}>Loading…</p></div><style>{`@keyframes pspin{to{transform:rotate(360deg);}}`}</style></div>);
+  if(!profile)return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:tok.bg}}><div style={{textAlign:'center'}}><AlertCircle size={40} color="#F85149" style={{margin:'0 auto 12px',display:'block'}}/><p style={{color:tok.text,fontWeight:600,marginBottom:8}}>Unable to load profile</p><p style={{color:tok.muted,fontSize:13,marginBottom:20}}>{error}</p><button onClick={()=>window.location.reload()} style={{padding:'10px 24px',background:ACCENT,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}>Retry</button></div></div>);
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    if (profile) {
-      setEditForm({
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        mobile_number: profile.mobile_number || '',
-        address: profile.address || '',
-      });
-    }
-  };
+  const dn=`${profile.first_name} ${profile.last_name}`.trim()||profile.username;
+  const ini=gin(profile.first_name,profile.last_name,profile.username);
+  const ag=gac(ini);
+  const rl=profile.is_superuser?'Administrator':profile.is_staff?'Staff Member':'Employee';
+  const dept=profile.department?(typeof profile.department==='object'?profile.department.name:profile.department):null;
+  const jd=profile.date_joined?new Date(profile.date_joined).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
 
-  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.currentTarget.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setAvatarPreview(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    setUploadingAvatar(true);
-    try {
-      const response = await apiService.uploadProfilePicture(file);
-      setSuccess('Profile picture updated successfully');
-      if (response.avatar_url) {
-        setAvatarUrl(response.avatar_url);
-      }
-      setTimeout(() => setAvatarPreview(null), 2000);
-    } catch (err) {
-      setError('Failed to upload profile picture');
-      setAvatarPreview(null);
-    } finally {
-      setUploadingAvatar(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  if (isMobile) return <MobileProfile />;
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : '#F5F7FA' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto 20px' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', border: '3px solid rgba(34,197,94,0.15)', borderTop: '3px solid #22C55E', animation: 'spin 1s linear infinite' }} />
-          </div>
-          <p style={{ color: isDark ? '#8892A4' : '#64748B', fontSize: 14 }}>Loading your profile...</p>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div style={{ padding: '40px 20px', background: isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : '#F5F7FA', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px', background: isDark ? 'rgba(15, 22, 35, 0.9)' : '#fff', borderRadius: 16, border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, textAlign: 'center' }}>
-          <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#F87171' }} />
-          <p style={{ fontSize: 16, fontWeight: 600, color: isDark ? '#F0F4FF' : '#0A0E1A', margin: '0 0 8px' }}>Unable to Load Profile</p>
-          <p style={{ fontSize: 14, color: isDark ? '#8892A4' : '#64748B', marginBottom: 24 }}>{error}</p>
-          <button onClick={fetchProfile} style={{ padding: '10px 24px', background: '#22C55E', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Retry</button>
-        </div>
-      </div>
-    );
-  }
-
-  const bgGradient = isDark ? 'linear-gradient(135deg, #080C14 0%, #0F1623 100%)' : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)';
-  const cardBg = isDark ? 'rgba(15, 22, 35, 0.85)' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
-  const text = isDark ? '#F0F4FF' : '#0A0E1A';
-  const muted = isDark ? '#8892A4' : '#64748B';
-  const inputBg = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)';
-  const inputBorder = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-
-  const initials = getInitials(profile.first_name, profile.last_name, profile.username);
-  const avatarGradient = getAvatarColor(initials);
-  const displayName = `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
-  const roleLabel = profile.is_superuser ? 'Admin' : profile.is_staff ? 'Staff' : 'Employee';
-
-  return (
-    <div style={{ background: bgGradient, minHeight: '100vh', padding: '40px 20px', transition: 'background 0.3s ease' }}>
-      <style>{`
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .profile-container { animation: slideUp 0.5s ease both; }
-        .stat-card { transition: all 0.3s ease; }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(34,197,94,0.15); }
-        .edit-mode { animation: fadeIn 0.3s ease; }
-      `}</style>
-
-      <div style={{ maxWidth: 1000, margin: '0 auto' }} className="profile-container">
-        {/* Header with avatar and quick info */}
-        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 32, marginBottom: 40, alignItems: 'start' }}>
-          {/* Avatar & Status */}
-          <div style={{ position: 'relative' }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarSelect}
-              style={{ display: 'none' }}
-            />
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              style={{
-                width: 200,
-                height: 200,
-                borderRadius: 16,
-                backgroundImage: avatarPreview ? `url(${avatarPreview})` : avatarUrl ? `url(${avatarUrl})` : !avatarPreview && !avatarUrl ? avatarGradient : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 64,
-                fontWeight: 700,
-                color: '#fff',
-                boxShadow: '0 20px 40px rgba(34,197,94,0.25)',
-                position: 'relative',
-                overflow: 'hidden',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-              } as React.CSSProperties}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.85)';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.filter = 'brightness(1)';
-              }}
-            >
-              {!avatarPreview && !avatarUrl && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent)' }} />}
-
-              {/* Upload overlay */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'rgba(0,0,0,0.4)',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                opacity: 0,
-                transition: 'opacity 0.3s ease',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.opacity = '1';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLDivElement).style.opacity = '0';
-              }}
-              className="upload-overlay"
-              >
-                <Upload size={32} style={{ color: '#fff', marginBottom: 8 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Upload Photo</span>
-              </div>
-
-              {uploadingAvatar && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(0,0,0,0.6)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid #fff', animation: 'spin 1s linear infinite' }} />
-                </div>
-              )}
-
-              {!avatarPreview && !avatarUrl && initials}
+  return(<div style={{minHeight:'100vh',background:tok.bg,padding:'48px 24px',fontFamily:"'Fira Sans','DM Sans',sans-serif",transition:'background 0.2s'}}>
+    <style>{`@import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+    @keyframes pspin{to{transform:rotate(360deg);}}@keyframes pfu{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}@keyframes psd{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .pst:hover{border-color:${ACCENT}!important;transform:translateY(-3px);}.pco:hover{border-color:${ACCENT}!important;}.paw:hover .pao{opacity:1!important;}.peb:hover{background:#3a5f8a!important;}`}</style>
+    <div style={{maxWidth:1100,margin:'0 auto',animation:'pfu 0.4s ease'}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:48,flexWrap:'wrap',gap:24}}>
+        <div style={{display:'flex',alignItems:'center',gap:32}}>
+          <div style={{position:'relative',width:128,height:128,flexShrink:0}}>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleAv} style={{display:'none'}}/>
+            <div className="paw" onClick={()=>fileRef.current?.click()} style={{width:128,height:128,borderRadius:'50%',cursor:'pointer',backgroundImage:avPrev?`url(${avPrev})`:avUrl?`url(${avUrl})`:ag,backgroundSize:'cover',backgroundPosition:'center',display:'flex',alignItems:'center',justifyContent:'center',fontSize:38,fontWeight:700,color:'#fff',border:`3px solid ${ACCENT}`,boxShadow:`0 0 20px ${ACCENT}30`,position:'relative',overflow:'hidden'} as React.CSSProperties}>
+              {!avPrev&&!avUrl&&ini}
+              <div className="pao" style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,opacity:0,transition:'opacity 0.25s',borderRadius:'50%'}}><Upload size={24} color={ACCENT}/><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>Upload</span></div>
+              {upAv&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%'}}><div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${ACCENT}35`,borderTop:`2px solid ${ACCENT}`,animation:'pspin 0.8s linear infinite'}}/></div>}
             </div>
-            {/* Status badge */}
-            <div style={{
-              position: 'absolute', bottom: 12, right: 12,
-              background: '#22C55E', color: '#fff',
-              padding: '4px 12px', borderRadius: 20,
-              fontSize: 11, fontWeight: 700,
-              boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
-            }}>
-              {profile.employment_status || 'Active'}
-            </div>
+            <div style={{position:'absolute',bottom:5,right:5,width:14,height:14,borderRadius:'50%',background:ACCENT,border:`2px solid ${tok.bg}`,boxShadow:`0 0 8px ${ACCENT}80`}}/>
           </div>
-
-          {/* Name, role, actions */}
           <div>
-            <div style={{ marginBottom: 24 }}>
-              <h1 style={{ fontSize: 36, fontWeight: 700, color: text, margin: '0 0 8px', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>{displayName}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <span style={{ fontSize: 16, fontWeight: 600, color: '#22C55E', fontFamily: "'DM Sans', sans-serif" }}>{roleLabel}</span>
-                {profile.department && (
-                  <span style={{ fontSize: 13, color: muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Building2 size={14} /> {typeof profile.department === 'object' ? profile.department.name : profile.department}
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: 13, color: muted, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{profile.email}</p>
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                style={{
-                  padding: '10px 20px', borderRadius: 8, border: 'none',
-                  background: isEditing ? 'rgba(244,63,94,0.1)' : 'rgba(34,197,94,0.1)',
-                  color: isEditing ? '#F43F5E' : '#22C55E',
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {isEditing ? <X size={16} /> : <Edit3 size={16} />}
-                {isEditing ? 'Cancel' : 'Edit Profile'}
-              </button>
-              <button
-                onClick={() => {}}
-                style={{ display: 'none' }}
-              />
-              <SecurityCard triggerOnly />
-            </div>
+            <h1 style={{fontSize:32,fontWeight:700,color:tok.text,margin:'0 0 5px',letterSpacing:'-0.02em'}}>{dn}</h1>
+            <p style={{fontSize:15,color:ACCENT,margin:'0 0 7px',fontWeight:500}}>{rl}</p>
+            {dept&&<p style={{fontSize:13,color:tok.muted,margin:'0 0 7px',display:'flex',alignItems:'center',gap:5}}><MapPin size={13}/>{dept}</p>}
+            <div style={{display:'flex',alignItems:'center',gap:6}}><Calendar size={13} color={tok.muted}/><span style={{color:tok.muted,fontSize:13}}>Joined {jd}</span></div>
           </div>
         </div>
-
-        {/* Success/Error messages */}
-        {success && (
-          <div style={{ padding: 16, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10, animation: 'slideUp 0.3s ease' }}>
-            <Check size={20} style={{ color: '#22C55E', flexShrink: 0 }} />
-            <span style={{ fontSize: 14, color: '#22C55E', fontWeight: 500 }}>{success}</span>
-          </div>
-        )}
-        {error && (
-          <div style={{ padding: 16, background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 8, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AlertCircle size={20} style={{ color: '#F43F5E', flexShrink: 0 }} />
-            <span style={{ fontSize: 14, color: '#F43F5E', fontWeight: 500 }}>{error}</span>
-          </div>
-        )}
-
-        {/* Stats grid */}
-        {!isEditing && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 40 }} className="stat-card">
-            {[
-              { icon: Calendar, label: 'Joined', value: new Date(profile.date_joined).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
-              { icon: Briefcase, label: 'Role', value: profile.role || 'Employee' },
-              { icon: MapPin, label: 'Timezone', value: profile.timezone || 'Asia/Kolkata' },
-              { icon: Shield, label: 'Status', value: profile.employment_status || 'Active' },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: 20, borderRadius: 12,
-                  background: cardBg, border: `1px solid ${cardBorder}`,
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <stat.icon size={16} style={{ color: '#22C55E' }} />
-                  <span style={{ fontSize: 12, color: muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
-                </div>
-                <p style={{ fontSize: 16, fontWeight: 700, color: text, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Contact details */}
-        {!isEditing && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 40 }}>
-            {[
-              { icon: Mail, label: 'Email', value: profile.email },
-              { icon: Phone, label: 'Phone', value: profile.mobile_number || 'Not provided' },
-              { icon: MapPin, label: 'Address', value: profile.address || 'Not provided' },
-            ].map((item, i) => (
-              <div key={i} style={{ padding: 16, borderRadius: 12, background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <item.icon size={14} style={{ color: '#22C55E' }} />
-                  <span style={{ fontSize: 11, color: muted, fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</span>
-                </div>
-                <p style={{ fontSize: 14, color: text, margin: 0, fontFamily: "'Fira Code', monospace", wordBreak: 'break-all' }}>{item.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Edit mode form */}
-        {isEditing && (
-          <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, padding: 40 }} className="edit-mode">
-            <h2 style={{ fontSize: 24, fontWeight: 700, color: text, margin: '0 0 32px', fontFamily: "'Outfit', sans-serif" }}>Edit Profile</h2>
-            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginBottom: 32 }}>
-              {[
-                { key: 'first_name', label: 'First Name', type: 'text' },
-                { key: 'last_name', label: 'Last Name', type: 'text' },
-                { key: 'email', label: 'Email', type: 'email' },
-                { key: 'mobile_number', label: 'Phone', type: 'tel' },
-              ].map(field => (
-                <div key={field.key} style={{ gridColumn: field.key === 'address' ? '1 / -1' : undefined }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    value={(editForm as any)[field.key]}
-                    onChange={e => setEditForm(f => ({ ...f, [field.key]: e.target.value }))}
-                    style={{
-                      width: '100%', padding: '12px 14px', borderRadius: 8,
-                      border: `1.5px solid ${inputBorder}`,
-                      background: inputBg, color: text,
-                      fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-                      transition: 'border-color 0.2s ease',
-                      outline: 'none',
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = '#22C55E'}
-                    onBlur={e => e.currentTarget.style.borderColor = inputBorder}
-                  />
-                </div>
-              ))}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Address
-                </label>
-                <textarea
-                  value={editForm.address}
-                  onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: 8,
-                    border: `1.5px solid ${inputBorder}`,
-                    background: inputBg, color: text,
-                    fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-                    transition: 'border-color 0.2s ease',
-                    outline: 'none', minHeight: 100, resize: 'vertical',
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = '#22C55E'}
-                  onBlur={e => e.currentTarget.style.borderColor = inputBorder}
-                />
-              </div>
-
-              {/* Form actions */}
-              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  style={{
-                    padding: '10px 24px', borderRadius: 8,
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                    background: 'transparent', color: text,
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '10px 24px', borderRadius: 8, border: 'none',
-                    background: '#22C55E', color: '#fff',
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}
-                >
-                  <Check size={16} />
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-
+        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+          <button className="peb" onClick={()=>setShowEdit(true)} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',background:NAVY,color:'#fff',border:'none',borderRadius:9,fontSize:14,fontWeight:600,cursor:'pointer',transition:'background 0.2s',boxShadow:'0 2px 8px rgba(43,74,107,0.3)'}}><Edit2 size={15}/>Edit Profile</button>
+          <SecurityCard triggerOnly/>
+        </div>
+      </div>
+      {success&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:`${ACCENT}12`,border:`1px solid ${ACCENT}35`,borderRadius:8,marginBottom:24,animation:'psd 0.3s ease'}}><Check size={15} color={ACCENT}/><span style={{fontSize:13,color:ACCENT}}>{success}</span></div>}
+      {error&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'rgba(248,81,73,0.08)',border:'1px solid rgba(248,81,73,0.22)',borderRadius:8,marginBottom:24}}><AlertCircle size={15} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{error}</span></div>}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(215px,1fr))',gap:14,marginBottom:28}}>
+        {[{l:'Member Since',v:jd},{l:'Role',v:profile.role||rl},{l:'Timezone',v:profile.timezone||'Asia/Kolkata'},{l:'Status',v:profile.employment_status||'Active'}].map((s,i)=>(<div key={i} className="pst" style={{background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:10,padding:'20px 22px',transition:'all 0.25s ease',cursor:'default',boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.06)'}}><div style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:8}}>{s.l}</div><div style={{fontSize:19,fontWeight:700,color:ACCENT}}>{s.v}</div></div>))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(265px,1fr))',gap:14}}>
+        {[{I:Mail,l:'Email',v:profile.email},{I:Phone,l:'Phone',v:profile.mobile_number||'Not provided'},{I:MapPin,l:'Address',v:profile.address||'Not provided'}].map((c,i)=>(<div key={i} className="pco" style={{background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:10,padding:'20px 22px',transition:'border-color 0.2s',boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.06)'}}><div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}><c.I size={16} color={ACCENT}/><span style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600}}>{c.l}</span></div><div style={{fontSize:14,color:tok.text,fontWeight:500,wordBreak:'break-all',fontFamily:"'Fira Code',monospace"}}>{c.v}</div></div>))}
       </div>
     </div>
-  );
+    {showEdit&&profile&&<EditModal profile={profile} dark={isDark} accent={ACCENT} onSave={handleSave} onClose={()=>setShowEdit(false)}/>}
+  </div>);
 };
 
 export default Profile;
