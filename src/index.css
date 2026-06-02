@@ -39,48 +39,55 @@
 }
 
 :root {
-  /* Light tokens */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Light mode — 360watts Design System */
+  --background: #F4F6F8;
+  --foreground: #12151A;
+  --card: #FFFFFF;
+  --card-foreground: #12151A;
+  --popover: #FFFFFF;
+  --popover-foreground: #12151A;
+  --primary: #2FBF71;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E9B949;
+  --secondary-foreground: #12151A;
+  --muted: #ECEFF1;
+  --muted-foreground: #717182;
+  --accent: #E9B949;
+  --accent-foreground: #12151A;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(0,0,0,0.1);
+  --input: rgba(0,0,0,0.07);
+  --ring: #2FBF71;
+  /* Design system extended palette */
+  --green: #2FBF71;
+  --green-soft: rgba(47,191,113,0.1);
 }
 
 .dark-mode {
-  /* Dark tokens */
-  /* Unified dark app background (matches customer + staff portal) */
+  /* Dark mode — 360watts Design System */
   --background: #080C14;
-  --foreground: oklch(0.985 0 0);
+  --foreground: #F0F4FF;
   --card: #0F1623;
-  --card-foreground: oklch(0.985 0 0);
+  --card-foreground: #F0F4FF;
   --popover: #0F1623;
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --popover-foreground: #F0F4FF;
+  --primary: #2FBF71;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E9B949;
+  --secondary-foreground: #0A0E1A;
+  --muted: rgba(255,255,255,0.08);
+  --muted-foreground: #8892A4;
+  --accent: #E9B949;
+  --accent-foreground: #0A0E1A;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255,255,255,0.07);
+  --input: rgba(255,255,255,0.1);
+  --ring: #2FBF71;
+  /* Design system extended palette */
+  --green: #2FBF71;
+  --green-soft: rgba(47,191,113,0.1);
 }
 
 @layer base {
