@@ -238,8 +238,8 @@ const PortalDevice: React.FC = () => {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ position: 'relative', width: 56, height: 56, margin: '0 auto 16px' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid rgba(245,158,11,0.15)', borderTop: '3px solid #F59E0B', animation: 'portal-spin 1s linear infinite' }} />
-          <Cpu size={20} color="#F59E0B" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid rgba(47,191,113,0.15)', borderTop: '3px solid #2FBF71', animation: 'portal-spin 1s linear infinite' }} />
+          <Cpu size={20} color="#2FBF71" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
         </div>
         <p style={{ color: muted, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Loading device info…</p>
       </div>
@@ -276,8 +276,8 @@ const PortalDevice: React.FC = () => {
       {/* Empty */}
       {devices.length === 0 && !error && (
         <div className="portal-fade-in" style={{ textAlign: 'center', padding: '72px 20px' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px', background: 'rgba(245,158,11,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Cpu size={32} color="#F59E0B" />
+          <div style={{ width: 72, height: 72, borderRadius: '50%', margin: '0 auto 20px', background: 'rgba(47,191,113,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Cpu size={32} color="#2FBF71" />
           </div>
           <p style={{ fontSize: 18, fontFamily: "'Outfit', sans-serif", fontWeight: 700, color: text, marginBottom: 8 }}>No devices found</p>
           <p style={{ fontSize: 14, color: muted }}>Your gateway device will appear here once provisioned.</p>
