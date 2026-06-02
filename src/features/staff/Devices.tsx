@@ -245,12 +245,12 @@ const Devices: React.FC = () => {
     wifi_password: '',
   });
   const [createForm, setCreateForm] = useState({
-    device_serial: '',
+    device_serial_preview: '',
     user: '',
     config_version: '',
     wifi_ssid: '',
     wifi_password: '',
-  });
+  } as any);
   const [showChangeWifiPassword, setShowChangeWifiPassword] = useState(false);
 
   // Site management state
@@ -691,12 +691,11 @@ const Devices: React.FC = () => {
       }
       setCreatingDevice(false);
       setCreateForm({
-        device_serial: '',
         user: '',
         config_version: '',
         wifi_ssid: '',
         wifi_password: '',
-      });
+      } as any);
       // Refetch to get the new device with all fields including audit trail
       await fetchDevices(currentPage, searchTerm);
     } catch (err) {
@@ -975,14 +974,17 @@ const Devices: React.FC = () => {
                 <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
                 <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Device Identity</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
-                <input type="text"
-                  value={editingDevice ? editForm.device_serial : createForm.device_serial}
-                  onChange={(e) => editingDevice ? setEditForm({...editForm, device_serial: e.target.value}) : setCreateForm({...createForm, device_serial: e.target.value})}
-                  required autoComplete="off" placeholder="SN-12345678"
-                  style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
-              </div>
+              {/* Only show device_serial input during edit mode */}
+              {editingDevice && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
+                  <input type="text"
+                    value={editForm.device_serial}
+                    onChange={(e) => setEditForm({...editForm, device_serial: e.target.value})}
+                    disabled autoComplete="off"
+                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#3a3a3a' : '#f3f4f6', color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.875rem', cursor: 'not-allowed' }} />
+                </div>
+              )}
             </div>
 
             {/* Ownership */}
