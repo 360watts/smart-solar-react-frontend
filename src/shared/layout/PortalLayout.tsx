@@ -60,22 +60,22 @@ const PORTAL_STYLES = `
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(245,158,11,0.06);
+    background: rgba(47,191,113,0.06);
     border-radius: 10px;
     opacity: 0;
     transition: opacity 0.18s ease;
   }
-  .portal-nav-link:hover { color: #F59E0B; }
+  .portal-nav-link:hover { color: #2FBF71; }
   .portal-nav-link:hover::before { opacity: 1; }
   .portal-nav-link.active {
-    color: #F59E0B;
-    background: rgba(245,158,11,0.1);
+    color: #2FBF71;
+    background: rgba(47,191,113,0.1);
     font-weight: 600;
   }
   .portal-nav-link.active .portal-nav-dot {
     opacity: 1;
-    background: #F59E0B;
-    box-shadow: 0 0 8px rgba(245,158,11,0.8);
+    background: #2FBF71;
+    box-shadow: 0 0 8px rgba(47,191,113,0.8);
   }
   .portal-nav-dot {
     width: 5px; height: 5px;
@@ -235,8 +235,8 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '8px 10px', borderRadius: 10,
-            background: isActive ? (isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)') : userBg,
-            border: isActive ? '1px solid rgba(245,158,11,0.25)' : `1px solid ${userBorder}`,
+            background: isActive ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)') : userBg,
+            border: isActive ? '1px solid rgba(47,191,113,0.25)' : `1px solid ${userBorder}`,
             marginBottom: 4,
             textDecoration: 'none',
             cursor: 'pointer',
@@ -245,9 +245,9 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
         >
           <div style={{
             width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
+            background: 'linear-gradient(135deg, #2FBF71, #1A9955)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 12, color: '#0A0E1A',
+            fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 12, color: '#FFFFFF',
           }}>
             {initials}
           </div>
@@ -305,7 +305,7 @@ const PortalLayout: React.FC = () => {
         <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>360Watts</div>
         <button
           onClick={() => setMobileOpen(true)}
-          style={{ padding: 8, borderRadius: 8, border: 'none', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', cursor: 'pointer' }}
+          style={{ padding: 8, borderRadius: 8, border: 'none', background: 'rgba(47,191,113,0.1)', color: '#2FBF71', cursor: 'pointer' }}
         >
           <Menu size={18} />
         </button>
