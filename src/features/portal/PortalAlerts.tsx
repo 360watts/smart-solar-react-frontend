@@ -113,8 +113,8 @@ const PortalAlerts: React.FC = () => {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ position: 'relative', width: 56, height: 56, margin: '0 auto 16px' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid rgba(245,158,11,0.15)', borderTop: '3px solid #F59E0B', animation: 'portal-spin 1s linear infinite' }} />
-          <Bell size={20} color="#F59E0B" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid rgba(47,191,113,0.15)', borderTop: '3px solid #2FBF71', animation: 'portal-spin 1s linear infinite' }} />
+          <Bell size={20} color="#2FBF71" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
         </div>
         <p style={{ color: muted, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Loading alerts…</p>
       </div>
@@ -272,7 +272,7 @@ const PortalAlerts: React.FC = () => {
       {/* ── Alert timeline ─────────────────────────────────────────────────── */}
       {pageItems.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
-          <div style={{ position: 'absolute', left: 19, top: 20, bottom: 20, width: 2, background: `linear-gradient(to bottom, rgba(245,158,11,0.3), transparent)`, pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', left: 19, top: 20, bottom: 20, width: 2, background: `linear-gradient(to bottom, rgba(47,191,113,0.3), transparent)`, pointerEvents: 'none' }} />
 
           {pageItems.map((alert, i) => {
             const sev    = SEV_CONFIG[alert.severity]  ?? SEV_CONFIG.info;
