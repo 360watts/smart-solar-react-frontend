@@ -242,18 +242,18 @@ const PortalChat: React.FC = () => {
         .pchat-fab {
           position: fixed; bottom: 28px; right: 28px; z-index: 9100;
           width: 56px; height: 56px; border-radius: 50%; border: none;
-          background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
-          box-shadow: 0 8px 28px rgba(245,158,11,0.45), inset 0 1px 3px rgba(255,255,255,0.4);
+          background: linear-gradient(135deg, #2FBF71 0%, #1A9955 100%);
+          box-shadow: 0 8px 28px rgba(47,191,113,0.45), inset 0 1px 3px rgba(255,255,255,0.4);
           display: flex; align-items: center; justify-content: center;
           cursor: pointer; transition: transform 0.22s cubic-bezier(.34,1.56,.64,1), box-shadow 0.22s;
           outline: none;
         }
-        .pchat-fab:hover { transform: scale(1.1) translateY(-3px); box-shadow: 0 14px 36px rgba(245,158,11,0.55); }
+        .pchat-fab:hover { transform: scale(1.1) translateY(-3px); box-shadow: 0 14px 36px rgba(47,191,113,0.55); }
         .pchat-fab:active { transform: scale(0.94); }
         .pchat-fab--open { background: linear-gradient(135deg, #1E293B, #0F172A); box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
         .pchat-fab__ring {
           position: absolute; inset: -5px; border-radius: 50%;
-          border: 2px solid rgba(245,158,11,0.5);
+          border: 2px solid rgba(47,191,113,0.5);
           animation: pchat-fab-ring 2.2s ease-out infinite;
           pointer-events: none;
         }
@@ -268,7 +268,7 @@ const PortalChat: React.FC = () => {
         .pchat-panel--dark {
           background: linear-gradient(160deg, #0D1422 0%, #080C14 100%);
           border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: 0 28px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(245,158,11,0.12);
+          box-shadow: 0 28px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(47,191,113,0.12);
         }
         .pchat-panel--light {
           background: #FFFFFF;
@@ -277,14 +277,14 @@ const PortalChat: React.FC = () => {
         }
         .pchat-msg { animation: pchat-msg-in 0.22s ease both; }
         .pchat-typing-dot {
-          width: 7px; height: 7px; border-radius: 50%; background: #F59E0B;
+          width: 7px; height: 7px; border-radius: 50%; background: #2FBF71;
           animation: pchat-bounce 1.1s ease-in-out infinite;
         }
         .pchat-markdown p         { margin: 0 0 8px; line-height: 1.6; }
         .pchat-markdown p:last-child { margin-bottom: 0; }
         .pchat-markdown ul, .pchat-markdown ol { padding-left: 18px; margin: 0 0 8px; }
         .pchat-markdown li        { margin-bottom: 3px; }
-        .pchat-chip:hover         { border-color: rgba(245,158,11,0.45) !important; }
+        .pchat-chip:hover         { border-color: rgba(47,191,113,0.45) !important; }
         @media (max-width: 600px) {
           .pchat-panel { right: 12px; bottom: 84px; width: calc(100vw - 24px) !important; height: 72dvh !important; border-radius: 16px; }
           .pchat-fab   { bottom: 20px; right: 16px; }
@@ -322,9 +322,9 @@ const PortalChat: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
+                background: 'linear-gradient(135deg, #2FBF71, #1A9955)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 12px rgba(245,158,11,0.4)',
+                boxShadow: '0 0 12px rgba(47,191,113,0.4)',
               }}>
                 <Sparkles size={15} color="#0A0E1A" strokeWidth={2.5} />
               </div>
@@ -390,8 +390,8 @@ const PortalChat: React.FC = () => {
                 </div>
                 <a href="/portal/profile" style={{
                   padding: '9px 20px', borderRadius: 9,
-                  background: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
-                  color: '#0A0E1A', fontFamily: "'DM Sans', sans-serif",
+                  background: 'linear-gradient(135deg, #2FBF71, #1A9955)',
+                  color: '#FFFFFF', fontFamily: "'DM Sans', sans-serif",
                   fontWeight: 700, fontSize: 13, textDecoration: 'none',
                 }}>
                   View Plans →
@@ -404,9 +404,9 @@ const PortalChat: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '20px 8px 8px' }}>
                 <div style={{
                   width: 52, height: 52, borderRadius: '50%', marginBottom: 14,
-                  background: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
+                  background: 'linear-gradient(135deg, #2FBF71, #1A9955)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 0 24px rgba(245,158,11,0.3)',
+                  boxShadow: '0 0 24px rgba(47,191,113,0.3)',
                 }}>
                   <Sparkles size={22} color="#0A0E1A" />
                 </div>
@@ -432,10 +432,10 @@ const PortalChat: React.FC = () => {
                     >
                       <div style={{
                         width: 26, height: 26, borderRadius: 7, flexShrink: 0,
-                        background: 'rgba(245,158,11,0.12)',
+                        background: 'rgba(47,191,113,0.12)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <Icon size={13} color="#F59E0B" />
+                        <Icon size={13} color="#2FBF71" />
                       </div>
                       <span style={{ fontSize: 13, color: isDark ? '#CBD5E1' : '#475569', fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
                     </button>
@@ -454,13 +454,13 @@ const PortalChat: React.FC = () => {
                     padding: '10px 13px',
                     borderRadius: isUser ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
                     background: isUser
-                      ? 'linear-gradient(135deg, #F59E0B, #FBBF24)'
+                      ? 'linear-gradient(135deg, #2FBF71, #1A9955)'
                       : isDark ? '#111827' : '#F8FAFC',
                     border: isUser ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-                    color: isUser ? '#0A0E1A' : (isDark ? '#E2E8F0' : '#1E293B'),
+                    color: isUser ? '#FFFFFF' : (isDark ? '#E2E8F0' : '#1E293B'),
                     fontSize: 13, lineHeight: 1.6,
                     fontFamily: "'DM Sans', sans-serif",
-                    boxShadow: isUser ? '0 3px 10px rgba(245,158,11,0.2)' : 'none',
+                    boxShadow: isUser ? '0 3px 10px rgba(47,191,113,0.2)' : 'none',
                   }}>
                     {isUser ? (
                       <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</span>
@@ -540,13 +540,13 @@ const PortalChat: React.FC = () => {
                   style={{
                     width: 34, height: 34, borderRadius: 9, border: 'none', flexShrink: 0,
                     background: input.trim() && !streaming
-                      ? 'linear-gradient(135deg, #F59E0B, #FBBF24)'
+                      ? 'linear-gradient(135deg, #2FBF71, #1A9955)'
                       : isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
-                    color: input.trim() && !streaming ? '#0A0E1A' : isDark ? '#4A5568' : '#94A3B8',
+                    color: input.trim() && !streaming ? '#FFFFFF' : isDark ? '#4A5568' : '#94A3B8',
                     cursor: input.trim() && !streaming ? 'pointer' : 'not-allowed',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'all 0.15s ease',
-                    boxShadow: input.trim() && !streaming ? '0 2px 8px rgba(245,158,11,0.3)' : 'none',
+                    boxShadow: input.trim() && !streaming ? '0 2px 8px rgba(47,191,113,0.3)' : 'none',
                   }}
                 >
                   {streaming
