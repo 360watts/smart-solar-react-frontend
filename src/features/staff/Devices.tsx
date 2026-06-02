@@ -929,69 +929,121 @@ const Devices: React.FC = () => {
         maxWidth: '640px', width: '100%',
         maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
+        {/* Header — Refined Design */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '24px 28px',
-          borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+          background: isDark ? 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95))' : 'linear-gradient(135deg, #ffffff, #f8fafc)',
+          borderBottom: '1px solid rgba(203,213,225,0.1)',
+          padding: '28px 32px',
           flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
-            }}>
-              <Pencil size={22} color="white" />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
-                {editingDevice ? `Edit Device: ${editingDevice.device_serial}` : 'Register New Device'}
-              </div>
-              <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
-                {editingDevice ? 'Update device configuration and assignment' : 'Add a new device to the fleet'}
-              </div>
-            </div>
-          </div>
-          <button type="button" onClick={handleCancel} style={{
-            width: 40, height: 40, borderRadius: 10, border: 'none',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-            color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <h2 style={{
+            margin: '0 0 8px 0',
+            fontSize: '24px',
+            fontWeight: 700,
+            fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
+            color: isDark ? '#f1f5f9' : '#1e293b',
+            letterSpacing: '-0.02em',
           }}>
-            <X size={18} />
-          </button>
+            {editingDevice ? `Edit: ${editingDevice.device_serial}` : 'Register New Device'}
+          </h2>
+          <p style={{
+            margin: 0,
+            fontSize: '13px',
+            color: isDark ? '#cbd5e1' : '#64748b',
+            fontFamily: '"Lora", Georgia, serif',
+            fontWeight: 400,
+          }}>
+            {editingDevice ? 'Update device configuration and assignment' : 'Configure your IoT gateway for solar energy management'}
+          </p>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           {/* Scrollable body */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
-            {/* Device Identity */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Device Identity</span>
+            {/* Device Identity — Refined */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #f59e0b',
+              }}>
+                <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#f1f5f9' : '#1e293b', fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                  Device Identity
+                </h3>
               </div>
-              {/* Only show device_serial input during edit mode */}
+
+              {/* Auto-generated serial badge (create mode only) */}
+              {!editingDevice && (
+                <div style={{
+                  padding: '16px',
+                  background: isDark ? 'rgba(203, 213, 225, 0.05)' : 'rgba(30, 41, 59, 0.04)',
+                  border: '1px solid rgba(203, 213, 225, 0.1)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}>
+                  <div>
+                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontFamily: '"IBM Plex Mono", monospace', color: isDark ? '#f1f5f9' : '#1e293b', fontWeight: 600, letterSpacing: '0.1em' }}>
+                      {createForm.device_serial_preview || '(auto-generated)'}
+                    </p>
+                  </div>
+                  {createForm.device_serial_preview && (
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(createForm.device_serial_preview)}
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        background: 'rgba(203, 213, 225, 0.1)',
+                        border: '1px solid rgba(203, 213, 225, 0.2)',
+                        color: isDark ? '#cbd5e1' : '#475569',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(203, 213, 225, 0.2)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(203, 213, 225, 0.1)'; }}
+                    >
+                      Copy
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Edit mode serial display */}
               {editingDevice && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Serial Number</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial Number</label>
                   <input type="text"
                     value={editForm.device_serial}
-                    onChange={(e) => setEditForm({...editForm, device_serial: e.target.value})}
                     disabled autoComplete="off"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#3a3a3a' : '#f3f4f6', color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.875rem', cursor: 'not-allowed' }} />
+                    style={{ padding: '12px 14px', borderRadius: '6px', width: '100%', boxSizing: 'border-box', border: '1px solid rgba(203, 213, 225, 0.3)', background: isDark ? 'rgba(30, 41, 59, 0.5)' : '#f8fafc', color: isDark ? '#9ca3af' : '#64748b', fontSize: '14px', fontFamily: '"IBM Plex Mono", monospace', cursor: 'not-allowed' }} />
                 </div>
               )}
             </div>
 
-            {/* Ownership */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Ownership &amp; Assignment</span>
+            {/* Ownership & Assignment — Refined */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #f59e0b',
+              }}>
+                <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#f1f5f9' : '#1e293b', fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                  Owner Assignment
+                </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
@@ -1115,11 +1167,57 @@ const Devices: React.FC = () => {
             )}
           </div>
 
-          {/* Footer */}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', padding: '16px 28px', borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', flexShrink: 0 }}>
-            <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>
-              {editingDevice ? 'Save Changes' : 'Register Device'}
+          {/* Footer — Refined */}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', padding: '20px 32px', borderTop: '1px solid rgba(203,213,225,0.1)', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={handleCancel}
+              style={{
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: 600,
+                border: '1px solid rgba(203, 213, 225, 0.3)',
+                background: 'transparent',
+                color: isDark ? '#cbd5e1' : '#475569',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(203, 213, 225, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              style={{
+                padding: '10px 24px',
+                fontSize: '13px',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              {editingDevice ? 'Update' : 'Register Device'} →
             </button>
           </div>
         </form>
