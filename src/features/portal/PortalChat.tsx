@@ -481,12 +481,12 @@ const PortalChat: React.FC = () => {
                             ul: ({ children }) => <ul>{children}</ul>,
                             ol: ({ children }) => <ol>{children}</ol>,
                             li: ({ children }) => <li>{children}</li>,
-                            strong: ({ children }) => <strong style={{ color: '#F59E0B', fontWeight: 600 }}>{children}</strong>,
+                            strong: ({ children }) => <strong style={{ color: '#2FBF71', fontWeight: 600 }}>{children}</strong>,
                             code: ({ children }) => (
                               <code style={{
                                 background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                                 padding: '1px 5px', borderRadius: 4, fontSize: 12,
-                                fontFamily: 'monospace', color: '#FBBF24',
+                                fontFamily: 'monospace', color: '#2FBF71',
                               }}>{children}</code>
                             ),
                           }}
