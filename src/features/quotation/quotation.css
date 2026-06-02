@@ -143,7 +143,7 @@
 }
 
 .sq-step-item.done {
-  border-left-color: rgba(0,166,62,0.3);
+  border-left-color: rgba(47,191,113,0.3);
 }
 
 .sq-step-item:disabled { cursor: not-allowed; }
@@ -162,7 +162,7 @@
 }
 
 .sq-step-item.active .sq-step-num { color: var(--green, #2FBF71); }
-.sq-step-item.done .sq-step-num   { color: rgba(0,166,62,0.5); }
+.sq-step-item.done .sq-step-num   { color: rgba(47,191,113,0.5); }
 
 .sq-step-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -219,7 +219,7 @@
   height: 100%;
   background: linear-gradient(90deg, var(--green, #2FBF71) 0%, #4DD68A 100%);
   border-radius: 99px;
-  box-shadow: 0 0 6px rgba(0,166,62,0.3);
+  box-shadow: 0 0 6px rgba(47,191,113,0.3);
   transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
 }
 
@@ -618,7 +618,7 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
 .sq-badge-green {
   color: var(--green, #2FBF71);
   background: var(--green-soft, rgba(47,191,113,0.1));
-  border: 1px solid rgba(0,166,62,0.2);
+  border: 1px solid rgba(47,191,113,0.2);
 }
 
 .sq-badge-yellow {
@@ -687,7 +687,7 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   align-items: center;
   gap: 10px;
   background: var(--green-soft, rgba(47,191,113,0.08));
-  border: 1px solid rgba(0,166,62,0.2);
+  border: 1px solid rgba(47,191,113,0.2);
   border-radius: var(--r-md, 12px);
   padding: 12px 16px;
   margin-bottom: 22px;
@@ -699,7 +699,7 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   border-radius: 50%;
   background: var(--green, #2FBF71);
   flex-shrink: 0;
-  box-shadow: 0 0 8px rgba(0,166,62,0.4);
+  box-shadow: 0 0 8px rgba(47,191,113,0.4);
   animation: sq-dot-pulse 2s ease-in-out infinite;
 }
 
@@ -770,7 +770,7 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #00a63e 0%, #007a55 100%);
+  background: linear-gradient(135deg, #2FBF71 0%, #007a55 100%);
   border: none;
   color: #fff;
   font-family: var(--display, 'Poppins', sans-serif);
@@ -781,12 +781,12 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   cursor: pointer;
   transition: all 0.15s;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 14px rgba(0,166,62,0.3);
+  box-shadow: 0 4px 14px rgba(47,191,113,0.3);
 }
 
 .sq-btn-primary:hover:not(:disabled) {
   opacity: 0.92;
-  box-shadow: 0 6px 20px rgba(0,166,62,0.4);
+  box-shadow: 0 6px 20px rgba(47,191,113,0.4);
   transform: translateY(-1px);
 }
 
@@ -1112,9 +1112,9 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   border: 1px solid rgba(59,130,246,0.2);
 }
 .sq-status-badge[data-status="accepted"] {
-  background: rgba(0,166,62,0.1);
+  background: rgba(47,191,113,0.1);
   color: var(--green, #2FBF71);
-  border: 1px solid rgba(0,166,62,0.2);
+  border: 1px solid rgba(47,191,113,0.2);
 }
 .sq-status-badge[data-status="rejected"] {
   background: rgba(239,68,68,0.1);
@@ -1149,7 +1149,7 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
 }
 .sq-quote-row:hover {
   border-color: var(--green, #2FBF71);
-  box-shadow: 0 2px 8px rgba(0,166,62,0.08);
+  box-shadow: 0 2px 8px rgba(47,191,113,0.08);
 }
 .sq-quote-row > div:first-child { flex: 1; min-width: 0; }
 
