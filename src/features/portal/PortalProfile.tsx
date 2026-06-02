@@ -7,15 +7,21 @@ import { apiService } from '../../services/api';
 import SiteMembersCard from './members/SiteMembersCard';
 import SecurityCard from './security/SecurityCard';
 
-const ORANGE='#F07522',ORANGE_D='#d66419',NAVY='#2B4A6B',WARN='#F59E0B';
+const PRIMARY='#2FBF71', PRIMARY_D='#1A9955', AMBER='#E9B949', NAVY='#2B4A6B', WARN='#F59E0B';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
 
 const PLAN:Record<string,{label:string;icon:React.ReactNode;color:string;border:string;bg:string}>={
   free:   {label:'Free',   icon:<Zap size={11}/>,  color:'#8B949E',border:'rgba(139,148,158,0.3)',bg:'rgba(139,148,158,0.1)'},
   basic:  {label:'Basic',  icon:<Star size={11}/>, color:'#79C0FF',border:'rgba(121,192,255,0.3)',bg:'rgba(121,192,255,0.08)'},
-  premium:{label:'Premium',icon:<Crown size={11}/>,color:ORANGE,   border:'rgba(240,117,34,0.35)',bg:'rgba(240,117,34,0.1)'},
+  premium:{label:'Premium',icon:<Crown size={11}/>,color:AMBER,   border:'rgba(233,185,73,0.35)',bg:'rgba(233,185,73,0.1)'},
 };
-const AV=[`linear-gradient(135deg,${ORANGE} 0%,#a04e18 100%)`,`linear-gradient(135deg,${NAVY} 0%,#1a2e42 100%)`,'linear-gradient(135deg,#4CAF82 0%,#2e6b53 100%)','linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%)','linear-gradient(135deg,#F59E0B 0%,#B45309 100%)'];
+const AV=[
+  `linear-gradient(135deg,${PRIMARY} 0%,${PRIMARY_D} 100%)`,
+  `linear-gradient(135deg,${NAVY} 0%,#1a2e42 100%)`,
+  'linear-gradient(135deg,#4CAF82 0%,#2e6b53 100%)',
+  'linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%)',
+  `linear-gradient(135deg,${AMBER} 0%,#B45309 100%)`
+];
 const gac=(s:string)=>{let h=0;for(let i=0;i<s.length;i++)h=s.charCodeAt(i)+((h<<5)-h);return AV[Math.abs(h)%AV.length];};
 const gin=(a:string,b:string,c:string)=>{if(a&&b)return`${a[0]}${b[0]}`.toUpperCase();if(a)return a.substring(0,2).toUpperCase();return c.substring(0,2).toUpperCase();};
 
@@ -31,7 +37,7 @@ const OTPInput:React.FC<{value:string;onChange:(v:string)=>void;accent:string;da
 
 interface EMProps{profile:any;dark:boolean;onSave:(f:any)=>Promise<void>;onClose:()=>void;}
 const EditModal:React.FC<EMProps>=({profile,dark,onSave,onClose})=>{
-  const tok=tokens(dark);const accent=ORANGE;
+  const tok=tokens(dark);const accent=PRIMARY;
   const [step,setStep]=useState<'form'|'otp'>('form');
   const [form,setForm]=useState({first_name:profile.first_name||'',last_name:profile.last_name||'',email:profile.email||'',mobile_number:profile.mobile_number||'',address:profile.address||''});
   const [otp,setOtp]=useState('');const [saving,setSaving]=useState(false);const [sending,setSending]=useState(false);
@@ -93,7 +99,7 @@ const EditModal:React.FC<EMProps>=({profile,dark,onSave,onClose})=>{
           </div>
           {sensitive&&<div style={{padding:'10px 14px',background:`${WARN}0d`,border:`1px solid ${WARN}28`,borderRadius:8,marginBottom:14,display:'flex',alignItems:'flex-start',gap:8}}><ShieldCheck size={14} color={WARN} style={{marginTop:1,flexShrink:0}}/><p style={{fontSize:12,color:tok.muted,margin:0,lineHeight:1.5}}>We will check availability and send a code to <strong style={{color:tok.text}}>{profile.email}</strong> to verify your identity.</p></div>}
           <div style={{display:'flex',gap:10}}>
-            <button type="submit" disabled={sending||saving} style={{flex:1,padding:'11px 16px',background:sending||saving?`${accent}65`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:sending||saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background 0.2s'}} onMouseEnter={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=ORANGE_D;}} onMouseLeave={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=accent;}}>
+            <button type="submit" disabled={sending||saving} style={{flex:1,padding:'11px 16px',background:sending||saving?`${accent}65`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:sending||saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'background 0.2s'}} onMouseEnter={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=PRIMARY_D;}} onMouseLeave={e=>{if(!sending&&!saving)(e.currentTarget as any).style.background=accent;}}>
               {sending?'Checking…':sensitive?<><ShieldCheck size={14}/>Continue</>:<><Save size={14}/>Save Changes</>}
             </button>
             <button type="button" onClick={onClose} style={{padding:'11px 20px',background:'transparent',color:tok.muted,border:`1px solid ${tok.border}`,borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer',transition:'all 0.2s'}} onMouseEnter={e=>{(e.currentTarget as any).style.borderColor=tok.muted;(e.currentTarget as any).style.color=tok.text;}} onMouseLeave={e=>{(e.currentTarget as any).style.borderColor=tok.border;(e.currentTarget as any).style.color=tok.muted;}}>Cancel</button>
@@ -105,7 +111,7 @@ const EditModal:React.FC<EMProps>=({profile,dark,onSave,onClose})=>{
           {otpErr&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'rgba(248,81,73,0.1)',border:'1px solid rgba(248,81,73,0.3)',borderRadius:8,marginTop:14}}><AlertCircle size={14} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{otpErr}</span></div>}
           <div style={{display:'flex',gap:10,marginTop:22}}>
             <button type="button" onClick={()=>{setStep('form');setOtp('');setOtpErr(null);}} style={{padding:'11px 16px',background:'transparent',color:tok.muted,border:`1px solid ${tok.border}`,borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{(e.currentTarget as any).style.borderColor=tok.muted;(e.currentTarget as any).style.color=tok.text;}} onMouseLeave={e=>{(e.currentTarget as any).style.borderColor=tok.border;(e.currentTarget as any).style.color=tok.muted;}}>← Back</button>
-            <button type="submit" disabled={saving||otp.replace(/\D/g,'').length<6} style={{flex:1,padding:'11px 16px',background:saving||otp.replace(/\D/g,'').length<6?`${accent}50`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onMouseEnter={e=>{if(!saving)(e.currentTarget as any).style.background=ORANGE_D;}} onMouseLeave={e=>{if(!saving)(e.currentTarget as any).style.background=accent;}}><Save size={14}/>{saving?'Saving…':'Confirm & Save'}</button>
+            <button type="submit" disabled={saving||otp.replace(/\D/g,'').length<6} style={{flex:1,padding:'11px 16px',background:saving||otp.replace(/\D/g,'').length<6?`${accent}50`:accent,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:saving?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}} onMouseEnter={e=>{if(!saving)(e.currentTarget as any).style.background=PRIMARY_D;}} onMouseLeave={e=>{if(!saving)(e.currentTarget as any).style.background=accent;}}><Save size={14}/>{saving?'Saving…':'Confirm & Save'}</button>
           </div>
           <p style={{textAlign:'center',marginTop:14,fontSize:12,color:tok.muted}}>Didn't receive it? <button type="button" style={{background:'none',border:'none',color:accent,fontSize:12,cursor:'pointer',fontWeight:600}} onClick={async()=>{try{await apiService.requestPasswordResetOTP({email:profile.email});}catch{}}}>Resend code</button></p>
         </form>)}
@@ -115,7 +121,7 @@ const EditModal:React.FC<EMProps>=({profile,dark,onSave,onClose})=>{
 };
 
 const PortalProfile:React.FC=()=>{
-  const {user,updateUser}=useAuth();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=ORANGE;
+  const {user,updateUser}=useAuth();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=PRIMARY;
   const fileRef=useRef<HTMLInputElement>(null);
   const [profile,setProfile]=useState<any>(null);const [portalSites,setPortalSites]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);const [success,setSuccess]=useState<string|null>(null);
