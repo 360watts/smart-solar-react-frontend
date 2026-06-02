@@ -125,11 +125,11 @@ const PortalOverview: React.FC = () => {
         <div style={{ position: 'relative', width: 56, height: 56, margin: '0 auto 16px' }}>
           <div style={{
             width: 56, height: 56, borderRadius: '50%',
-            border: '3px solid rgba(245,158,11,0.15)',
-            borderTop: '3px solid #F59E0B',
+            border: '3px solid rgba(47,191,113,0.15)',
+            borderTop: '3px solid #2FBF71',
             animation: 'portal-spin 1s linear infinite',
           }} />
-          <Zap size={20} color="#F59E0B" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
+          <Zap size={20} color="#2FBF71" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }} />
         </div>
         <p style={{ color: muted, fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Loading your solar data…</p>
       </div>
@@ -173,7 +173,7 @@ const PortalOverview: React.FC = () => {
             fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: 28,
             color: text, margin: 0, letterSpacing: '-0.02em',
             ...(isDark ? {
-              background: 'linear-gradient(135deg, #F0F4FF 30%, #F59E0B 100%)',
+              background: 'linear-gradient(135deg, #F0F4FF 30%, #2FBF71 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             } : {}),
           }}>
@@ -206,9 +206,9 @@ const PortalOverview: React.FC = () => {
           {summary.sites.map(s => (
             <button key={s.site_id} onClick={() => setSelectedSiteId(s.site_id)} style={{
               padding: '8px 18px', borderRadius: 10,
-              border: s.site_id === selectedSiteId ? '1px solid #F59E0B' : `1px solid ${border}`,
-              background: s.site_id === selectedSiteId ? 'rgba(245,158,11,0.12)' : surface,
-              color: s.site_id === selectedSiteId ? '#F59E0B' : muted,
+              border: s.site_id === selectedSiteId ? '1px solid #2FBF71' : `1px solid ${border}`,
+              background: s.site_id === selectedSiteId ? 'rgba(47,191,113,0.12)' : surface,
+              color: s.site_id === selectedSiteId ? '#2FBF71' : muted,
               fontWeight: 600, fontSize: 13, cursor: 'pointer',
               fontFamily: "'DM Sans', sans-serif", transition: 'all 0.18s ease',
             }}>
@@ -220,10 +220,10 @@ const PortalOverview: React.FC = () => {
 
       {/* KPI grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
-        <KpiCard icon={<Zap size={15} />} label="Capacity" value={`${capacityCount.toFixed(2)} kWp`} sub="Installed solar panels" accentColor="#F59E0B" delay={0} isDark={isDark} />
+        <KpiCard icon={<Zap size={15} />} label="Capacity" value={`${capacityCount.toFixed(2)} kWp`} sub="Installed solar panels" accentColor="#E9B949" delay={0} isDark={isDark} />
         <KpiCard icon={<Activity size={15} />} label="Status" value={site.site_status.charAt(0).toUpperCase() + site.site_status.slice(1)} sub={`System ${site.site_status}`} accentColor={statusColor} delay={60} isDark={isDark} />
         <KpiCard icon={<Battery size={15} />} label="Devices" value={`${onlineDevices} / ${totalDevices}`} sub={onlineDevices === totalDevices ? 'All online' : `${totalDevices - onlineDevices} offline`} accentColor={onlineDevices === totalDevices ? '#34D399' : '#F87171'} delay={120} isDark={isDark} />
-        <KpiCard icon={<AlertTriangle size={15} />} label="Active Alerts" value={String(summary.active_alert_count)} sub={summary.active_alert_count === 0 ? 'System healthy' : 'Needs attention'} accentColor={summary.active_alert_count > 0 ? '#FBBF24' : '#34D399'} delay={180} isDark={isDark} />
+        <KpiCard icon={<AlertTriangle size={15} />} label="Active Alerts" value={String(summary.active_alert_count)} sub={summary.active_alert_count === 0 ? 'System healthy' : 'Needs attention'} accentColor={summary.active_alert_count > 0 ? '#F59E0B' : '#34D399'} delay={180} isDark={isDark} />
       </div>
 
       {/* Live separator */}
