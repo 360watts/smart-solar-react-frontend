@@ -6,30 +6,30 @@
 /* CSS Variables for consistent theming */
 :root {
   /* ---- 360Watts Brand Colors ---- */
-  --brand-green:       #00a63e;
-  --brand-green-dark:  #007a55;
-  --brand-green-light: #4ade80;
-  --brand-orange:      #F07522;
-  --brand-orange-dark: #d96b1e;
-  --brand-orange-light:#fdba74;
-  --brand-blue:        #254D65;
+  --brand-green:       #2FBF71;
+  --brand-green-dark:  #1A9955;
+  --brand-green-light: #4DD68A;
+  --brand-amber:       #E9B949;
+  --brand-amber-dark:  #C9983A;
+  --brand-amber-light: #F0CB6C;
+  --brand-blue:        #3B82F6;
 
-  /* Primary Colors — 360Watts Green */
-  --primary-gradient: linear-gradient(135deg, #00a63e 0%, #007a55 50%, #4ade80 100%);
-  --primary-color: #00a63e;
-  --primary-light: #4ade80;
-  --primary-dark: #007a55;
-  --secondary-color: #F07522;
+  /* Primary Colors — 360Watts Solar Green */
+  --primary-gradient: linear-gradient(135deg, #2FBF71 0%, #1A9955 50%, #4DD68A 100%);
+  --primary-color: #2FBF71;
+  --primary-light: #4DD68A;
+  --primary-dark: #1A9955;
+  --secondary-color: #E9B949;
 
-  /* Solar Theme Colors — Brand Orange Palette */
-  --solar-gradient: linear-gradient(135deg, #F07522 0%, #fbbf24 50%, #f97316 100%);
-  --solar-gold: #fbbf24;
-  --solar-orange: #F07522;
-  --solar-amber: #f59e0b;
+  /* Solar Theme Colors — Amber palette for energy/power values */
+  --solar-gradient: linear-gradient(135deg, #E9B949 0%, #F0CB6C 50%, #C9983A 100%);
+  --solar-gold: #E9B949;
+  --solar-orange: #E9B949;
+  --solar-amber: #E9B949;
   
   /* Status Colors - Balanced & Accessible */
-  --success-color: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-color: #34D399;
+  --success-bg: rgba(52, 211, 153, 0.12);
   --warning-color: #f59e0b;
   --warning-bg: rgba(245, 158, 11, 0.12);
   --danger-color: #ef4444;
@@ -64,8 +64,8 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.4);
-  --shadow-glow-primary: 0 0 24px rgba(0, 166, 62, 0.25);
-  --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.2);
+  --shadow-glow-primary: 0 0 24px rgba(47, 191, 113, 0.25);
+  --shadow-glow-success: 0 0 20px rgba(52, 211, 153, 0.2);
   --shadow-glow-danger: 0 0 20px rgba(239, 68, 68, 0.2);
   
   /* Typography Scale */
@@ -121,17 +121,17 @@
   --radius-2xl: 28px;
   --radius-full: 9999px;
 
-  /* Extended Accent — Brand Orange (replaces cyan) */
-  --cyan: #F07522;
-  --cyan-dark: #d96b1e;
-  --cyan-light: #fdba74;
-  --cyan-glow: rgba(240, 117, 34, 0.3);
+  /* Secondary Accent — Amber (DS secondary) */
+  --cyan: #E9B949;
+  --cyan-dark: #C9983A;
+  --cyan-light: #F0CB6C;
+  --cyan-glow: rgba(233, 185, 73, 0.3);
 
-  /* Neon Glow System — Brand Green */
-  --glow-primary: 0 0 20px rgba(0, 166, 62, 0.4), 0 0 60px rgba(0, 166, 62, 0.12);
-  --glow-cyan: 0 0 20px rgba(240, 117, 34, 0.4), 0 0 60px rgba(240, 117, 34, 0.12);
-  --glow-amber: 0 0 20px rgba(245, 158, 11, 0.4), 0 0 60px rgba(245, 158, 11, 0.12);
-  --glow-success: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 60px rgba(16, 185, 129, 0.12);
+  /* Glow System — Design System colours */
+  --glow-primary: 0 0 20px rgba(47, 191, 113, 0.4), 0 0 60px rgba(47, 191, 113, 0.12);
+  --glow-cyan: 0 0 20px rgba(233, 185, 73, 0.4), 0 0 60px rgba(233, 185, 73, 0.12);
+  --glow-amber: 0 0 20px rgba(233, 185, 73, 0.4), 0 0 60px rgba(233, 185, 73, 0.12);
+  --glow-success: 0 0 20px rgba(52, 211, 153, 0.4), 0 0 60px rgba(52, 211, 153, 0.12);
   --glow-danger: 0 0 20px rgba(239, 68, 68, 0.4), 0 0 60px rgba(239, 68, 68, 0.12);
 }
 
