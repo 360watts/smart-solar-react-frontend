@@ -217,7 +217,7 @@
 
 .sq-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--green, #00a63e) 0%, #20BA5A 100%);
+  background: linear-gradient(90deg, var(--green, #00a63e) 0%, #4DD68A 100%);
   border-radius: 99px;
   box-shadow: 0 0 6px rgba(0,166,62,0.3);
   transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
