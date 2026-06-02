@@ -680,7 +680,7 @@ const Devices: React.FC = () => {
   const handleCreate = async () => {
     try {
       const response = await apiService.createDevice(createForm);
-      // Check if MQTT cert was issued
+      // Show MQTT cert modal if cert was issued
       if (response.mqttCert && response.mqttKey) {
         setMqttCertData({
           cert: response.mqttCert,
@@ -3285,17 +3285,16 @@ const Devices: React.FC = () => {
       </div>
     )}
 
-    {/* MQTT Certificate Display Modal */}
+    {/* MQTT Certificate Display Modal — one-time popup */}
     {showMqttCertModal && mqttCertData && (
       <AccessibleModal
-        isOpen={showMqttCertModal}
+        open={showMqttCertModal}
         onClose={() => setShowMqttCertModal(false)}
         title="MQTT Certificate Issued"
-        size="large"
       >
         <div style={{ padding: '20px' }}>
           <p style={{ marginBottom: '12px', color: '#666' }}>
-            Device provisioned successfully. Save the certificate and key below for MQTT connectivity.
+            Device provisioned successfully. Download or copy the credentials below to send to your IoT team.
           </p>
 
           <div style={{ marginBottom: '16px' }}>
@@ -3383,7 +3382,7 @@ const Devices: React.FC = () => {
               className="btn-secondary"
               onClick={() => setShowMqttCertModal(false)}
             >
-              Done
+              Got it
             </button>
           </div>
         </div>
