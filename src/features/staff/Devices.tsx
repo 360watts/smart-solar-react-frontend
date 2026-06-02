@@ -234,6 +234,9 @@ const Devices: React.FC = () => {
   const [scanResults, setScanResults] = useState<{ filename: string; errors: { line: number; text: string }[]; warnings: { line: number; text: string }[]; fetch_error?: boolean }[] | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanMeta, setScanMeta] = useState<{ files_scanned: number; total_errors: number; total_warnings: number } | null>(null);
+  const [mqttCertData, setMqttCertData] = useState<{ cert: string; key: string; endpoint: string } | null>(null);
+  const [showMqttCertModal, setShowMqttCertModal] = useState(false);
+
   const [editForm, setEditForm] = useState({
     device_serial: '',
     user: '',
@@ -676,7 +679,16 @@ const Devices: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-      await apiService.createDevice(createForm);
+      const response = await apiService.createDevice(createForm);
+      // Check if MQTT cert was issued
+      if (response.mqttCert && response.mqttKey) {
+        setMqttCertData({
+          cert: response.mqttCert,
+          key: response.mqttKey,
+          endpoint: response.mqttEndpoint || 'a3abbajlzutkd4-ats.iot.ap-south-1.amazonaws.com',
+        });
+        setShowMqttCertModal(true);
+      }
       setCreatingDevice(false);
       setCreateForm({
         device_serial: '',
@@ -3272,6 +3284,112 @@ const Devices: React.FC = () => {
         </div>
       </div>
     )}
+
+    {/* MQTT Certificate Display Modal */}
+    {showMqttCertModal && mqttCertData && (
+      <AccessibleModal
+        isOpen={showMqttCertModal}
+        onClose={() => setShowMqttCertModal(false)}
+        title="MQTT Certificate Issued"
+        size="large"
+      >
+        <div style={{ padding: '20px' }}>
+          <p style={{ marginBottom: '12px', color: '#666' }}>
+            Device provisioned successfully. Save the certificate and key below for MQTT connectivity.
+          </p>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>Endpoint:</label>
+            <div style={{
+              backgroundColor: '#f5f5f5',
+              padding: '10px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              wordBreak: 'break-all',
+              userSelect: 'all',
+            }}>
+              {mqttCertData.endpoint}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(mqttCertData.endpoint)}
+              style={{ marginTop: '6px', padding: '6px 12px', fontSize: '12px' }}
+              className="btn-secondary"
+            >
+              Copy Endpoint
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>Certificate (PEM):</label>
+            <textarea
+              readOnly
+              value={mqttCertData.cert}
+              style={{
+                width: '100%',
+                height: '120px',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                padding: '8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                userSelect: 'all',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(mqttCertData.cert)}
+              style={{ marginTop: '6px', padding: '6px 12px', fontSize: '12px' }}
+              className="btn-secondary"
+            >
+              Copy Certificate
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>Private Key (PEM):</label>
+            <textarea
+              readOnly
+              value={mqttCertData.key}
+              style={{
+                width: '100%',
+                height: '120px',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                padding: '8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                userSelect: 'all',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(mqttCertData.key)}
+              style={{ marginTop: '6px', padding: '6px 12px', fontSize: '12px' }}
+              className="btn-secondary"
+            >
+              Copy Private Key
+            </button>
+          </div>
+
+          <p style={{ fontSize: '12px', color: '#999', marginBottom: '0' }}>
+            ⚠️ Keep the private key secure. Do not share or commit to version control.
+          </p>
+
+          <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowMqttCertModal(false)}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </AccessibleModal>
+    )}
+
     </div>
   );
 };
