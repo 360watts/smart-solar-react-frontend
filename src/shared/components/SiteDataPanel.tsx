@@ -922,13 +922,15 @@ interface EnergyFlowBlockProps {
   gridKw: number | null;
   battKw: number | null;
   battSoc: number | null;
+  evPlugData?: any;
 }
 
 // ── EnergyFlowBlock — premium 4-corner cross layout ──────────────────────────
 // Layout: Solar TL · Load TR · Battery BL · Grid BR · Hub center
 // SVG viewBox 300×270 with preserveAspectRatio="none" — diagonal gradient lines
 // with animateMotion flow dots indicating real-time power direction.
-const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw, battKw, battSoc }) => {
+// EV Charger: positioned right of Load, animated flow if charging
+const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw, battKw, battSoc, evPlugData }) => {
   const { isDark } = useTheme();
 
   const uidRef = useRef('');
@@ -1293,6 +1295,26 @@ const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw,
           active={isLoadActive}
           style={getPos(C.load)}
         />
+
+        {/* ── Node: EV Charger (right side) ── */}
+        {evPlugData && (
+          <NodeCard
+            label="EV Charger"
+            icon={<Zap size={28} color={evPlugData?.power_w > 50 ? '#fbbf24' : (isDark ? '#475569' : '#cbd5e1')} />}
+            valueStr={evPlugData?.power_w ? (evPlugData.power_w / 1000).toFixed(2) : '0'}
+            unit="kW"
+            subLabel={evPlugData?.switch_on ? '↓ Charging' : 'Standby'}
+            color="#fbbf24"
+            active={evPlugData?.power_w > 50}
+            style={{
+              position: 'absolute',
+              right: 20,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 2,
+            }}
+          />
+        )}
 
         {/* ── Center Hub ── */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -3742,6 +3764,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [telemetry, setTelemetry] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any[]>([]);
   const [weather, setWeather] = useState<any>(null);
+  const [evPlugData, setEvPlugData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -3927,10 +3950,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         return windows;
       };
 
-      // Kick off forecast + weather immediately — runs in parallel with all telemetry fetches
+      // Kick off forecast + weather + EV plug data immediately — runs in parallel with all telemetry fetches
       const forecastWeatherPromise = Promise.all([
         apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
         apiService.getSiteWeather(siteId),
+        apiService.getEVPlugLatest(siteId),
       ] as Promise<any>[]);
 
       let telemetryRows: any[] = [];
@@ -3963,7 +3987,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      const [fcst, wth] = await forecastWeatherPromise;
+      const [fcst, wth, evData] = await forecastWeatherPromise;
+      setEvPlugData(evData);
 
       // Pull latest raw rows to drive Overview freshness and Energy Flow block.
       let latestRawRows: any[] = [];
@@ -4913,6 +4938,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     gridKw={gridKw}
                     battKw={batPowerKw}
                     battSoc={batSoc}
+                    evPlugData={evPlugData}
                   />
                 ) : (
                   <div style={{

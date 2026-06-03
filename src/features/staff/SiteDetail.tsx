@@ -150,7 +150,7 @@ export default function SiteDetail() {
 
   // ── Data Fetching & Handlers ──
   const refresh = useCallback(async () => {
-    if (!siteId) return;
+    if (!siteId || !user?.is_staff) return;
     setLoading(true); setError(null);
     try {
       const data = await apiService.getSiteStaffDetail(siteId);
@@ -169,7 +169,7 @@ export default function SiteDetail() {
     } finally {
       setLoading(false);
     }
-  }, [siteId]);
+  }, [siteId, user]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -199,7 +199,11 @@ export default function SiteDetail() {
   }, [siteId]);
 
   useEffect(() => {
-    if (!user?.is_staff) return;  // customers cannot call /api/users/ — would trigger 401 logout
+    // Only load users if user is staff — prevents 403 errors from non-staff users
+    if (!user?.is_staff) {
+      setOwnerUsers([]);
+      return;
+    }
     let mounted = true;
     const loadUsers = async () => {
       setUsersBusy(true);

@@ -63,7 +63,7 @@ const MobileSiteDetail: React.FC = () => {
   const [lifecycleTo, setLifecycleTo]   = useState('active');
 
   const refresh = useCallback(async () => {
-    if (!siteId) return;
+    if (!siteId || !user?.is_staff) return;
     setLoading(true); setError(null);
     try {
       const data = await apiService.getSiteStaffDetail(siteId);
@@ -77,7 +77,7 @@ const MobileSiteDetail: React.FC = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally { setLoading(false); }
-  }, [siteId]);
+  }, [siteId, user]);
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
@@ -89,7 +89,11 @@ const MobileSiteDetail: React.FC = () => {
       .finally(() => setAppliancesLoading(false));
   }, [siteId]);
   useEffect(() => {
-    if (!user?.is_staff) return;  // customers cannot call /api/users/ — would trigger 401 logout
+    // Only load users if user is staff — prevents 403 errors from non-staff users
+    if (!user?.is_staff) {
+      setOwnerUsers([]);
+      return;
+    }
     apiService.getUsers().then((res: any) => {
       setOwnerUsers(Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : []);
     }).catch(() => {});

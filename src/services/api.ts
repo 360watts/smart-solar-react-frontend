@@ -622,6 +622,23 @@ class ApiService {
     });
   }
 
+  // Smart device sub-metering (EV charger, CT clamps, etc.)
+  async getEVPlugLatest(siteId: string): Promise<{ power_w: number | null; current_a: number | null; voltage_v: number | null; energy_kwh: number | null; switch_on: boolean | null; timestamp: string } | null> {
+    try {
+      const cacheKey = `ev_plug_${siteId}`;
+      const cached = cacheService.get(cacheKey);
+      if (cached) return cached;
+      const data = await this.request(`/sites/${siteId}/ev-plug/latest/`);
+      cacheService.set(cacheKey, data, 55 * 1000); // 55-second cache, same as telemetry
+      return data;
+    } catch (error) {
+      // 404 = device not found, which is fine (not an error)
+      if (error instanceof Error && error.message.includes('404')) return null;
+      console.warn('getEVPlugLatest error:', error);
+      return null;
+    }
+  }
+
   // DynamoDB site data
   async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number; aggregate?: 'none' | '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams();
