@@ -4135,10 +4135,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   // RS-485 staleness: backend sets data_stale=true when instantaneous power
   // registers are frozen (same value for ≥5 consecutive readings).
-  // The Deye WiFi stick (used by the Deye app) reads from the internal COM port
-  // and is unaffected — only our RS-485 Modbus path can freeze.
   const rs485Stale = latest?.data_stale === true;
   const isDeyeCloud = latest?.data_source === 'deye_cloud';
+
+  // Infer gateway and logger status from data_source + timestamp age.
+  // Gateway (ESP32) = our RS-485 Modbus monitoring device.
+  // Logger (SolarmanV5 WiFi stick) = Deye's own cloud reporting path.
+  const latestAgeMs = latest?.timestamp ? Date.now() - new Date(latest.timestamp).getTime() : Infinity;
+  const gatewayOffline = !isDeyeCloud && latestAgeMs > 10 * 60 * 1000;  // no RS-485 data > 10 min
+  const deyeCloudAgeMs = isDeyeCloud ? latestAgeMs : null;
+  // Logger considered offline/standby if Deye Cloud data is older than 20 min
+  const loggerOffline = isDeyeCloud && deyeCloudAgeMs != null && deyeCloudAgeMs > 20 * 60 * 1000;
 
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
@@ -4837,9 +4844,36 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     }}
                   >
                     <span style={{ fontSize: '1rem' }}>☁️</span>
-                    <div>
-                      <strong>Deye Cloud data</strong> — RS-485 readings are frozen or unavailable; live values are being sourced from the Deye Cloud API (WiFi stick).
-                      <span style={{ marginLeft: 8, opacity: 0.75 }}>RS-485 link may be frozen or the gateway may be offline.</span>
+                    <div style={{ flex: 1 }}>
+                      {/* Status pills */}
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600,
+                          background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                        }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                          Gateway offline
+                        </span>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600,
+                          background: loggerOffline ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
+                          color: loggerOffline ? '#ef4444' : '#3b82f6',
+                          border: `1px solid ${loggerOffline ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`,
+                        }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: loggerOffline ? '#ef4444' : '#3b82f6', display: 'inline-block' }} />
+                          {loggerOffline ? 'Logger offline / standby' : 'Deye logger online'}
+                        </span>
+                      </div>
+                      {/* Context message */}
+                      <span style={{ opacity: 0.85 }}>
+                        {loggerOffline
+                          ? <>RS-485 monitoring unavailable. Deye Cloud data is <strong>{Math.round((deyeCloudAgeMs ?? 0) / 60000)} min old</strong> — logger may be in nighttime standby.</>
+                          : <>RS-485 gateway offline. Showing last known values from the <strong>Deye Cloud logger</strong> (WiFi stick).</>
+                        }
+                      </span>
                     </div>
                   </motion.div>
                 )}
