@@ -387,12 +387,6 @@ export default function EnergyFlowBlock({
   const hubToGridActive = gridActive;  // Grid import/export
   const hubToBattActive = battActive;  // Battery charging/discharging
 
-  // DEBUG: Log state for diagnosis
-  if (typeof window !== 'undefined' && (pvToHubActive !== undefined)) {
-    console.log('[EnergyFlow] pvKw=', pvKw, 'loadKw=', loadKw, 'gridKw=', gridKw, 'battKw=', battKw);
-    console.log('[EnergyFlow] pvActive=', pvActive, 'loadActive=', loadActive, 'gridActive=', gridActive, 'battActive=', battActive);
-    console.log('[EnergyFlow] Beam state: pvToHubActive=', pvToHubActive, 'hubToLoadActive=', hubToLoadActive, 'hubToGridActive=', hubToGridActive);
-  }
 
   // Y-connector branches already handle load distribution intelligently
 
@@ -533,7 +527,6 @@ export default function EnergyFlowBlock({
               <circle cx={N.hub.x} cy={N.hub.y} r={HUB_R} fill={bgColor} />
 
               {/* ── Animated beams (smart routing based on actual power flow) ── */}
-              {console.log('[SVG] About to render beams. pvToHubActive=', pvToHubActive, 'P.pvToHub=', P.pvToHub?.substring(0, 50))}
               {/* Solar → Hub: intensity based on PV generation */}
               <Beam key="pv" d={P.pvToHub}   stroke="#f59e0b" active={pvToHubActive}              uid="pv"   speed={1.8} intensity={pvIntensity} />
               {/* Battery → Hub: intensity based on battery discharge */}
