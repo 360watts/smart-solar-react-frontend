@@ -143,8 +143,6 @@ function Beam({
   const midOpacity = Math.min(1, 0.25 + intensity * 0.25);   // Increased mid
   const speedAdjust = speed * (0.8 + intensity * 0.4);
 
-  console.log('[Beam] Rendering active beam - stroke:', stroke, 'speedAdjust:', speedAdjust, 'd length:', d?.length);
-
   return (
     <g>
       {/* Wide glow halo — soft outer envelope */}
@@ -153,7 +151,7 @@ function Beam({
       {/* Mid-range glow — body glow */}
       <path d={d} stroke={stroke} strokeWidth={8} strokeOpacity={midOpacity}
         fill="none" strokeLinecap="round" />
-      {/* Core animated beam with filter for sophisticated multi-layer glow */}
+      {/* Core animated beam — one period per cycle, repeats infinitely */}
       <motion.path
         d={d}
         stroke={stroke}
@@ -163,8 +161,8 @@ function Beam({
         strokeDasharray={`${DASH} ${GAP}`}
         filter="url(#efglow)"
         initial={{ strokeDashoffset: 0 }}
-        animate={{ strokeDashoffset: -PERIOD * 400 }}
-        transition={{ duration: speedAdjust * 400, ease: 'linear' }}
+        animate={{ strokeDashoffset: -PERIOD }}
+        transition={{ duration: 1.6 / speedAdjust, ease: 'linear', repeat: Infinity }}
       />
     </g>
   );
@@ -383,7 +381,7 @@ export default function EnergyFlowBlock({
   const pvToHubActive = pvActive;  // Solar is generating
   const hubToLoadActive = loadActive;  // Load is consuming power
 
-  // Secondary flows: conditionally overlay
+  // Secondary flows: bidirectional — both tracks lit when the bus is active
   const hubToGridActive = gridActive;  // Grid import/export
   const hubToBattActive = battActive;  // Battery charging/discharging
 

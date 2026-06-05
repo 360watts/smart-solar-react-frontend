@@ -55,7 +55,7 @@ export function NodeCard({
           ? `0 0 28px ${color}1a, 0 0 14px ${color}14, 0 6px 18px rgba(0,0,0,0.15)`
           : `0 2px 10px rgba(0,0,0,0.1)`,
         cursor: onClick ? 'pointer' : 'default',
-        opacity: active ? 1 : 0.52,
+        opacity: 1,
         transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
         position: 'relative',
         transform: 'translateZ(0)',
@@ -64,13 +64,11 @@ export function NodeCard({
         if (onClick) {
           const el = e.currentTarget as HTMLElement;
           el.style.transform = 'scale(1.06) translateZ(0)';
-          el.style.opacity = active ? '1' : '0.68';
         }
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
         el.style.transform = 'scale(1) translateZ(0)';
-        el.style.opacity = active ? '1' : '0.52';
       }}
     >
       {/* Icon circle */}
@@ -193,7 +191,7 @@ export function SmartCard({
           ? `0 0 24px ${color}18, 0 0 12px ${color}12, 0 4px 14px rgba(0,0,0,0.12)`
           : '0 1px 6px rgba(0,0,0,0.08)',
         cursor: onClick ? 'pointer' : 'default',
-        opacity: active ? 1 : 0.48,
+        opacity: 1,
         transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
         transform: 'translateZ(0)',
       }}
@@ -201,13 +199,11 @@ export function SmartCard({
         if (onClick) {
           const el = e.currentTarget as HTMLElement;
           el.style.transform = 'scale(1.05) translateZ(0)';
-          el.style.opacity = active ? '1' : '0.65';
         }
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLElement;
         el.style.transform = 'scale(1) translateZ(0)';
-        el.style.opacity = active ? '1' : '0.48';
       }}
     >
       {/* Icon circle */}
