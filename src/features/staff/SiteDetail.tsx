@@ -102,7 +102,7 @@ export default function SiteDetail() {
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
   const textMain    = isDark ? '#F0F4FF' : '#0f172a';
   const textMute    = isDark ? '#8892A4' : '#94a3b8';
-  const textSub     = isDark ? '#94a3b8' : '#475569';
+  const textSub     = isDark ? '#94a3b8' : '#94a3b8';
   const primary     = '#00a63e';
   const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
   const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';

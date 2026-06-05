@@ -18,7 +18,7 @@ export interface NodeCardProps {
 const STATUS_BG: Record<DeviceStatus, string> = {
   online:  '#16a34a',
   offline: '#dc2626',
-  unknown: '#475569',
+  unknown: '#64748b',
 };
 
 export function NodeCard({
@@ -48,7 +48,7 @@ export function NodeCard({
           : `1.5px solid ${active
               ? isDark ? `${color}42` : `${color}32`
               : isDark ? 'rgba(31,41,55,0.9)' : '#e5eaf3'}`,
-        borderTop: `3.5px solid ${active ? color : isDark ? '#1f2937' : '#e2e8f0'}`,
+        borderTop: `3.5px solid ${active ? color : isDark ? '#cbd5e1' : '#e2e8f0'}`,
         boxShadow: isAnomalous
           ? `0 0 20px rgba(239,68,68,0.35), 0 4px 14px rgba(0,0,0,0.25)`
           : active
@@ -84,10 +84,10 @@ export function NodeCard({
           width: 42, height: 42, borderRadius: '50%',
           background: active
             ? isDark ? `${color}20` : `${color}12`
-            : isDark ? '#111827' : '#f3f6fb',
+            : isDark ? '#1e293b' : '#f3f6fb',
           border: `1.5px solid ${active
             ? isDark ? `${color}50` : `${color}40`
-            : isDark ? '#1f2937' : '#e5eaf3'}`,
+            : isDark ? '#475569' : '#e5eaf3'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative',
         }}>
@@ -98,7 +98,7 @@ export function NodeCard({
       {/* Value */}
       <div style={{
         fontSize: 16, fontWeight: 800, lineHeight: 1,
-        color: active ? color : isDark ? '#374151' : '#9ca3af',
+        color: active ? color : isDark ? '#94a3b8' : '#9ca3af',
         fontVariantNumeric: 'tabular-nums',
         letterSpacing: '-0.02em',
         display: 'flex', alignItems: 'baseline', gap: 2,
@@ -111,7 +111,7 @@ export function NodeCard({
       {subLabel && (
         <span style={{
           fontSize: 8.5,
-          color: active ? `${color}cc` : isDark ? '#4b5563' : '#9ca3af',
+          color: active ? `${color}cc` : isDark ? '#cbd5e1' : '#9ca3af',
           marginTop: -3,
           whiteSpace: 'nowrap',
           fontWeight: 600,
@@ -124,7 +124,7 @@ export function NodeCard({
       <span style={{
         fontSize: 8, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.1em',
-        color: active ? color : isDark ? '#374151' : '#b0bcc8',
+        color: active ? color : isDark ? '#94a3b8' : '#b0bcc8',
         marginTop: subLabel ? 0 : -3,
         whiteSpace: 'nowrap',
         opacity: active ? 0.85 : 1,
@@ -184,7 +184,7 @@ export function SmartCard({
           : `1.5px solid ${active
               ? isDark ? `${color}38` : `${color}30`
               : isDark ? 'rgba(31,41,55,0.8)' : '#e5eaf3'}`,
-        borderTop: `3.5px solid ${active ? color : isDark ? '#1f2937' : '#e2e8f0'}`,
+        borderTop: `3.5px solid ${active ? color : isDark ? '#cbd5e1' : '#e2e8f0'}`,
         boxShadow: isAnomalous
           ? '0 0 14px rgba(239,68,68,0.28)'
           : active
@@ -217,8 +217,8 @@ export function SmartCard({
         )}
         <div style={{
           width: 34, height: 34, borderRadius: '50%',
-          background: active ? `${color}16` : isDark ? '#111827' : '#f3f6fb',
-          border: `1.5px solid ${active ? `${color}45` : isDark ? '#1f2937' : '#e5eaf3'}`,
+          background: active ? `${color}16` : isDark ? '#1e293b' : '#f3f6fb',
+          border: `1.5px solid ${active ? `${color}45` : isDark ? '#475569' : '#e5eaf3'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative',
         }}>
@@ -229,7 +229,7 @@ export function SmartCard({
       {/* Value */}
       <div style={{
         fontSize: 14, fontWeight: 800, lineHeight: 1,
-        color: active ? color : isDark ? '#374151' : '#9ca3af',
+        color: active ? color : isDark ? '#94a3b8' : '#9ca3af',
         fontVariantNumeric: 'tabular-nums',
         display: 'flex', alignItems: 'baseline', gap: 1.5,
         letterSpacing: '-0.01em',
@@ -242,7 +242,7 @@ export function SmartCard({
       <span style={{
         fontSize: 7.5, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.09em',
-        color: active ? color : isDark ? '#374151' : '#b0bcc8',
+        color: active ? color : isDark ? '#94a3b8' : '#b0bcc8',
         opacity: active ? 0.85 : 1,
         whiteSpace: 'nowrap', textAlign: 'center',
         maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis',

@@ -26,7 +26,7 @@ interface SiteRow {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active: '#22c55e', commissioning: '#f59e0b', inactive: '#64748b', archived: '#475569',
+  active: '#22c55e', commissioning: '#f59e0b', inactive: '#64748b', archived: '#94a3b8',
 };
 
 const MobileSites: React.FC = () => {
@@ -38,7 +38,7 @@ const MobileSites: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
   const text    = isDark ? '#f1f5f9' : '#0f172a';
   const muted   = isDark ? '#64748b' : '#94a3b8';
-  const sub     = isDark ? '#94a3b8' : '#475569';
+  const sub     = isDark ? '#94a3b8' : '#94a3b8';
   const accent  = '#00a63e';
 
   const [sites,        setSites]        = useState<SiteRow[]>([]);

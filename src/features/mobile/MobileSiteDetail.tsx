@@ -25,7 +25,7 @@ const MobileSiteDetail: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
   const text    = isDark ? '#f1f5f9' : '#0f172a';
   const muted   = isDark ? '#64748b' : '#94a3b8';
-  const sub     = isDark ? '#94a3b8' : '#475569';
+  const sub     = isDark ? '#94a3b8' : '#94a3b8';
   const accent  = '#00a63e';
   const inputBg = isDark ? '#0a1628' : '#f8fafc';
 

@@ -38,4 +38,5 @@ export interface EnergyFlowBlockProps {
   battKw: number | null;
   battSoc: number | null;
   smartDevices?: SmartDeviceNode[];
+  siteId?: string;
 }

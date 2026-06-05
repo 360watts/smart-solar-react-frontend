@@ -21,7 +21,7 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
   const text = isDark ? '#f1f5f9' : '#0f172a';
   const muted = isDark ? '#94a3b8' : '#64748b';
   const surface = isDark ? '#1e293b' : '#ffffff';
-  const border = isDark ? '#334155' : '#e2e8f0';
+  const border = isDark ? '#cbd5e1' : '#e2e8f0';
   const accent = '#22c55e';
 
   // Load or create invite on mount
@@ -130,11 +130,11 @@ const InviteMemberModal: React.FC<Props> = ({ siteId, onClose, onInvited }) => {
           animation: checkBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .invite-link-container {
-          background: linear-gradient(135deg, ${isDark ? '#334155' : '#f1f5f9'}, ${isDark ? '#1e293b' : '#ffffff'});
+          background: linear-gradient(135deg, ${isDark ? '#cbd5e1' : '#f1f5f9'}, ${isDark ? '#1e293b' : '#ffffff'});
           transition: all 0.2s ease;
         }
         .invite-link-container:hover {
-          background: ${isDark ? '#475569' : '#e2e8f0'};
+          background: ${isDark ? '#94a3b8' : '#e2e8f0'};
           border-color: ${accent}30;
         }
       `}</style>

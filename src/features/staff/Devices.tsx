@@ -136,7 +136,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
         <div style={{ overflowX: 'auto', padding: '0 20px 12px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
             <thead>
-              <tr style={{ color: isDark ? '#475569' : '#94a3b8' }}>
+              <tr style={{ color: isDark ? '#94a3b8' : '#94a3b8' }}>
                 {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
                   <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -166,7 +166,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
                   <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
                     {reg.unit || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : isDark ? '#475569' : '#cbd5e1' }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : isDark ? '#94a3b8' : '#cbd5e1' }}>
                     {reg.value != null ? reg.value : '—'}
                   </td>
                   <td style={{ padding: '5px 8px' }}>
@@ -990,7 +990,7 @@ const Devices: React.FC = () => {
                   gap: '12px',
                 }}>
                   <div>
-                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial</p>
+                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial</p>
                     <p style={{ margin: 0, fontSize: '14px', fontFamily: '"IBM Plex Mono", monospace', color: isDark ? '#f1f5f9' : '#1e293b', fontWeight: 600, letterSpacing: '0.1em' }}>
                       {createForm.device_serial_preview || '(auto-generated)'}
                     </p>
@@ -1004,7 +1004,7 @@ const Devices: React.FC = () => {
                         fontSize: '12px',
                         background: 'rgba(203, 213, 225, 0.1)',
                         border: '1px solid rgba(203, 213, 225, 0.2)',
-                        color: isDark ? '#cbd5e1' : '#475569',
+                        color: isDark ? '#cbd5e1' : '#94a3b8',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
@@ -1021,7 +1021,7 @@ const Devices: React.FC = () => {
               {/* Edit mode serial display */}
               {editingDevice && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial Number</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial Number</label>
                   <input type="text"
                     value={editForm.device_serial}
                     disabled autoComplete="off"
@@ -1178,7 +1178,7 @@ const Devices: React.FC = () => {
                 fontWeight: 600,
                 border: '1px solid rgba(203, 213, 225, 0.3)',
                 background: 'transparent',
-                color: isDark ? '#cbd5e1' : '#475569',
+                color: isDark ? '#cbd5e1' : '#94a3b8',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -1251,7 +1251,7 @@ const Devices: React.FC = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
                 background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                color: isDark ? '#94a3b8' : '#475569',
+                color: isDark ? '#94a3b8' : '#94a3b8',
                 transition: 'background 150ms, color 150ms',
                 flexShrink: 0,
               }}
@@ -1305,7 +1305,7 @@ const Devices: React.FC = () => {
                   padding: '5px 10px', borderRadius: 7, border: 'none', fontSize: '0.8rem', fontWeight: 500,
                   transition: 'background 150ms, color 150ms',
                   background: 'transparent',
-                  color: color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : isDark ? '#cbd5e1' : '#475569',
+                  color: color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : isDark ? '#cbd5e1' : '#94a3b8',
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLButtonElement;
@@ -1350,7 +1350,7 @@ const Devices: React.FC = () => {
           const deviceOnline = !!selectedDevice.is_online;
           const textMain = isDark ? '#f1f5f9' : '#0f172a';
           const textMute = isDark ? '#64748b' : '#94a3b8';
-          const textSub  = isDark ? '#94a3b8' : '#475569';
+          const textSub  = isDark ? '#94a3b8' : '#94a3b8';
 
           const kpiCards = [
             {
@@ -1599,7 +1599,7 @@ const Devices: React.FC = () => {
                   </span>
                 )},
                 { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
-                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#475569' }}>{selectedDevice.hw_id || '—'}</span> },
+                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#94a3b8' }}>{selectedDevice.hw_id || '—'}</span> },
                 { label: 'Model', content: <span>{selectedDevice.model || '—'}</span> },
                 { label: 'Assigned User', content: <span>{selectedDevice.user || '—'}</span> },
                 {
@@ -1868,7 +1868,7 @@ const Devices: React.FC = () => {
                       { label: 'Last sample', value: new Date(regCoverage.last_telemetry_at).toLocaleTimeString(), color: isDark ? '#94a3b8' : '#64748b' },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#475569' : '#94a3b8' }}>{label}</span>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#94a3b8' : '#94a3b8' }}>{label}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>{value}</span>
                       </div>
                     ))}
@@ -2728,7 +2728,7 @@ const Devices: React.FC = () => {
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>⚡</div>
                   <div>
                     <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Day Scan — {scanDateLabel}</div>
-                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: '#475569', marginTop: 1 }}>
+                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: '#94a3b8', marginTop: 1 }}>
                       {scanLoading ? 'Scanning all files for the day…' : scanMeta ? `${scanMeta.files_scanned} file${scanMeta.files_scanned !== 1 ? 's' : ''} scanned` : ''}
                     </div>
                   </div>
@@ -2761,7 +2761,7 @@ const Devices: React.FC = () => {
                 {scanLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 14 }}>
                     <div style={{ width: 36, height: 36, border: '3px solid rgba(239,68,68,0.2)', borderTop: '3px solid #ef4444', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ color: '#475569', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
+                    <span style={{ color: '#94a3b8', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
                   </div>
                 ) : scanResults ? (() => {
                   const filesWithIssues = scanResults.filter(r => r.errors.length > 0 || r.warnings.length > 0);
@@ -2769,7 +2769,7 @@ const Devices: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 20px', gap: 12 }}>
                       <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
                       <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#22c55e' }}>Clean day</div>
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#475569', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
                     </div>
                   );
                   return (

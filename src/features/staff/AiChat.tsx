@@ -503,7 +503,7 @@ const AiChat: React.FC = () => {
         .ai-hero__sub {
           font-size: 0.82rem; line-height: 1.5; margin-bottom: 12px;
         }
-        .ai-panel--light .ai-hero__sub { color: #475569; }
+        .ai-panel--light .ai-hero__sub { color: #94a3b8; }
         .ai-panel--dark .ai-hero__sub { color: #94a3b8; }
         .ai-hero__metrics {
           display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
@@ -624,7 +624,7 @@ const AiChat: React.FC = () => {
         .ai-msg--user .ai-msg__ts  { right: 0; }
         .ai-msg--assistant .ai-msg__ts { left: 33px; }
         .ai-panel--light .ai-msg__ts { color: #94a3b8; }
-        .ai-panel--dark  .ai-msg__ts { color: #475569; }
+        .ai-panel--dark  .ai-msg__ts { color: #94a3b8; }
 
         /* ── Markdown ── */
         .ai-markdown {
@@ -730,7 +730,7 @@ const AiChat: React.FC = () => {
         .ai-panel--dark .ai-send-btn:disabled { background: rgba(255,255,255,0.08); }
         .ai-input-hint { font-size: 0.64rem; text-align: center; margin-top: 5px; letter-spacing: 0.03em; text-transform: uppercase; }
         .ai-panel--light .ai-input-hint { color: #94a3b8; }
-        .ai-panel--dark  .ai-input-hint { color: #475569; }
+        .ai-panel--dark  .ai-input-hint { color: #94a3b8; }
         @media (max-width: 640px) {
           .ai-hero { padding: 14px 14px 10px; }
           .ai-hero__metrics { grid-template-columns: 1fr; }

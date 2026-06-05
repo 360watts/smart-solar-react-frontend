@@ -140,7 +140,7 @@ const Dashboard: React.FC = () => {
   const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const textMain = isDark ? '#F0F4FF' : '#0f172a';
   const textMute = isDark ? '#8892A4' : '#94a3b8';
-  const textSub  = isDark ? '#8892A4' : '#475569';
+  const textSub  = isDark ? '#8892A4' : '#94a3b8';
 
   const onlineDot = (online: boolean): React.CSSProperties => ({
     width: 7, height: 7, borderRadius: '50%', flexShrink: 0,

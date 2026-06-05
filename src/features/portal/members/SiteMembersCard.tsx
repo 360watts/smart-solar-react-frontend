@@ -33,7 +33,7 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
   const text = isDark ? '#f1f5f9' : '#0f172a';
   const muted = isDark ? '#94a3b8' : '#64748b';
   const surface = isDark ? '#1e293b' : '#ffffff';
-  const border = isDark ? '#334155' : '#e2e8f0';
+  const border = isDark ? '#cbd5e1' : '#e2e8f0';
   const rowHover = isDark ? '#263044' : '#f8fafc';
 
   const load = async () => {
@@ -161,7 +161,7 @@ const SiteMembersCard: React.FC<Props> = ({ siteId, ownerUserId }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                  background: isDark ? '#334155' : '#e2e8f0',
+                  background: isDark ? '#cbd5e1' : '#e2e8f0',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '12px', fontWeight: 700, color: muted,
                 }}>

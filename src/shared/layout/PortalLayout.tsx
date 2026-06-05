@@ -214,7 +214,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
               end={end}
               onClick={onClose}
               className={`portal-nav-link portal-fade-in-${i + 1} ${isActive ? 'active' : ''}`}
-              style={!isDark && !isActive ? { color: '#475569' } : undefined}
+              style={!isDark && !isActive ? { color: '#94a3b8' } : undefined}
             >
               <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
               {label}
@@ -265,7 +265,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 
       {/* Footer actions */}
       <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <button className="portal-btn" onClick={toggleTheme} style={!isDark ? { color: '#475569' } : undefined}>
+        <button className="portal-btn" onClick={toggleTheme} style={!isDark ? { color: '#94a3b8' } : undefined}>
           {isDark ? <Sun size={14} /> : <Moon size={14} />}
           {isDark ? 'Light mode' : 'Dark mode'}
         </button>

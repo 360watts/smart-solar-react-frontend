@@ -437,7 +437,7 @@ const PortalChat: React.FC = () => {
                       }}>
                         <Icon size={13} color="#2FBF71" />
                       </div>
-                      <span style={{ fontSize: 13, color: isDark ? '#CBD5E1' : '#475569', fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+                      <span style={{ fontSize: 13, color: isDark ? '#CBD5E1' : '#94a3b8', fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
                     </button>
                   ))}
                 </div>
@@ -455,7 +455,7 @@ const PortalChat: React.FC = () => {
                     borderRadius: isUser ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
                     background: isUser
                       ? 'linear-gradient(135deg, #2FBF71, #1A9955)'
-                      : isDark ? '#111827' : '#F8FAFC',
+                      : isDark ? '#e2e8f0' : '#F8FAFC',
                     border: isUser ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
                     color: isUser ? '#FFFFFF' : (isDark ? '#E2E8F0' : '#1E293B'),
                     fontSize: 13, lineHeight: 1.6,

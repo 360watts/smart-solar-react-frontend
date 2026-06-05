@@ -498,7 +498,7 @@ const Login: React.FC = () => {
                       background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
                       display: 'flex', alignItems: 'center', gap: 6,
                       fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-                      color: cooldown > 0 ? '#475569' : '#F59E0B',
+                      color: cooldown > 0 ? '#94a3b8' : '#F59E0B',
                     }}
                   >
                     <RefreshCw size={13} />
@@ -565,7 +565,7 @@ const Login: React.FC = () => {
                     type="button"
                     onClick={handleResendVerification}
                     disabled={cooldown > 0 || loading}
-                    style={{ background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: cooldown > 0 ? '#475569' : '#22c55e' }}
+                    style={{ background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: cooldown > 0 ? '#94a3b8' : '#22c55e' }}
                   >
                     <RefreshCw size={13} />
                     {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}

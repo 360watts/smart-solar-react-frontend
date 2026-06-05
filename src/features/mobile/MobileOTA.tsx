@@ -65,7 +65,7 @@ const MobileOTA: React.FC = () => {
   const surf2   = isDark ? '#111e33' : '#f8fafc';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
   const text    = isDark ? '#f1f5f9' : '#0f172a';
-  const sub     = isDark ? '#94a3b8' : '#475569';
+  const sub     = isDark ? '#94a3b8' : '#94a3b8';
   const muted   = isDark ? '#4a5568' : '#94a3b8';
   const accent  = '#00a63e';
   const inp     = isDark ? '#0a1628' : '#f1f5f9';

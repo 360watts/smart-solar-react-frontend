@@ -810,7 +810,7 @@ export const OTA: React.FC = () => {
 
             <button type="submit" disabled={uploadProgress !== null} style={{
               ...btnBase,
-              background: uploadProgress !== null ? (isDark ? '#334155' : '#CBD5E1') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+              background: uploadProgress !== null ? (isDark ? '#cbd5e1' : '#CBD5E1') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
               color: uploadProgress !== null ? (isDark ? '#64748B' : '#94A3B8') : 'white',
               boxShadow: uploadProgress !== null ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
               justifyContent: 'center',

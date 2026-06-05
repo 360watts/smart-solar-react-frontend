@@ -89,7 +89,7 @@ const VerifyEmailPage: React.FC = () => {
                 You will receive another email with your <strong style={{ color: '#cbd5e1' }}>login credentials</strong> once your account has been set up. This usually takes just a few minutes.
               </p>
             </div>
-            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#475569' }}>You can close this tab.</p>
+            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#94a3b8' }}>You can close this tab.</p>
           </>
         )}
 
@@ -107,7 +107,7 @@ const VerifyEmailPage: React.FC = () => {
             <p style={{ margin: '0 0 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>
               {errorMsg}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#475569' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
               Ask your 360Watts administrator to resend the verification link.
             </p>
           </>
