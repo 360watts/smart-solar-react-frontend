@@ -151,18 +151,18 @@ function Beam({
       {/* Mid-range glow — body glow */}
       <path d={d} stroke={stroke} strokeWidth={8} strokeOpacity={midOpacity}
         fill="none" strokeLinecap="round" />
-      {/* Core animated beam — one period per cycle, repeats infinitely */}
-      <motion.path
+      {/* Core animated beam — CSS keyframe drives stroke-dashoffset */}
+      <path
+        className="ef-beam"
         d={d}
         stroke={stroke}
         strokeWidth={4}
         strokeLinecap="round"
         fill="none"
         strokeDasharray={`${DASH} ${GAP}`}
+        strokeDashoffset={0}
         filter="url(#efglow)"
-        initial={{ strokeDashoffset: 0 }}
-        animate={{ strokeDashoffset: -PERIOD }}
-        transition={{ duration: 1.6 / speedAdjust, ease: 'linear', repeat: Infinity }}
+        style={{ '--ef-duration': `${(1.6 / speedAdjust).toFixed(3)}s` } as React.CSSProperties}
       />
     </g>
   );
@@ -365,40 +365,36 @@ export default function EnergyFlowBlock({
   const solarLoadActive = solarLoadPowerKw > 0.01;
   const gridLoadActive  = gridLoadPowerKw > 0.01;
 
-  const isExporting   = gridKw < -0.01;
-  const isImporting   = gridKw >  0.01;
-  const isCharging    = battKw < -0.01;
-  const isDischarging = battKw >  0.01;
-  const pvActive      = pvKw   >  0.01;
-  const loadActive    = loadKw >  0.01;
-  const gridActive    = Math.abs(gridKw) > 0.01;
-  const battActive    = Math.abs(battKw) > 0.01;
+  const pv   = pvKw   ?? 0;
+  const load = loadKw ?? 0;
+  const grid = gridKw ?? 0;
+  const batt = battKw ?? 0;
+
+  const isExporting   = grid < -0.01;
+  const isImporting   = grid >  0.01;
+  const isCharging    = batt < -0.01;
+  const isDischarging = batt >  0.01;
+  const pvActive      = pv   >  0.01;
+  const loadActive    = load >  0.01;
+  const gridActive    = Math.abs(grid) > 0.01;
+  const battActive    = Math.abs(batt) > 0.01;
   const battPresent   = battActive || (battSoc ?? 0) > 0;
   const gridColor     = isExporting ? '#34d399' : '#60a5fa';
 
-  // ── Smart energy routing: show actual power destinations ──
-  // Main flows: always show when active
-  const pvToHubActive = pvActive;  // Solar is generating
-  const hubToLoadActive = loadActive;  // Load is consuming power
+  const pvToHubActive   = pvActive;
+  const hubToLoadActive = loadActive;
+  const hubToGridActive = isExporting;
+  const hubToBattActive = isCharging;
 
-  // Secondary flows: bidirectional — both tracks lit when the bus is active
-  const hubToGridActive = gridActive;  // Grid import/export
-  const hubToBattActive = battActive;  // Battery charging/discharging
+  const pvIntensity   = pvActive   ? Math.min(1, pv   / 10) : 0;
+  const gridIntensity = gridActive ? Math.min(1, Math.abs(grid) / 10) : 0;
+  const battIntensity = battActive ? Math.min(1, Math.abs(batt) / 10) : 0;
+  const loadIntensity = loadActive ? Math.min(1, load / 10) : 0;
 
-
-  // Y-connector branches already handle load distribution intelligently
-
-  // ── Intensity: normalized to 0–1 range for visual responsiveness ──
-  // Higher power flow = brighter, faster animation
-  const pvIntensity = pvActive ? Math.min(1, Math.abs(pvKw ?? 0) / 10) : 0;
-  const gridIntensity = gridActive ? Math.min(1, Math.abs(gridKw ?? 0) / 10) : 0;
-  const battIntensity = battActive ? Math.min(1, Math.abs(battKw ?? 0) / 10) : 0;
-  const loadIntensity = loadActive ? Math.min(1, Math.abs(loadKw ?? 0) / 10) : 0;
-
-  const pvFmt   = fmtPower(pvKw);
-  const battFmt = fmtPower(battKw);
-  const loadFmt = fmtPower(loadKw);
-  const gridFmt = fmtPower(gridKw);
+  const pvFmt   = fmtPower(pv);
+  const battFmt = fmtPower(batt);
+  const loadFmt = fmtPower(load);
+  const gridFmt = fmtPower(grid);
 
   const anomalous = nonGridDevices
     .filter(d => d.is_active && d.latest === null)
@@ -681,7 +677,7 @@ export default function EnergyFlowBlock({
             devices={solarLoads}
             isDark={isDark}
             onDeviceClick={setSelectedDevice}
-            fallbackKw={pvKw}
+            fallbackKw={pv}
             fallbackLabel="Solar Generation"
           />
           <SubSection
@@ -691,7 +687,7 @@ export default function EnergyFlowBlock({
             devices={gridLoads}
             isDark={isDark}
             onDeviceClick={setSelectedDevice}
-            fallbackKw={Math.abs(gridKw)}
+            fallbackKw={Math.abs(grid)}
             fallbackLabel={isImporting ? 'Grid Import' : isExporting ? 'Grid Export' : 'Grid'}
           />
         </div>
