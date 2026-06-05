@@ -7378,6 +7378,17 @@ body.dark-mode .config-arrow {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* Exception: allow SVG data visualizations (energy flow beams) to animate */
+  svg path,
+  svg motion path,
+  svg motion line,
+  svg g > * {
+    animation-duration: inherit !important;
+    animation-iteration-count: inherit !important;
+    transition-duration: inherit !important;
+  }
+
   .card-3d:hover {
     transform: none;
   }

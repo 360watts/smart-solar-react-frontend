@@ -89,6 +89,7 @@ import { cacheService } from '../../services/cacheService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../app/constants';
 import DetailsTab from '../../features/staff/DetailsTab';
+import EnergyFlowBlock from './EnergyFlow';
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
@@ -910,457 +911,6 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
           </div>
         </motion.div>
       ))}
-    </motion.div>
-  );
-};
-
-// ── Energy Flow Diagram ─────────────────────────────────────────────────────────
-
-interface EnergyFlowBlockProps {
-  pvKw: number | null;
-  loadKw: number | null;
-  gridKw: number | null;
-  battKw: number | null;
-  battSoc: number | null;
-  evPlugData?: any;
-}
-
-// ── EnergyFlowBlock — premium 4-corner cross layout ──────────────────────────
-// Layout: Solar TL · Load TR · Battery BL · Grid BR · Hub center
-// SVG viewBox 300×270 with preserveAspectRatio="none" — diagonal gradient lines
-// with animateMotion flow dots indicating real-time power direction.
-// EV Charger: positioned right of Load, animated flow if charging
-const EnergyFlowBlock: React.FC<EnergyFlowBlockProps> = ({ pvKw, loadKw, gridKw, battKw, battSoc, evPlugData }) => {
-  const { isDark } = useTheme();
-
-  const uidRef = useRef('');
-  if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
-  const uid = uidRef.current;
-
-  // Sign conventions (RS-485 register 625 / Deye Cloud — same in both sources):
-  //   gridKw < 0  → exporting to grid (selling)
-  //   gridKw > 0  → importing from grid (buying)
-  //   battKw > 0  → battery discharging
-  //   battKw < 0  → battery charging
-  const isExporting   = (gridKw  ?? 0) < -0.01;
-  const isImporting   = (gridKw  ?? 0) >  0.01;
-  const isCharging    = (battKw  ?? 0) < -0.01;
-
-  const pvValue        = pvKw   ?? 0;
-  const loadValue      = loadKw ?? 0;
-  const gridValue      = Math.abs(gridKw  ?? 0);
-  const battSocValue   = battSoc ?? 0;
-  const battPowerValue = Math.abs(battKw  ?? 0);
-
-  const isPvActive    = pvValue        > 0.01;
-  const isLoadActive  = loadValue      > 0.01;
-  const isGridActive  = gridValue      > 0.01;
-  const isBattActive  = battPowerValue > 0.01;
-  const isBattPresent = isBattActive || battSocValue > 0;
-
-  const gridColor  = isExporting ? '#5bbd79' : '#3b82f6';
-  const loadColor  = '#ef4444'; // Red for load
-  const labelColor = isDark ? '#64748b' : '#94a3b8';
-  const trackColor = isDark ? 'rgba(148,163,184,0.38)' : 'rgba(71,85,105,0.28)';
-
-  const statusText = isPvActive && !isImporting
-    ? 'System optimal — solar powering load.'
-    : isExporting
-    ? 'Exporting surplus energy to grid.'
-    : isImporting
-    ? 'Drawing power from grid.'
-    : 'No active solar generation.';
-  const statusOk = isPvActive && !isImporting;
-
-  // ── SVG geometry ─────────────────────────────────────────────────────────────
-  // viewBox 400×420, preserveAspectRatio="none"
-  const hub = { x: 200, y: 210 };
-  
-  // C = center of each NodeCard in SVG coordinates
-  // Top-Left: Solar, Top-Right: Grid, Bottom-Left: Battery, Bottom-Right: Load
-  const C = { 
-    solar: { x: 80, y: 88 }, 
-    grid:  { x: 320, y: 88 }, 
-    batt:  { x: 80, y: 348 }, 
-    load:  { x: 320, y: 337 } 
-  };
-
-  // Connection points for the lines
-  // Lines should touch the info pills (boxes) for the outer nodes
-  // and the circular SVG for the central hub.
-  const conn = {
-    solar: { x: 80, y: 124 }, // Center of Solar info pill
-    grid:  { x: 320, y: 124 }, // Center of Grid info pill
-    batt:  { x: 80, y: 364 }, // Attach to battery info box
-    load:  { x: 320, y: 353 }, // Attach to load info box
-    hub:   { x: 200, y: 210 }  // Center of Hub circular icon (calibrated without load pill)
-  };
-
-  // Generate a smooth S-curve (Cubic Bezier) that starts/ends horizontally
-  const curve = (p1: {x: number, y: number}, p2: {x: number, y: number}, nodeX: number) => {
-    // Use the node and hub X coordinates to keep the inflection point symmetric
-    const midX = (nodeX + conn.hub.x) / 2;
-    return `M ${p1.x} ${p1.y} C ${midX} ${p1.y}, ${midX} ${p2.y}, ${p2.x} ${p2.y}`;
-  };
-
-  // Paths named for animateMotion direction — stop at hub center (hidden under solid hub div)
-  const P = {
-    solarToHub: curve(conn.solar, conn.hub, conn.solar.x),
-    hubToLoad:  curve(conn.hub, conn.load, conn.load.x),
-    hubToBatt:  curve(conn.hub, conn.batt, conn.batt.x),
-    battToHub:  curve(conn.batt, conn.hub, conn.batt.x),
-    hubToGrid:  curve(conn.hub, conn.grid, conn.grid.x),
-    gridToHub:  curve(conn.grid, conn.hub, conn.grid.x),
-  };
-
-  // Track: full bi-directional lines stopping at hub center
-  const trackPaths = [
-    curve(conn.solar, conn.hub, conn.solar.x),
-    curve(conn.load, conn.hub, conn.load.x),
-    curve(conn.batt, conn.hub, conn.batt.x),
-    curve(conn.grid, conn.hub, conn.grid.x),
-  ];
-
-  // Format kW value → "X W" below 1 kW, "X.XX kW" at 1 kW and above
-  const fmtPower = (kw: number): { valueStr: string; unit: string } =>
-    kw >= 1 ? { valueStr: kw.toFixed(2), unit: 'kW' } : { valueStr: (kw * 1000).toFixed(0), unit: 'W' };
-
-  // Helper to get absolute percentage position for NodeCards
-  const getPos = (pt: {x: number, y: number}) => ({
-    left: `${(pt.x / 400) * 100}%`,
-    top: `${(pt.y / 470) * 100}%`,
-  });
-
-  // Helper for modern animated flow beam
-  const renderBeam = (isActive: boolean, d: string, stroke: string, duration: number = 1.5) => {
-    if (!isActive) return null;
-    return (
-      <g>
-        {/* Base colored line */}
-        <path d={d} stroke={stroke} strokeWidth={2} strokeOpacity={0.25} fill="none" strokeLinecap="round" />
-        {/* Animated beam */}
-        <motion.path
-          d={d}
-          stroke={stroke}
-          strokeWidth={4}
-          strokeLinecap="round"
-          fill="none"
-          filter={`url(#glow-${uid})`}
-          strokeDasharray="0.25 0.75"
-          pathLength={1}
-          initial={{ strokeDashoffset: 0 }}
-          animate={{ strokeDashoffset: -1 }}
-          transition={{ duration, repeat: Infinity, ease: "linear" }}
-        />
-      </g>
-    );
-  };
-
-  // ── Node card renderer ────────────────────────────────────────────────────────
-  const NodeCard = ({
-    label, icon, valueStr, unit, color, active, subLabel, extra, style,
-  }: {
-    label: string;
-    icon: React.ReactNode;
-    valueStr: string;
-    unit: string;
-    color: string;
-    active: boolean;
-    subLabel?: string;
-    extra?: React.ReactNode;
-    style: React.CSSProperties;
-  }) => (
-    <div
-      style={{
-        position: 'absolute',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-        zIndex: 2,
-        transform: 'translate(-50%, -50%)',
-        ...style,
-      }}
-    >
-      {/* Icon Circle */}
-      <div style={{ position: 'relative', width: 64, height: 64 }}>
-        {/* Glow */}
-        {active && (
-          <div style={{
-            position: 'absolute',
-            inset: -12,
-            background: color,
-            opacity: isDark ? 0.35 : 0.25,
-            filter: 'blur(16px)',
-            borderRadius: '50%',
-          }} />
-        )}
-        {/* Circle */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: isDark ? `linear-gradient(135deg, #1e293b 0%, ${color}20 100%)` : `linear-gradient(135deg, #ffffff 0%, ${color}15 100%)`,
-          borderRadius: '50%',
-          boxShadow: isDark ? `0 4px 12px rgba(0,0,0,0.3), inset 0 0 0 1px ${color}30` : `0 4px 12px ${color}20, inset 0 0 0 1px ${color}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: `1px solid ${active ? (isDark ? `${color}50` : `${color}40`) : (isDark ? '#334155' : '#f1f5f9')}`,
-        }}>
-          {icon}
-        </div>
-      </div>
-
-      {/* Info Pill */}
-      <div style={{
-        background: active 
-          ? (isDark ? `linear-gradient(135deg, rgba(30,41,59,0.95) 0%, ${color}10 100%)` : `linear-gradient(135deg, rgba(255,255,255,0.95) 0%, ${color}08 100%)`)
-          : (isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)'),
-        border: `1px solid ${active ? (isDark ? `${color}40` : `${color}30`) : (isDark ? '#334155' : '#f3f4f6')}`,
-        borderRadius: 14,
-        padding: '6px 14px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        boxShadow: isDark ? `0 4px 12px rgba(0,0,0,0.2), 0 0 8px ${color}15` : `0 4px 12px rgba(0,0,0,0.05), 0 0 8px ${color}15`,
-        backdropFilter: 'blur(8px)',
-        minWidth: 90,
-      }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: active ? color : labelColor, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-          {label}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', lineHeight: 1 }}>
-            {valueStr}
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: active ? color : labelColor, opacity: 0.8 }}>
-            {unit}
-          </span>
-        </div>
-        {subLabel && active && (
-          <span style={{ fontSize: 10, fontWeight: 700, color, marginTop: 4 }}>
-            {subLabel}
-          </span>
-        )}
-        {extra}
-      </div>
-    </div>
-  );
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-      style={{
-        padding: '10px 14px 14px',
-        marginBottom: 16,
-        borderRadius: 14,
-        background: isDark ? '#0F1623' : '#ffffff',
-        border: `0.6px solid ${isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0'}`,
-        boxShadow: isDark
-          ? '0 4px 24px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.03)'
-          : '0 1px 4px rgba(0,0,0,0.07)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: isDark ? '#f8fafc' : '#0f172a', fontFamily: 'Inter, sans-serif' }}>
-            Real-Time Energy Flow
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
-          <motion.span
-            animate={{ opacity: [1, 0.2, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-            style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}
-          />
-          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#10b981' }}>LIVE</span>
-        </div>
-      </div>
-
-      {/* ── Diagram ── */}
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: 470,
-          background: isDark
-            ? 'radial-gradient(circle at 50% 50%, rgba(30,41,59,0.5) 0%, rgba(15,23,42,1) 100%)'
-            : 'radial-gradient(circle at 50% 50%, rgba(248,250,252,1) 0%, rgba(255,255,255,1) 100%)',
-          borderRadius: 24,
-          border: `1px solid ${isDark ? '#334155' : '#f3f4f6'}`,
-          overflow: 'hidden',
-          boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.2)' : '0 8px 30px rgba(0,0,0,0.04)',
-        }}
-      >
-
-        {/* SVG: gradient flow lines + animated beams */}
-        <svg
-          viewBox="0 0 400 470"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
-        >
-          <defs>
-            {/* Soft glow filter */}
-            <filter id={`glow-${uid}`} x="-60%" y="-60%" width="220%" height="220%">
-              <feGaussianBlur stdDeviation="2.2" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-
-            {/* Per-node gradient for active lines */}
-            <linearGradient id={`sg-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#5bbd79" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#5bbd79" stopOpacity="0.95" />
-            </linearGradient>
-            <linearGradient id={`gg-${uid}`} x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={gridColor} stopOpacity="0.95" />
-              <stop offset="100%" stopColor={gridColor} stopOpacity="0.45" />
-            </linearGradient>
-            <linearGradient id={`bg-${uid}`} x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.45" />
-            </linearGradient>
-            <linearGradient id={`lg-${uid}`} x1="100%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor={loadColor} stopOpacity="0.95" />
-              <stop offset="100%" stopColor={loadColor} stopOpacity="0.45" />
-            </linearGradient>
-          </defs>
-
-          {/* ── Track lines (always visible, dashed, subtle) ── */}
-          {trackPaths.map((d, i) => (
-            <path key={i} d={d} stroke={trackColor} strokeWidth={1.5} fill="none"
-              strokeLinecap="round" />
-          ))}
-
-          {/* ── Animated Beams ── */}
-          {/* Solar */}
-          {renderBeam(isPvActive, P.solarToHub, `url(#sg-${uid})`, 1.9)}
-          
-          {/* Load */}
-          {renderBeam(isLoadActive, P.hubToLoad, `url(#lg-${uid})`, 1.9)}
-          
-          {/* Battery */}
-          {isBattActive 
-            ? renderBeam(true, isCharging ? P.hubToBatt : P.battToHub, `url(#bg-${uid})`, 1.9)
-            : isBattPresent 
-              ? <path d={P.hubToBatt} stroke={`url(#bg-${uid})`} strokeWidth={2} strokeOpacity={0.25} fill="none" strokeLinecap="round" />
-              : null}
-              
-          {/* Grid */}
-          {renderBeam(isGridActive, isExporting ? P.hubToGrid : P.gridToHub, `url(#gg-${uid})`, 1.9)}
-        </svg>
-
-        {/* ── Node: Solar — top-left ── */}
-        <NodeCard
-          label="Solar Arrays"
-          icon={<Sun size={28} color={isPvActive ? '#5bbd79' : (isDark ? '#475569' : '#cbd5e1')} />}
-          {...fmtPower(pvValue)}
-          color="#5bbd79"
-          active={isPvActive}
-          style={getPos(C.solar)}
-        />
-
-        {/* ── Node: Grid — top-right ── */}
-        <NodeCard
-          label="Public Grid"
-          icon={<Activity size={28} color={isGridActive ? gridColor : (isDark ? '#475569' : '#cbd5e1')} />}
-          {...fmtPower(gridValue)}
-          color={gridColor}
-          active={isGridActive}
-          subLabel={isGridActive ? (isExporting ? '↑ Exporting' : '↓ Importing') : undefined}
-          style={getPos(C.grid)}
-        />
-
-        {/* ── Node: Battery — bottom-left ── */}
-        <NodeCard
-          label="Battery Storage"
-          icon={<Battery size={28} color={isBattPresent ? '#f59e0b' : (isDark ? '#475569' : '#cbd5e1')} />}
-          {...fmtPower(battPowerValue)}
-          color="#f59e0b"
-          active={isBattPresent}
-          subLabel={isBattActive ? (isCharging ? '↑ Charging' : '↓ Discharging') : undefined}
-          style={getPos(C.batt)}
-        />
-
-        {/* ── Node: Load — bottom-right ── */}
-        <NodeCard
-          label="Solar Load"
-          icon={<Home size={28} color={isLoadActive ? loadColor : (isDark ? '#475569' : '#cbd5e1')} />}
-          {...fmtPower(loadValue)}
-          color={loadColor}
-          active={isLoadActive}
-          style={getPos(C.load)}
-        />
-
-        {/* ── Node: EV Charger (right side) ── */}
-        {evPlugData && (
-          <NodeCard
-            label="EV Charger"
-            icon={<Zap size={28} color={evPlugData?.power_w > 50 ? '#fbbf24' : (isDark ? '#475569' : '#cbd5e1')} />}
-            valueStr={evPlugData?.power_w ? (evPlugData.power_w / 1000).toFixed(2) : '0'}
-            unit="kW"
-            subLabel={evPlugData?.switch_on ? '↓ Charging' : 'Standby'}
-            color="#fbbf24"
-            active={evPlugData?.power_w > 50}
-            style={{
-              position: 'absolute',
-              right: 20,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 2,
-            }}
-          />
-        )}
-
-        {/* ── Center Hub ── */}
-        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ position: 'relative', width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Outer rings */}
-            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', border: `1px solid ${isDark ? '#c6d2ff' : '#6366f1'}`, opacity: isDark ? 0.15 : 0.2 }} />
-            <div style={{ position: 'absolute', inset: -10, borderRadius: '50%', border: `1px solid ${isDark ? '#a3b3ff' : '#4f46e5'}`, opacity: isDark ? 0.25 : 0.3 }} />
-            
-            {/* Inner circle */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)',
-              border: '4px solid #ffffff',
-              boxShadow: '0 0 20px rgba(0,0,0,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Zap size={28} color="#ffffff" />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── Status row ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 10, borderTop: `0.6px solid ${isDark ? 'rgba(148,163,184,0.1)' : '#e5e7eb'}` }}>
-        <div style={{
-          width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-          background: statusOk ? 'rgba(91,189,121,0.14)' : 'rgba(245,158,11,0.12)',
-          border: `1px solid ${statusOk ? '#5bbd79' : '#f59e0b'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: statusOk ? '#5bbd79' : '#f59e0b', lineHeight: 1 }}>
-            {statusOk ? '✓' : '!'}
-          </span>
-        </div>
-        <span style={{ fontSize: '0.7rem', color: isDark ? '#64748b' : '#6b7280', fontFamily: 'Inter, sans-serif' }}>
-          {statusText}
-        </span>
-        <span style={{ marginLeft: 'auto', fontSize: '0.62rem', color: labelColor, fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
-          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
-      </div>
     </motion.div>
   );
 };
@@ -3764,7 +3314,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [telemetry, setTelemetry] = useState<any[]>([]);
   const [forecast, setForecast] = useState<any[]>([]);
   const [weather, setWeather] = useState<any>(null);
-  const [evPlugData, setEvPlugData] = useState<any>(null);
+  const [smartDevices, setSmartDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -3950,11 +3500,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         return windows;
       };
 
-      // Kick off forecast + weather + EV plug data immediately — runs in parallel with all telemetry fetches
+      // Kick off forecast + weather + smart devices immediately — runs in parallel with all telemetry fetches
       const forecastWeatherPromise = Promise.all([
         apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
         apiService.getSiteWeather(siteId),
-        apiService.getEVPlugLatest(siteId),
+        apiService.getSmartDevices(siteId),
       ] as Promise<any>[]);
 
       let telemetryRows: any[] = [];
@@ -3987,8 +3537,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      const [fcst, wth, evData] = await forecastWeatherPromise;
-      setEvPlugData(evData);
+      const [fcst, wth, devices] = await forecastWeatherPromise;
+      setSmartDevices(Array.isArray(devices) ? devices : []);
 
       // Pull latest raw rows to drive Overview freshness and Energy Flow block.
       let latestRawRows: any[] = [];
@@ -4938,7 +4488,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     gridKw={gridKw}
                     battKw={batPowerKw}
                     battSoc={batSoc}
-                    evPlugData={evPlugData}
+                    smartDevices={smartDevices}
                   />
                 ) : (
                   <div style={{

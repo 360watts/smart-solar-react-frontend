@@ -632,10 +632,31 @@ class ApiService {
       cacheService.set(cacheKey, data, 55 * 1000); // 55-second cache, same as telemetry
       return data;
     } catch (error) {
-      // 404 = device not found, which is fine (not an error)
-      if (error instanceof Error && error.message.includes('404')) return null;
+      // 404 = no EV charger configured for this site, expected for most sites
+      const msg = error instanceof Error ? error.message : '';
+      if (!msg || msg.includes('404') || msg.toLowerCase().includes('ev charger')) return null;
       console.warn('getEVPlugLatest error:', error);
       return null;
+    }
+  }
+
+  async getSmartDevices(siteId: string): Promise<any[]> {
+    try {
+      const data = await this.request(`/sites/${siteId}/smart-devices/`);
+      return data ?? [];
+    } catch (error) {
+      console.warn('getSmartDevices error:', error);
+      return [];
+    }
+  }
+
+  async getSmartDeviceReadings(deviceId: number, hours: number = 24): Promise<{ timestamp: string; power_w: number | null }[]> {
+    try {
+      const data = await this.request(`/smart-devices/${deviceId}/readings/?hours=${hours}`);
+      return data ?? [];
+    } catch (error) {
+      console.warn('getSmartDeviceReadings error:', error);
+      return [];
     }
   }
 
