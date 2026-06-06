@@ -3,7 +3,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { AreaChart, Area, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { SmartDeviceNode } from './types';
-import { apiService } from '../../../services/api';
+import { apiService, CtMeterReading } from '../../../services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,7 @@ export interface NodeData {
   timestamp?: string;
   deviceType?: string;
   circuit?: string;
+  ctReading?: CtMeterReading;
 }
 
 interface NodeDetailModalProps {
@@ -184,6 +185,83 @@ function TrendIcon({ kw }: { kw: number }) {
   if (kw > 0.5) return <TrendingUp size={14} color={DS.colors.solarGreen} />;
   if (kw < -0.5) return <TrendingDown size={14} color={DS.colors.error} />;
   return <Minus size={14} color={DS.colors.textDim} />;
+}
+
+// ─── 3-Phase CT panel ─────────────────────────────────────────────────────────
+
+function PhaseCell({ value, unit, isDark }: { value: number | null; unit: string; isDark: boolean }) {
+  const display = value != null ? `${Math.abs(value).toFixed(unit === 'V' || unit === 'W' || unit === 'var' || unit === 'VA' ? 1 : 3)}` : '—';
+  return (
+    <td style={{
+      padding: '5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums',
+      fontSize: 11, fontWeight: 600, color: isDark ? DS.colors.textPrimary : '#1e293b',
+      borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+    }}>
+      {display}
+      {value != null && <span style={{ fontSize: 9, opacity: 0.55, marginLeft: 2 }}>{unit}</span>}
+    </td>
+  );
+}
+
+function ThreePhasePanel({ r, isDark, accent }: { r: CtMeterReading; isDark: boolean; accent: string }) {
+  const rows: { label: string; unit: string; vals: (number | null)[] }[] = [
+    { label: 'Voltage',         unit: 'V',   vals: [r.voltage_l1,        r.voltage_l2,        r.voltage_l3,        null] },
+    { label: 'Current',         unit: 'A',   vals: [r.current_l1,        r.current_l2,        r.current_l3,        null] },
+    { label: 'Frequency',       unit: 'Hz',  vals: [r.frequency_l1,      r.frequency_l2,      r.frequency_l3,      null] },
+    { label: 'Active Power',    unit: 'W',   vals: [r.active_power_l1,   r.active_power_l2,   r.active_power_l3,   r.active_power_total] },
+    { label: 'Reactive Power',  unit: 'var', vals: [r.reactive_power_l1, r.reactive_power_l2, r.reactive_power_l3, r.reactive_power_total] },
+    { label: 'Apparent Power',  unit: 'VA',  vals: [r.apparent_power_l1, r.apparent_power_l2, r.apparent_power_l3, r.apparent_power_total] },
+    { label: 'Power Factor',    unit: '',    vals: [r.power_factor_l1,   r.power_factor_l2,   r.power_factor_l3,   r.power_factor_total] },
+  ];
+
+  const thStyle: React.CSSProperties = {
+    padding: '5px 8px', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+    textTransform: 'uppercase', color: accent, textAlign: 'center',
+    borderBottom: isDark ? `1px solid ${accent}30` : `1px solid ${accent}40`,
+  };
+  const rowLabelStyle: React.CSSProperties = {
+    padding: '5px 8px', fontSize: 10, fontWeight: 700, color: isDark ? DS.colors.textMuted : '#64748b',
+    borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+    whiteSpace: 'nowrap',
+  };
+
+  return (
+    <div style={{ overflowX: 'auto', borderRadius: DS.radius.sm, border: isDark ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${accent}28` }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+        <thead>
+          <tr style={{ background: isDark ? `${accent}14` : `${accent}0d` }}>
+            <th style={{ ...thStyle, textAlign: 'left' }}>Measurement</th>
+            <th style={thStyle}>L1</th>
+            <th style={thStyle}>L2</th>
+            <th style={thStyle}>L3</th>
+            <th style={{ ...thStyle, color: isDark ? DS.colors.textPrimary : '#0f172a' }}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={row.label} style={{ background: i % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)') }}>
+              <td style={rowLabelStyle}>{row.label}</td>
+              <PhaseCell value={row.vals[0]} unit={row.unit} isDark={isDark} />
+              <PhaseCell value={row.vals[1]} unit={row.unit} isDark={isDark} />
+              <PhaseCell value={row.vals[2]} unit={row.unit} isDark={isDark} />
+              {row.vals[3] != null ? (
+                <td style={{
+                  padding: '5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums',
+                  fontSize: 11, fontWeight: 800, color: accent,
+                  borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+                }}>
+                  {Math.abs(row.vals[3]).toFixed(row.unit === '' ? 3 : 1)}
+                  {row.unit && <span style={{ fontSize: 9, opacity: 0.65, marginLeft: 2 }}>{row.unit}</span>}
+                </td>
+              ) : (
+                <td style={{ borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }} />
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
@@ -462,8 +540,17 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   </motion.div>
                 )}
 
+                {/* ── CT Meter 3-phase table ── */}
+                {node.ctReading && (
+                  <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
+                    <SectionLabel>3-Phase Measurements</SectionLabel>
+                    <ThreePhasePanel r={node.ctReading} isDark={isDark} accent={accentColor} />
+                  </motion.div>
+                )}
+
                 {/* ── Sparkline chart ── */}
-                <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
+                {node.type !== 'ctmeter' && (
+                <motion.div custom={4} variants={rowVariants} initial="hidden" animate="visible">
                   <SectionLabel>24h Trend</SectionLabel>
                   <div style={{
                     background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)',
@@ -520,6 +607,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     )}
                   </div>
                 </motion.div>
+                )}
 
                 {/* ── Footer meta row ── */}
                 <motion.div

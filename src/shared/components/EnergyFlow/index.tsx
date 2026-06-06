@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Sun, Battery, Home, Zap, Wind, Droplets, Waves, Plug, Activity, Grid, Car } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -6,6 +6,7 @@ import { NodeCard, SmartCard } from './DeviceCard';
 import AnomalyBanner from './AnomalyBanner';
 import NodeDetailModal, { NodeData, NodeType } from './NodeDetailModal';
 import { EnergyFlowBlockProps, SmartDeviceNode, ApplianceLabel } from './types';
+import { apiService, CtMeterReading } from '../../../services/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Beam animation: motion.linearGradient sweeps a narrow light window along
@@ -13,15 +14,16 @@ import { EnergyFlowBlockProps, SmartDeviceNode, ApplianceLabel } from './types';
 // top-level SVG <defs> so they are in scope before any path references them.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Cross topology: Gateway hub at centre, Battery above, Solar left, Grid right, Load below.
 const VW = 700;
-const VH = 200;
+const VH = 240;
 const ASPECT_PAD = `${(VH / VW) * 100}%`;
 
 const N = {
-  pv:   { x: 90,  y: 100 },
-  hub:  { x: 350, y: 100 },
-  batt: { x: 590, y: 55  },
-  grid: { x: 590, y: 145 },
+  pv:   { x: 90,  y: 125 },   // left
+  hub:  { x: 350, y: 125 },   // centre (IoT Gateway)
+  batt: { x: 350, y: 32  },   // top
+  grid: { x: 610, y: 125 },   // right
 } as const;
 
 const HUB_R = 38;
@@ -53,17 +55,16 @@ function hubPath(sx: number, sy: number, direction: 'toHub' | 'fromHub', srcTrim
 }
 
 const NODE_R = 65;
+// Battery is vertically above hub — use smaller srcTrim so short path is visible
+const BATT_TRIM = 36;
 
 const P = {
   pvToHub:   hubPath(N.pv.x,   N.pv.y,   'toHub',   NODE_R),
-  battToHub: hubPath(N.batt.x, N.batt.y, 'toHub',   NODE_R),
-  hubToBatt: hubPath(N.batt.x, N.batt.y, 'fromHub', NODE_R),
+  battToHub: hubPath(N.batt.x, N.batt.y, 'toHub',   BATT_TRIM),
+  hubToBatt: hubPath(N.batt.x, N.batt.y, 'fromHub', BATT_TRIM),
   gridToHub: hubPath(N.grid.x, N.grid.y, 'toHub',   NODE_R),
   hubToGrid: hubPath(N.grid.x, N.grid.y, 'fromHub', NODE_R),
-  hubToLoad: (() => {
-    const x = N.hub.x, y1 = N.hub.y + HUB_R, y2 = VH;
-    return `M ${x} ${y1} L ${x} ${y2}`;
-  })(),
+  hubToLoad: `M ${N.hub.x} ${N.hub.y + HUB_R} L ${N.hub.x} ${VH}`,
 } as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -177,7 +178,7 @@ function HubNode({ isDark }: { isDark: boolean }) {
       <span style={{
         fontSize: 8, fontWeight: 800, textTransform: 'uppercase',
         letterSpacing: '0.12em', color: isDark ? '#6366f1' : '#4f46e5',
-      }}>Inverter</span>
+      }}>Gateway</span>
     </div>
   );
 }
@@ -191,6 +192,8 @@ interface SubSectionProps {
   onDeviceClick: (d: SmartDeviceNode) => void;
   fallbackKw?: number;
   fallbackLabel?: string;
+  ctReading?: CtMeterReading | null;
+  onCtClick?: () => void;
 }
 
 // Helper to convert device to comprehensive NodeData
@@ -219,7 +222,79 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
   };
 }
 
-function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick, fallbackKw, fallbackLabel }: SubSectionProps) {
+// ── CT Meter summary card ─────────────────────────────────────────────────────
+
+function CtMeterCard({ reading, isDark, onClick }: { reading: CtMeterReading; isDark: boolean; onClick: () => void }) {
+  const accent = '#60a5fa';
+  const fmt1 = (v: number | null, unit: string) =>
+    v != null ? `${Math.abs(v).toFixed(1)} ${unit}` : '—';
+
+  const phases = [
+    { label: 'L1', v: reading.voltage_l1, i: reading.current_l1, pf: reading.power_factor_l1, pa: reading.active_power_l1 },
+    { label: 'L2', v: reading.voltage_l2, i: reading.current_l2, pf: reading.power_factor_l2, pa: reading.active_power_l2 },
+    { label: 'L3', v: reading.voltage_l3, i: reading.current_l3, pf: reading.power_factor_l3, pa: reading.active_power_l3 },
+  ];
+
+  const totalW = reading.active_power_total ?? 0;
+  const totalAbs = Math.abs(totalW);
+  const totalStr = totalAbs >= 1000 ? `${(totalAbs / 1000).toFixed(2)} kW` : `${totalAbs.toFixed(0)} W`;
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        cursor: 'pointer',
+        background: isDark ? `${accent}10` : `${accent}0d`,
+        border: `1.5px solid ${accent}35`,
+        borderRadius: 10,
+        padding: '8px 10px',
+        marginBottom: 8,
+        transition: 'all 0.18s ease',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accent}1e` : `${accent}1a`)}
+      onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accent}10` : `${accent}0d`)}
+    >
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Activity size={11} color={accent} />
+          <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: accent }}>
+            CT Meter · 3-Phase
+          </span>
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 800, color: accent, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+          {totalStr}
+        </span>
+      </div>
+
+      {/* Phase grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+        {phases.map(ph => (
+          <div key={ph.label} style={{
+            background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(96,165,250,0.07)',
+            borderRadius: 6, padding: '5px 7px',
+          }}>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: accent, letterSpacing: '0.08em', marginBottom: 3 }}>
+              {ph.label}
+            </div>
+            <div style={{ fontSize: 8.5, color: isDark ? '#e2e8f0' : '#334155', fontVariantNumeric: 'tabular-nums', lineHeight: 1.5 }}>
+              <span style={{ opacity: 0.65 }}>V </span>{fmt1(ph.v, 'V')}<br />
+              <span style={{ opacity: 0.65 }}>I </span>{fmt1(ph.i, 'A')}<br />
+              <span style={{ opacity: 0.65 }}>PF </span>{ph.pf != null ? Math.abs(ph.pf).toFixed(3) : '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tap hint */}
+      <div style={{ marginTop: 5, fontSize: 7.5, color: isDark ? 'rgba(148,163,184,0.55)' : '#94a3b8', textAlign: 'right', letterSpacing: '0.04em' }}>
+        Tap for full breakdown ›
+      </div>
+    </div>
+  );
+}
+
+function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick, fallbackKw, fallbackLabel, ctReading, onCtClick }: SubSectionProps) {
   const hasFallbackPower = (fallbackKw ?? 0) > 0.01;
   return (
     <div style={{
@@ -249,20 +324,26 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick, 
         )}
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        {/* CT meter summary always at top when present */}
+        {ctReading && onCtClick && (
+          <CtMeterCard reading={ctReading} isDark={isDark} onClick={onCtClick} />
+        )}
         {devices.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 0' }}>
-            {fallbackKw !== undefined && (
-              <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: hasFallbackPower ? accentColor : isDark ? '#cbd5e1' : '#94a3b8', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                {(() => { const f = fmtPower(fallbackKw ?? 0); return f.valueStr; })()}
-                <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, marginLeft: 3 }}>
-                  {(() => { const f = fmtPower(fallbackKw ?? 0); return f.unit; })()}
+          !ctReading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '6px 0' }}>
+              {fallbackKw !== undefined && (
+                <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: hasFallbackPower ? accentColor : isDark ? '#cbd5e1' : '#94a3b8', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                  {(() => { const f = fmtPower(fallbackKw ?? 0); return f.valueStr; })()}
+                  <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, marginLeft: 3 }}>
+                    {(() => { const f = fmtPower(fallbackKw ?? 0); return f.unit; })()}
+                  </span>
                 </span>
+              )}
+              <span style={{ fontSize: 8.5, color: isDark ? '#cbd5e1' : '#94a3b8', letterSpacing: '0.04em', textAlign: 'center' }}>
+                {fallbackLabel ?? 'No devices registered'}
               </span>
-            )}
-            <span style={{ fontSize: 8.5, color: isDark ? '#cbd5e1' : '#94a3b8', letterSpacing: '0.04em', textAlign: 'center' }}>
-              {fallbackLabel ?? 'No devices registered'}
-            </span>
-          </div>
+            </div>
+          )
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {devices.map(device => {
@@ -297,6 +378,19 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [ctReading, setCtReading] = useState<CtMeterReading | null>(null);
+
+  useEffect(() => {
+    if (!siteId) return;
+    let cancelled = false;
+    const fetch = async () => {
+      const data = await apiService.getLatestEnergyMeter(siteId);
+      if (!cancelled) setCtReading(data);
+    };
+    fetch();
+    const interval = setInterval(fetch, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [siteId]);
 
   const nonGridDevices  = smartDevices.filter(d => d.appliance_label !== 'grid');
   const solarLoads      = nonGridDevices.filter(d => circuitOf(d) === 'solar');
@@ -518,8 +612,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             icon: <Home size={24} color="#f87171" />,
             details: {
               'Consumption': `${loadFmt.valueStr} ${loadFmt.unit}`,
-              'Solar Loads': solarLoadActive ? `${(solarLoadPowerKw).toFixed(2)} kW` : 'Idle',
-              'Grid Loads': gridLoadActive ? `${(gridLoadPowerKw).toFixed(2)} kW` : 'Idle',
+              'Solar Loads': solarLoadActive ? `${solarLoadPowerKw.toFixed(2)} kW` : 'Idle',
+              'Grid Loads': gridLoadActive ? `${gridLoadPowerKw.toFixed(2)} kW` : 'Idle',
             },
           })} style={{ cursor: 'pointer' }}>
             <NodeCard label="Total Load"
@@ -529,52 +623,31 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           </div>
         </div>
 
-        {/* Y-connector SVG — gradient refs defined in <defs> above */}
+        {/* Y-connector SVG */}
         <svg width="100%" height="44" viewBox="0 0 200 44"
           style={{ display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
-          <defs>
-            <filter id={`ycglow-${uidRef.current}`} x="-80%" y="-80%" width="260%" height="260%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-
           <style>{`
             @keyframes flow-f87171{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
             @keyframes flow-f59e0b{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
             @keyframes flow-60a5fa{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
           `}</style>
-
-
           {loadActive && (
             <>
-              {/* Hub → junction: load colour, flows downward */}
               <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
               <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"
-                strokeDasharray="10 10"
-                style={{ animation: 'flow-f87171 2.4s linear infinite' }} />
-              {/* Left half: junction → solar branch (drawn centre→left, flows leftward) */}
+                strokeDasharray="10 10" style={{ animation: 'flow-f87171 2.4s linear infinite' }} />
               <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
               <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"
-                strokeDasharray="10 10"
-                style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
-              {/* Right half: junction → grid branch (drawn centre→right, flows rightward) */}
+                strokeDasharray="10 10" style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
               <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
               <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"
-                strokeDasharray="10 10"
-                style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
-
-              {/* Solar load branch — animates whenever load flows, not just when solarLoadActive */}
+                strokeDasharray="10 10" style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
               <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth="5" strokeLinecap="round" strokeOpacity={0.06} />
               <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"
-                strokeDasharray="10 10"
-                style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
-
-              {/* Non-solar (grid) load branch — always animate when load flows */}
+                strokeDasharray="10 10" style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
               <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeOpacity={0.06} />
               <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round"
-                strokeDasharray="10 10"
-                style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
+                strokeDasharray="10 10" style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
             </>
           )}
         </svg>
@@ -584,10 +657,27 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f59e0b'))}
             fallbackKw={pv} fallbackLabel="Solar Generation" />
-          <SubSection title="Non Solar Load" icon={<Grid size={11} color="#60a5fa" />}
+          <SubSection title="Grid Load" icon={<Grid size={11} color="#60a5fa" />}
             accentColor="#60a5fa" devices={gridLoads} isDark={isDark}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#60a5fa'))}
-            fallbackKw={Math.abs(grid)} fallbackLabel={isImporting ? 'Grid Import' : isExporting ? 'Grid Export' : 'Grid'} />
+            fallbackKw={Math.abs(grid)} fallbackLabel={isImporting ? 'Grid Import' : isExporting ? 'Grid Export' : 'Grid'}
+            ctReading={ctReading}
+            onCtClick={() => ctReading && handleNodeClick({
+              type: 'ctmeter' as NodeType,
+              id: 'ctmeter',
+              title: 'Grid Load · CT Meter',
+              subtitle: '3-Phase Measurement',
+              power_kw: Math.abs(ctReading.active_power_total ?? 0) / 1000,
+              status: (Math.abs(ctReading.active_power_total ?? 0) / 1000) > 0.01 ? 'active' : 'inactive',
+              color: '#60a5fa',
+              icon: <Activity size={24} color="#60a5fa" />,
+              details: {
+                'Active Power': `${Math.abs(ctReading.active_power_total ?? 0).toFixed(1)} W`,
+                'Apparent Power': `${Math.abs(ctReading.apparent_power_total ?? 0).toFixed(1)} VA`,
+                'Power Factor': (ctReading.power_factor_total ?? 0).toFixed(3),
+              },
+              ctReading,
+            })} />
         </div>
       </div>
 

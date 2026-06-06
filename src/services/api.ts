@@ -1,6 +1,38 @@
 import { cacheService, DEFAULT_TTL } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../app/constants';
 
+// ─── CT Energy Meter ──────────────────────────────────────────────────────────
+
+export interface CtMeterReading {
+  timestamp: string;
+  node_id: string;
+  voltage_l1: number | null;
+  voltage_l2: number | null;
+  voltage_l3: number | null;
+  current_l1: number | null;
+  current_l2: number | null;
+  current_l3: number | null;
+  frequency_l1: number | null;
+  frequency_l2: number | null;
+  frequency_l3: number | null;
+  active_power_l1: number | null;
+  active_power_l2: number | null;
+  active_power_l3: number | null;
+  active_power_total: number | null;
+  reactive_power_l1: number | null;
+  reactive_power_l2: number | null;
+  reactive_power_l3: number | null;
+  reactive_power_total: number | null;
+  apparent_power_l1: number | null;
+  apparent_power_l2: number | null;
+  apparent_power_l3: number | null;
+  apparent_power_total: number | null;
+  power_factor_l1: number | null;
+  power_factor_l2: number | null;
+  power_factor_l3: number | null;
+  power_factor_total: number | null;
+}
+
 // ─── Site Member Sharing ──────────────────────────────────────────────────────
 
 export interface SiteMember {
@@ -657,6 +689,14 @@ class ApiService {
     } catch (error) {
       console.warn('getSmartDeviceReadings error:', error);
       return [];
+    }
+  }
+
+  async getLatestEnergyMeter(siteId: string): Promise<CtMeterReading | null> {
+    try {
+      return await this.request(`/sites/${siteId}/energy-meter/latest/`);
+    } catch {
+      return null;
     }
   }
 
