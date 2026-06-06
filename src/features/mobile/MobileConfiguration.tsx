@@ -48,13 +48,12 @@ const fmtLastPolled = (ts?: string) => {
 const MobileConfiguration: React.FC = () => {
   const { isDark } = useTheme();
 
-  const bg      = isDark ? '#060d18' : '#f0fdf4';
-  const surface = isDark ? '#0d1829' : '#ffffff';
-  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
-  const text    = isDark ? '#f1f5f9' : '#0f172a';
-  const muted   = isDark ? '#64748b' : '#94a3b8';
-  const sub     = isDark ? '#94a3b8' : '#94a3b8';
-  const accent  = '#00a63e';
+  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
+  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const accent  = '#2FBF71';
 
   const [slaves,     setSlaves]     = useState<SlaveDevice[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -107,48 +106,40 @@ const MobileConfiguration: React.FC = () => {
   };
 
   const card = (extra?: React.CSSProperties): React.CSSProperties => ({
-    background: surface, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', ...extra,
-  });
-
-  const pill = (active: boolean, color = accent): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600,
-    cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0,
-    background: active ? `${color}22` : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
-    color: active ? color : sub,
+    background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16, overflow: 'hidden', ...extra,
   });
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
       <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.875rem' }}>Loading…</span>
+      <span style={{ fontSize: '0.875rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
     </div>
   );
 
   return (
     <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
 
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #004d1e, #006b2b)', padding: '14px 16px' }}>
+      <div style={{ position:'sticky', top:0, zIndex:20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${border}`, padding:'14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Configuration</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginTop: 1 }}>{counts.total} slaves · {counts.activeRegs} active registers</div>
+            <div style={{ fontSize: '0.6rem', color: muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'DM Sans', sans-serif" }}>Configuration</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: text, marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>{counts.total} slaves · {counts.activeRegs} active regs</div>
           </div>
           <button onClick={() => { setRefreshing(true); fetchSlaves(true); }}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, cursor: 'pointer', color: '#fff', padding: '6px 8px', display: 'flex' }}>
+            style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, padding: '7px 9px', display: 'flex' }}>
             <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
           {[
-            { label: 'Total',    value: counts.total,      bg: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.9)' },
-            { label: 'Enabled',  value: counts.enabled,    bg: 'rgba(34,197,94,0.25)',  color: '#86efac' },
-            { label: 'Disabled', value: counts.disabled,   bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
-            { label: 'Registers',value: counts.totalRegs,  bg: 'rgba(59,130,246,0.2)',  color: '#93c5fd' },
+            { label: 'Total',    value: counts.total,      color: 'rgba(241,245,249,0.9)', bg: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+            { label: 'Enabled',  value: counts.enabled,    color: '#2FBF71', bg: 'rgba(47,191,113,0.1)' },
+            { label: 'Disabled', value: counts.disabled,   color: '#94A3B8', bg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+            { label: 'Registers',value: counts.totalRegs,  color: '#60A5FA', bg: 'rgba(96,165,250,0.1)' },
           ].map(({ label, value, bg: kBg, color }) => (
-            <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color }}>{value}</div>
-              <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{label}</div>
+            <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: `1px solid ${border}` }}>
+              <div style={{ fontSize: '1.15rem', fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+              <div style={{ fontSize: '0.57rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
             </div>
           ))}
         </div>
@@ -156,48 +147,50 @@ const MobileConfiguration: React.FC = () => {
 
       <div style={{ padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Register health */}
-        <div style={card({ padding: '10px 14px' })}>
+        <div style={card({ padding: '12px 14px' })}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Database size={14} color={accent} />
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: '0.7rem', color: sub }}>Active registers</span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: text }}>{counts.activeRegs} / {counts.totalRegs}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Active registers</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: text, fontFamily: "'JetBrains Mono', monospace" }}>{counts.activeRegs} / {counts.totalRegs}</span>
               </div>
-              <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
-                <div style={{ height: '100%', borderRadius: 2, background: accent, width: counts.totalRegs > 0 ? `${(counts.activeRegs / counts.totalRegs) * 100}%` : '0%', transition: 'width 0.4s' }} />
+              <div style={{ height: 5, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)' }}>
+                <div style={{ height: '100%', borderRadius: 3, background: accent, width: counts.totalRegs > 0 ? `${(counts.activeRegs / counts.totalRegs) * 100}%` : '0%', transition: 'width 0.4s' }} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, border: `1px solid ${border}`, borderRadius: 10, padding: '8px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 12, padding: '10px 14px' }}>
           <Search size={14} color={muted} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or slave ID…"
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text }} />
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.82rem', color: text, fontFamily: "'DM Sans', sans-serif" }} />
           {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}><X size={13} color={muted} /></button>}
         </div>
 
         <div style={{ display: 'flex', gap: 6 }}>
-          {(['all', 'enabled', 'disabled'] as const).map(f => (
-            <button key={f} style={pill(filter === f, f === 'enabled' ? '#22c55e' : f === 'disabled' ? '#64748b' : accent)} onClick={() => setFilter(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          {(['all', 'enabled', 'disabled'] as const).map(f => {
+            const c = f === 'enabled' ? '#2FBF71' : f === 'disabled' ? '#64748b' : accent;
+            return (
+              <button key={f} onClick={() => setFilter(f)}
+                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0, background: filter === f ? `${c}18` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'), color: filter === f ? c : muted, fontFamily: "'DM Sans', sans-serif" }}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ fontSize: '0.7rem', color: muted }}>
+        <div style={{ fontSize: '0.7rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>
           {filtered.length} slave device{filtered.length !== 1 ? 's' : ''}
-          {totalPages > 1 && <span style={{ color: accent }}> · page {page}/{totalPages}</span>}
+          {totalPages > 1 && <span style={{ color: accent, fontFamily: "'JetBrains Mono', monospace" }}> · page {page}/{totalPages}</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.length === 0 ? (
-            <div style={{ ...card(), padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ ...card(), padding: '48px 20px', textAlign: 'center' }}>
               <Settings size={28} color={border} style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontSize: '0.875rem', color: muted }}>No slave devices found</div>
+              <div style={{ fontSize: '0.875rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No slave devices found</div>
             </div>
           ) : paginated.map(slave => {
             const enabled   = slave.enabled !== false;
@@ -215,24 +208,24 @@ const MobileConfiguration: React.FC = () => {
               ? Math.round((slave.success_count / Math.max(1, slave.success_count + slave.error_count)) * 100) : null;
 
             return (
-              <div key={slave.id} style={card()}>
+              <div key={slave.id} style={{ ...card(), borderLeft: `3px solid ${enabled ? accent : '#64748b'}` }}>
                 <button onClick={() => toggle(expanded, setExpanded, slave.id)}
-                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: enabled ? 'rgba(34,197,94,0.1)' : 'rgba(100,116,139,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${enabled ? 'rgba(34,197,94,0.2)' : 'rgba(100,116,139,0.15)'}` }}>
-                    {enabled ? <CheckCircle size={16} color="#22c55e" /> : <XCircle size={16} color="#64748b" />}
+                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '14px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: enabled ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${enabled ? 'rgba(47,191,113,0.2)' : 'rgba(100,116,139,0.15)'}` }}>
+                    {enabled ? <CheckCircle size={16} color="#2FBF71" /> : <XCircle size={16} color="#64748b" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</span>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: enabled ? 'rgba(34,197,94,0.1)' : 'rgba(100,116,139,0.1)', color: enabled ? '#22c55e' : '#64748b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontFamily: "'DM Sans', sans-serif" }}>{name}</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: enabled ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>
                         {enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
-                    {slaveId != null && <div style={{ fontSize: '0.7rem', color: muted, marginBottom: 3 }}>Slave ID: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: sub }}>{slaveId}</span></div>}
+                    {slaveId != null && <div style={{ fontSize: '0.7rem', color: muted, marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Slave ID: <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: text }}>{slaveId}</span></div>}
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {polling != null && <span style={{ fontSize: '0.68rem', color: sub }}>Poll: {fmtMs(polling)}</span>}
-                      {regs.length > 0 && <span style={{ fontSize: '0.68rem', color: sub }}>{activeR}/{regs.length} regs</span>}
-                      {lastPolled && <span style={{ fontSize: '0.68rem', color: muted }}>Last: {lastPolled}</span>}
+                      {polling != null && <span style={{ fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>Poll: {fmtMs(polling)}</span>}
+                      {regs.length > 0 && <span style={{ fontSize: '0.68rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{activeR}/{regs.length} regs</span>}
+                      {lastPolled && <span style={{ fontSize: '0.68rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Last: {lastPolled}</span>}
                     </div>
                   </div>
                   <div style={{ color: muted, flexShrink: 0 }}>
@@ -241,82 +234,80 @@ const MobileConfiguration: React.FC = () => {
                 </button>
 
                 {isExp && (
-                  <div style={{ padding: '0 12px 12px', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
+                  <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${border}`, paddingTop: 12 }}>
 
-                    {/* Detail grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                       {timeout != null && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Timeout</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Clock size={11} color={muted} />{fmtMs(timeout)}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Timeout</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: text, marginTop: 2 }}><Clock size={11} color={muted} /><span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{fmtMs(timeout)}</span></div>
                         </div>
                       )}
                       {slave.protocol && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Protocol</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Radio size={11} color={muted} />{slave.protocol}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Protocol</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: text, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}><Radio size={11} color={muted} />{slave.protocol}</div>
                         </div>
                       )}
                       {baud != null && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Baud rate</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Cpu size={11} color={muted} />{baud}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Baud rate</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: text, marginTop: 2 }}><Cpu size={11} color={muted} /><span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{baud}</span></div>
                         </div>
                       )}
                       {slave.parity && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Parity</div>
-                          <div style={{ fontSize: '0.72rem', color: sub }}>{slave.parity}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Parity</div>
+                          <div style={{ fontSize: '0.72rem', color: text, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>{slave.parity}</div>
                         </div>
                       )}
                       {slave.stop_bits != null && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Stop bits</div>
-                          <div style={{ fontSize: '0.72rem', color: sub }}>{slave.stop_bits}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Stop bits</div>
+                          <div style={{ fontSize: '0.72rem', color: text, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>{slave.stop_bits}</div>
                         </div>
                       )}
                       {successRate != null && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Poll success</div>
-                          <div style={{ fontSize: '0.72rem', color: successRate < 80 ? '#ef4444' : successRate < 95 ? '#f59e0b' : '#22c55e', fontWeight: 700 }}>{successRate}%</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Poll success</div>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, marginTop: 2, fontFamily: "'JetBrains Mono', monospace", color: successRate < 80 ? '#F87171' : successRate < 95 ? '#F59E0B' : '#2FBF71' }}>{successRate}%</div>
                         </div>
                       )}
                       {slave.error_count != null && slave.error_count > 0 && (
                         <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Errors</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: '#f59e0b' }}><AlertTriangle size={11} color="#f59e0b" />{slave.error_count}</div>
+                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'DM Sans', sans-serif" }}>Errors</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: '#F59E0B', marginTop: 2 }}><AlertTriangle size={11} color="#F59E0B" /><span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{slave.error_count}</span></div>
                         </div>
                       )}
                     </div>
 
-                    {/* Registers */}
                     {regs.length > 0 && (
                       <>
                         <button onClick={() => toggle(regsOpen, setRegsOpen, slave.id)}
-                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', cursor: 'pointer', marginBottom: isRegs ? 8 : 0 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 600, color: muted }}>
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', cursor: 'pointer', marginBottom: isRegs ? 8 : 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 600, color: muted, fontFamily: "'DM Sans', sans-serif" }}>
                             <Database size={12} color={muted} />Registers ({activeR}/{regs.length} active)
                           </span>
                           {isRegs ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
                         </button>
 
                         {isRegs && (
-                          <div style={{ borderRadius: 8, border: `1px solid ${border}`, overflow: 'hidden', background: isDark ? '#050b14' : '#f8fafc' }}>
+                          <div style={{ borderRadius: 10, border: `1px solid ${border}`, overflow: 'hidden', background: isDark ? 'rgba(0,0,0,0.3)' : '#F8FAFC' }}>
                             <div style={{ maxHeight: 260, overflowY: 'auto' }}>
                               {regs.map((reg, i) => {
                                 const regEnabled = reg.enabled !== false;
                                 return (
-                                  <div key={reg.id ?? i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderTop: i === 0 ? 'none' : `1px solid ${border}`, opacity: regEnabled ? 1 : 0.5 }}>
+                                  <div key={reg.id ?? i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderTop: i === 0 ? 'none' : `1px solid ${border}`, opacity: regEnabled ? 1 : 0.5 }}>
                                     <Hash size={11} color={muted} style={{ flexShrink: 0 }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name ?? `Register ${i + 1}`}</div>
-                                      <div style={{ fontSize: '0.6rem', color: muted }}>
+                                      <div style={{ fontSize: '0.72rem', fontWeight: 600, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>{reg.name ?? `Register ${i + 1}`}</div>
+                                      <div style={{ fontSize: '0.6rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>
                                         {reg.address != null && `0x${reg.address.toString(16).toUpperCase().padStart(4, '0')}`}
                                         {reg.data_type && ` · ${reg.data_type}`}
                                         {reg.unit && ` · ${reg.unit}`}
                                       </div>
                                     </div>
-                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: regEnabled ? '#22c55e' : '#64748b' }}>{regEnabled ? 'ON' : 'OFF'}</span>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: regEnabled ? '#2FBF71' : '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>{regEnabled ? 'ON' : 'OFF'}</span>
                                   </div>
                                 );
                               })}
@@ -332,23 +323,22 @@ const MobileConfiguration: React.FC = () => {
           })}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 0 4px' }}>
             <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
-              style={{ padding: '6px 16px', background: page > 1 ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 8, cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? accent : muted, fontSize: '0.75rem', fontWeight: 600 }}>
+              style={{ padding: '6px 16px', background: page > 1 ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? accent : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
               Prev
             </button>
             <div style={{ display: 'flex', gap: 4 }}>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
-                  style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${p === page ? accent : border}`, background: p === page ? `${accent}22` : 'transparent', cursor: 'pointer', color: p === page ? accent : muted, fontSize: '0.72rem', fontWeight: 700 }}>
+                  style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${p === page ? accent : border}`, background: p === page ? `${accent}18` : 'transparent', cursor: 'pointer', color: p === page ? accent : muted, fontSize: '0.72rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
                   {p}
                 </button>
               ))}
             </div>
             <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
-              style={{ padding: '6px 16px', background: page < totalPages ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 8, cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? accent : muted, fontSize: '0.75rem', fontWeight: 600 }}>
+              style={{ padding: '6px 16px', background: page < totalPages ? `${accent}18` : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? accent : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
               Next
             </button>
           </div>

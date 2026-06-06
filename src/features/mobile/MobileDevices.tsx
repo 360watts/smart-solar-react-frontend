@@ -35,8 +35,6 @@ interface LogEntry {
   message: string;
 }
 
-// ── Log panel ─────────────────────────────────────────────────────────────────
-
 const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; muted: string; sub: string }> = ({ deviceId, isDark, border, muted, sub }) => {
   const [logs, setLogs]       = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +43,6 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError('');
-    // DB-based logs removed (F-027). Logs are now stored as files in S3.
     setLogs([]);
     setLoading(false);
     return () => { cancelled = true; };
@@ -53,31 +50,31 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
 
   const levelColor = (l: string) => {
     const u = l.toUpperCase();
-    if (u === 'ERROR' || u === 'CRITICAL') return '#ef4444';
-    if (u === 'WARNING' || u === 'WARN')   return '#f59e0b';
-    if (u === 'INFO')                       return '#3b82f6';
+    if (u === 'ERROR' || u === 'CRITICAL') return '#F87171';
+    if (u === 'WARNING' || u === 'WARN')   return '#F59E0B';
+    if (u === 'INFO')                       return '#60A5FA';
     return muted;
   };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '14px 0', color: muted, fontSize: '0.72rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '14px 0', color: muted, fontSize: '0.72rem', fontFamily: "'DM Sans', sans-serif" }}>
       <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading logs…
     </div>
   );
-  if (error) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: '#ef4444' }}>{error}</div>;
-  if (logs.length === 0) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: muted }}>No log entries found</div>;
+  if (error) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: '#F87171', fontFamily: "'DM Sans', sans-serif" }}>{error}</div>;
+  if (logs.length === 0) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No log entries found</div>;
 
   return (
-    <div style={{ marginTop: 8, borderRadius: 8, border: `1px solid ${border}`, background: isDark ? '#050b14' : '#f8fafc', overflow: 'hidden' }}>
+    <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', overflow: 'hidden' }}>
       <div style={{ maxHeight: 240, overflowY: 'auto' }}>
         {logs.map((entry, i) => (
-          <div key={entry.id} style={{ display: 'flex', gap: 8, padding: '6px 10px', borderTop: i === 0 ? 'none' : `1px solid ${border}` }}>
-            <span style={{ flexShrink: 0, minWidth: 32, fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', color: levelColor(entry.log_level), paddingTop: 1 }}>
+          <div key={entry.id} style={{ display: 'flex', gap: 8, padding: '7px 11px', borderTop: i === 0 ? 'none' : `1px solid ${border}` }}>
+            <span style={{ flexShrink: 0, minWidth: 32, fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', color: levelColor(entry.log_level), paddingTop: 1, fontFamily: "'JetBrains Mono', monospace" }}>
               {entry.log_level.slice(0, 4)}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.68rem', color: isDark ? '#cbd5e1' : '#334155', lineHeight: 1.4, wordBreak: 'break-word' }}>{entry.message}</div>
-              <div style={{ fontSize: '0.6rem', color: muted, marginTop: 2 }}>
+              <div style={{ fontSize: '0.68rem', color: isDark ? '#CBD5E1' : '#334155', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{entry.message}</div>
+              <div style={{ fontSize: '0.6rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
                 {new Date(entry.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
             </div>
@@ -87,8 +84,6 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
     </div>
   );
 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmtLastSeen = (ts?: string) => {
   if (!ts) return '—';
@@ -115,18 +110,15 @@ const fmtBytes = (b?: number | null) => {
   return `${(b / 1024).toFixed(0)} KB`;
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 const MobileDevices: React.FC = () => {
   const { isDark } = useTheme();
 
-  const bg      = isDark ? '#060d18' : '#f0fdf4';
-  const surface = isDark ? '#0d1829' : '#ffffff';
-  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
-  const text    = isDark ? '#f1f5f9' : '#0f172a';
-  const muted   = isDark ? '#64748b' : '#94a3b8';
-  const sub     = isDark ? '#94a3b8' : '#94a3b8';
-  const accent  = '#00a63e';
+  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
+  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const accent  = '#2FBF71';
 
   const [devices,    setDevices]    = useState<Device[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -158,17 +150,23 @@ const MobileDevices: React.FC = () => {
 
   const counts = { total: devices.length, online: devices.filter(d => d.is_online).length, offline: devices.filter(d => !d.is_online).length, warn: devices.filter(d => d.heartbeat_health?.severity === 'warn' || d.heartbeat_health?.severity === 'critical').length };
 
-  const healthColor = (h?: Device['heartbeat_health']) => !h || h.severity === 'ok' ? '#22c55e' : h.severity === 'warn' ? '#f59e0b' : '#ef4444';
+  const healthColor = (h?: Device['heartbeat_health']) => !h || h.severity === 'ok' ? '#2FBF71' : h.severity === 'warn' ? '#F59E0B' : '#F87171';
 
   const signalBar = (dbm: number | null | undefined) => {
     if (dbm == null) return null;
-    const c = dbm > -60 ? '#22c55e' : dbm > -75 ? '#f59e0b' : '#ef4444';
+    const c = dbm > -60 ? '#2FBF71' : dbm > -75 ? '#F59E0B' : '#F87171';
     const label = dbm > -60 ? 'Strong' : dbm > -75 ? 'Fair' : 'Weak';
+    const bars = [dbm > -90, dbm > -75, dbm > -60];
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem' }}>
-        <Signal size={12} color={c} />
-        <span style={{ color: c, fontWeight: 600 }}>{label}</span>
-        <span style={{ color: muted }}>({dbm} dBm)</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}` }}>
+        <Signal size={13} color={c} />
+        <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 14 }}>
+          {bars.map((on, i) => (
+            <div key={i} style={{ width: 4, height: `${(i + 1) * 33}%`, borderRadius: 2, background: on ? c : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
+          ))}
+        </div>
+        <span style={{ fontSize: '0.72rem', color: c, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+        <span style={{ fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginLeft: 'auto' }}>{dbm} dBm</span>
       </div>
     );
   };
@@ -177,53 +175,45 @@ const MobileDevices: React.FC = () => {
     setFn(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
-  const card = (extra?: React.CSSProperties): React.CSSProperties => ({
-    background: surface, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', ...extra,
-  });
-
-  const pill = (active: boolean, color = accent): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600,
-    cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0,
-    background: active ? `${color}22` : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
-    color: active ? color : sub,
-  });
-
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
-      <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.875rem' }}>Loading…</span>
+      <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+      <span style={{ fontSize: '0.8rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
     </div>
   );
 
   return (
     <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
 
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #004d1e, #006b2b)', padding: '14px 16px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Devices</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginTop: 1 }}>
-              {counts.online} online · {counts.offline} offline
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif" }}>Devices</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", marginTop: 1 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: accent }}>{counts.online}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: muted }}>/{counts.total}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'DM Sans', sans-serif", marginLeft: 6 }}>online</span>
             </div>
           </div>
-          <button onClick={() => { setRefreshing(true); fetchDevices(true); }}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, cursor: 'pointer', color: '#fff', padding: '6px 8px', display: 'flex' }}>
-            <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          <button
+            onClick={() => { setRefreshing(true); fetchDevices(true); }}
+            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+          >
+            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
           </button>
         </div>
 
-        {/* KPI */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
           {[
-            { label: 'Total',   value: counts.total,   bg: 'rgba(255,255,255,0.1)',  color: 'rgba(255,255,255,0.9)' },
-            { label: 'Online',  value: counts.online,  bg: 'rgba(34,197,94,0.25)',   color: '#86efac' },
-            { label: 'Offline', value: counts.offline, bg: 'rgba(100,116,139,0.2)',  color: '#94a3b8' },
-            { label: 'Issues',  value: counts.warn,    bg: counts.warn > 0 ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.08)', color: counts.warn > 0 ? '#fcd34d' : 'rgba(255,255,255,0.5)' },
-          ].map(({ label, value, bg: kBg, color }) => (
-            <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color }}>{value}</div>
-              <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{label}</div>
+            { label: 'Total',   value: counts.total,   color: text },
+            { label: 'Online',  value: counts.online,  color: accent },
+            { label: 'Offline', value: counts.offline, color: '#64748b' },
+            { label: 'Issues',  value: counts.warn,    color: counts.warn > 0 ? '#F59E0B' : muted },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}`, flexShrink: 0 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.82rem', fontWeight: 700, color }}>{value}</span>
+              <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -231,161 +221,182 @@ const MobileDevices: React.FC = () => {
 
       <div style={{ padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, border: `1px solid ${border}`, borderRadius: 10, padding: '8px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 12, padding: '10px 12px' }}>
           <Search size={14} color={muted} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search serial, model, HW ID…"
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text }} />
-          {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}><X size={13} color={muted} /></button>}
-        </div>
-
-        {/* Filter pills */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['all', 'online', 'offline'] as const).map(f => (
-            <button key={f} style={pill(filter === f, f === 'online' ? '#22c55e' : f === 'offline' ? '#64748b' : accent)} onClick={() => setFilter(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)} {f !== 'all' && `(${f === 'online' ? counts.online : counts.offline})`}
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search serial, model, HW ID…"
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'DM Sans', sans-serif" }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
+              <X size={13} color={muted} />
             </button>
-          ))}
+          )}
         </div>
 
-        <div style={{ fontSize: '0.7rem', color: muted }}>{filtered.length} device{filtered.length !== 1 ? 's' : ''}</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['all', 'online', 'offline'] as const).map(f => {
+            const color = f === 'online' ? accent : f === 'offline' ? '#64748b' : accent;
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'DM Sans', sans-serif" }}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)} {f !== 'all' && `(${f === 'online' ? counts.online : counts.offline})`}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Device cards */}
+        <div style={{ fontSize: '0.65rem', color: muted, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+          {filtered.length} device{filtered.length !== 1 ? 's' : ''}
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.length === 0 ? (
-            <div style={{ ...card(), padding: '40px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.875rem', color: muted }}>No devices match filter</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 20px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16 }}>
+              <Cpu size={32} color={border} style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No devices match filter</div>
             </div>
           ) : filtered.map(device => {
-            const hc      = healthColor(device.heartbeat_health);
-            const isExp   = expanded.has(device.id);
-            const isLogs  = logsOpen.has(device.id);
-            const health  = device.heartbeat_health;
-            const uptime  = fmtUptime(device.uptime_seconds);
+            const hc     = healthColor(device.heartbeat_health);
+            const isExp  = expanded.has(device.id);
+            const isLogs = logsOpen.has(device.id);
+            const health = device.heartbeat_health;
+            const uptime = fmtUptime(device.uptime_seconds);
             const freeMem = fmtBytes(device.free_memory_bytes);
+            const onlineColor = device.is_online ? '#2FBF71' : '#475569';
 
             return (
-              <div key={device.id} style={card()}>
-                {/* Card header */}
-                <button onClick={() => toggle(expanded, setExpanded, device.id)}
-                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: device.is_online ? 'rgba(34,197,94,0.1)' : 'rgba(100,116,139,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${device.is_online ? 'rgba(34,197,94,0.2)' : 'rgba(100,116,139,0.15)'}` }}>
-                    {device.is_online ? <Wifi size={16} color="#22c55e" /> : <WifiOff size={16} color="#64748b" />}
+              <div key={device.id} style={{ background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16, overflow: 'hidden' }}>
+                <button
+                  onClick={() => toggle(expanded, setExpanded, device.id)}
+                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: device.is_online ? 'rgba(47,191,113,0.12)' : 'rgba(71,85,105,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${device.is_online ? 'rgba(47,191,113,0.25)' : 'rgba(71,85,105,0.2)'}` }}>
+                    {device.is_online ? <Wifi size={16} color="#2FBF71" /> : <WifiOff size={16} color="#475569" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.875rem', fontWeight: 700, color: text }}>{device.device_serial}</span>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: device.is_online ? 'rgba(34,197,94,0.1)' : 'rgba(100,116,139,0.1)', color: device.is_online ? '#22c55e' : '#64748b' }}>
-                        {device.is_online ? 'Online' : 'Offline'}
-                      </span>
-                    </div>
-                    {device.model && <div style={{ fontSize: '0.7rem', color: muted, marginTop: 2 }}>{device.model}</div>}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: sub }}>
-                        <Clock size={11} color={muted} />{fmtLastSeen(device.last_seen_at ?? device.last_heartbeat)}
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.875rem', fontWeight: 700, color: text, marginBottom: 3 }}>{device.device_serial}</div>
+                    {device.model && <div style={{ fontSize: '0.68rem', color: muted, fontFamily: "'DM Sans', sans-serif", marginBottom: 4 }}>{device.model}</div>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.67rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>
+                        <Clock size={10} color={muted} />{fmtLastSeen(device.last_seen_at ?? device.last_heartbeat)}
                       </div>
                       {device.pending_config_update && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: '#f59e0b', fontWeight: 600 }}>
-                          <AlertTriangle size={10} color="#f59e0b" />Config pending
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: '#F59E0B', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+                          <AlertTriangle size={10} color="#F59E0B" />Config pending
                         </div>
                       )}
                     </div>
                   </div>
-                  <div style={{ color: muted, flexShrink: 0 }}>
-                    {isExp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: hc, boxShadow: `0 0 6px ${hc}80` }} />
+                    <div style={{ color: muted }}>
+                      {isExp ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </div>
                   </div>
                 </button>
 
-                {/* Expanded details */}
                 {isExp && (
-                  <div style={{ padding: '0 12px 12px', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
+                  <div style={{ borderTop: `1px solid ${border}` }}>
+                    {health && health.severity !== 'ok' && (
+                      <div style={{ height: 3, background: hc, opacity: 0.7 }} />
+                    )}
+                    <div style={{ padding: '12px 13px 13px' }}>
 
-                    {/* Info grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                      {device.hw_id && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>HW ID</div>
-                          <div style={{ fontSize: '0.72rem', fontFamily: 'monospace', fontWeight: 600, color: sub }}>{device.hw_id}</div>
-                        </div>
-                      )}
-                      {device.firmware_version && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Firmware</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Shield size={11} color={muted} />{device.firmware_version}</div>
-                        </div>
-                      )}
-                      {device.connectivity_type && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Connectivity</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Radio size={11} color={muted} />{device.connectivity_type}</div>
-                        </div>
-                      )}
-                      {device.device_temp_c != null && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temperature</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.device_temp_c > 70 ? '#ef4444' : sub }}>
-                            <Thermometer size={11} color={device.device_temp_c > 70 ? '#ef4444' : muted} />{device.device_temp_c.toFixed(1)}°C
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        {device.hw_id && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>HW ID</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.68rem', fontWeight: 600, color: muted }}>{device.hw_id}</div>
                           </div>
-                        </div>
-                      )}
-                      {uptime && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Uptime</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: sub }}><Activity size={11} color={muted} />{uptime}</div>
-                        </div>
-                      )}
-                      {device.cpu_usage_pct != null && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>CPU</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.cpu_usage_pct > 80 ? '#ef4444' : sub }}>
-                            <Cpu size={11} color={device.cpu_usage_pct > 80 ? '#ef4444' : muted} />{device.cpu_usage_pct.toFixed(0)}%
+                        )}
+                        {device.firmware_version && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Firmware</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Shield size={10} color={muted} />{device.firmware_version}</div>
                           </div>
+                        )}
+                        {device.connectivity_type && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Connectivity</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Radio size={10} color={muted} />{device.connectivity_type}</div>
+                          </div>
+                        )}
+                        {device.device_temp_c != null && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Temperature</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.device_temp_c > 70 ? '#F87171' : muted, fontFamily: "'JetBrains Mono', monospace" }}>
+                              <Thermometer size={10} color={device.device_temp_c > 70 ? '#F87171' : muted} />{device.device_temp_c.toFixed(1)}°C
+                            </div>
+                          </div>
+                        )}
+                        {uptime && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Uptime</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Activity size={10} color={muted} />{uptime}</div>
+                          </div>
+                        )}
+                        {device.cpu_usage_pct != null && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>CPU</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.cpu_usage_pct > 80 ? '#F87171' : muted, fontFamily: "'JetBrains Mono', monospace" }}>
+                              <Cpu size={10} color={device.cpu_usage_pct > 80 ? '#F87171' : muted} />{device.cpu_usage_pct.toFixed(0)}%
+                            </div>
+                          </div>
+                        )}
+                        {freeMem && (
+                          <div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Free Mem</div>
+                            <div style={{ fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{freeMem}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {device.signal_strength_dbm != null && (
+                        <div style={{ marginBottom: 8 }}>
+                          {signalBar(device.signal_strength_dbm)}
                         </div>
                       )}
-                      {freeMem && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Free Mem</div>
-                          <div style={{ fontSize: '0.72rem', color: sub }}>{freeMem}</div>
+
+                      {health && health.severity !== 'ok' && (health.issues?.length ?? 0) > 0 && (
+                        <div style={{ marginBottom: 8, padding: '9px 11px', borderRadius: 10, background: `${hc}10`, border: `1px solid ${hc}30` }}>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: hc, marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Health Issues</div>
+                          {health.issues!.map((issue, i) => (
+                            <div key={i} style={{ fontSize: '0.72rem', color: hc, fontWeight: 500, lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>{issue}</div>
+                          ))}
                         </div>
                       )}
-                    </div>
 
-                    {/* Signal */}
-                    {device.signal_strength_dbm != null && signalBar(device.signal_strength_dbm)}
-
-                    {/* Health issues */}
-                    {health && health.severity !== 'ok' && (health.issues?.length ?? 0) > 0 && (
-                      <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: `${hc}12`, border: `1px solid ${hc}30` }}>
-                        <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', color: hc, marginBottom: 4, letterSpacing: '0.04em' }}>Health Issues</div>
-                        {health.issues!.map((issue, i) => (
-                          <div key={i} style={{ fontSize: '0.7rem', color: hc, fontWeight: 500, lineHeight: 1.5 }}>{issue}</div>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                        {[
+                          { label: 'Auto Reboot', on: device.auto_reboot_enabled },
+                          { label: 'Logs',        on: device.logs_enabled !== false },
+                          { label: 'Config Sync', on: !device.pending_config_update },
+                        ].map(({ label, on }) => (
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(47,191,113,0.1)' : 'rgba(71,85,105,0.12)', color: on ? '#2FBF71' : '#64748b', border: `1px solid ${on ? 'rgba(47,191,113,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'DM Sans', sans-serif" }}>
+                            <Settings size={9} />{label}
+                          </div>
                         ))}
                       </div>
-                    )}
 
-                    {/* Feature flags */}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                      {[
-                        { label: 'Auto Reboot', on: device.auto_reboot_enabled },
-                        { label: 'Logs',        on: device.logs_enabled !== false },
-                        { label: 'Config Sync', on: !device.pending_config_update },
-                      ].map(({ label, on }) => (
-                        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(34,197,94,0.1)' : 'rgba(100,116,139,0.1)', color: on ? '#22c55e' : '#64748b', border: `1px solid ${on ? 'rgba(34,197,94,0.2)' : 'rgba(100,116,139,0.15)'}` }}>
-                          <Settings size={9} />{label}
-                        </div>
-                      ))}
+                      <button
+                        onClick={() => toggle(logsOpen, setLogsOpen, device.id)}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 11px', borderRadius: 9, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', cursor: 'pointer' }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', fontWeight: 600, color: muted, fontFamily: "'DM Sans', sans-serif" }}>
+                          <FileText size={12} color={muted} />Device Logs
+                        </span>
+                        {isLogs ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
+                      </button>
+
+                      {isLogs && <LogPanel deviceId={device.id} isDark={isDark} border={border} muted={muted} sub={muted} />}
                     </div>
-
-                    {/* Logs toggle */}
-                    <button onClick={() => toggle(logsOpen, setLogsOpen, device.id)}
-                      style={{ marginTop: 10, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', cursor: 'pointer' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 600, color: muted }}>
-                        <FileText size={12} color={muted} />Device Logs
-                      </span>
-                      {isLogs ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
-                    </button>
-
-                    {isLogs && <LogPanel deviceId={device.id} isDark={isDark} border={border} muted={muted} sub={sub} />}
                   </div>
                 )}
               </div>

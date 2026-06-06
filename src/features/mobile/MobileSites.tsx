@@ -26,20 +26,19 @@ interface SiteRow {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active: '#22c55e', commissioning: '#f59e0b', inactive: '#64748b', archived: '#94a3b8',
+  active: '#2FBF71', commissioning: '#F59E0B', inactive: '#64748b', archived: '#94a3b8',
 };
 
 const MobileSites: React.FC = () => {
   const { isDark } = useTheme();
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
 
-  const bg      = isDark ? '#060d18' : '#f0fdf4';
-  const surface = isDark ? '#0d1829' : '#ffffff';
-  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.14)';
-  const text    = isDark ? '#f1f5f9' : '#0f172a';
-  const muted   = isDark ? '#64748b' : '#94a3b8';
-  const sub     = isDark ? '#94a3b8' : '#94a3b8';
-  const accent  = '#00a63e';
+  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
+  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const accent  = '#2FBF71';
 
   const [sites,        setSites]        = useState<SiteRow[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -80,17 +79,6 @@ const MobileSites: React.FC = () => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
 
-  const card = (extra?: React.CSSProperties): React.CSSProperties => ({
-    background: surface, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', ...extra,
-  });
-
-  const pill = (active: boolean, color = accent): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600,
-    cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' as const, flexShrink: 0,
-    background: active ? `${color}22` : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
-    color: active ? color : sub,
-  });
-
   const fmtUpdated = (ts?: string) => {
     if (!ts) return null;
     const d = Date.now() - new Date(ts).getTime();
@@ -102,36 +90,41 @@ const MobileSites: React.FC = () => {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
-      <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.875rem' }}>Loading…</span>
+      <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+      <span style={{ fontSize: '0.8rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
     </div>
   );
 
   return (
     <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
 
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #004d1e, #006b2b)', padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sites</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginTop: 1 }}>{counts.active} active · {counts.online} gateways online</div>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif" }}>Sites</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", marginTop: 1 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: accent }}>{counts.total}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'DM Sans', sans-serif", marginLeft: 6 }}>{counts.online} online</span>
+            </div>
           </div>
-          <button onClick={() => { setRefreshing(true); fetchSites(true); }}
-            style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, cursor: 'pointer', color: '#fff', padding: '6px 8px', display: 'flex' }}>
-            <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          <button
+            onClick={() => { setRefreshing(true); fetchSites(true); }}
+            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+          >
+            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
           {[
-            { label: 'Total',     value: counts.total,     bg: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.9)' },
-            { label: 'Active',    value: counts.active,    bg: 'rgba(34,197,94,0.25)',  color: '#86efac' },
-            { label: 'Online',    value: counts.online,    bg: 'rgba(34,197,94,0.2)',   color: '#86efac' },
-            { label: 'Attention', value: counts.attention, bg: counts.attention > 0 ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.08)', color: counts.attention > 0 ? '#fcd34d' : 'rgba(255,255,255,0.4)' },
-          ].map(({ label, value, bg: kBg, color }) => (
-            <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color }}>{value}</div>
-              <div style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{label}</div>
+            { label: 'Total',  value: counts.total,     color: text },
+            { label: 'Online', value: counts.online,    color: accent },
+            { label: 'Offline', value: counts.total - counts.online, color: '#64748b' },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}` }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', fontWeight: 700, color }}>{value}</span>
+              <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -140,139 +133,172 @@ const MobileSites: React.FC = () => {
       <div style={{ padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
         {counts.capacity > 0 && (
-          <div style={card({ padding: '10px 14px' })}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Zap size={14} color="#eab308" />
-              <span style={{ fontSize: '0.72rem', color: sub }}>Fleet capacity: </span>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: text }}>{counts.capacity.toFixed(1)} kWp</span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 12 }}>
+            <Zap size={13} color="#F59E0B" />
+            <span style={{ fontSize: '0.7rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Fleet capacity</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', fontWeight: 700, color: '#F59E0B', marginLeft: 'auto' }}>{counts.capacity.toFixed(1)} kWp</span>
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, border: `1px solid ${border}`, borderRadius: 10, padding: '8px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 12, padding: '10px 12px' }}>
           <Search size={14} color={muted} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search sites…"
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text }} />
-          {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}><X size={13} color={muted} /></button>}
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search sites…"
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'DM Sans', sans-serif" }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
+              <X size={13} color={muted} />
+            </button>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-          {['all', 'active', 'commissioning', 'inactive'].map(s => (
-            <button key={s} style={pill(statusFilter === s, STATUS_COLOR[s] ?? accent)} onClick={() => setStatusFilter(s)}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
+          {['all', 'active', 'commissioning', 'inactive'].map(s => {
+            const color = STATUS_COLOR[s] ?? accent;
+            const active = statusFilter === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'DM Sans', sans-serif" }}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ fontSize: '0.7rem', color: muted }}>{filtered.length} site{filtered.length !== 1 ? 's' : ''}</div>
+        <div style={{ fontSize: '0.65rem', color: muted, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+          {filtered.length} site{filtered.length !== 1 ? 's' : ''}
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.length === 0 ? (
-            <div style={{ ...card(), padding: '40px 20px', textAlign: 'center' }}>
-              <MapPin size={28} color={border} style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontSize: '0.875rem', color: muted }}>No sites match filter</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 20px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16 }}>
+              <MapPin size={32} color={border} style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No sites match filter</div>
             </div>
           ) : filtered.map(site => {
-            const gwOnline   = site.gateway_device?.is_online;
-            const gwHealth   = site.gateway_device?.heartbeat_health?.severity;
-            const status     = site.site_status ?? (site.is_active ? 'active' : 'inactive');
-            const sc         = STATUS_COLOR[status] ?? '#3b82f6';
-            const devCount   = site.devices?.length ?? 0;
-            const onlineDev  = site.devices?.filter(d => d.is_online).length ?? 0;
-            const isExp      = expanded.has(site.site_id);
-            const updated    = fmtUpdated(site.updated_at);
+            const gwOnline  = site.gateway_device?.is_online;
+            const gwHealth  = site.gateway_device?.heartbeat_health?.severity;
+            const status    = site.site_status ?? (site.is_active ? 'active' : 'inactive');
+            const sc        = STATUS_COLOR[status] ?? '#60A5FA';
+            const devCount  = site.devices?.length ?? 0;
+            const onlineDev = site.devices?.filter(d => d.is_online).length ?? 0;
+            const isExp     = expanded.has(site.site_id);
+            const updated   = fmtUpdated(site.updated_at);
 
             return (
-              <div key={site.site_id} style={card()}>
-                <button onClick={() => toggle(site.site_id)}
-                  style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '12px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: `${sc}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${sc}30` }}>
-                    {gwOnline ? <Wifi size={16} color={sc} /> : <WifiOff size={16} color="#64748b" />}
-                  </div>
+              <div key={site.site_id} style={{ background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16, overflow: 'hidden' }}>
+                <div style={{ display: 'flex' }}>
+                  <div style={{ width: 4, flexShrink: 0, background: gwOnline ? sc : '#334155' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{site.display_name}</span>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: `${sc}18`, color: sc }}>{status}</span>
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: muted, fontFamily: 'monospace', marginBottom: 4 }}>{site.site_id}</div>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.68rem', color: gwOnline ? '#22c55e' : '#64748b', fontWeight: 600 }}>{gwOnline ? '● Online' : '○ Offline'}</span>
-                      {devCount > 0 && <span style={{ fontSize: '0.68rem', color: sub }}>{onlineDev}/{devCount} devices</span>}
-                      {site.capacity_kw && <span style={{ fontSize: '0.68rem', color: sub }}>{site.capacity_kw} kWp</span>}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                    {isExp ? <ChevronUp size={14} color={muted} /> : <ChevronDown size={14} color={muted} />}
-                    <button onClick={e => { e.stopPropagation(); navigate(`/sites/${site.site_id}`); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, background: `${accent}15`, border: `1px solid ${accent}30`, cursor: 'pointer', color: accent, fontSize: '0.62rem', fontWeight: 700 }}>
-                      Open <ChevronRight size={11} />
+                    <button
+                      onClick={() => toggle(site.site_id)}
+                      style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13px 13px 13px 12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{site.display_name}</span>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: `${sc}20`, color: sc, fontFamily: "'DM Sans', sans-serif", border: `1px solid ${sc}40` }}>{status}</span>
+                        </div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', color: muted, marginBottom: 5 }}>{site.site_id}</div>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.67rem', color: gwOnline ? '#2FBF71' : '#64748b', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{gwOnline ? '● Online' : '○ Offline'}</span>
+                          {devCount > 0 && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{onlineDev}/{devCount} devices</span>}
+                          {site.capacity_kw && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.capacity_kw} kWp</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); navigate(`/sites/${site.site_id}`); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 10px', borderRadius: 8, background: `${accent}18`, border: `1px solid ${accent}35`, cursor: 'pointer', color: accent, fontSize: '0.65rem', fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          Open <ChevronRight size={11} />
+                        </button>
+                        {isExp ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
+                      </div>
                     </button>
-                  </div>
-                </button>
 
-                {isExp && (
-                  <div style={{ padding: '0 12px 12px', borderTop: `1px solid ${border}`, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      {site.latitude != null && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Location</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: sub }}><MapPin size={10} color={muted} />{site.latitude.toFixed(4)}°, {site.longitude?.toFixed(4)}°</div>
-                        </div>
-                      )}
-                      {site.timezone && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Timezone</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: sub }}><Globe size={10} color={muted} />{site.timezone}</div>
-                        </div>
-                      )}
-                      {site.inverter_capacity_kw && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inverter cap.</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: sub }}><Activity size={10} color={muted} />{site.inverter_capacity_kw} kW</div>
-                        </div>
-                      )}
-                      {updated && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Updated</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: sub }}><Clock size={10} color={muted} />{updated}</div>
-                        </div>
-                      )}
-                      {site.gateway_device?.model && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gateway</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: sub }}><Cpu size={10} color={muted} />{site.gateway_device.model}</div>
-                        </div>
-                      )}
-                      {site.gateway_device?.firmware_version && (
-                        <div>
-                          <div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Firmware</div>
-                          <div style={{ fontSize: '0.7rem', color: sub, fontFamily: 'monospace' }}>{site.gateway_device.firmware_version}</div>
-                        </div>
-                      )}
-                    </div>
+                    {isExp && (
+                      <div style={{ padding: '0 13px 13px 12px', borderTop: `1px solid ${border}` }}>
+                        <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            {site.capacity_kw && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Capacity</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Zap size={10} color="#F59E0B" />{site.capacity_kw} kWp</div>
+                              </div>
+                            )}
+                            {site.latitude != null && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Location</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><MapPin size={10} color={muted} />{site.latitude.toFixed(3)}°, {site.longitude?.toFixed(3)}°</div>
+                              </div>
+                            )}
+                            {site.timezone && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Timezone</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Globe size={10} color={muted} />{site.timezone}</div>
+                              </div>
+                            )}
+                            {site.inverter_capacity_kw && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Inverter cap.</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Activity size={10} color={muted} />{site.inverter_capacity_kw} kW</div>
+                              </div>
+                            )}
+                            {updated && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Updated</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Clock size={10} color={muted} />{updated}</div>
+                              </div>
+                            )}
+                            {site.gateway_device?.model && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Gateway</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Cpu size={10} color={muted} />{site.gateway_device.model}</div>
+                              </div>
+                            )}
+                            {site.gateway_device?.firmware_version && (
+                              <div>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Firmware</div>
+                                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.68rem', color: muted }}>{site.gateway_device.firmware_version}</div>
+                              </div>
+                            )}
+                          </div>
 
-                    {(gwHealth === 'warn' || gwHealth === 'critical') && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 8, background: gwHealth === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${gwHealth === 'critical' ? 'rgba(239,68,68,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
-                        <AlertTriangle size={13} color={gwHealth === 'critical' ? '#ef4444' : '#f59e0b'} />
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: gwHealth === 'critical' ? '#ef4444' : '#f59e0b' }}>Gateway health: {gwHealth}</span>
-                      </div>
-                    )}
-
-                    {(site.devices?.length ?? 0) > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 }}>Devices</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {site.devices!.map(d => (
-                            <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', borderRadius: 7, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}` }}>
-                              <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', fontWeight: 600, color: sub }}>{d.device_serial}</span>
-                              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: d.is_online ? '#22c55e' : '#64748b' }}>{d.is_online ? 'Online' : 'Offline'}</span>
+                          {(gwHealth === 'warn' || gwHealth === 'critical') && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 11px', borderRadius: 10, background: gwHealth === 'critical' ? 'rgba(248,113,113,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${gwHealth === 'critical' ? 'rgba(248,113,113,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
+                              <AlertTriangle size={13} color={gwHealth === 'critical' ? '#F87171' : '#F59E0B'} />
+                              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: gwHealth === 'critical' ? '#F87171' : '#F59E0B', fontFamily: "'DM Sans', sans-serif" }}>Gateway health: {gwHealth}</span>
                             </div>
-                          ))}
+                          )}
+
+                          {(site.devices?.length ?? 0) > 0 && (
+                            <div>
+                              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>Devices</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {site.devices!.map(d => (
+                                  <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 9, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}` }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                      {d.is_online ? <Wifi size={12} color="#2FBF71" /> : <WifiOff size={12} color="#64748b" />}
+                                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', fontWeight: 600, color: text }}>{d.device_serial}</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: d.is_online ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{d.is_online ? 'Online' : 'Offline'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
