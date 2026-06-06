@@ -610,10 +610,9 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             status: loadActive ? 'active' : 'inactive',
             color: '#f87171',
             icon: <Home size={24} color="#f87171" />,
-            details: {
-              'Consumption': `${loadFmt.valueStr} ${loadFmt.unit}`,
-              'Solar Loads': solarLoadActive ? `${solarLoadPowerKw.toFixed(2)} kW` : 'Idle',
-              'Grid Loads': gridLoadActive ? `${gridLoadPowerKw.toFixed(2)} kW` : 'Idle',
+            loadSplit: {
+              solarKw: load,
+              gridKw: ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0,
             },
           })} style={{ cursor: 'pointer' }}>
             <NodeCard label="Total Load"

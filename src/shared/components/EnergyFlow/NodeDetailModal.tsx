@@ -27,6 +27,7 @@ export interface NodeData {
   deviceType?: string;
   circuit?: string;
   ctReading?: CtMeterReading;
+  loadSplit?: { solarKw: number; gridKw: number };
 }
 
 interface NodeDetailModalProps {
@@ -185,6 +186,97 @@ function TrendIcon({ kw }: { kw: number }) {
   if (kw > 0.5) return <TrendingUp size={14} color={DS.colors.solarGreen} />;
   if (kw < -0.5) return <TrendingDown size={14} color={DS.colors.error} />;
   return <Minus size={14} color={DS.colors.textDim} />;
+}
+
+// ─── Load split panel ─────────────────────────────────────────────────────────
+
+function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: number; isDark: boolean }) {
+  const total = solarKw + gridKw;
+  const solarPct = total > 0 ? (solarKw / total) * 100 : 50;
+  const gridPct  = total > 0 ? (gridKw  / total) * 100 : 50;
+  const fmtKw = (kw: number) => {
+    const abs = Math.abs(kw);
+    return abs >= 1 ? `${abs.toFixed(2)} kW` : `${(abs * 1000).toFixed(0)} W`;
+  };
+
+  return (
+    <div style={{
+      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+      border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
+      borderRadius: DS.radius.sm,
+      padding: '12px 14px',
+    }}>
+      {/* Two columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        {/* Solar load */}
+        <div style={{
+          background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.07)',
+          border: '1px solid rgba(245,158,11,0.25)',
+          borderRadius: DS.radius.sm, padding: '10px 12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f59e0b' }}>
+              Solar Load
+            </span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: isDark ? DS.colors.textPrimary : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {fmtKw(solarKw)}
+          </div>
+          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>
+            {solarPct.toFixed(0)}% of total · Inverter
+          </div>
+        </div>
+
+        {/* Grid load */}
+        <div style={{
+          background: isDark ? 'rgba(96,165,250,0.08)' : 'rgba(96,165,250,0.07)',
+          border: '1px solid rgba(96,165,250,0.25)',
+          borderRadius: DS.radius.sm, padding: '10px 12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#60a5fa', flexShrink: 0 }} />
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#60a5fa' }}>
+              Grid Load
+            </span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: isDark ? DS.colors.textPrimary : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {fmtKw(gridKw)}
+          </div>
+          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>
+            {gridPct.toFixed(0)}% of total · CT Meter
+          </div>
+        </div>
+      </div>
+
+      {/* Proportional bar */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 8, color: DS.colors.textDim, fontWeight: 600 }}>
+          <span>Solar</span>
+          <span>Grid</span>
+        </div>
+        <div style={{ height: 6, borderRadius: 3, overflow: 'hidden', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', display: 'flex' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${solarPct}%` }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            style={{ height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '3px 0 0 3px' }}
+          />
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${gridPct}%` }}
+            transition={{ duration: 0.7, ease: 'easeOut', delay: 0.05 }}
+            style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '0 3px 3px 0' }}
+          />
+        </div>
+        {total > 0 && (
+          <div style={{ fontSize: 8.5, color: DS.colors.textMuted, marginTop: 5, textAlign: 'center' }}>
+            Total {fmtKw(total)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── 3-Phase CT panel ─────────────────────────────────────────────────────────
@@ -518,6 +610,14 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     <TrendIcon kw={node.power_kw} />
                   </div>
                 </motion.div>
+
+                {/* ── Solar / Grid load split ── */}
+                {node.loadSplit && (
+                  <motion.div custom={2} variants={rowVariants} initial="hidden" animate="visible">
+                    <SectionLabel>Load Breakdown</SectionLabel>
+                    <LoadSplitPanel solarKw={node.loadSplit.solarKw} gridKw={node.loadSplit.gridKw} isDark={isDark} />
+                  </motion.div>
+                )}
 
                 {/* ── Metrics grid ── */}
                 {allDetails.length > 0 && (
