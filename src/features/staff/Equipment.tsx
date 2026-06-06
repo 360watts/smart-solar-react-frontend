@@ -33,6 +33,7 @@ interface Inverter {
   operating_voltage_min_v: string | null; operating_voltage_max_v: string | null; max_input_current_a: string | null;
   anti_islanding: boolean; teda_scheme: string;
   installed_at: string | null; warranty_expires_at: string | null; is_active: boolean; notes: string;
+  logger_serial: string | null;
 }
 
 interface Battery {
@@ -61,6 +62,7 @@ const blankInverter = (): Omit<Inverter, 'id' | 'site'> => ({
   operating_voltage_min_v: '', operating_voltage_max_v: '', max_input_current_a: '',
   anti_islanding: true, teda_scheme: '',
   installed_at: '', warranty_expires_at: '', is_active: true, notes: '',
+  logger_serial: '',
 });
 
 const blankBattery = (): Omit<Battery, 'id' | 'site'> => ({
@@ -91,6 +93,7 @@ const TEXT_FIELDS_ALLOW_EMPTY = new Set([
   'teda_scheme',
   'technology',
   'notes',
+  'logger_serial',
 ]);
 
 const cleanNulls = (obj: Record<string, any>) =>
@@ -393,6 +396,7 @@ const InverterSection: React.FC<{
               <div style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1', marginTop: 4 }}>Installation</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <FormField label="TEDA Scheme" value={form.teda_scheme} onChange={v => f('teda_scheme', v)} isDark={isDark} placeholder="e.g., TEDA-2026-A" />
+                <FormField label="Logger Serial (Deye dongle)" value={form.logger_serial ?? ''} onChange={v => f('logger_serial', v)} isDark={isDark} placeholder="e.g., 2430328041" />
                 <FormField label="Installed Date" value={form.installed_at ?? ''} onChange={v => f('installed_at', v)} type="date" isDark={isDark} />
                 <FormField label="Warranty Expires" value={form.warranty_expires_at ?? ''} onChange={v => f('warranty_expires_at', v)} type="date" isDark={isDark} />
               </div>
