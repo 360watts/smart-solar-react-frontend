@@ -700,6 +700,14 @@ class ApiService {
     }
   }
 
+  async getGatewayStatus(siteId: string): Promise<{ is_online: boolean; last_heartbeat: string | null; age_seconds: number | null; serial: string | null } | null> {
+    try {
+      return await this.request(`/sites/${siteId}/gateway-status/`);
+    } catch {
+      return null;
+    }
+  }
+
   // DynamoDB site data
   async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number; aggregate?: 'none' | '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams();

@@ -3441,6 +3441,21 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [weatherSubTab, setWeatherSubTab] = useState<'current' | 'accuracy'>('current');
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
+  const [gatewayOnline, setGatewayOnline] = useState<boolean | null>(null); // null = not yet fetched
+
+  // Poll gateway online status every 30s so EnergyFlow hides immediately when device goes offline.
+  // Complements isDataLive (timestamp age) which has up to 10-min lag after device disconnects.
+  useEffect(() => {
+    if (!siteId) return;
+    let cancelled = false;
+    const poll = async () => {
+      const status = await apiService.getGatewayStatus(siteId);
+      if (!cancelled) setGatewayOnline(status?.is_online ?? null);
+    };
+    poll();
+    const iv = setInterval(poll, 30_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [siteId]);
 
   // Force-refresh vs-actual data, bypassing the in-memory cache, when the chart is first opened
   const refreshVsActualData = useCallback(async () => {
@@ -3726,13 +3741,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
     : false;
 
-  // "Live" = last reading arrived within the past 10 minutes
+  // "Live" = last reading arrived within the past 10 minutes AND gateway is online.
+  // gatewayOnline uses device.last_heartbeat (5-min timeout) — reflects the actual
+  // MQTT connection state, not just data freshness. When null (first load), fall back
+  // to timestamp-only check so there's no flash of "offline" on mount.
   // Deye Cloud data is ~5 min stale by the time the cron writes it + another 5 min until
   // the next cron run → allow 15 min before hiding the flow block for cloud-sourced records.
   const liveThresholdMs = isDeyeCloud ? 15 * 60 * 1000 : 10 * 60 * 1000;
-  const isDataLive = latest?.timestamp
+  const dataFresh = latest?.timestamp
     ? (Date.now() - new Date(latest.timestamp).getTime()) < liveThresholdMs
     : false;
+  // For RS-485 gateway sites: use real-time is_online. For Deye Cloud or unresolved: timestamp only.
+  const isDataLive = isDeyeCloud
+    ? dataFresh
+    : dataFresh && (gatewayOnline === null ? true : gatewayOnline);
 
   const gridExporting = gridKw != null && gridKw < -0.01;  // negative = export (sell)
   const gridImporting = gridKw != null && gridKw >  0.01;  // positive = import (buy)
