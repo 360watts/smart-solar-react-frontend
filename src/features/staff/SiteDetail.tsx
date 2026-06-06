@@ -490,7 +490,7 @@ export default function SiteDetail() {
         )}
 
         {/* ── Segmented Tabs ── */}
-        <div style={{ display: 'flex', gap: 8, padding: 6, background: inputBg, borderRadius: 12, border: `1px solid ${inputBorder}`, marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 6, background: inputBg, borderRadius: 12, border: `1px solid ${inputBorder}`, marginBottom: 24 }}>
           {[
             { id: 'overview', label: 'Overview', icon: <Activity size={14} /> },
             { id: 'gateway', label: 'Gateway Settings', icon: <Wifi size={14} /> },
@@ -500,9 +500,9 @@ export default function SiteDetail() {
             <button
               key={t.id} onClick={() => setTab(t.id as Tab)}
               style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                flex: '1 1 120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: '0.85rem', fontWeight: 600, transition: 'all 200ms',
+                fontSize: '0.85rem', fontWeight: 600, transition: 'all 200ms', whiteSpace: 'nowrap',
                 background: tab === t.id ? (isDark ? 'rgba(255,255,255,0.08)' : '#ffffff') : 'transparent',
                 color: tab === t.id ? textMain : textMute,
                 boxShadow: tab === t.id && !isDark ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'

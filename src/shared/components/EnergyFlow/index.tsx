@@ -229,7 +229,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick, 
         ? `linear-gradient(135deg, ${accentColor}14 0%, ${accentColor}07 100%)`
         : `linear-gradient(135deg, ${accentColor}13 0%, ${accentColor}06 100%)`,
       boxShadow: `0 0 20px ${accentColor}08, 0 2px 8px rgba(0,0,0,0.08)`,
-      padding: '10px 12px 12px', flex: 1, minWidth: 0,
+      padding: '10px 12px 12px', flex: '1 1 180px', minWidth: 0,
       display: 'flex', flexDirection: 'column', transition: 'all 0.25s ease-in-out',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
@@ -393,7 +393,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
       {/* Diagram */}
       <div style={{ padding: '10px 18px 0' }}>
-        <div style={{ position: 'relative', width: '100%', paddingBottom: ASPECT_PAD, minWidth: 320 }}>
+        <div style={{ position: 'relative', width: '100%', paddingBottom: ASPECT_PAD }}>
           <div style={{ position: 'absolute', inset: 0 }}>
             <svg
               viewBox={`0 0 ${VW} ${VH}`}
@@ -579,7 +579,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           )}
         </svg>
 
-        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap' }}>
           <SubSection title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f59e0b'))}

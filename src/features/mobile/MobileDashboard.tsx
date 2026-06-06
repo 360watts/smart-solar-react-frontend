@@ -608,7 +608,7 @@ const MobileDashboard: React.FC = () => {
           </div>
 
           {/* ── KPI 2×2 ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
             {[
               { label: 'Solar Power', val: `${fmtKW(pvW)} kW`, sub2: `${fmtKWh(pvKWh)} kWh today`, icon: <Sun size={18} color="#eab308" />, color: '#eab308' },
               { label: 'Load',        val: `${fmtKW(loadW)} kW`, sub2: `${fmtKWh(ldKWh)} kWh today`, icon: <Zap size={18} color="#3b82f6" />, color: '#3b82f6' },
@@ -629,7 +629,7 @@ const MobileDashboard: React.FC = () => {
           {/* ── Daily Summary ── */}
           <div style={card({ padding: '12px 14px' })}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Today's Energy</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 8 }}>
               {[
                 { label: 'Generated', val: fmtKWh(pvKWh), color: '#eab308' },
                 { label: 'Consumed',  val: fmtKWh(ldKWh), color: '#3b82f6' },

@@ -170,7 +170,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
   return (
     <div style={{
-      width: 232, height: '100%',
+      width: 'min(232px, 90vw)', height: '100%',
       background: sideBg,
       borderRight: `1px solid ${sideBorder}`,
       display: 'flex', flexDirection: 'column',
@@ -426,6 +426,7 @@ const StaffLayout: React.FC = () => {
           padding: '32px 32px',
           minHeight: '100vh',
           boxSizing: 'border-box',
+          overflowX: 'auto',
           color: isDark ? '#F0F4FF' : '#0A0E1A',
           fontFamily: "'Fira Sans', 'DM Sans', sans-serif",
         }}

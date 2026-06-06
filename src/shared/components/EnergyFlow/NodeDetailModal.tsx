@@ -107,11 +107,21 @@ const fmtRelTime = (ts: string): string => {
 const isActive = (status?: string) => status === 'active' || status === 'online';
 
 // Field in site history response per node type
-const HISTORY_FIELD: Partial<Record<NodeType, string>> = {
-  solar: 'pv_kw',
-  battery: 'batt_kw',
-  grid: 'grid_kw',
-  load: 'load_kw',
+// Maps node type to a function that extracts kW from a history row.
+// Backend returns watts from telemetry_5min CAGG: pv1_power_w, pv2_power_w,
+// ac_output_power_w, load_power_w, grid_power_w, battery_power_w.
+const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => number | null>> = {
+  solar: (r) => {
+    const pv1 = Number(r.pv1_power_w ?? 0);
+    const pv2 = Number(r.pv2_power_w ?? 0);
+    const ac = Number(r.ac_output_power_w ?? 0);
+    // Use AC output if PV strings are missing, otherwise sum PV strings
+    const raw = (pv1 === 0 && pv2 === 0 && ac > 0) ? ac : (pv1 + pv2);
+    return raw / 1000;
+  },
+  battery: (r) => r.battery_power_w != null ? Number(r.battery_power_w) / 1000 : null,
+  grid:    (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
+  load:    (r) => r.load_power_w    != null ? Number(r.load_power_w)    / 1000 : null,
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -198,7 +208,9 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     let cancelled = false;
     setSparkLoading(true);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const todayDate = new Date();
+    const today = todayDate.toISOString().slice(0, 10);
+    const tomorrow = new Date(todayDate.getTime() + 86400000).toISOString().slice(0, 10);
 
     const load = async () => {
       try {
@@ -213,16 +225,13 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               t: new Date(r.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
               v: (r.power_w ?? 0) / 1000,
             }));
-        } else if (siteId && HISTORY_FIELD[node.type]) {
-          // Site node: fetch 15-min site history for today
-          const field = HISTORY_FIELD[node.type]!;
-          const rows = await apiService.getSiteHistory(siteId, { start_date: today, end_date: today, aggregate: '15min' });
+        } else if (siteId && HISTORY_EXTRACT[node.type]) {
+          const extract = HISTORY_EXTRACT[node.type]!;
+          const rows = await apiService.getSiteHistory(siteId, { start_date: today, end_date: tomorrow, aggregate: '15min' });
           points = rows
-            .filter(r => r[field] != null)
-            .map(r => ({
-              t: new Date(r.timestamp ?? r.interval ?? r.time ?? '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
-              v: Math.abs(Number(r[field])),
-            }));
+            .map(r => ({ t: new Date(r.timestamp ?? '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }), v: extract(r as Record<string, unknown>) }))
+            .filter((p): p is { t: string; v: number } => p.v != null && !isNaN(p.v))
+            .map(p => ({ ...p, v: Math.abs(p.v) }));
         }
 
         if (!cancelled) setSparkData(points);
@@ -289,7 +298,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               style={{
                 position: 'relative',
                 width: 'min(94vw, 460px)',
-                maxHeight: '88vh',
+                maxHeight: '88dvh',
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 borderRadius: DS.radius.lg,
@@ -438,7 +447,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     <SectionLabel>Details</SectionLabel>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
                       gap: 8,
                     }}>
                       {allDetails.slice(0, 6).map(([k, v], i) => (
@@ -476,7 +485,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                           tick={{ fontSize: 9, fill: DS.colors.textDim, fontWeight: 600 }}
                           tickLine={false}
                           axisLine={false}
-                          interval={11}
+                          interval={Math.max(0, Math.floor(sparkData.length / 6) - 1)}
                         />
                         <defs>
                           <linearGradient id={`grad-${node.id}`} x1="0" y1="0" x2="0" y2="1">

@@ -174,7 +174,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 
   return (
     <div style={{
-      width: 232, height: '100%',
+      width: 'min(232px, 90vw)', height: '100%',
       background: sideBg,
       borderRight: `1px solid ${sideBorder}`,
       display: 'flex', flexDirection: 'column',
@@ -340,6 +340,7 @@ const PortalLayout: React.FC = () => {
         padding: '36px 32px',
         minHeight: '100vh',
         boxSizing: 'border-box',
+        overflowX: 'auto',
       }} className="portal-main">
         <Outlet />
       </main>
@@ -350,7 +351,7 @@ const PortalLayout: React.FC = () => {
       <style>{`
         @media (max-width: 1023px) {
           .portal-desktop-sidebar { display: none !important; }
-          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px !important; }
+          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 80px !important; }
           .portal-mobile-topbar { display: flex !important; }
         }
       `}</style>

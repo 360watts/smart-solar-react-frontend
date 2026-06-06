@@ -590,7 +590,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
         <CloudSun size={16} color="#00a63e" />
         24 h Weather Outlook
       </p>
-      <div style={{ overflowX: 'auto', paddingTop: 8, paddingBottom: 4 }}>
+      <div style={{ overflowX: 'auto', paddingTop: 8, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 'max-content' }}>
           {hourly.map((h, i) => {
             const time = (() => { try { return new Date(h.forecast_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }); } catch { return ''; } })();

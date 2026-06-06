@@ -369,7 +369,7 @@ const Navbar: React.FC = () => {
                   position: 'absolute',
                   top: 'calc(100% + 8px)',
                   right: 0,
-                  width: 220,
+                  width: 'min(220px, calc(100vw - 32px))',
                   background: tok.dropdownBg(isDark),
                   border: `1px solid ${tok.border(isDark)}`,
                   borderRadius: 12,

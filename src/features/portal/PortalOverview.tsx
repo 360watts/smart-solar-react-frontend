@@ -164,7 +164,7 @@ const PortalOverview: React.FC = () => {
   const statusColor   = site.site_status === 'active' ? '#34D399' : '#F59E0B';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, fontFamily: "'DM Sans', sans-serif", maxWidth: 1200, margin: '0 auto', width: '100%' }}>
 
       {/* Header */}
       <div className="portal-fade-in" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>

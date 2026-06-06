@@ -414,7 +414,7 @@ const Dashboard: React.FC = () => {
               <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setDropdownOpen(false)} />
               <div style={{
                 position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 9999,
-                minWidth: 280, maxHeight: 360,
+                minWidth: 'min(280px, calc(100vw - 32px))', maxHeight: 360,
                 background: surface,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
                 borderRadius: 14,
