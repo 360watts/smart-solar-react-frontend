@@ -108,6 +108,10 @@ const STAFF_STYLES = `
     .staff-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 80px !important; }
     .staff-mobile-topbar { display: flex !important; }
   }
+  /* Mobile pages manage all their own padding — zero out layout padding so it doesn't stack */
+  @media (max-width: 768px) {
+    .staff-main { padding: 0 !important; }
+  }
 `;
 
 function injectStaffStyles() {
