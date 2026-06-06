@@ -3,7 +3,7 @@ import { apiService, AlertItem } from '../../services/api';
 import {
   Sun, Battery, Zap, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, MapPin, Clock, RefreshCw, Wifi, WifiOff,
-  Compass, Globe, Thermometer, CloudSun, Droplets, Wind,
+  Compass, Globe, CloudSun, Droplets, Wind,
   Activity, BarChart3,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,6 +13,8 @@ import {
   LineElement, Filler, Tooltip,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import EnergyFlowBlock from '../../shared/components/EnergyFlow';
+import { SmartDeviceNode } from '../../shared/components/EnergyFlow/types';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -48,254 +50,6 @@ function startOfTodayIST(): string {
   return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
 }
 
-interface PowerFlowProps {
-  pvW: number | null; loadW: number | null; gridW: number | null;
-  batW: number | null; soc: number | null; batV: number | null;
-  isExporting: boolean; isImporting: boolean;
-  isBatCharging: boolean; isBatDischarging: boolean;
-  isDark: boolean;
-}
-
-const PowerFlowDiagram: React.FC<PowerFlowProps> = ({
-  pvW, loadW, gridW, batW, soc, batV,
-  isExporting, isImporting, isBatCharging, isBatDischarging, isDark,
-}) => {
-  const PV  = { x: 62,  y: 52  };
-  const BAT = { x: 258, y: 52  };
-  const GRD = { x: 62,  y: 178 };
-  const LOD = { x: 258, y: 178 };
-  const CTR = { x: 160, y: 115 };
-
-  const R  = 22;
-  const RC = 10;
-
-  const edge = (from: {x:number,y:number}, to: {x:number,y:number}, r: number) => {
-    const dx = to.x - from.x, dy = to.y - from.y;
-    const len = Math.hypot(dx, dy);
-    return { x: from.x + (dx/len)*r, y: from.y + (dy/len)*r };
-  };
-
-  const pvOut  = edge(PV,  CTR, R);   const ctrPv  = edge(CTR, PV,  RC);
-  const batOut = edge(BAT, CTR, R);   const ctrBat = edge(CTR, BAT, RC);
-  const grdOut = edge(GRD, CTR, R);   const ctrGrd = edge(CTR, GRD, RC);
-  const lodOut = edge(LOD, CTR, R);   const ctrLod = edge(CTR, LOD, RC);
-
-  const C_SOLAR  = '#F59E0B';
-  const C_LOAD   = '#60A5FA';
-  const C_GRID_E = '#2FBF71';
-  const C_GRID_I = '#F59E0B';
-  const C_BAT_C  = '#2FBF71';
-  const C_BAT_D  = '#A78BFA';
-  const track    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-  const nodeRing = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
-  const nodeFill = isDark ? '#0d1117' : '#ffffff';
-  const tf  = isDark ? '#F1F5F9' : '#0F172A';
-  const tf2 = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
-
-  const pvActive   = pvW   != null && pvW   > 10;
-  const ldActive   = loadW != null && loadW > 10;
-  const gridActive = isExporting || isImporting;
-  const batActive  = isBatCharging || isBatDischarging;
-
-  const gridColor = isExporting ? C_GRID_E : C_GRID_I;
-  const batColor  = isBatCharging ? C_BAT_C : C_BAT_D;
-
-  const spd = (w: number | null) => {
-    const a = Math.abs(w ?? 0);
-    if (a > 4000) return 500;
-    if (a > 2000) return 800;
-    if (a > 800)  return 1200;
-    return 1800;
-  };
-
-  const DA = '5 11';
-
-  const mid = (a: {x:number,y:number}, b: {x:number,y:number}) => ({ x: (a.x+b.x)/2, y: (a.y+b.y)/2 });
-  const midPV  = mid(pvOut,  ctrPv);
-  const midBAT = mid(batOut, ctrBat);
-  const midGRD = mid(grdOut, ctrGrd);
-  const midLOD = mid(lodOut, ctrLod);
-
-  return (
-    <svg viewBox="0 0 320 230" style={{ width: '100%', display: 'block' }} aria-label="Live power flow">
-      <defs>
-        <filter id="pf-glow-solar" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="pf-glow-load" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="pf-glow-grid" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="pf-glow-bat" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <style>{`
-          @keyframes pf-fwd  { from { stroke-dashoffset: 16 } to { stroke-dashoffset: 0  } }
-          @keyframes pf-pulse { 0%,100% { opacity:.7 } 50% { opacity:1 } }
-          .pf-node-active { animation: pf-pulse 2s ease-in-out infinite; }
-        `}</style>
-      </defs>
-
-      {[
-        [pvOut, ctrPv], [batOut, ctrBat], [grdOut, ctrGrd], [lodOut, ctrLod]
-      ].map(([a, b], i) => (
-        <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-          stroke={track} strokeWidth="2.5" strokeLinecap="round"/>
-      ))}
-
-      {pvActive && (
-        <line x1={pvOut.x} y1={pvOut.y} x2={ctrPv.x} y2={ctrPv.y}
-          stroke={C_SOLAR} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={DA}
-          style={{ animation: `pf-fwd ${spd(pvW)}ms linear infinite` }}/>
-      )}
-      {gridActive && (
-        <line
-          x1={isExporting ? ctrGrd.x : grdOut.x} y1={isExporting ? ctrGrd.y : grdOut.y}
-          x2={isExporting ? grdOut.x : ctrGrd.x} y2={isExporting ? grdOut.y : ctrGrd.y}
-          stroke={gridColor} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={DA}
-          style={{ animation: `pf-fwd ${spd(gridW)}ms linear infinite` }}/>
-      )}
-      {batActive && (
-        <line
-          x1={isBatCharging ? ctrBat.x : batOut.x} y1={isBatCharging ? ctrBat.y : batOut.y}
-          x2={isBatCharging ? batOut.x : ctrBat.x} y2={isBatCharging ? batOut.y : ctrBat.y}
-          stroke={batColor} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={DA}
-          style={{ animation: `pf-fwd ${spd(batW)}ms linear infinite` }}/>
-      )}
-      {ldActive && (
-        <line x1={ctrLod.x} y1={ctrLod.y} x2={lodOut.x} y2={lodOut.y}
-          stroke={C_LOAD} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={DA}
-          style={{ animation: `pf-fwd ${spd(loadW)}ms linear infinite` }}/>
-      )}
-
-      <circle cx={CTR.x} cy={CTR.y} r={RC + 4} fill={isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.08)'} />
-      <circle cx={CTR.x} cy={CTR.y} r={RC} fill={nodeFill}
-        stroke="#2FBF71" strokeWidth="1.5"/>
-      <polygon points={`${CTR.x+2},${CTR.y-7} ${CTR.x-3},${CTR.y-1} ${CTR.x+1},${CTR.y-1} ${CTR.x-2},${CTR.y+7} ${CTR.x+4},${CTR.y+0} ${CTR.x-0},${CTR.y+0}`}
-        fill="#2FBF71" opacity="0.9"/>
-
-      {pvActive && (
-        <g>
-          <rect x={midPV.x-18} y={midPV.y-9} width="36" height="17" rx="8"
-            fill={isDark ? 'rgba(255,255,255,0.06)' : '#fffbeb'} stroke={C_SOLAR} strokeWidth="1"/>
-          <text x={midPV.x} y={midPV.y+4} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={C_SOLAR}>
-            {(Math.abs(pvW!)/1000).toFixed(1)} kW
-          </text>
-        </g>
-      )}
-      {gridActive && (
-        <g>
-          <rect x={midGRD.x-18} y={midGRD.y-9} width="36" height="17" rx="8"
-            fill={isDark ? 'rgba(255,255,255,0.06)' : '#f0fdf4'} stroke={gridColor} strokeWidth="1"/>
-          <text x={midGRD.x} y={midGRD.y+4} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={gridColor}>
-            {(Math.abs(gridW!)/1000).toFixed(1)} kW
-          </text>
-        </g>
-      )}
-      {batActive && (
-        <g>
-          <rect x={midBAT.x-18} y={midBAT.y-9} width="36" height="17" rx="8"
-            fill={isDark ? 'rgba(255,255,255,0.06)' : '#f5f3ff'} stroke={batColor} strokeWidth="1"/>
-          <text x={midBAT.x} y={midBAT.y+4} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={batColor}>
-            {(Math.abs(batW!)/1000).toFixed(1)} kW
-          </text>
-        </g>
-      )}
-      {ldActive && (
-        <g>
-          <rect x={midLOD.x-18} y={midLOD.y-9} width="36" height="17" rx="8"
-            fill={isDark ? 'rgba(255,255,255,0.06)' : '#eff6ff'} stroke={C_LOAD} strokeWidth="1"/>
-          <text x={midLOD.x} y={midLOD.y+4} textAnchor="middle" fontSize="8.5" fontWeight="700" fill={C_LOAD}>
-            {(Math.abs(loadW!)/1000).toFixed(1)} kW
-          </text>
-        </g>
-      )}
-
-      <circle cx={PV.x} cy={PV.y} r={R+5} fill={pvActive ? `${C_SOLAR}18` : 'none'}/>
-      <circle cx={PV.x} cy={PV.y} r={R} fill={nodeFill}
-        stroke={pvActive ? C_SOLAR : nodeRing} strokeWidth={pvActive ? 2 : 1.5}
-        filter={pvActive ? 'url(#pf-glow-solar)' : undefined}
-        className={pvActive ? 'pf-node-active' : undefined}/>
-      <circle cx={PV.x} cy={PV.y} r="6" fill={pvActive ? C_SOLAR : tf2} opacity={pvActive ? 1 : 0.4}/>
-      {[0,45,90,135,180,225,270,315].map((deg,i) => {
-        const rad = deg*Math.PI/180;
-        return <line key={i}
-          x1={PV.x+Math.cos(rad)*8} y1={PV.y+Math.sin(rad)*8}
-          x2={PV.x+Math.cos(rad)*11} y2={PV.y+Math.sin(rad)*11}
-          stroke={pvActive ? C_SOLAR : tf2} strokeWidth="1.5" strokeLinecap="round"
-          opacity={pvActive ? 1 : 0.35}/>;
-      })}
-      <text x={PV.x} y={PV.y+R+11} textAnchor="middle" fontSize="9" fontWeight="700"
-        fill={pvActive ? C_SOLAR : tf2} opacity={pvActive ? 1 : 0.55}>
-        {pvW != null ? `${(pvW/1000).toFixed(1)} kW` : '—'}
-      </text>
-      <text x={PV.x} y={PV.y+R+20} textAnchor="middle" fontSize="7.5" fill={tf2} opacity="0.75">Solar PV</text>
-
-      <circle cx={BAT.x} cy={BAT.y} r={R+5} fill={batActive ? `${batColor}18` : 'none'}/>
-      <circle cx={BAT.x} cy={BAT.y} r={R} fill={nodeFill}
-        stroke={batActive ? batColor : nodeRing} strokeWidth={batActive ? 2 : 1.5}
-        filter={batActive ? 'url(#pf-glow-bat)' : undefined}
-        className={batActive ? 'pf-node-active' : undefined}/>
-      <rect x={BAT.x-8} y={BAT.y-6} width="16" height="10" rx="2"
-        fill="none" stroke={batActive ? batColor : tf2} strokeWidth="1.6" opacity={batActive ? 1 : 0.4}/>
-      <rect x={BAT.x+8} y={BAT.y-3.5} width="2.5" height="5" rx="1"
-        fill={batActive ? batColor : tf2} opacity={batActive ? 1 : 0.4}/>
-      {soc != null && (
-        <rect x={BAT.x-6.5} y={BAT.y-4.5}
-          width={Math.max(0,(soc/100)*13)} height="7" rx="1"
-          fill={soc < 20 ? '#F87171' : soc < 50 ? '#F59E0B' : batActive ? batColor : '#2FBF71'}
-          opacity="0.85"/>
-      )}
-      <text x={BAT.x} y={BAT.y+R+11} textAnchor="middle" fontSize="9" fontWeight="700"
-        fill={batActive ? batColor : tf2} opacity={batActive ? 1 : 0.55}>
-        {soc != null ? `${Math.round(soc)}%` : '—%'}{batV != null ? ` · ${batV.toFixed(0)}V` : ''}
-      </text>
-      <text x={BAT.x} y={BAT.y+R+20} textAnchor="middle" fontSize="7.5" fill={tf2} opacity="0.75">
-        {isBatCharging ? 'Charging' : isBatDischarging ? 'Discharge' : 'Battery'}
-      </text>
-
-      <circle cx={GRD.x} cy={GRD.y} r={R+5} fill={gridActive ? `${gridColor}18` : 'none'}/>
-      <circle cx={GRD.x} cy={GRD.y} r={R} fill={nodeFill}
-        stroke={gridActive ? gridColor : nodeRing} strokeWidth={gridActive ? 2 : 1.5}
-        filter={gridActive ? 'url(#pf-glow-grid)' : undefined}
-        className={gridActive ? 'pf-node-active' : undefined}/>
-      <line x1={GRD.x} y1={GRD.y-11} x2={GRD.x} y2={GRD.y+8}
-        stroke={gridActive ? gridColor : tf2} strokeWidth="1.8" strokeLinecap="round" opacity={gridActive ? 1 : 0.4}/>
-      {[-6,0,6].map((dy,i) => (
-        <line key={i} x1={GRD.x-5.5} y1={GRD.y+dy-3} x2={GRD.x+5.5} y2={GRD.y+dy-3}
-          stroke={gridActive ? gridColor : tf2} strokeWidth="1.4" strokeLinecap="round" opacity={gridActive ? 1 : 0.35}/>
-      ))}
-      <text x={GRD.x} y={GRD.y+R+11} textAnchor="middle" fontSize="9" fontWeight="700"
-        fill={gridActive ? gridColor : tf2} opacity={gridActive ? 1 : 0.55}>
-        {gridW != null ? `${(Math.abs(gridW)/1000).toFixed(1)} kW` : '—'}
-      </text>
-      <text x={GRD.x} y={GRD.y+R+20} textAnchor="middle" fontSize="7.5" fill={tf2} opacity="0.75">
-        {isExporting ? 'Exporting' : isImporting ? 'Importing' : 'Grid'}
-      </text>
-
-      <circle cx={LOD.x} cy={LOD.y} r={R+5} fill={ldActive ? `${C_LOAD}12` : 'none'}/>
-      <circle cx={LOD.x} cy={LOD.y} r={R} fill={nodeFill}
-        stroke={ldActive ? C_LOAD : nodeRing} strokeWidth={ldActive ? 2 : 1.5}
-        filter={ldActive ? 'url(#pf-glow-load)' : undefined}/>
-      <polygon points={`${LOD.x},${LOD.y-10} ${LOD.x-9},${LOD.y-2} ${LOD.x+9},${LOD.y-2}`}
-        fill={ldActive ? C_LOAD : tf2} opacity={ldActive ? 0.9 : 0.35}/>
-      <rect x={LOD.x-6.5} y={LOD.y-2} width="13" height="10" rx="1"
-        fill={ldActive ? C_LOAD : tf2} opacity={ldActive ? 0.9 : 0.35}/>
-      <rect x={LOD.x-2.5} y={LOD.y+2} width="5" height="6" rx="1" fill={nodeFill}/>
-      <text x={LOD.x} y={LOD.y+R+11} textAnchor="middle" fontSize="9" fontWeight="700"
-        fill={ldActive ? C_LOAD : tf2} opacity={ldActive ? 1 : 0.55}>
-        {loadW != null ? `${(loadW/1000).toFixed(1)} kW` : '—'}
-      </text>
-      <text x={LOD.x} y={LOD.y+R+20} textAnchor="middle" fontSize="7.5" fill={tf2} opacity="0.75">Consumption</text>
-    </svg>
-  );
-};
 
 const MobileDashboard: React.FC = () => {
   const { isDark } = useTheme();
@@ -316,6 +70,7 @@ const MobileDashboard: React.FC = () => {
   const [telLoading, setTelLoading] = useState(false);
   const [weather, setWeather]     = useState<WeatherData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [smartDevices, setSmartDevices] = useState<SmartDeviceNode[]>([]);
   const sitesInit = useRef(false);
 
   const site = useMemo(() => sites.find(s => s.site_id === selectedId) ?? null, [sites, selectedId]);
@@ -380,6 +135,7 @@ const MobileDashboard: React.FC = () => {
     if (!selectedId) return;
     fetchTelemetry(selectedId);
     fetchWeather(selectedId);
+    apiService.getSmartDevices(selectedId).then(d => setSmartDevices(Array.isArray(d) ? d : [])).catch(() => setSmartDevices([]));
     const id = setInterval(() => fetchTelemetry(selectedId), 60_000);
     return () => clearInterval(id);
   }, [selectedId, fetchTelemetry, fetchWeather]);
@@ -452,7 +208,7 @@ const MobileDashboard: React.FC = () => {
   );
 
   return (
-    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
+    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 68 }}>
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -624,16 +380,15 @@ const MobileDashboard: React.FC = () => {
             </div>
           )}
 
-          <div style={{ ...card(), padding: '12px 10px 8px' }}>
-            <div style={{ ...sectionLabel, paddingLeft: 4 }}>Live Power Flow</div>
-            <PowerFlowDiagram
-              pvW={pvW} loadW={loadW} gridW={gridW} batW={batW}
-              soc={soc} batV={batV}
-              isExporting={isExporting} isImporting={isImporting}
-              isBatCharging={isBatCharging} isBatDischarging={isBatDischarging}
-              isDark={isDark}
-            />
-          </div>
+          <EnergyFlowBlock
+            pvKw={pvW != null ? pvW / 1000 : null}
+            loadKw={loadW != null ? loadW / 1000 : null}
+            gridKw={gridW != null ? gridW / 1000 : null}
+            battKw={batW != null ? batW / 1000 : null}
+            battSoc={soc}
+            smartDevices={smartDevices}
+            siteId={selectedId ?? undefined}
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
             {[

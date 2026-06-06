@@ -203,7 +203,7 @@ const MobileOTA: React.FC = () => {
   };
 
   return (
-    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 96 }}>
+    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 68 }}>
 
       <div style={{ position:'sticky', top:0, zIndex:20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${border}`, padding:'14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>

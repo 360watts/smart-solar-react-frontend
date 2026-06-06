@@ -90,7 +90,7 @@ const MobileAlerts: React.FC = () => {
   );
 
   return (
-    <div style={{ background:bg, minHeight:'100dvh', paddingBottom:96 }}>
+    <div style={{ background:bg, minHeight:'100dvh', paddingBottom:68 }}>
       <style>{`@keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }`}</style>
 
       <div style={{
