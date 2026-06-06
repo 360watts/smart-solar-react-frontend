@@ -131,13 +131,14 @@ function Beam({ d, color, active, speed = 1.6, intensity = 0.5 }: {
   );
 }
 
-function At({ cx, cy, children }: { cx: number; cy: number; children: React.ReactNode }) {
+function At({ cx, cy, scale = 1, children }: { cx: number; cy: number; scale?: number; children: React.ReactNode }) {
   return (
     <div style={{
       position: 'absolute',
       left: `${(cx / VW) * 100}%`,
       top: `${(cy / VH) * 100}%`,
-      transform: 'translate(-50%, -50%)',
+      transform: `translate(-50%, -50%) scale(${scale})`,
+      transformOrigin: 'center center',
       zIndex: 2,
     }}>
       {children}
@@ -375,6 +376,20 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
 
+  // Scale node cards down on narrow containers (mobile) so edges don't clip
+  const diagramRef = useRef<HTMLDivElement>(null);
+  const [nodeScale, setNodeScale] = useState(1);
+  useEffect(() => {
+    const el = diagramRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      setNodeScale(Math.min(1, Math.max(0.6, w / 420)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [ctReading, setCtReading] = useState<CtMeterReading | null>(null);
@@ -485,7 +500,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       )}
 
       {/* Diagram */}
-      <div style={{ padding: '10px 18px 0' }}>
+      <div ref={diagramRef} style={{ padding: '10px 18px 0' }}>
         <div style={{ position: 'relative', width: '100%', paddingBottom: ASPECT_PAD }}>
           <div style={{ position: 'absolute', inset: 0 }}>
             <svg
@@ -525,7 +540,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             </svg>
 
             {/* Node cards */}
-            <At cx={N.pv.x} cy={N.pv.y}>
+            <At cx={N.pv.x} cy={N.pv.y} scale={nodeScale}>
               <div onClick={() => handleNodeClick({
                 type: 'solar',
                 id: 'solar',
@@ -545,8 +560,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   color="#f59e0b" active={pvActive} isDark={isDark} />
               </div>
             </At>
-            <At cx={N.hub.x} cy={N.hub.y}><HubNode isDark={isDark} /></At>
-            <At cx={N.batt.x} cy={N.batt.y}>
+            <At cx={N.hub.x} cy={N.hub.y} scale={nodeScale}><HubNode isDark={isDark} /></At>
+            <At cx={N.batt.x} cy={N.batt.y} scale={nodeScale}>
               <div onClick={() => handleNodeClick({
                 type: 'battery',
                 id: 'battery',
@@ -570,7 +585,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   isDark={isDark} />
               </div>
             </At>
-            <At cx={N.grid.x} cy={N.grid.y}>
+            <At cx={N.grid.x} cy={N.grid.y} scale={nodeScale}>
               <div onClick={() => handleNodeClick({
                 type: 'grid',
                 id: 'grid',
