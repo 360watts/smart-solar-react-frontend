@@ -7,7 +7,7 @@ import { apiService, CtMeterReading } from '../../../services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type NodeType = 'solar' | 'battery' | 'grid' | 'load' | 'device';
+export type NodeType = 'solar' | 'battery' | 'grid' | 'load' | 'device' | 'ctmeter';
 
 export interface NodeData {
   type: NodeType;

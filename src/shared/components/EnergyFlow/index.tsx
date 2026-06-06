@@ -698,7 +698,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             emptyDesc="Assign smart plugs to the grid circuit to monitor individual loads"
             ctTotalKw={ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : undefined}
             onCtHeaderClick={() => ctReading && handleNodeClick({
-              type: 'ctmeter' as NodeType,
+              type: 'ctmeter',
               id: 'ctmeter',
               title: 'Grid Load · CT Meter',
               subtitle: '3-Phase Measurement',
