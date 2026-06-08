@@ -287,11 +287,9 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         )}
       </nav>
 
-      {/* Divider */}
-      <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)', margin: '0 10px', flexShrink: 0 }} />
 
-      {/* User block */}
-      <div style={{ padding: '12px 10px 16px', flexShrink: 0 }}>
+      {/* User block — sticky bottom so it stays visible when nav scrolls */}
+      <div style={{ padding: '12px 10px 16px', flexShrink: 0, position: 'sticky', bottom: 0, background: sideBg, borderTop: `1px solid ${sideBorder}` }}>
         <button
           onClick={() => setProfileOpen(v => !v)}
           style={{
