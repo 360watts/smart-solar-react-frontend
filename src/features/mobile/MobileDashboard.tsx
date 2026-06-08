@@ -4,7 +4,7 @@ import {
   Sun, Battery, Zap, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, MapPin, Clock, RefreshCw, Wifi, WifiOff,
   Compass, Globe, CloudSun, Droplets, Wind,
-  Activity, BarChart3, Search,
+  Activity, BarChart3, Search, Menu,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../app/constants';
@@ -31,8 +31,8 @@ interface TelemetryRow {
   pv1_power_w?: number; pv2_power_w?: number; pv3_power_w?: number; pv4_power_w?: number;
   grid_power_w?: number; load_power_w?: number; battery_power_w?: number;
   battery_soc_percent?: number; pv_today_kwh?: number; load_today_kwh?: number;
-  grid_export_today_kwh?: number; grid_import_today_kwh?: number;
-  battery_charge_today_kwh?: number; battery_discharge_today_kwh?: number;
+  grid_sell_today_kwh?: number; grid_buy_today_kwh?: number;
+  batt_charge_today_kwh?: number; batt_discharge_today_kwh?: number;
   battery_voltage_v?: number;
 }
 interface WeatherData {
@@ -92,10 +92,10 @@ const MobileDashboard: React.FC = () => {
   const batV   = lat?.battery_voltage_v ?? null;
   const pvKWh  = lat?.pv_today_kwh ?? null;
   const ldKWh  = lat?.load_today_kwh ?? null;
-  const exKWh  = lat?.grid_export_today_kwh ?? null;
-  const imKWh  = lat?.grid_import_today_kwh ?? null;
-  const bcKWh  = lat?.battery_charge_today_kwh ?? null;
-  const bdKWh  = lat?.battery_discharge_today_kwh ?? null;
+  const exKWh  = lat?.grid_sell_today_kwh ?? null;
+  const imKWh  = lat?.grid_buy_today_kwh ?? null;
+  const bcKWh  = lat?.batt_charge_today_kwh ?? null;
+  const bdKWh  = lat?.batt_discharge_today_kwh ?? null;
   const selfSuf = pvKWh != null && ldKWh != null && ldKWh > 0 ? Math.min(100, Math.round((pvKWh / ldKWh) * 100)) : null;
   const isExporting = gridW != null && gridW < -50;
   const isImporting = gridW != null && gridW > 50;
@@ -188,7 +188,6 @@ const MobileDashboard: React.FC = () => {
     ...extra,
   });
 
-  const sevColor = (s: string) => s === 'critical' ? '#F87171' : s === 'warning' ? '#F59E0B' : '#60A5FA';
 
   const sectionLabel: React.CSSProperties = {
     fontSize: '0.6rem',
@@ -210,7 +209,7 @@ const MobileDashboard: React.FC = () => {
   );
 
   return (
-    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 68 }}>
+    <div style={{ background: bg, minHeight: '100dvh', paddingBottom: 68, overflowX: 'clip' }}>
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -265,10 +264,14 @@ const MobileDashboard: React.FC = () => {
               </span>
             </div>
             <button
-              onClick={() => { setRefreshing(true); fetchAll(); if (selectedId) { fetchTelemetry(selectedId); fetchWeather(selectedId); } }}
-              style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, padding: '7px', display: 'flex' }}
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
+              style={{
+                background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)',
+                border: `1px solid rgba(47,191,113,0.22)`,
+                borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: '7px', display: 'flex',
+              }}
             >
-              <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+              <Menu size={16} />
             </button>
           </div>
         </div>
@@ -537,6 +540,63 @@ const MobileDashboard: React.FC = () => {
             </div>
           )}
 
+          {/* ── Active alerts strip ── */}
+          {(() => {
+            const sevPalette: Record<string, { bg: string; color: string; border: string }> = {
+              critical: { bg: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)', color: '#EF4444', border: 'rgba(239,68,68,0.25)' },
+              warning:  { bg: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.07)', color: '#F59E0B', border: 'rgba(245,158,11,0.25)' },
+              info:     { bg: isDark ? 'rgba(96,165,250,0.12)' : 'rgba(96,165,250,0.07)', color: '#60A5FA', border: 'rgba(96,165,250,0.25)' },
+            };
+            if (activeAlerts.length === 0) {
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.2)' }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2FBF71', boxShadow: '0 0 6px #2FBF71' }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#2FBF71', fontFamily: "'DM Sans', sans-serif" }}>All systems normal</span>
+                </div>
+              );
+            }
+            const hasCritical = activeAlerts.some(a => a.severity === 'critical');
+            const headerColor = hasCritical ? '#EF4444' : '#F59E0B';
+            return (
+              <div style={{ ...card(), padding: 0, overflow: 'hidden', border: `1px solid ${hasCritical ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.25)'}` }}>
+                <button
+                  onClick={() => setAlertsOpen(o => !o)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: hasCritical ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : (isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.05)'), border: 'none', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle size={13} color={headerColor} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: headerColor, fontFamily: "'DM Sans', sans-serif" }}>
+                      {activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {alertsOpen ? <ChevronUp size={13} color={headerColor} /> : <ChevronDown size={13} color={headerColor} />}
+                </button>
+                {alertsOpen && (
+                  <div style={{ padding: '8px 10px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {activeAlerts.map(a => {
+                      const p = sevPalette[a.severity] ?? sevPalette.info;
+                      return (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderRadius: 9, overflow: 'hidden', border: `1px solid ${p.border}`, background: p.bg }}>
+                          <div style={{ width: 3, alignSelf: 'stretch', background: p.color, flexShrink: 0 }} />
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', flex: 1, minWidth: 0 }}>
+                            <AlertTriangle size={11} color={p.color} style={{ flexShrink: 0, marginTop: 2 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              {a.fault_code && (
+                                <span style={{ fontSize: '0.58rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", padding: '1px 5px', borderRadius: 999, background: `${p.color}20`, color: p.color, marginRight: 5, display: 'inline-block', marginBottom: 3 }}>{a.fault_code}</span>
+                              )}
+                              <div style={{ fontSize: '0.71rem', fontWeight: 600, color: p.color, fontFamily: "'DM Sans', sans-serif" }}>{a.message}</div>
+                              <div style={{ fontSize: '0.58rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>Device {a.device_id}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <EnergyFlowBlock
             pvKw={pvW != null ? pvW / 1000 : null}
             loadKw={loadW != null ? loadW / 1000 : null}
@@ -576,6 +636,8 @@ const MobileDashboard: React.FC = () => {
                 { label: 'Bat. Chg',  val: fmtKWh(bcKWh), color: '#2FBF71', unit: 'kWh' },
                 { label: 'Bat. Dis',  val: fmtKWh(bdKWh), color: '#A78BFA', unit: 'kWh' },
                 { label: 'Exported',  val: fmtKWh(exKWh), color: '#2FBF71', unit: 'kWh' },
+                { label: 'Imported',  val: fmtKWh(imKWh), color: '#F59E0B', unit: 'kWh' },
+                { label: 'Net Grid',  val: exKWh != null && imKWh != null ? fmtKWh(exKWh - imKWh) : '—', color: exKWh != null && imKWh != null && exKWh >= imKWh ? '#2FBF71' : '#F87171', unit: 'kWh' },
               ].map(({ label, val, color, unit }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px 0' }}>
                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{val}</div>
@@ -586,39 +648,6 @@ const MobileDashboard: React.FC = () => {
             </div>
           </div>
 
-          {activeAlerts.length > 0 && (
-            <div style={card()}>
-              <button
-                onClick={() => setAlertsOpen(o => !o)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 14px', background: 'transparent', border: 'none', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertTriangle size={14} color="#F59E0B" />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: text, fontFamily: "'DM Sans', sans-serif" }}>{activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}</span>
-                </div>
-                {alertsOpen ? <ChevronUp size={14} color={muted} /> : <ChevronDown size={14} color={muted} />}
-              </button>
-              {alertsOpen && (
-                <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {activeAlerts.map(a => (
-                    <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderRadius: 10, overflow: 'hidden', border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                      <div style={{ width: 4, alignSelf: 'stretch', background: sevColor(a.severity), flexShrink: 0 }} />
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 10px', flex: 1, minWidth: 0 }}>
-                        <AlertTriangle size={12} color={sevColor(a.severity)} style={{ flexShrink: 0, marginTop: 2 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {a.fault_code && (
-                            <span style={{ fontSize: '0.58rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", padding: '1px 5px', borderRadius: 999, background: `${sevColor(a.severity)}18`, color: sevColor(a.severity), marginRight: 5, display: 'inline-block', marginBottom: 3 }}>{a.fault_code}</span>
-                          )}
-                          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: text, fontFamily: "'DM Sans', sans-serif" }}>{a.message}</div>
-                          <div style={{ fontSize: '0.6rem', color: muted, marginTop: 3, fontFamily: "'JetBrains Mono', monospace" }}>Dev {a.device_id}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           <div style={{ ...card(), padding: '14px 12px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>

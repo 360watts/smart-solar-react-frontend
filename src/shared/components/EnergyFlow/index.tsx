@@ -301,7 +301,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         ? `linear-gradient(135deg, ${accentColor}14 0%, ${accentColor}07 100%)`
         : `linear-gradient(135deg, ${accentColor}13 0%, ${accentColor}06 100%)`,
       boxShadow: `0 0 20px ${accentColor}08, 0 2px 8px rgba(0,0,0,0.08)`,
-      padding: '10px 12px 12px', flex: '1 1 180px', minWidth: 0,
+      padding: '10px 12px 12px', flex: '1 1 0', minWidth: 0,
       display: 'flex', flexDirection: 'column', transition: 'all 0.25s ease-in-out',
     }}>
 
@@ -724,7 +724,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           );
         })()}
 
-        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap', transform: `scale(${nodeScale})`, transformOrigin: 'top center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', paddingBottom: 14 }}>
           <SubSection
             title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}

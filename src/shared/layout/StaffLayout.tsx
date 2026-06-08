@@ -365,39 +365,48 @@ const StaffLayout: React.FC = () => {
   // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
+  // Allow child pages (e.g. MobileDashboard) to open the sidebar via custom event
+  useEffect(() => {
+    const handler = () => setMobileOpen(true);
+    window.addEventListener('open-mobile-menu', handler);
+    return () => window.removeEventListener('open-mobile-menu', handler);
+  }, []);
+
   const bg = isDark ? '#080C14' : '#F0F5FF';
 
   return (
     <div style={{ background: bg, minHeight: '100vh', width: '100%', fontFamily: "'Fira Sans', 'DM Sans', sans-serif" }}>
 
-      {/* Mobile topbar */}
-      <header
-        className="staff-mobile-topbar"
-        style={{
-          display: 'none',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          background: isDark ? '#0D1422' : '#fff',
-          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
-          position: 'sticky', top: 0, zIndex: 40,
-          boxShadow: isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>
-          Smart Solar
-        </div>
-        <button
-          onClick={() => setMobileOpen(true)}
+      {/* Mobile topbar — suppressed on /dashboard, which renders its own branded header */}
+      {location.pathname !== '/dashboard' && (
+        <header
+          className="staff-mobile-topbar"
           style={{
-            padding: 8, borderRadius: 8, border: 'none',
-            background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)',
-            color: '#22C55E', cursor: 'pointer',
+            display: 'none',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            background: isDark ? '#0D1422' : '#fff',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
+            position: 'sticky', top: 0, zIndex: 40,
+            boxShadow: isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)',
           }}
         >
-          <Menu size={18} />
-        </button>
-      </header>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>
+            Smart Solar
+          </div>
+          <button
+            onClick={() => setMobileOpen(true)}
+            style={{
+              padding: 8, borderRadius: 8, border: 'none',
+              background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)',
+              color: '#22C55E', cursor: 'pointer',
+            }}
+          >
+            <Menu size={18} />
+          </button>
+        </header>
+      )}
 
       {/* Mobile overlay */}
       {mobileOpen && (
@@ -430,7 +439,7 @@ const StaffLayout: React.FC = () => {
           padding: '32px 32px',
           minHeight: '100vh',
           boxSizing: 'border-box',
-          overflowX: 'auto',
+          overflowX: 'clip',
           color: isDark ? '#F0F4FF' : '#0A0E1A',
           fontFamily: "'Fira Sans', 'DM Sans', sans-serif",
         }}
