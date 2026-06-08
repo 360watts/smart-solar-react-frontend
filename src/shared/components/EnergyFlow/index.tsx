@@ -440,7 +440,13 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     let cancelled = false;
     const fetch = async () => {
       const data = await apiService.getLatestEnergyMeter(siteId);
-      if (!cancelled) setCtReading(data);
+      if (cancelled) return;
+      // Discard readings older than 15 minutes — device is offline
+      if (data?.timestamp) {
+        const ageMs = Date.now() - new Date(data.timestamp).getTime();
+        if (ageMs > 15 * 60 * 1000) { setCtReading(null); return; }
+      }
+      setCtReading(data);
     };
     fetch();
     const interval = setInterval(fetch, 30_000);
