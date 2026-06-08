@@ -140,7 +140,7 @@ const MobileSiteDetail: React.FC = () => {
     background: surface,
     backdropFilter: 'blur(16px)',
     border: `1px solid ${border}`,
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     ...extra,
   });
@@ -175,31 +175,31 @@ const MobileSiteDetail: React.FC = () => {
   return (
     <div style={{ background:bg, minHeight:'100dvh', paddingBottom:68 }}>
 
-      <div style={{ position:'sticky', top:0, zIndex:20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${border}`, padding:'12px 16px 14px' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12 }}>
+      <div style={{ position:'sticky', top:0, zIndex:20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${border}`, padding:'10px 14px 12px' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)', flexShrink: 0 }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
             <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, cursor: 'pointer', color: '#2FBF71', padding: '6px', display: 'flex' }}>
-            <Menu size={16} />
+          <button aria-label="Open navigation menu" onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: 0, display: 'flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Menu size={18} />
           </button>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <button onClick={() => navigate(-1)}
-            style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border:`1px solid ${border}`, borderRadius:10, padding:'7px 9px', cursor:'pointer', color:muted, display:'flex' }}>
+          <button aria-label="Go back" onClick={() => navigate(-1)}
+            style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border:`1px solid ${border}`, borderRadius:10, padding:0, cursor:'pointer', color:muted, display:'flex', width:44, height:44, alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <ArrowLeft size={16}/>
           </button>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:'0.62rem', color:muted, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.07em', fontFamily:"'DM Sans', sans-serif" }}>{siteId}</div>
-            <div style={{ fontSize:'1rem', fontWeight:700, color:text, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontFamily:"'Outfit', sans-serif" }}>
+            <div style={{ fontSize:'0.95rem', fontWeight:700, color:text, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontFamily:"'Outfit', sans-serif" }}>
               {site?.display_name ?? 'Site Detail'}
             </div>
           </div>
-          <button onClick={() => refresh()}
-            style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border:`1px solid ${border}`, borderRadius:10, padding:'7px 9px', cursor:'pointer', color:muted, display:'flex' }}>
+          <button aria-label="Refresh site details" onClick={() => refresh()}
+            style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border:`1px solid ${border}`, borderRadius:10, padding:0, cursor:'pointer', color:muted, display:'flex', width:44, height:44, alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <RefreshCw size={15}/>
           </button>
         </div>
@@ -226,7 +226,7 @@ const MobileSiteDetail: React.FC = () => {
         <div style={{ display:'flex', gap:4, padding:'8px 0' }}>
           {(['overview','gateway','appliances','lifecycle'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              style={{ flex:1, padding:'7px 4px', background: tab===t ? `${accent}18` : 'transparent', border: tab===t ? `1px solid ${accent}30` : '1px solid transparent', borderRadius:999, cursor:'pointer', fontSize:'0.68rem', fontWeight:700, color: tab===t ? accent : muted, textTransform:'capitalize', transition:'all 150ms', fontFamily:"'DM Sans', sans-serif" }}>
+              style={{ flex:1, minHeight:44, padding:'7px 4px', background: tab===t ? `${accent}18` : 'transparent', border: tab===t ? `1px solid ${accent}30` : '1px solid transparent', borderRadius:999, cursor:'pointer', fontSize:'0.68rem', fontWeight:700, color: tab===t ? accent : muted, textTransform:'capitalize', transition:'all 150ms', fontFamily:"'DM Sans', sans-serif" }}>
               {t}
             </button>
           ))}
@@ -247,7 +247,7 @@ const MobileSiteDetail: React.FC = () => {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
                 <div style={{ fontSize:'0.78rem', fontWeight:700, color:text, fontFamily:"'Outfit', sans-serif" }}>Site Details</div>
                 <button onClick={() => editing ? setEditing(false) : setEditing(true)}
-                  style={{ background:`${accent}12`, border:`1px solid ${accent}30`, borderRadius:999, padding:'5px 12px', cursor:'pointer', color:accent, fontSize:'0.7rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
+                  style={{ background:`${accent}12`, border:`1px solid ${accent}30`, borderRadius:999, minHeight:44, padding:'5px 14px', cursor:'pointer', color:accent, fontSize:'0.7rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
                   {editing ? <><X size={11}/>Cancel</> : <><Settings size={11}/>Edit</>}
                 </button>
               </div>
@@ -292,7 +292,7 @@ const MobileSiteDetail: React.FC = () => {
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <div style={{ fontSize:'0.58rem', color:muted, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3, fontFamily:"'DM Sans', sans-serif" }}>{label}</div>
-                      <div style={{ fontSize:'0.8rem', color:text, fontWeight:500, fontFamily:"'DM Sans', sans-serif" }}>{value ?? '—'}</div>
+                      <div style={{ fontSize:'0.8rem', color:text, fontWeight:500, fontFamily:"'DM Sans', sans-serif", overflowWrap:'anywhere' }}>{value ?? '—'}</div>
                     </div>
                   ))}
                 </div>
@@ -343,7 +343,7 @@ const MobileSiteDetail: React.FC = () => {
                   </div>
                 )}
                 <button onClick={handleDetach} disabled={busy}
-                  style={{ width:'100%', padding:'10px', background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.25)', borderRadius:10, cursor:'pointer', color:'#F87171', fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:"'DM Sans', sans-serif" }}>
+                  style={{ width:'100%', minHeight:44, padding:'10px', background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.25)', borderRadius:10, cursor:'pointer', color:'#F87171', fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:"'DM Sans', sans-serif" }}>
                   <Unlink size={13}/> Detach Gateway
                 </button>
                 <div style={{ marginTop:12 }}>
@@ -351,7 +351,7 @@ const MobileSiteDetail: React.FC = () => {
                   <div style={{ display:'flex', gap:6 }}>
                     <input value={moveTarget} onChange={e => setMoveTarget(e.target.value)} placeholder="target_site_id" style={{ ...inputStyle, flex:1 }}/>
                     <button onClick={handleMove} disabled={busy || !moveTarget.trim()}
-                      style={{ padding:'10px 14px', background:`${accent}18`, border:`1px solid ${accent}30`, borderRadius:10, cursor:'pointer', color:accent, fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
+                      style={{ minHeight:44, padding:'10px 14px', background:`${accent}18`, border:`1px solid ${accent}30`, borderRadius:10, cursor:'pointer', color:accent, fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
                       <ArrowRightLeft size={13}/>Move
                     </button>
                   </div>
@@ -365,7 +365,7 @@ const MobileSiteDetail: React.FC = () => {
                   <div style={{ display:'flex', gap:6 }}>
                     <input value={devicePk} onChange={e => setDevicePk(e.target.value)} placeholder="Device PK (number)" style={{ ...inputStyle, flex:1 }}/>
                     <button onClick={handleAttach} disabled={busy || !devicePk}
-                      style={{ padding:'10px 14px', background:`${accent}18`, border:`1px solid ${accent}30`, borderRadius:10, cursor:'pointer', color:accent, fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
+                      style={{ minHeight:44, padding:'10px 14px', background:`${accent}18`, border:`1px solid ${accent}30`, borderRadius:10, cursor:'pointer', color:accent, fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', gap:4, fontFamily:"'DM Sans', sans-serif" }}>
                       <LinkIcon size={13}/>Attach
                     </button>
                   </div>
@@ -437,13 +437,13 @@ const MobileSiteDetail: React.FC = () => {
             <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:18 }}>
               {LIFECYCLE_OPTIONS.map(opt => (
                 <button key={opt} onClick={() => setLifecycleTo(opt)}
-                  style={{ padding:'7px 16px', borderRadius:999, border:`1.5px solid ${lifecycleTo===opt ? accent : border}`, background: lifecycleTo===opt ? `${accent}18` : 'transparent', color: lifecycleTo===opt ? accent : muted, fontSize:'0.75rem', fontWeight:600, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
+                  style={{ minHeight:44, padding:'7px 16px', borderRadius:999, border:`1.5px solid ${lifecycleTo===opt ? accent : border}`, background: lifecycleTo===opt ? `${accent}18` : 'transparent', color: lifecycleTo===opt ? accent : muted, fontSize:'0.75rem', fontWeight:600, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
                   {opt}
                 </button>
               ))}
             </div>
             <button onClick={handleLifecycle} disabled={busy || lifecycleTo === site?.site_status}
-              style={{ width:'100%', padding:'12px', background: accent, border:'none', borderRadius:12, cursor:'pointer', color:'#fff', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity:busy||lifecycleTo===site?.site_status?0.4:1, fontFamily:"'DM Sans', sans-serif" }}>
+              style={{ width:'100%', minHeight:44, padding:'12px', background: accent, border:'none', borderRadius:12, cursor:'pointer', color:'#fff', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity:busy||lifecycleTo===site?.site_status?0.4:1, fontFamily:"'DM Sans', sans-serif" }}>
               <Activity size={14}/>{busy ? 'Transitioning…' : `Set to "${lifecycleTo}"`}
             </button>
           </div>

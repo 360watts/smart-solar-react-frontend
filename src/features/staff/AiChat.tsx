@@ -205,8 +205,8 @@ const AiChat: React.FC = () => {
   // Panel dimensions
   const isFullscreen = panelSize === 'fullscreen';
   const panelW = isFullscreen ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 380;
-  const panelH = isFullscreen ? '100dvh' : isMobile ? 'calc(100dvh - 160px)' : 560;
-  const panelBottom = isFullscreen ? 0 : isMobile ? 144 : 88;
+  const panelH = isFullscreen ? '100dvh' : isMobile ? 'calc(100dvh - 128px)' : 560;
+  const panelBottom = isFullscreen ? 0 : isMobile ? 92 : 88;
   const panelRight = isFullscreen ? 0 : isMobile ? 8 : 24;
   const panelRadius = isFullscreen ? 0 : 18;
 
@@ -218,8 +218,9 @@ const AiChat: React.FC = () => {
       <button
         onClick={() => setOpen(o => !o)}
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
-        style={{ bottom: isMobile ? 80 : 24, right: isMobile ? 16 : 24 }}
+        style={{ bottom: isMobile ? 18 : 24, right: isMobile ? 14 : 24 }}
         title={`${ASSISTANT_LABEL} (Ctrl+/)`}
+        aria-label={open ? 'Close AI assistant' : 'Open AI assistant'}
       >
         <span className="ai-fab__ring" />
         {open
@@ -733,6 +734,8 @@ const AiChat: React.FC = () => {
         .ai-panel--light .ai-input-hint { color: #94a3b8; }
         .ai-panel--dark  .ai-input-hint { color: #94a3b8; }
         @media (max-width: 640px) {
+          .ai-fab { width: 44px; height: 44px; box-shadow: 0 6px 22px rgba(0,166,62,0.34), inset 0 2px 4px rgba(255,255,255,0.24); }
+          .ai-fab__ring { inset: -3px; }
           .ai-hero { padding: 14px 14px 10px; }
           .ai-hero__metrics { grid-template-columns: 1fr; }
           .ai-suggestions { grid-template-columns: 1fr; }

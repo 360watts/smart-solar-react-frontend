@@ -111,6 +111,12 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
 const GRID_APPLIANCES: ApplianceLabel[] = ['ev_charger', 'geyser', 'ac_unit', 'washing_machine'];
 const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' =>
   d.circuit ?? (GRID_APPLIANCES.includes(d.appliance_label) ? 'grid' : 'solar');
+const deviceLabel = (device: SmartDeviceNode) =>
+  (device.display_name || `Device ${device.id}`).split(' — ')[0] || 'Smart device';
+const isFreshReading = (timestamp?: string | null) =>
+  !!timestamp && Date.now() - new Date(timestamp).getTime() <= 5 * 60 * 1000;
+const freshLatest = (device: SmartDeviceNode) =>
+  device.latest && isFreshReading(device.latest.timestamp) ? device.latest : null;
 
 // ── SVG beam primitives ───────────────────────────────────────────────────────
 
@@ -234,8 +240,9 @@ interface SubSectionProps {
 
 // Helper to convert device to comprehensive NodeData
 function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): NodeData {
-  const sdKw = (device.latest?.power_w ?? 0) / 1000;
-  const deviceName = device.display_name.split(' — ')[0];
+  const latest = freshLatest(device);
+  const sdKw = (latest?.power_w ?? 0) / 1000;
+  const deviceName = deviceLabel(device);
   const sdActive = device.is_active && sdKw > 0.001;
 
   return {
@@ -249,10 +256,10 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
     icon: applIcon(device.appliance_label, accentColor),
     device,
     // Comprehensive data
-    current_a: device.latest?.current_a ?? undefined,
-    voltage_v: device.latest?.voltage_v ?? undefined,
-    energy_kwh: device.latest?.energy_kwh ?? undefined,
-    timestamp: device.latest?.timestamp ?? undefined,
+    current_a: latest?.current_a ?? undefined,
+    voltage_v: latest?.voltage_v ?? undefined,
+    energy_kwh: latest?.energy_kwh ?? undefined,
+    timestamp: latest?.timestamp ?? undefined,
     deviceType: device.device_type,
     circuit: device.circuit,
   };
@@ -286,7 +293,7 @@ function EmptyPlaceholder({ title, desc, accent, isDark }: {
 
 function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
                       emptyTitle, emptyDesc, ctTotalKw, onCtHeaderClick }: SubSectionProps) {
-  const devicesTotalKw = devices.reduce((s, d) => s + (d.latest?.power_w ?? 0), 0) / 1000;
+  const devicesTotalKw = devices.reduce((s, d) => s + (freshLatest(d)?.power_w ?? 0), 0) / 1000;
   const hasCtTotal = ctTotalKw != null;
 
   // Header power: CT meter is authoritative for grid load; device sum for solar load
@@ -382,10 +389,11 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         {devices.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {devices.map(device => {
-              const sdKw = (device.latest?.power_w ?? 0) / 1000;
+              const latest = freshLatest(device);
+              const sdKw = (latest?.power_w ?? 0) / 1000;
               const sdFmt = fmtPower(sdKw);
               const sdActive = device.is_active && sdKw > 0.001;
-              const deviceName = device.display_name.split(' — ')[0];
+              const deviceName = deviceLabel(device);
               const deviceColor = sdActive ? accentColor : isDark ? '#cbd5e1' : '#9ca3af';
               return (
                 <SmartCard
@@ -456,8 +464,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const nonGridDevices  = smartDevices.filter(d => d.appliance_label !== 'grid');
   const solarLoads      = nonGridDevices.filter(d => circuitOf(d) === 'solar');
   const gridLoads       = nonGridDevices.filter(d => circuitOf(d) === 'grid');
-  const solarLoadPowerKw = solarLoads.reduce((s, d) => s + ((d.latest?.power_w ?? 0) / 1000), 0);
-  const gridLoadPowerKw  = gridLoads.reduce((s, d) => s + ((d.latest?.power_w ?? 0) / 1000), 0);
+  const solarLoadPowerKw = solarLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
+  const gridLoadPowerKw  = gridLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
   const solarLoadActive  = solarLoadPowerKw > 0.01;
   const gridLoadActive   = gridLoadPowerKw  > 0.01;
 
@@ -487,7 +495,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const loadFmt = fmtPower(load);
   const gridFmt = fmtPower(grid);
 
-  const anomalous = nonGridDevices.filter(d => d.is_active && d.latest === null).map(d => d.display_name);
+  const anomalous = nonGridDevices.filter(d => d.is_active && d.latest === null).map(deviceLabel);
   const bgColor   = isDark ? '#06090f' : '#ffffff';
 
   const handleNodeClick = (nodeData: NodeData) => {

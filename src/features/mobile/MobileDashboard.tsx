@@ -28,6 +28,7 @@ interface Site {
 }
 interface TelemetryRow {
   timestamp: string;
+  data_stale?: boolean;
   pv1_power_w?: number; pv2_power_w?: number; pv3_power_w?: number; pv4_power_w?: number;
   grid_power_w?: number; load_power_w?: number; battery_power_w?: number;
   battery_soc_percent?: number; pv_today_kwh?: number; load_today_kwh?: number;
@@ -46,6 +47,22 @@ interface WeatherData {
 const siteIsOnline = (site: Site) => site.devices.some(d => d.is_online);
 const fmtKW  = (w: number | null | undefined) => w != null ? `${(Math.abs(w) / 1000).toFixed(1)}` : '—';
 const fmtKWh = (k: number | null | undefined) => k != null ? `${k.toFixed(1)}` : '—';
+const FRESH_DATA_MS = 5 * 60 * 1000;
+const isFreshTimestamp = (timestamp?: string | null) =>
+  !!timestamp && Date.now() - new Date(timestamp).getTime() <= FRESH_DATA_MS;
+const isFreshTelemetry = (row?: TelemetryRow | null) =>
+  !!row && row.data_stale !== true && isFreshTimestamp(row.timestamp);
+const formatAge = (timestamp?: string | null) => {
+  if (!timestamp) return 'No telemetry received';
+  const diff = Math.max(0, Date.now() - new Date(timestamp).getTime());
+  const mins = Math.max(1, Math.round(diff / 60000));
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return rem ? `${hours}h ${rem}m ago` : `${hours}h ago`;
+};
+const siteName = (site: Pick<Site, 'display_name' | 'site_id'>) =>
+  site.display_name || site.site_id || 'Unnamed site';
 function startOfTodayIST(): string {
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: IST_TIMEZONE });
   return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
@@ -83,25 +100,30 @@ const MobileDashboard: React.FC = () => {
     return allAlerts.filter(a => ids.has(parseInt(a.device_id)) && !a.resolved && (a.status === 'active' || a.status === 'acknowledged' || a.status == null));
   }, [allAlerts, site]);
 
-  const lat = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
+  const lastTelemetry = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
+  const dataIsStale = !!lastTelemetry && !isFreshTelemetry(lastTelemetry);
+  const lat = dataIsStale ? null : lastTelemetry;
+  const day = lastTelemetry;
+  const lastTelemetryLabel = formatAge(lastTelemetry?.timestamp);
   const pvW    = lat ? (lat.pv1_power_w ?? 0) + (lat.pv2_power_w ?? 0) + (lat.pv3_power_w ?? 0) + (lat.pv4_power_w ?? 0) : null;
   const gridW  = lat?.grid_power_w ?? null;
   const loadW  = lat?.load_power_w ?? null;
   const batW   = lat?.battery_power_w ?? null;
   const soc    = lat?.battery_soc_percent ?? null;
   const batV   = lat?.battery_voltage_v ?? null;
-  const pvKWh  = lat?.pv_today_kwh ?? null;
-  const ldKWh  = lat?.load_today_kwh ?? null;
-  const exKWh  = lat?.grid_sell_today_kwh ?? null;
-  const imKWh  = lat?.grid_buy_today_kwh ?? null;
-  const bcKWh  = lat?.batt_charge_today_kwh ?? null;
-  const bdKWh  = lat?.batt_discharge_today_kwh ?? null;
+  const pvKWh  = day?.pv_today_kwh ?? null;
+  const ldKWh  = day?.load_today_kwh ?? null;
+  const exKWh  = day?.grid_sell_today_kwh ?? null;
+  const imKWh  = day?.grid_buy_today_kwh ?? null;
+  const bcKWh  = day?.batt_charge_today_kwh ?? null;
+  const bdKWh  = day?.batt_discharge_today_kwh ?? null;
   const selfSuf = pvKWh != null && ldKWh != null && ldKWh > 0 ? Math.min(100, Math.round((pvKWh / ldKWh) * 100)) : null;
   const isExporting = gridW != null && gridW < -50;
   const isImporting = gridW != null && gridW > 50;
   const isBatCharging = batW != null && batW > 50;
   const isBatDischarging = batW != null && batW < -50;
   const online = site ? siteIsOnline(site) : false;
+  const liveStatusText = !lastTelemetry ? 'No live data' : dataIsStale ? `Stale · ${lastTelemetryLabel}` : `Live · ${lastTelemetryLabel}`;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -118,7 +140,7 @@ const MobileDashboard: React.FC = () => {
   const fetchTelemetry = useCallback(async (id: string) => {
     setTelLoading(true);
     try {
-      const d = await apiService.getSiteTelemetry(id, { start_date: startOfTodayIST(), end_date: new Date().toISOString() });
+      const d = await apiService.getSiteTelemetry(id, { start_date: startOfTodayIST(), end_date: new Date().toISOString(), aggregate: 'none' });
       setTelemetry(Array.isArray(d) ? d : []);
     } catch { setTelemetry([]); } finally { setTelLoading(false); }
   }, []);
@@ -135,6 +157,9 @@ const MobileDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!selectedId) return;
+    setTelemetry([]);
+    setSmartDevices([]);
+    setWeather(null);
     fetchTelemetry(selectedId);
     fetchWeather(selectedId);
     apiService.getSmartDevices(selectedId).then(d => setSmartDevices(Array.isArray(d) ? d : [])).catch(() => setSmartDevices([]));
@@ -248,14 +273,16 @@ const MobileDashboard: React.FC = () => {
           </div>
 
           <button
+            aria-label="Open navigation menu"
             onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
             style={{
               background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)',
               border: `1px solid rgba(47,191,113,0.22)`,
-              borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: '7px', display: 'flex',
+              borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: 0, display: 'flex',
+              width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Menu size={16} />
+            <Menu size={18} />
           </button>
         </div>
       </div>
@@ -312,8 +339,8 @@ const MobileDashboard: React.FC = () => {
                   }}
                 />
                 {siteSearch && (
-                  <button onClick={() => setSiteSearch('')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: muted, lineHeight: 1, borderRadius: 4 }}>
+                  <button aria-label="Clear site search" onClick={() => setSiteSearch('')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: muted, lineHeight: 1, borderRadius: 6, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     ✕
                   </button>
                 )}
@@ -341,10 +368,14 @@ const MobileDashboard: React.FC = () => {
                 return filtered.map((s, idx) => {
                   const on = siteIsOnline(s);
                   const sel = s.site_id === selectedId;
-                  const initials = s.display_name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                  const name = siteName(s);
+                  const initials = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
                   return (
                     <div key={s.site_id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => { setSelectedId(s.site_id); setPickerOpen(false); setSiteSearch(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(s.site_id); setPickerOpen(false); setSiteSearch(''); } }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '11px 14px',
@@ -379,7 +410,7 @@ const MobileDashboard: React.FC = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? (isDark ? '#fff' : '#0f172a') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
-                            {s.display_name}
+                            {name}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -420,6 +451,7 @@ const MobileDashboard: React.FC = () => {
 
           {/* ── Site selector button ── */}
           <button
+            aria-label="Select site"
             onClick={() => { setPickerOpen(o => !o); setSiteSearch(''); }}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -444,10 +476,10 @@ const MobileDashboard: React.FC = () => {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
-                  {site?.display_name ?? 'Select a site'}
+                  {site ? siteName(site) : 'Select a site'}
                 </div>
-                <div style={{ fontSize: '0.6rem', color: online ? '#2FBF71' : muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
-                  {online ? '🟢 Online' : '🔴 Offline'} · {site.capacity_kw} kWp
+                <div style={{ fontSize: '0.6rem', color: online && !dataIsStale ? '#2FBF71' : muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
+                  {online ? 'Online' : 'Offline'} · {liveStatusText}
                 </div>
               </div>
             </div>
@@ -455,16 +487,37 @@ const MobileDashboard: React.FC = () => {
               style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
           </button>
 
+          {(dataIsStale || !lastTelemetry) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+              borderRadius: 12,
+              background: dataIsStale ? 'rgba(245,158,11,0.08)' : isDark ? 'rgba(148,163,184,0.08)' : 'rgba(100,116,139,0.06)',
+              border: `1px solid ${dataIsStale ? 'rgba(245,158,11,0.24)' : border}`,
+              color: dataIsStale ? '#F59E0B' : muted,
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                  {dataIsStale ? 'Live data is stale' : 'Waiting for live telemetry'}
+                </div>
+                <div style={{ fontSize: '0.62rem', marginTop: 2, opacity: 0.85 }}>
+                  {dataIsStale ? `Last telemetry ${lastTelemetryLabel}. Current power is hidden after 5 minutes; today's totals and charts still show historical data.` : 'Live cards will populate after a fresh telemetry packet arrives.'}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{
             ...card(),
             padding: '12px 14px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-around',
           }}>
             {[
-              { icon: <Sun size={13} color="#F59E0B" />, label: 'Solar', value: `${fmtKW(pvW)} kW`, color: '#F59E0B' },
-              { icon: <Zap size={13} color="#60A5FA" />, label: 'Load', value: `${fmtKW(loadW)} kW`, color: '#60A5FA' },
-              { icon: <Battery size={13} color={soc != null && soc < 20 ? '#F87171' : '#2FBF71'} />, label: 'Battery', value: soc != null ? `${Math.round(soc)}%` : '—', color: soc != null && soc < 20 ? '#F87171' : '#2FBF71' },
-              { icon: isExporting ? <TrendingUp size={13} color="#2FBF71" /> : isImporting ? <TrendingDown size={13} color="#F59E0B" /> : <Globe size={13} color={muted} />, label: 'Grid', value: gridW != null ? `${fmtKW(gridW)} kW` : '—', color: isExporting ? '#2FBF71' : isImporting ? '#F59E0B' : muted },
+              { icon: <Sun size={13} color={pvW == null ? muted : '#F59E0B'} />, label: 'Solar', value: pvW != null ? `${fmtKW(pvW)} kW` : '—', color: pvW == null ? muted : '#F59E0B' },
+              { icon: <Zap size={13} color={loadW == null ? muted : '#60A5FA'} />, label: 'Load', value: loadW != null ? `${fmtKW(loadW)} kW` : '—', color: loadW == null ? muted : '#60A5FA' },
+              { icon: <Battery size={13} color={soc == null ? muted : soc < 20 ? '#F87171' : '#2FBF71'} />, label: 'Battery', value: soc != null ? `${Math.round(soc)}%` : '—', color: soc == null ? muted : soc < 20 ? '#F87171' : '#2FBF71' },
+              { icon: isExporting ? <TrendingUp size={13} color="#2FBF71" /> : isImporting ? <TrendingDown size={13} color="#F59E0B" /> : <Globe size={13} color={muted} />, label: 'Grid', value: gridW != null ? `${fmtKW(gridW)} kW` : '—', color: gridW == null ? muted : isExporting ? '#2FBF71' : isImporting ? '#F59E0B' : muted },
             ].map(({ icon, label, value, color }, idx, arr) => (
               <React.Fragment key={label}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -640,7 +693,9 @@ const MobileDashboard: React.FC = () => {
                 <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
               </div>
             ) : chartData.labels.length === 0 ? (
-              <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No data yet today</div>
+              <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: muted, fontFamily: "'DM Sans', sans-serif", textAlign: 'center', padding: '0 16px' }}>
+                No data yet today
+              </div>
             ) : (
               <div style={{ height: 160 }}><Line data={chartData} options={chartOpts} /></div>
             )}
