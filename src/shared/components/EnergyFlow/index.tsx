@@ -15,18 +15,10 @@ import { apiService, CtMeterReading } from '../../../services/api';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Cross topology: Gateway hub at centre, Battery above, Solar left, Grid right, Load below.
-const VW = 700;
-const VH = 240;
-const ASPECT_PAD = `${(VH / VW) * 100}%`;
-
-const N = {
-  pv:   { x: 90,  y: 125 },   // left
-  hub:  { x: 350, y: 125 },   // centre (IoT Gateway)
-  batt: { x: 350, y: 32  },   // top
-  grid: { x: 610, y: 125 },   // right
-} as const;
-
-const HUB_R = 38;
+const VW  = 700;
+const HUB_R    = 38;
+const NODE_R   = 65;
+const BATT_TRIM = 36;
 
 function trimEnd(x1: number, y1: number, x2: number, y2: number, trim: number) {
   const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -43,29 +35,59 @@ function trimStart(x1: number, y1: number, x2: number, y2: number, trim: number)
 const bez = (x1: number, y1: number, x2: number, y2: number) =>
   `M ${x1} ${y1} L ${x2} ${y2}`;
 
-function hubPath(sx: number, sy: number, direction: 'toHub' | 'fromHub', srcTrim = 52, hubTrim = HUB_R) {
+function hubPath(
+  sx: number, sy: number,
+  direction: 'toHub' | 'fromHub',
+  hub: { x: number; y: number },
+  srcTrim = 52,
+  hubTrim = HUB_R,
+) {
   if (direction === 'toHub') {
-    const s = trimStart(sx, sy, N.hub.x, N.hub.y, srcTrim);
-    const e = trimEnd(sx, sy, N.hub.x, N.hub.y, hubTrim);
+    const s = trimStart(sx, sy, hub.x, hub.y, srcTrim);
+    const e = trimEnd(sx, sy, hub.x, hub.y, hubTrim);
     return bez(s.x, s.y, e.x, e.y);
   }
-  const s = trimStart(N.hub.x, N.hub.y, sx, sy, hubTrim);
-  const e = trimEnd(N.hub.x, N.hub.y, sx, sy, srcTrim);
+  const s = trimStart(hub.x, hub.y, sx, sy, hubTrim);
+  const e = trimEnd(hub.x, hub.y, sx, sy, srcTrim);
   return bez(s.x, s.y, e.x, e.y);
 }
 
-const NODE_R = 65;
-// Battery is vertically above hub — use smaller srcTrim so short path is visible
-const BATT_TRIM = 36;
+type NodePos = { x: number; y: number };
 
-const P = {
-  pvToHub:   hubPath(N.pv.x,   N.pv.y,   'toHub',   NODE_R),
-  battToHub: hubPath(N.batt.x, N.batt.y, 'toHub',   BATT_TRIM),
-  hubToBatt: hubPath(N.batt.x, N.batt.y, 'fromHub', BATT_TRIM),
-  gridToHub: hubPath(N.grid.x, N.grid.y, 'toHub',   NODE_R),
-  hubToGrid: hubPath(N.grid.x, N.grid.y, 'fromHub', NODE_R),
-  hubToLoad: `M ${N.hub.x} ${N.hub.y + HUB_R} L ${N.hub.x} ${VH}`,
-} as const;
+function computeLayout(vh: number, nodes: { pv: NodePos; hub: NodePos; batt: NodePos; grid: NodePos }) {
+  const { pv, hub, batt, grid } = nodes;
+  return {
+    VH: vh,
+    N: nodes,
+    ASPECT_PAD: `${(vh / VW) * 100}%`,
+    P: {
+      pvToHub:   hubPath(pv.x,   pv.y,   'toHub',   hub, NODE_R),
+      battToHub: hubPath(batt.x, batt.y, 'toHub',   hub, BATT_TRIM),
+      hubToBatt: hubPath(batt.x, batt.y, 'fromHub', hub, BATT_TRIM),
+      gridToHub: hubPath(grid.x, grid.y, 'toHub',   hub, NODE_R),
+      hubToGrid: hubPath(grid.x, grid.y, 'fromHub', hub, NODE_R),
+      hubToLoad: `M ${hub.x} ${hub.y + HUB_R} L ${hub.x} ${vh}`,
+    },
+  };
+}
+
+// Wide layout — desktop / tablet (container ≥ 480 px)
+const WIDE_LAYOUT = computeLayout(240, {
+  pv:   { x: 90,  y: 125 },
+  hub:  { x: 350, y: 125 },
+  batt: { x: 350, y: 32  },
+  grid: { x: 610, y: 125 },
+});
+
+// Narrow layout — mobile (container < 480 px).
+// Taller viewBox (320 vs 240) and battery repositioned to y=80 so the node
+// card clears the container top even at the reduced mobile scale.
+const NARROW_LAYOUT = computeLayout(320, {
+  pv:   { x: 90,  y: 200 },
+  hub:  { x: 350, y: 200 },
+  batt: { x: 350, y: 80  },
+  grid: { x: 610, y: 200 },
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -131,14 +153,18 @@ function Beam({ d, color, active, speed = 1.6, intensity = 0.5 }: {
   );
 }
 
-function At({ cx, cy, scale = 1, children }: { cx: number; cy: number; scale?: number; children: React.ReactNode }) {
+function At({ cx, cy, scale = 1, vw, vh, children }: {
+  cx: number; cy: number; scale?: number; vw: number; vh: number; children: React.ReactNode;
+}) {
   return (
     <div style={{
       position: 'absolute',
-      left: `${(cx / VW) * 100}%`,
-      top: `${(cy / VH) * 100}%`,
-      transform: `translate(-50%, -50%) scale(${scale})`,
-      transformOrigin: 'center center',
+      left: `${(cx / vw) * 100}%`,
+      top: `${(cy / vh) * 100}%`,
+      // CSS zoom shrinks both visual rendering AND DOM layout footprint (unlike transform:scale),
+      // so absolute-positioned node cards don't overlap each other on narrow screens.
+      zoom: scale,
+      transform: 'translate(-50%, -50%)',
       zIndex: 2,
     }}>
       {children}
@@ -376,19 +402,25 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
 
-  // Scale node cards down on narrow containers (mobile) so edges don't clip
+  // Track container width so we can switch between wide and narrow layouts.
+  // CSS zoom (used in At) correctly shrinks DOM footprint unlike transform:scale.
   const diagramRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(700);
   const [nodeScale, setNodeScale] = useState(1);
   useEffect(() => {
     const el = diagramRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
       const w = entry.contentRect.width;
-      setNodeScale(Math.min(1, Math.max(0.6, w / 420)));
+      setContainerWidth(w);
+      // Narrower divisor on mobile so nodes shrink enough to clear edges
+      setNodeScale(Math.min(1, Math.max(0.55, w / 540)));
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const { VH, N, P, ASPECT_PAD } = containerWidth < 480 ? NARROW_LAYOUT : WIDE_LAYOUT;
 
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -505,6 +537,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           <div style={{ position: 'absolute', inset: 0 }}>
             <svg
               viewBox={`0 0 ${VW} ${VH}`}
+
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
             >
               <defs>
@@ -540,7 +573,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             </svg>
 
             {/* Node cards */}
-            <At cx={N.pv.x} cy={N.pv.y} scale={nodeScale}>
+            <At cx={N.pv.x} cy={N.pv.y} scale={nodeScale} vw={VW} vh={VH}>
               <div onClick={() => handleNodeClick({
                 type: 'solar',
                 id: 'solar',
@@ -560,8 +593,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   color="#f59e0b" active={pvActive} isDark={isDark} />
               </div>
             </At>
-            <At cx={N.hub.x} cy={N.hub.y} scale={nodeScale}><HubNode isDark={isDark} /></At>
-            <At cx={N.batt.x} cy={N.batt.y} scale={nodeScale}>
+            <At cx={N.hub.x} cy={N.hub.y} scale={nodeScale} vw={VW} vh={VH}><HubNode isDark={isDark} /></At>
+            <At cx={N.batt.x} cy={N.batt.y} scale={nodeScale} vw={VW} vh={VH}>
               <div onClick={() => handleNodeClick({
                 type: 'battery',
                 id: 'battery',
@@ -585,7 +618,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   isDark={isDark} />
               </div>
             </At>
-            <At cx={N.grid.x} cy={N.grid.y} scale={nodeScale}>
+            <At cx={N.grid.x} cy={N.grid.y} scale={nodeScale} vw={VW} vh={VH}>
               <div onClick={() => handleNodeClick({
                 type: 'grid',
                 id: 'grid',
