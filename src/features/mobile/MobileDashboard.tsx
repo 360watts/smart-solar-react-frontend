@@ -15,6 +15,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import EnergyFlowBlock from '../../shared/components/EnergyFlow';
 import { SmartDeviceNode } from '../../shared/components/EnergyFlow/types';
+import finalLogo from '../../assets/finalLogo.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -221,32 +222,45 @@ const MobileDashboard: React.FC = () => {
         .online-dot { animation: pulse-ring 2s ease-out infinite; }
       `}</style>
 
+      {/* ── Sticky header ── */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 20,
-        background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)',
-        backdropFilter: 'blur(20px)',
+        background: isDark ? 'rgba(7,9,15,0.94)' : 'rgba(244,247,250,0.94)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         borderBottom: `1px solid ${border}`,
-        padding: '14px 16px',
+        padding: '12px 16px 14px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Dashboard</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>
-              {site?.display_name ?? 'Solar Monitor'}
+        {/* Brand row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, overflow: 'hidden',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)',
+              border: `1px solid rgba(47,191,113,0.18)`,
+              boxShadow: '0 2px 10px rgba(47,191,113,0.2)',
+            }}>
+              <img src={finalLogo} alt="360Watts" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2FBF71', fontFamily: "'DM Sans', sans-serif" }}>360Watts</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: text, lineHeight: 1.2, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>
+                {site?.display_name ?? 'Solar Monitor'}
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 10px', borderRadius: 999,
-              background: online ? 'rgba(47,191,113,0.12)' : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-              border: `1px solid ${online ? 'rgba(47,191,113,0.25)' : border}`,
+              background: online ? (isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)') : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              border: `1px solid ${online ? 'rgba(47,191,113,0.28)' : border}`,
             }}>
-              <span
-                className={online ? 'online-dot' : undefined}
-                style={{ width: 7, height: 7, borderRadius: '50%', background: online ? '#2FBF71' : '#94A3B8', display: 'inline-block', flexShrink: 0 }}
-              />
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: online ? '#2FBF71' : muted, fontFamily: "'DM Sans', sans-serif" }}>
+              <span className={online ? 'online-dot' : undefined}
+                style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : '#94A3B8', display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: online ? '#2FBF71' : muted, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.04em' }}>
                 {online ? 'Online' : 'Offline'}
               </span>
             </div>
@@ -259,97 +273,196 @@ const MobileDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Site selector trigger */}
         <button
           onClick={() => { setPickerOpen(o => !o); setSiteSearch(''); }}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-            border: `1px solid ${border}`, borderRadius: 999,
-            padding: '10px 16px', cursor: 'pointer', color: text,
+            background: pickerOpen
+              ? isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)'
+              : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+            border: `1.5px solid ${pickerOpen ? 'rgba(47,191,113,0.45)' : border}`,
+            borderRadius: 12,
+            padding: '10px 14px', cursor: 'pointer', color: text,
+            transition: 'border-color 0.2s, background 0.2s',
+            boxShadow: pickerOpen ? '0 0 0 3px rgba(47,191,113,0.1)' : 'none',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MapPin size={13} color={muted} />
-            <span style={{ fontWeight: 700, fontSize: '0.88rem', fontFamily: "'DM Sans', sans-serif" }}>{site?.display_name ?? 'Select site'}</span>
-            {site && <span style={{ fontSize: '0.65rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.site_id}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)',
+              border: `1px solid rgba(47,191,113,0.2)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <MapPin size={13} color="#2FBF71" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                {site?.display_name ?? 'Select a site'}
+              </div>
+              {site && (
+                <div style={{ fontSize: '0.6rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
+                  {site.site_id} · {site.capacity_kw} kWp
+                </div>
+              )}
+            </div>
           </div>
-          <ChevronDown size={14} color={muted} style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+          <ChevronDown size={15} color={pickerOpen ? '#2FBF71' : muted}
+            style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
         </button>
       </div>
 
+      {/* ── Site picker dropdown ── */}
       {pickerOpen && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 18 }} onClick={() => { setPickerOpen(false); setSiteSearch(''); }} />
           <div style={{
-            position: 'relative', zIndex: 19,
-            background: isDark ? 'rgba(12,14,22,0.97)' : 'rgba(255,255,255,0.97)',
-            backdropFilter: 'blur(20px)',
-            borderBottom: `1px solid ${border}`,
-            maxHeight: 340,
-            boxShadow: isDark ? '0 16px 48px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.12)',
+            position: 'sticky', top: 115, zIndex: 19,
+            margin: '0 16px',
+            background: isDark ? 'rgba(10,13,20,0.98)' : 'rgba(252,253,255,0.98)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: `1.5px solid ${isDark ? 'rgba(47,191,113,0.2)' : 'rgba(47,191,113,0.25)'}`,
+            borderRadius: 16,
+            boxShadow: isDark
+              ? '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(47,191,113,0.08)'
+              : '0 12px 40px rgba(0,0,0,0.14), 0 0 0 1px rgba(47,191,113,0.06)',
+            overflow: 'hidden',
+            animation: 'sitePickerIn 0.18s cubic-bezier(0.34,1.4,0.64,1)',
           }}>
-            {/* Search bar */}
+            <style>{`
+              @keyframes sitePickerIn {
+                from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+                to   { opacity: 1; transform: translateY(0) scale(1); }
+              }
+            `}</style>
+
+            {/* Search */}
             <div style={{
-              padding: '10px 14px',
-              borderBottom: `1px solid ${border}`,
-              position: 'sticky', top: 0,
-              background: isDark ? 'rgba(12,14,22,0.98)' : 'rgba(255,255,255,0.98)',
-              zIndex: 1,
+              padding: '12px 12px 10px',
+              borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+              background: isDark ? 'rgba(47,191,113,0.04)' : 'rgba(47,191,113,0.03)',
             }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                border: `1px solid ${border}`, borderRadius: 10,
-                padding: '8px 12px',
-              }}>
-                <Search size={13} color={muted} style={{ flexShrink: 0 }} />
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                borderRadius: 10, padding: '8px 12px',
+                transition: 'border-color 0.15s',
+              }}
+                onFocus={() => {}}
+              >
+                <Search size={13} color="#2FBF71" style={{ flexShrink: 0 }} />
                 <input
                   autoFocus
-                  placeholder="Search sites…"
+                  placeholder="Search by name or ID…"
                   value={siteSearch}
                   onChange={e => setSiteSearch(e.target.value)}
                   style={{
                     flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                    fontSize: '0.85rem', color: text, fontFamily: "'DM Sans', sans-serif",
+                    fontSize: '0.82rem', color: text, fontFamily: "'DM Sans', sans-serif",
                   }}
                 />
                 {siteSearch && (
-                  <button onClick={() => setSiteSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
-                    <ChevronDown size={13} color={muted} style={{ transform: 'rotate(45deg)' }} />
+                  <button onClick={() => setSiteSearch('')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: muted, lineHeight: 1, borderRadius: 4 }}>
+                    ✕
                   </button>
                 )}
               </div>
+              <div style={{ marginTop: 7, fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted, paddingLeft: 2 }}>
+                {sites.length} site{sites.length !== 1 ? 's' : ''} available
+              </div>
             </div>
-            {/* Site list */}
-            <div style={{ overflowY: 'auto', maxHeight: 270 }}>
-              {sites
-                .filter(s => !siteSearch || s.display_name.toLowerCase().includes(siteSearch.toLowerCase()) || s.site_id.toLowerCase().includes(siteSearch.toLowerCase()))
-                .map(s => {
+
+            {/* List */}
+            <div style={{ overflowY: 'auto', maxHeight: 280 }}>
+              {(() => {
+                const filtered = sites.filter(s =>
+                  !siteSearch ||
+                  s.display_name.toLowerCase().includes(siteSearch.toLowerCase()) ||
+                  s.site_id.toLowerCase().includes(siteSearch.toLowerCase())
+                );
+                if (filtered.length === 0) return (
+                  <div style={{ padding: '28px 16px', textAlign: 'center' }}>
+                    <Search size={20} color={muted} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
+                    <div style={{ fontSize: '0.82rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No sites match</div>
+                    <div style={{ fontSize: '0.7rem', color: muted, opacity: 0.6, marginTop: 3 }}>"{siteSearch}"</div>
+                  </div>
+                );
+                return filtered.map((s, idx) => {
                   const on = siteIsOnline(s);
                   const sel = s.site_id === selectedId;
+                  const initials = s.display_name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
                   return (
-                    <div key={s.site_id} onClick={() => { setSelectedId(s.site_id); setPickerOpen(false); setSiteSearch(''); }}
+                    <div key={s.site_id}
+                      onClick={() => { setSelectedId(s.site_id); setPickerOpen(false); setSiteSearch(''); }}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 0, cursor: 'pointer',
-                        background: sel ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)') : 'transparent',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '11px 14px',
+                        cursor: 'pointer',
+                        borderBottom: idx < filtered.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` : 'none',
+                        background: sel
+                          ? isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)'
+                          : 'transparent',
+                        transition: 'background 0.12s',
+                        position: 'relative',
+                      }}
+                      onMouseEnter={e => { if (!sel) (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'; }}
+                      onMouseLeave={e => { if (!sel) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                    >
+                      {/* Selected accent bar */}
+                      {sel && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#2FBF71', borderRadius: '0 2px 2px 0' }} />}
+
+                      {/* Avatar */}
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: sel
+                          ? 'linear-gradient(135deg,#2FBF71,#00a650)'
+                          : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: `1px solid ${sel ? 'rgba(47,191,113,0.5)' : border}`,
+                        boxShadow: sel ? '0 4px 12px rgba(47,191,113,0.25)' : 'none',
                       }}>
-                      <div style={{ width: 4, alignSelf: 'stretch', background: on ? '#2FBF71' : '#64748B', flexShrink: 0 }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', flex: 1, minWidth: 0 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>{s.display_name}</div>
-                          <div style={{ fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{s.site_id} · {s.devices.length} dev</div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: sel ? '#fff' : muted, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.02em' }}>{initials}</span>
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? (isDark ? '#fff' : '#0f172a') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                            {s.display_name}
+                          </span>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                          {on ? <Wifi size={14} color="#2FBF71" /> : <WifiOff size={14} color="#64748B" />}
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: on ? '#2FBF71' : '#64748B' }}>{on ? 'Online' : 'Offline'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{s.site_id}</span>
+                          <span style={{ fontSize: '0.6rem', color: muted, opacity: 0.5 }}>·</span>
+                          <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{s.capacity_kw} kWp</span>
+                          <span style={{ fontSize: '0.6rem', color: muted, opacity: 0.5 }}>·</span>
+                          <span style={{ fontSize: '0.62rem', color: muted }}>{s.devices.length} dev</span>
                         </div>
+                      </div>
+
+                      {/* Status */}
+                      <div style={{
+                        flexShrink: 0,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 999,
+                        background: on
+                          ? isDark ? 'rgba(47,191,113,0.14)' : 'rgba(47,191,113,0.1)'
+                          : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                        border: `1px solid ${on ? 'rgba(47,191,113,0.3)' : border}`,
+                      }}>
+                        {on ? <Wifi size={10} color="#2FBF71" /> : <WifiOff size={10} color="#94A3B8" />}
+                        <span style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: on ? '#2FBF71' : '#94A3B8', fontFamily: "'DM Sans', sans-serif" }}>
+                          {on ? 'On' : 'Off'}
+                        </span>
                       </div>
                     </div>
                   );
-                })}
-              {sites.filter(s => !siteSearch || s.display_name.toLowerCase().includes(siteSearch.toLowerCase()) || s.site_id.toLowerCase().includes(siteSearch.toLowerCase())).length === 0 && (
-                <div style={{ padding: '24px 16px', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>No sites match "{siteSearch}"</div>
-              )}
+                });
+              })()}
             </div>
           </div>
         </>
