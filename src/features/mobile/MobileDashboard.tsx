@@ -135,8 +135,6 @@ const MobileDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!selectedId) return;
-    setTelemetry([]);
-    setWeather(null);
     fetchTelemetry(selectedId);
     fetchWeather(selectedId);
     apiService.getSmartDevices(selectedId).then(d => setSmartDevices(Array.isArray(d) ? d : [])).catch(() => setSmartDevices([]));
@@ -233,7 +231,7 @@ const MobileDashboard: React.FC = () => {
         padding: '12px 16px 14px',
       }}>
         {/* Brand row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10, overflow: 'hidden',
@@ -244,78 +242,22 @@ const MobileDashboard: React.FC = () => {
             }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 44, height: 44, objectFit: 'contain' }} />
             </div>
-            <div>
-              <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2FBF71', fontFamily: "'DM Sans', sans-serif" }}>360Watts</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: text, lineHeight: 1.2, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>
-                {site?.display_name ?? 'Solar Monitor'}
-              </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: text, lineHeight: 1.2, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>
+              360Watts
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px', borderRadius: 999,
-              background: online ? (isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)') : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-              border: `1px solid ${online ? 'rgba(47,191,113,0.28)' : border}`,
-            }}>
-              <span className={online ? 'online-dot' : undefined}
-                style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : '#94A3B8', display: 'inline-block', flexShrink: 0 }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: online ? '#2FBF71' : muted, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.04em' }}>
-                {online ? 'Online' : 'Offline'}
-              </span>
-            </div>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
-              style={{
-                background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)',
-                border: `1px solid rgba(47,191,113,0.22)`,
-                borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: '7px', display: 'flex',
-              }}
-            >
-              <Menu size={16} />
-            </button>
-          </div>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
+            style={{
+              background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)',
+              border: `1px solid rgba(47,191,113,0.22)`,
+              borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: '7px', display: 'flex',
+            }}
+          >
+            <Menu size={16} />
+          </button>
         </div>
-
-        {/* Site selector trigger */}
-        <button
-          onClick={() => { setPickerOpen(o => !o); setSiteSearch(''); }}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: pickerOpen
-              ? isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)'
-              : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-            border: `1.5px solid ${pickerOpen ? 'rgba(47,191,113,0.45)' : border}`,
-            borderRadius: 12,
-            padding: '10px 14px', cursor: 'pointer', color: text,
-            transition: 'border-color 0.2s, background 0.2s',
-            boxShadow: pickerOpen ? '0 0 0 3px rgba(47,191,113,0.1)' : 'none',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)',
-              border: `1px solid rgba(47,191,113,0.2)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <MapPin size={13} color="#2FBF71" />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
-                {site?.display_name ?? 'Select a site'}
-              </div>
-              {site && (
-                <div style={{ fontSize: '0.6rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
-                  {site.site_id} · {site.capacity_kw} kWp
-                </div>
-              )}
-            </div>
-          </div>
-          <ChevronDown size={15} color={pickerOpen ? '#2FBF71' : muted}
-            style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
-        </button>
       </div>
 
       {/* ── Site picker dropdown ── */}
@@ -475,6 +417,43 @@ const MobileDashboard: React.FC = () => {
 
       {site && (
         <div style={{ padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* ── Site selector button ── */}
+          <button
+            onClick={() => { setPickerOpen(o => !o); setSiteSearch(''); }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: pickerOpen
+                ? isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)'
+                : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              border: `1.5px solid ${pickerOpen ? 'rgba(47,191,113,0.45)' : border}`,
+              borderRadius: 12,
+              padding: '10px 14px', cursor: 'pointer', color: text,
+              transition: 'border-color 0.2s, background 0.2s',
+              boxShadow: pickerOpen ? '0 0 0 3px rgba(47,191,113,0.1)' : 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                background: online ? (isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)') : (isDark ? 'rgba(100,100,100,0.1)' : 'rgba(0,0,0,0.08)'),
+                border: `1px solid ${online ? 'rgba(47,191,113,0.2)' : border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : '#94A3B8', display: 'inline-block' }} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                  {site?.display_name ?? 'Select a site'}
+                </div>
+                <div style={{ fontSize: '0.6rem', color: online ? '#2FBF71' : muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
+                  {online ? '🟢 Online' : '🔴 Offline'} · {site.capacity_kw} kWp
+                </div>
+              </div>
+            </div>
+            <ChevronDown size={15} color={pickerOpen ? '#2FBF71' : muted}
+              style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
+          </button>
 
           <div style={{
             ...card(),
