@@ -84,14 +84,11 @@ const MobileDashboard: React.FC = () => {
   }, [allAlerts, site]);
 
   const lat = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
-  // Treat real-time power values as stale if latest reading is >15 min old
-  const latAge = lat ? (Date.now() - new Date(lat.timestamp).getTime()) : Infinity;
-  const isStale = latAge > 15 * 60 * 1000;
-  const pvW    = lat && !isStale ? (lat.pv1_power_w ?? 0) + (lat.pv2_power_w ?? 0) + (lat.pv3_power_w ?? 0) + (lat.pv4_power_w ?? 0) : null;
-  const gridW  = isStale ? null : lat?.grid_power_w ?? null;
-  const loadW  = isStale ? null : lat?.load_power_w ?? null;
-  const batW   = isStale ? null : lat?.battery_power_w ?? null;
-  const soc    = isStale ? null : lat?.battery_soc_percent ?? null;
+  const pvW    = lat ? (lat.pv1_power_w ?? 0) + (lat.pv2_power_w ?? 0) + (lat.pv3_power_w ?? 0) + (lat.pv4_power_w ?? 0) : null;
+  const gridW  = lat?.grid_power_w ?? null;
+  const loadW  = lat?.load_power_w ?? null;
+  const batW   = lat?.battery_power_w ?? null;
+  const soc    = lat?.battery_soc_percent ?? null;
   const batV   = lat?.battery_voltage_v ?? null;
   const pvKWh  = lat?.pv_today_kwh ?? null;
   const ldKWh  = lat?.load_today_kwh ?? null;

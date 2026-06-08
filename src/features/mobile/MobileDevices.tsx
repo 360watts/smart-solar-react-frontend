@@ -3,7 +3,8 @@ import { apiService } from '../../services/api';
 import {
   Wifi, WifiOff, RefreshCw, Thermometer, Signal, AlertTriangle,
   Search, X, FileText, ChevronDown, ChevronUp, Loader2,
-  Activity, Cpu, Clock, Radio, Settings, Shield,
+  Activity, Cpu, Clock, Radio, Settings, Shield, MoreVertical,
+  RotateCcw, Trash2, Pencil, Download, BellOff, Bell
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -127,6 +128,8 @@ const MobileDevices: React.FC = () => {
   const [filter,     setFilter]     = useState<'all' | 'online' | 'offline'>('all');
   const [expanded,   setExpanded]   = useState<Set<number>>(new Set());
   const [logsOpen,   setLogsOpen]   = useState<Set<number>>(new Set());
+  const [actionMenu, setActionMenu] = useState<number | null>(null);
+  const [modal,      setModal]      = useState<{ type: 'reboot' | 'reset' | 'delete' | null; device: Device | null }>({ type: null, device: null });
 
   const fetchDevices = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -300,6 +303,9 @@ const MobileDevices: React.FC = () => {
                       {isExp ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </div>
                   </div>
+                  <button onClick={e => { e.stopPropagation(); setActionMenu(actionMenu === device.id ? null : device.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: muted, padding: '4px', flexShrink: 0, marginLeft: '-8px' }}>
+                    <MoreVertical size={16} />
+                  </button>
                 </button>
 
                 {isExp && (
@@ -405,6 +411,70 @@ const MobileDevices: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Action Menu Modal */}
+      {actionMenu !== null && filtered.find(d => d.id === actionMenu) && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)', zIndex: 30,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setActionMenu(null)}>
+          <div style={{
+            background: surface, borderRadius: 12, border: `1px solid ${border}`,
+            overflow: 'hidden', width: 'calc(100% - 32px)', maxWidth: 320
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}`, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Actions</div>
+            <div style={{ padding: '8px' }}>
+              {[
+                { label: 'Edit', icon: <Pencil size={16} />, onClick: () => { setActionMenu(null); }, color: '#3B82F6' },
+                { label: 'Reboot', icon: <RotateCcw size={16} />, onClick: () => { setModal({ type: 'reboot', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
+                { label: 'Hard Reset', icon: <AlertTriangle size={16} />, onClick: () => { setModal({ type: 'reset', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
+                { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => { setModal({ type: 'delete', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#EF4444' },
+              ].map(({ label, icon, onClick, color }) => (
+                <button key={label} onClick={onClick} style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'transparent',
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color, fontWeight: 600, fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif",
+                  transition: 'background 150ms'
+                }} onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}
+                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {icon}{label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modals */}
+      {modal.type && modal.device && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 40,
+          display: 'flex', alignItems: 'flex-end'
+        }}>
+          <div style={{
+            width: '100%', borderRadius: '20px 20px 0 0', background: surface,
+            padding: '20px 20px 30px'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ marginBottom: 12, fontSize: '0.9rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: text }}>
+              {modal.type === 'reboot' ? 'Reboot Device?' : modal.type === 'reset' ? 'Hard Reset?' : 'Delete Device?'}
+            </div>
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}>
+              {modal.type === 'reboot' && `Queue reboot for ${modal.device.device_serial}? The device will restart.`}
+              {modal.type === 'reset' && `Hard reset ${modal.device.device_serial}? This will erase configuration.`}
+              {modal.type === 'delete' && `Permanently delete ${modal.device.device_serial}? This cannot be undone.`}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setModal({ type: null, device: null })} style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: `1px solid ${border}`,
+                background: 'transparent', color: muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
+              }}>Cancel</button>
+              <button onClick={() => { setModal({ type: null, device: null }); }} style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: 'none',
+                background: modal.type === 'delete' ? '#EF4444' : '#F59E0B', color: '#FFFFFF', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
+              }}>{modal.type === 'reboot' ? 'Reboot' : modal.type === 'reset' ? 'Reset' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
