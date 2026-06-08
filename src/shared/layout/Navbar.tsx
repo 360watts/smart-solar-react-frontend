@@ -231,7 +231,7 @@ const Navbar: React.FC = () => {
               <img src={finalLogo} alt="360watts" style={{ width: 68, height: 68, objectFit: 'contain' }} />
             </div>
             <div className="topnav-brand-text" style={{ lineHeight: 1.25 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: tok.text(isDark), letterSpacing: '-0.01em' }}>Smart Solar</div>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: tok.text(isDark), letterSpacing: '-0.01em' }}>360Watts</div>
               <div style={{ fontSize: 11, color: tok.muted(isDark), fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>IoT Platform</div>
             </div>
           </Link>

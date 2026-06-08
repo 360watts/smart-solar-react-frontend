@@ -198,7 +198,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: sideText, letterSpacing: '-0.01em' }}>
-            Smart Solar
+            360Watts
           </div>
           <div style={{ fontSize: 10, color: sideMuted, marginTop: 1, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             IoT Platform
@@ -375,8 +375,8 @@ const StaffLayout: React.FC = () => {
   return (
     <div style={{ background: bg, minHeight: '100vh', width: '100%', fontFamily: "'Fira Sans', 'DM Sans', sans-serif" }}>
 
-      {/* Mobile topbar — suppressed on /dashboard, which renders its own branded header */}
-      {location.pathname !== '/dashboard' && (
+      {/* Mobile topbar — suppressed on all pages since each page has its own branded header */}
+      {false && (
         <header
           className="staff-mobile-topbar"
           style={{
@@ -391,7 +391,7 @@ const StaffLayout: React.FC = () => {
           }}
         >
           <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>
-            Smart Solar
+            360Watts
           </div>
           <button
             onClick={() => setMobileOpen(true)}
