@@ -649,7 +649,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       {/* Total Load + Y-connector + Sub-loads */}
       <div style={{ padding: '0 18px 0', marginTop: -10 }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
-          <div onClick={() => handleNodeClick({
+          <div style={{ zoom: nodeScale }} onClick={() => handleNodeClick({
             type: 'load',
             id: 'load',
             title: 'Total Load',
@@ -715,7 +715,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           );
         })()}
 
-        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap', zoom: nodeScale }}>
           <SubSection
             title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
