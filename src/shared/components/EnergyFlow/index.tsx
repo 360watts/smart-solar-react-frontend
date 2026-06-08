@@ -85,7 +85,7 @@ const WIDE_LAYOUT = computeLayout(240, {
 const NARROW_LAYOUT = computeLayout(320, {
   pv:   { x: 90,  y: 200 },
   hub:  { x: 350, y: 200 },
-  batt: { x: 350, y: 80  },
+  batt: { x: 350, y: 45  },
   grid: { x: 610, y: 200 },
 });
 
@@ -156,18 +156,27 @@ function Beam({ d, color, active, speed = 1.6, intensity = 0.5 }: {
 function At({ cx, cy, scale = 1, vw, vh, children }: {
   cx: number; cy: number; scale?: number; vw: number; vh: number; children: React.ReactNode;
 }) {
+  // Outer div is 0×0 positioned at the node coordinate — zero DOM footprint.
+  // Inner div centers content around that anchor and scales it visually.
+  // Keeping centering and scaling in separate transforms avoids the
+  // zoom+translate(%) ambiguity where % resolution differs across browsers.
   return (
     <div style={{
       position: 'absolute',
       left: `${(cx / vw) * 100}%`,
       top: `${(cy / vh) * 100}%`,
-      // CSS zoom shrinks both visual rendering AND DOM layout footprint (unlike transform:scale),
-      // so absolute-positioned node cards don't overlap each other on narrow screens.
-      zoom: scale,
-      transform: 'translate(-50%, -50%)',
+      width: 0,
+      height: 0,
+      overflow: 'visible',
       zIndex: 2,
     }}>
-      {children}
+      <div style={{
+        display: 'inline-block',
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        transformOrigin: 'center center',
+      }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -200,7 +209,7 @@ function HubNode({ isDark }: { isDark: boolean }) {
             border: '1.5px solid rgba(99,102,241,0.28)', pointerEvents: 'none',
           }}
         />
-        <Activity size={26} color="#818cf8" />
+        <Activity size={22} color="#818cf8" />
       </motion.div>
       <span style={{
         fontSize: 8, fontWeight: 800, textTransform: 'uppercase',
@@ -402,8 +411,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
 
-  // Track container width so we can switch between wide and narrow layouts.
-  // CSS zoom (used in At) correctly shrinks DOM footprint unlike transform:scale.
+  // Track container width to switch between wide and narrow layouts and to
+  // scale node cards, the Total Load card, and SubSection proportionally.
   const diagramRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(700);
   const [nodeScale, setNodeScale] = useState(1);
@@ -649,7 +658,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       {/* Total Load + Y-connector + Sub-loads */}
       <div style={{ padding: '0 18px 0', marginTop: -10 }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
-          <div style={{ zoom: nodeScale }} onClick={() => handleNodeClick({
+          <div style={{ display: 'inline-block', transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
             type: 'load',
             id: 'load',
             title: 'Total Load',
@@ -661,7 +670,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
               solarKw: load,
               gridKw: ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0,
             },
-          })} style={{ cursor: 'pointer' }}>
+          })}>
             <NodeCard label="Total Load"
               icon={<Home size={22} color={loadActive ? '#f87171' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
               valueStr={loadFmt.valueStr} unit={loadFmt.unit}
@@ -715,7 +724,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           );
         })()}
 
-        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap', zoom: nodeScale }}>
+        <div style={{ display: 'flex', gap: 13, alignItems: 'stretch', paddingBottom: 14, flexWrap: 'wrap', transform: `scale(${nodeScale})`, transformOrigin: 'top center' }}>
           <SubSection
             title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}

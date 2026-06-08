@@ -203,11 +203,12 @@ const AiChat: React.FC = () => {
   };
 
   // Panel dimensions
-  const panelW = isMobile ? 'calc(100vw - 16px)' : panelSize === 'compact' ? 380 : '100vw';
-  const panelH = isMobile ? 'calc(100dvh - 220px)' : panelSize === 'compact' ? 560 : '100dvh';
-  const panelBottom = panelSize === 'fullscreen' ? 0 : isMobile ? 144 : 88;
-  const panelRight = panelSize === 'fullscreen' ? 0 : isMobile ? 8 : 24;
-  const panelRadius = panelSize === 'fullscreen' ? 0 : 18;
+  const isFullscreen = panelSize === 'fullscreen';
+  const panelW = isFullscreen ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 380;
+  const panelH = isFullscreen ? '100dvh' : isMobile ? 'calc(100dvh - 160px)' : 560;
+  const panelBottom = isFullscreen ? 0 : isMobile ? 144 : 88;
+  const panelRight = isFullscreen ? 0 : isMobile ? 8 : 24;
+  const panelRadius = isFullscreen ? 0 : 18;
 
   const SizeIcon = panelSize === 'fullscreen' ? Minimize2 : Maximize2;
 

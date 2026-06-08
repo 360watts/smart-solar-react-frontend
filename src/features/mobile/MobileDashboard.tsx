@@ -4,7 +4,7 @@ import {
   Sun, Battery, Zap, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, MapPin, Clock, RefreshCw, Wifi, WifiOff,
   Compass, Globe, CloudSun, Droplets, Wind,
-  Activity, BarChart3,
+  Activity, BarChart3, Search,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../app/constants';
@@ -64,6 +64,7 @@ const MobileDashboard: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sitesLoading, setSitesLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [siteSearch, setSiteSearch] = useState('');
   const [allAlerts, setAllAlerts] = useState<AlertItem[]>([]);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [telemetry, setTelemetry] = useState<TelemetryRow[]>([]);
@@ -259,54 +260,97 @@ const MobileDashboard: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setPickerOpen(o => !o)}
+          onClick={() => { setPickerOpen(o => !o); setSiteSearch(''); }}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
             border: `1px solid ${border}`, borderRadius: 999,
-            padding: '8px 14px', cursor: 'pointer', color: text,
+            padding: '10px 16px', cursor: 'pointer', color: text,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MapPin size={12} color={muted} />
-            <span style={{ fontWeight: 600, fontSize: '0.82rem', fontFamily: "'DM Sans', sans-serif" }}>{site?.display_name ?? 'Select site'}</span>
-            {site && <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.site_id}</span>}
+            <MapPin size={13} color={muted} />
+            <span style={{ fontWeight: 700, fontSize: '0.88rem', fontFamily: "'DM Sans', sans-serif" }}>{site?.display_name ?? 'Select site'}</span>
+            {site && <span style={{ fontSize: '0.65rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.site_id}</span>}
           </div>
-          <ChevronDown size={13} color={muted} style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+          <ChevronDown size={14} color={muted} style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
         </button>
       </div>
 
       {pickerOpen && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 18 }} onClick={() => setPickerOpen(false)} />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 18 }} onClick={() => { setPickerOpen(false); setSiteSearch(''); }} />
           <div style={{
             position: 'relative', zIndex: 19,
             background: isDark ? 'rgba(12,14,22,0.97)' : 'rgba(255,255,255,0.97)',
             backdropFilter: 'blur(20px)',
             borderBottom: `1px solid ${border}`,
-            maxHeight: 280, overflowY: 'auto',
+            maxHeight: 340,
             boxShadow: isDark ? '0 16px 48px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.12)',
           }}>
-            {sites.map(s => {
-              const on = siteIsOnline(s);
-              const sel = s.site_id === selectedId;
-              return (
-                <div key={s.site_id} onClick={() => { setSelectedId(s.site_id); setPickerOpen(false); }}
+            {/* Search bar */}
+            <div style={{
+              padding: '10px 14px',
+              borderBottom: `1px solid ${border}`,
+              position: 'sticky', top: 0,
+              background: isDark ? 'rgba(12,14,22,0.98)' : 'rgba(255,255,255,0.98)',
+              zIndex: 1,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                border: `1px solid ${border}`, borderRadius: 10,
+                padding: '8px 12px',
+              }}>
+                <Search size={13} color={muted} style={{ flexShrink: 0 }} />
+                <input
+                  autoFocus
+                  placeholder="Search sites…"
+                  value={siteSearch}
+                  onChange={e => setSiteSearch(e.target.value)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 0, cursor: 'pointer',
-                    background: sel ? (isDark ? 'rgba(47,191,113,0.06)' : 'rgba(47,191,113,0.04)') : 'transparent',
-                  }}>
-                  <div style={{ width: 4, alignSelf: 'stretch', background: on ? '#2FBF71' : '#64748B', flexShrink: 0 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', flex: 1, minWidth: 0 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>{s.display_name}</div>
-                      <div style={{ fontSize: '0.65rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>{s.site_id} · {s.devices.length} dev</div>
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    fontSize: '0.85rem', color: text, fontFamily: "'DM Sans', sans-serif",
+                  }}
+                />
+                {siteSearch && (
+                  <button onClick={() => setSiteSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                    <ChevronDown size={13} color={muted} style={{ transform: 'rotate(45deg)' }} />
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Site list */}
+            <div style={{ overflowY: 'auto', maxHeight: 270 }}>
+              {sites
+                .filter(s => !siteSearch || s.display_name.toLowerCase().includes(siteSearch.toLowerCase()) || s.site_id.toLowerCase().includes(siteSearch.toLowerCase()))
+                .map(s => {
+                  const on = siteIsOnline(s);
+                  const sel = s.site_id === selectedId;
+                  return (
+                    <div key={s.site_id} onClick={() => { setSelectedId(s.site_id); setPickerOpen(false); setSiteSearch(''); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 0, cursor: 'pointer',
+                        background: sel ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)') : 'transparent',
+                      }}>
+                      <div style={{ width: 4, alignSelf: 'stretch', background: on ? '#2FBF71' : '#64748B', flexShrink: 0 }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>{s.display_name}</div>
+                          <div style={{ fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{s.site_id} · {s.devices.length} dev</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+                          {on ? <Wifi size={14} color="#2FBF71" /> : <WifiOff size={14} color="#64748B" />}
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: on ? '#2FBF71' : '#64748B' }}>{on ? 'Online' : 'Offline'}</span>
+                        </div>
+                      </div>
                     </div>
-                    {on ? <Wifi size={13} color="#2FBF71" /> : <WifiOff size={13} color="#64748B" />}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              {sites.filter(s => !siteSearch || s.display_name.toLowerCase().includes(siteSearch.toLowerCase()) || s.site_id.toLowerCase().includes(siteSearch.toLowerCase())).length === 0 && (
+                <div style={{ padding: '24px 16px', textAlign: 'center', color: muted, fontSize: '0.82rem' }}>No sites match "{siteSearch}"</div>
+              )}
+            </div>
           </div>
         </>
       )}
