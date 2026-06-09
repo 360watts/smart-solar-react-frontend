@@ -346,8 +346,8 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
       {/* ── Body ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-        {/* Grid load with CT total but no smart devices */}
-        {devices.length === 0 && hasCtTotal && (
+        {/* Grid load with CT total */}
+        {hasCtTotal && (
           <>
             <div
               onClick={onCtHeaderClick}
@@ -374,7 +374,9 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
                 3-Phase ›
               </div>
             </div>
-            <EmptyPlaceholder title={emptyTitle} desc={emptyDesc} accent={accentColor} isDark={isDark} />
+            {devices.length === 0 && (
+              <EmptyPlaceholder title={emptyTitle} desc={emptyDesc} accent={accentColor} isDark={isDark} />
+            )}
           </>
         )}
 
