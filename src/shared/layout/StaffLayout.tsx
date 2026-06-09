@@ -51,9 +51,9 @@ const STAFF_STYLES = `
     border-radius: 9px;
     text-decoration: none;
     font-size: 13px;
-    font-family: 'Fira Sans', 'DM Sans', sans-serif;
+    font-family: 'Inter', 'DM Sans', sans-serif;
     font-weight: 500;
-    color: #8892A4;
+    color: #667085;
     background: transparent;
     transition: all 0.15s ease;
     cursor: pointer;
@@ -63,10 +63,10 @@ const STAFF_STYLES = `
     white-space: nowrap;
     overflow: hidden;
   }
-  .staff-nav-link:hover { color: #F0F4FF; background: rgba(255,255,255,0.05); }
+  .staff-nav-link:hover { color: #12151A; background: rgba(47,191,113,0.08); }
   .staff-nav-link.active {
-    color: #22C55E;
-    background: rgba(34,197,94,0.1);
+    color: #2FBF71;
+    background: rgba(47,191,113,0.12);
     font-weight: 600;
   }
   .staff-nav-dot {
@@ -78,30 +78,30 @@ const STAFF_STYLES = `
     transition: all 0.15s ease;
   }
   .staff-nav-link.active .staff-nav-dot {
-    background: #22C55E;
-    box-shadow: 0 0 8px rgba(34,197,94,0.8);
+    background: #2FBF71;
+    box-shadow: 0 0 8px rgba(47,191,113,0.6);
   }
 
   /* Light mode overrides */
-  body:not(.dark-mode) .staff-nav-link { color: #64748B; }
-  body:not(.dark-mode) .staff-nav-link:hover { color: #0A0E1A; background: rgba(0,0,0,0.05); }
-  body:not(.dark-mode) .staff-nav-link.active { color: #16A34A; background: rgba(34,197,94,0.08); }
-  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: #16A34A; box-shadow: 0 0 6px rgba(22,163,74,0.5); }
+  body:not(.dark-mode) .staff-nav-link { color: #667085; }
+  body:not(.dark-mode) .staff-nav-link:hover { color: #12151A; background: rgba(47,191,113,0.08); }
+  body:not(.dark-mode) .staff-nav-link.active { color: #2FBF71; background: rgba(47,191,113,0.1); }
+  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: #2FBF71; box-shadow: 0 0 6px rgba(47,191,113,0.4); }
 
   .staff-btn {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 12px; border-radius: 9px; border: none;
     background: transparent; cursor: pointer; font-size: 13px;
-    font-family: 'Fira Sans', 'DM Sans', sans-serif; font-weight: 500;
+    font-family: 'Inter', 'DM Sans', sans-serif; font-weight: 500;
     transition: all 0.15s ease; width: 100%; text-align: left;
     color: #8892A4;
   }
-  .staff-btn:hover { background: rgba(255,255,255,0.05); color: #F0F4FF; }
-  .staff-btn.danger { color: #F87171; }
-  .staff-btn.danger:hover { background: rgba(248,113,113,0.08); color: #FCA5A5; }
+  .staff-btn:hover { background: rgba(47,191,113,0.08); color: #12151A; }
+  .staff-btn.danger { color: #DC2626; }
+  .staff-btn.danger:hover { background: rgba(220,38,38,0.08); color: #B91C1C; }
 
-  body:not(.dark-mode) .staff-btn { color: #64748B; }
-  body:not(.dark-mode) .staff-btn:hover { background: rgba(0,0,0,0.05); color: #0A0E1A; }
+  body:not(.dark-mode) .staff-btn { color: #667085; }
+  body:not(.dark-mode) .staff-btn:hover { background: rgba(47,191,113,0.08); color: #12151A; }
 
   @media (max-width: 1023px) {
     .staff-desktop-sidebar { display: none !important; }
@@ -163,12 +163,12 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const displayName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user?.username : '';
   const roleName = user?.is_superuser ? 'Admin' : user?.is_staff ? 'Staff' : 'User';
 
-  const sideBg     = isDark ? 'linear-gradient(180deg, #0D1422 0%, #080C14 100%)' : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)';
-  const sideBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-  const sideText   = isDark ? '#F0F4FF' : '#0A0E1A';
-  const sideMuted  = isDark ? '#4A5568' : '#94A3B8';
-  const userBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
-  const userBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  const sideBg     = isDark ? 'linear-gradient(180deg, #0F1623 0%, #080C14 100%)' : 'linear-gradient(180deg, #FFFFFF 0%, #F4F6F8 100%)';
+  const sideBorder = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+  const sideText   = isDark ? '#F0F4FF' : '#12151A';
+  const sideMuted  = isDark ? '#8892A4' : '#667085';
+  const userBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(47,191,113,0.04)';
+  const userBorder = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(47,191,113,0.12)';
 
   const isActivePath = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 

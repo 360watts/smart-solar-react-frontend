@@ -135,23 +135,28 @@ const Dashboard: React.FC = () => {
 
   // ── Design tokens ────────────────────────────────────────────────────────
 
-  const bg       = isDark ? '#080C14' : '#f0fdf4';
-  const surface  = isDark ? '#0F1623' : '#ffffff';
-  const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
-  const textMain = isDark ? '#F0F4FF' : '#0f172a';
-  const textMute = isDark ? '#8892A4' : '#94a3b8';
-  const textSub  = isDark ? '#8892A4' : '#94a3b8';
+  // ── Design tokens — matches mobile AppTheme ─────────────────────────────
+  const bg       = isDark ? '#080C14' : '#F4F6F8';
+  const surface  = isDark ? '#0F1623' : '#FFFFFF';
+  const cardEl   = isDark ? '#111927' : '#EDF0F4';
+  const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
+  const borderMuted = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
+  const textMain = isDark ? '#F0F4FF' : '#12151A';
+  const textMute = isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)';
+  const textSub  = isDark ? '#8892A4' : '#717182';
+  const textDim  = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
+  const accent   = '#2FBF71';
 
   const onlineDot = (online: boolean): React.CSSProperties => ({
-    width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-    background: online ? '#22c55e' : '#64748b',
-    boxShadow: online ? '0 0 6px rgba(34,197,94,0.55)' : 'none',
+    width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+    background: online ? accent : '#EF4444',
+    boxShadow: online ? `0 0 5px ${accent}88` : 'none',
   });
 
   const statusPalette = {
-    ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
-    warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
-    err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
+    ok:   { bg: 'rgba(47,191,113,0.10)',  color: accent,    border: 'rgba(47,191,113,0.25)' },
+    warn: { bg: 'rgba(233,185,73,0.10)',  color: '#E9B949', border: 'rgba(233,185,73,0.25)' },
+    err:  { bg: 'rgba(239,68,68,0.10)',   color: '#EF4444', border: 'rgba(239,68,68,0.25)'  },
   };
 
   // ── Mobile handoff ───────────────────────────────────────────────────────
@@ -256,24 +261,38 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
         {kpiCards.map(({ label, value, sub, icon, status }) => {
           const s = statusPalette[status];
           return (
-            <div key={label} className="card" style={{ padding: 20, position: 'relative', overflow: 'hidden' }}>
-              <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                  {icon}
+            <div key={label} style={{
+              background: surface, border: `1px solid ${border}`, borderRadius: 18,
+              padding: 14, position: 'relative', overflow: 'hidden', minHeight: 100,
+              boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 1px 6px rgba(0,0,0,0.04)',
+            }}>
+              {/* Corner glow */}
+              <span style={{ position: 'absolute', top: -18, right: -18, width: 56, height: 56, borderRadius: '50%', background: `${s.color}0A`, pointerEvents: 'none' }} />
+              <span style={{ position: 'absolute', top: -6, right: -6, width: 28, height: 28, borderRadius: '50%', background: `${s.color}0D`, pointerEvents: 'none' }} />
+
+              {/* Icon badge + label row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{
+                  width: 30, height: 30, borderRadius: 10,
+                  background: s.bg, color: s.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${s.color}25`, flexShrink: 0,
+                }}>
+                  {React.cloneElement(icon as React.ReactElement<any>, { size: 15 })}
                 </div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                  {statusIcons[status]}{statusLabels[status]}
-                </span>
+                <span style={{ color: textMute, fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: textSub, marginBottom: 4, fontWeight: 500 }}>{label}</div>
-              <div className="staff-data" style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
-              <div style={{ fontSize: '0.72rem', color: textMute }}>{sub}</div>
-              <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
+
+              {/* Value */}
+              <div className="staff-data" style={{ color: textMain, fontSize: '1.625rem', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
+              <div style={{ color: textDim, fontSize: '0.6875rem', marginTop: 4 }}>{sub}</div>
+
+              {/* Accent baseline bar */}
+              <div style={{ position: 'absolute', bottom: 8, left: 14, width: 24, height: 2, borderRadius: 1, background: `${s.color}50` }} />
             </div>
           );
         })}
@@ -286,9 +305,9 @@ const Dashboard: React.FC = () => {
   const renderSiteInfoStrip = () => {
     if (!selectedSite) return null;
 
-    const chipBg     = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
-    const chipBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.09)';
-    const isActive   = selectedSite.is_active !== false; // treat undefined as active
+    const chipBg     = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(18,21,26,0.04)';
+    const chipBorder = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(18,21,26,0.09)';
+    const isActive   = selectedSite.is_active !== false;
 
     const chips: { icon: React.ReactNode; text: string }[] = [
       { icon: <MapPin size={11} />, text: `${selectedSite.latitude}° N, ${selectedSite.longitude}° E` },
@@ -299,7 +318,7 @@ const Dashboard: React.FC = () => {
     ];
 
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 0 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 0 }}>
         {chips.map(({ icon, text }) => (
           <span key={text} style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -328,8 +347,6 @@ const Dashboard: React.FC = () => {
   // ── Active alerts strip ───────────────────────────────────────────────────
 
   const renderAlertsStrip = () => {
-    if (activeAlerts.length === 0) return null;
-
     const severityPalette: Record<string, { bg: string; color: string; border: string }> = {
       critical: { bg: 'rgba(239,68,68,0.1)',  color: '#ef4444', border: 'rgba(239,68,68,0.25)'  },
       warning:  { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
@@ -337,8 +354,46 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {activeAlerts.map(alert => {
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '10px 14px',
+          borderRadius: 12,
+          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(47,191,113,0.18)'}`,
+          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(47,191,113,0.05)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <Bell size={14} color={activeAlerts.length > 0 ? '#2FBF71' : textMute} />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: textMain }}>
+              Active alerts
+            </span>
+          </div>
+          <span style={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            color: activeAlerts.length > 0 ? '#2FBF71' : textMute,
+          }}>
+            {activeAlerts.length > 0 ? `${activeAlerts.length} open` : 'None'}
+          </span>
+        </div>
+
+        {activeAlerts.length === 0 ? (
+          <div style={{
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1px dashed ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(148,163,184,0.28)'}`,
+            color: textMute,
+            fontSize: '0.78rem',
+            background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
+          }}>
+            No active alerts for the selected site.
+          </div>
+        ) : activeAlerts.map(alert => {
           const p = severityPalette[alert.severity] ?? severityPalette.info;
           return (
             <div
@@ -362,11 +417,11 @@ const Dashboard: React.FC = () => {
               <span style={{ fontSize: '0.75rem', color: p.color, fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {alert.message}
               </span>
-              {alert.status && (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: p.color, opacity: 0.7, flexShrink: 0 }}>
-                  {alert.status}
-                </span>
-              )}
+                {alert.status && (
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: p.color, opacity: 0.7, flexShrink: 0 }}>
+                    {alert.status}
+                  </span>
+                )}
             </div>
           );
         })}
@@ -377,24 +432,24 @@ const Dashboard: React.FC = () => {
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="admin-container responsive-page" style={{ paddingBottom: 40 }}>
+    <div className="admin-container responsive-page" style={{ paddingBottom: 40, background: bg }}>
 
       <PageHeader
-        icon={<LayoutDashboard size={20} color="white" />}
         title="Dashboard"
-        subtitle="Site overview and live health"
+        subtitle="Live site health and energy intelligence"
         rightSlot={
           <div style={{ position: 'relative' }}>
           <button
             onClick={() => setDropdownOpen(o => !o)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 12px', borderRadius: 10,
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 999,
               border: `1px solid ${border}`,
-              background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+              background: surface,
               cursor: 'pointer', color: textMain,
-              fontSize: '0.8125rem', fontWeight: 500,
+              fontSize: '0.8125rem', fontWeight: 600,
               userSelect: 'none', transition: 'background 150ms',
+              boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.06)',
             }}
           >
             {selectedSite && <span style={onlineDot(siteIsOnline(selectedSite))} />}

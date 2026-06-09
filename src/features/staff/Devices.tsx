@@ -102,9 +102,11 @@ interface SolarSite {
 
 const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave, isDark }) => {
   const [open, setOpen] = useState(false);
+  const borderM = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
+  const textD   = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
 
   return (
-    <div style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+    <div style={{ borderBottom: `1px solid ${borderM}` }}>
       <button
         onClick={() => setOpen(v => !v)}
         style={{
@@ -112,19 +114,19 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
           padding: '10px 20px', background: 'none', border: 'none', cursor: 'pointer',
           transition: 'background 150ms',
         }}
-        onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)')}
+        onMouseEnter={e => (e.currentTarget.style.background = borderM)}
         onMouseLeave={e => (e.currentTarget.style.background = 'none')}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {open
-            ? <ChevronDown size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
-            : <ChevronRight size={13} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />
+            ? <ChevronDown size={13} style={{ color: textD }} />
+            : <ChevronRight size={13} style={{ color: textD }} />
           }
-          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#374151', fontFamily: 'Poppins, sans-serif' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
             Slave {slave.slave_id} — {slave.device_name}
           </span>
           {!slave.enabled && (
-            <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: isDark ? '#64748b' : '#94a3b8' }}>disabled</span>
+            <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: textD }}>disabled</span>
           )}
         </div>
         <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: slave.received === slave.configured ? '#22c55e' : '#f59e0b' }}>
@@ -136,7 +138,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
         <div style={{ overflowX: 'auto', padding: '0 20px 12px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
             <thead>
-              <tr style={{ color: isDark ? '#94a3b8' : '#94a3b8' }}>
+              <tr style={{ color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
                 {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
                   <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -147,26 +149,26 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
                 <tr
                   key={reg.id}
                   style={{
-                    borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+                    borderTop: `1px solid ${borderM}`,
                     background: reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)',
                     transition: 'background 150ms',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)')}
                 >
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#F0F4FF' : '#12151A', whiteSpace: 'nowrap' }}>
                     {reg.label}
                   </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#64748b' : '#94a3b8' }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: textD }}>
                     {reg.address}
                   </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b' }}>
+                  <td style={{ padding: '5px 8px', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
                     {reg.category || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? '#94a3b8' : '#64748b', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                  <td style={{ padding: '5px 8px', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
                     {reg.unit || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : isDark ? '#94a3b8' : '#cbd5e1' }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : textD }}>
                     {reg.value != null ? reg.value : '—'}
                   </td>
                   <td style={{ padding: '5px 8px' }}>
@@ -190,6 +192,18 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
 const Devices: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
+  // ── Design tokens — mobile AppTheme aligned ──────────────────────────────
+  const T = {
+    bg:      isDark ? '#080C14'                      : '#F4F6F8',
+    surface: isDark ? '#0F1623'                      : '#FFFFFF',
+    cardEl:  isDark ? '#111927'                      : '#EDF0F4',
+    border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
+    borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
+    text:    isDark ? '#F0F4FF'                      : '#12151A',
+    textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
+    textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
+    accent:  '#2FBF71',
+  };
   const { user } = useAuth();
   const isStaffUser = !!user?.is_staff;
   const [searchParams] = useSearchParams();
@@ -356,17 +370,17 @@ const Devices: React.FC = () => {
   }, []);
 
   const fetchSites = async (devices: Device[]) => {
-    const siteMap = new Map<number, SolarSite | null>();
-    for (const device of devices) {
-      try {
-        const site = await apiService.getDeviceSite(device.id);
-        siteMap.set(device.id, site || null);
-      } catch (err) {
-        console.error(`Failed to fetch site for device ${device.id}:`, err);
-        siteMap.set(device.id, null);
-      }
-    }
-    setDeviceSiteMap(siteMap);
+    const entries = await Promise.all(
+      devices.map(async (device) => {
+        try {
+          const site = await apiService.getDeviceSite(device.id);
+          return [device.id, site || null] as const;
+        } catch {
+          return [device.id, null] as const;
+        }
+      })
+    );
+    setDeviceSiteMap(new Map(entries));
   };
 
   const activeAlerts = useMemo(() => {
@@ -915,33 +929,34 @@ const Devices: React.FC = () => {
   const editDevicePortal = (editingDevice || creatingDevice) ? ReactDOM.createPortal(
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(4px)',
+      background: isDark ? 'rgba(8,12,20,0.78)' : 'rgba(18,21,26,0.55)',
+      backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 9999, padding: '20px',
+      zIndex: 9999, padding: '16px',
     }} onClick={handleCancel}>
       <div style={{
-        background: isDark ? '#1a1a1a' : '#ffffff',
-        borderRadius: 16,
+        background: isDark ? '#0F1623' : '#ffffff',
+        borderRadius: 14,
         boxShadow: isDark
-          ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
-          : '0 25px 50px -12px rgba(0,0,0,0.25)',
-        maxWidth: '640px', width: '100%',
+          ? '0 24px 64px rgba(0,0,0,0.55)'
+          : '0 24px 64px rgba(15,23,42,0.16)',
+        maxWidth: 'min(560px, calc(100vw - 24px))', width: '100%',
         maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
       }} onClick={e => e.stopPropagation()}>
         {/* Header — Refined Design */}
         <div style={{
-          background: isDark ? 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95))' : 'linear-gradient(135deg, #ffffff, #f8fafc)',
-          borderBottom: '1px solid rgba(203,213,225,0.1)',
-          padding: '28px 32px',
+          background: isDark ? 'linear-gradient(135deg, rgba(15,22,35,0.96), rgba(8,12,20,0.96))' : 'linear-gradient(135deg, #ffffff, #f8fafc)',
+          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(47,191,113,0.08)'}`,
+          padding: '22px 24px',
           flexShrink: 0,
         }}>
           <h2 style={{
             margin: '0 0 8px 0',
             fontSize: '24px',
             fontWeight: 700,
-            fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
-            color: isDark ? '#f1f5f9' : '#1e293b',
+            fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
+            color: T.text,
             letterSpacing: '-0.02em',
           }}>
             {editingDevice ? `Edit: ${editingDevice.device_serial}` : 'Register New Device'}
@@ -950,7 +965,7 @@ const Devices: React.FC = () => {
             margin: 0,
             fontSize: '13px',
             color: isDark ? '#cbd5e1' : '#64748b',
-            fontFamily: '"Lora", Georgia, serif',
+            fontFamily: '"Inter", sans-serif',
             fontWeight: 400,
           }}>
             {editingDevice ? 'Update device configuration and assignment' : 'Configure your IoT gateway for solar energy management'}
@@ -962,17 +977,17 @@ const Devices: React.FC = () => {
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
             {/* Device Identity — Refined */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '2px solid #f59e0b',
+                paddingBottom: '10px',
+                borderBottom: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
               }}>
-                <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#f1f5f9' : '#1e293b', fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                <div style={{ width: '3px', height: '18px', background: '#2FBF71', borderRadius: '1.5px' }} />
+                <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: T.text, fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif' }}>
                   Device Identity
                 </h3>
               </div>
@@ -981,17 +996,17 @@ const Devices: React.FC = () => {
               {!editingDevice && (
                 <div style={{
                   padding: '16px',
-                  background: isDark ? 'rgba(203, 213, 225, 0.05)' : 'rgba(30, 41, 59, 0.04)',
-                  border: '1px solid rgba(203, 213, 225, 0.1)',
-                  borderRadius: '8px',
+                  background: 'rgba(47,191,113,0.06)',
+                  border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
+                  borderRadius: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '12px',
                 }}>
                   <div>
-                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontFamily: '"IBM Plex Mono", monospace', color: isDark ? '#f1f5f9' : '#1e293b', fontWeight: 600, letterSpacing: '0.1em' }}>
+                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: T.textM, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Inter", sans-serif' }}>Device Serial</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', color: T.text, fontWeight: 600, letterSpacing: '0.08em' }}>
                       {createForm.device_serial_preview || '(auto-generated)'}
                     </p>
                   </div>
@@ -1002,9 +1017,9 @@ const Devices: React.FC = () => {
                       style={{
                         padding: '8px 12px',
                         fontSize: '12px',
-                        background: 'rgba(203, 213, 225, 0.1)',
-                        border: '1px solid rgba(203, 213, 225, 0.2)',
-                        color: isDark ? '#cbd5e1' : '#94a3b8',
+                        background: 'rgba(47,191,113,0.08)',
+                        border: '1px solid rgba(47,191,113,0.16)',
+                        color: isDark ? '#cbd5e1' : '#2FBF71',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
@@ -1021,11 +1036,11 @@ const Devices: React.FC = () => {
               {/* Edit mode serial display */}
               {editingDevice && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#cbd5e1' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Lora", Georgia, serif' }}>Device Serial Number</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: T.textM, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Inter", sans-serif' }}>Device Serial Number</label>
                   <input type="text"
                     value={editForm.device_serial}
                     disabled autoComplete="off"
-                    style={{ padding: '12px 14px', borderRadius: '6px', width: '100%', boxSizing: 'border-box', border: '1px solid rgba(203, 213, 225, 0.3)', background: isDark ? 'rgba(30, 41, 59, 0.5)' : '#f8fafc', color: isDark ? '#9ca3af' : '#64748b', fontSize: '14px', fontFamily: '"IBM Plex Mono", monospace', cursor: 'not-allowed' }} />
+                    style={{ padding: '12px 14px', borderRadius: '10px', width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', color: isDark ? '#9ca3af' : '#667085', fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', cursor: 'not-allowed' }} />
                 </div>
               )}
             </div>
@@ -1041,17 +1056,17 @@ const Devices: React.FC = () => {
                 borderBottom: '2px solid #f59e0b',
               }}>
                 <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#f1f5f9' : '#1e293b', fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.text, fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
                   Owner Assignment
                 </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Assigned User</label>
+                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Assigned User</label>
                 <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <input type="text" placeholder="Search and select user..." value={userSearchTerm}
                     onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserDropdown(true); }}
                     onFocus={() => setShowUserDropdown(true)} autoComplete="off"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
+                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                   {(editingDevice ? editForm.user : createForm.user) && (
                     <div style={{ marginTop: 8, fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
                       <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
@@ -1059,18 +1074,18 @@ const Devices: React.FC = () => {
                     </div>
                   )}
                   {showUserDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-secondary, #0f172a)', border: '1px solid var(--border-color, rgba(148,163,184,0.1))', borderRadius: 8, maxHeight: 200, overflowY: 'auto', zIndex: 1000, boxShadow: 'var(--shadow-xl)', marginTop: 4 }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, maxHeight: 200, overflowY: 'auto', zIndex: 1000, boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4 }}>
                       {filteredUsers.length > 0 ? filteredUsers.map((user) => (
                         <div key={user.id}
                           onClick={() => { if (editingDevice) setEditForm({...editForm, user: user.username}); else setCreateForm({...createForm, user: user.username}); setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`); setShowUserDropdown(false); }}
-                          style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border-color, rgba(148,163,184,0.1))', background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99,102,241,0.15)' : 'transparent', color: 'var(--text-primary, #f8fafc)', fontSize: '0.875rem' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(99,102,241,0.15)' : 'transparent'}>
+                          style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: `1px solid ${T.borderM}`, background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(47,191,113,0.10)' : 'transparent', color: T.text, fontSize: '0.875rem' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = T.cardEl}
+                          onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(47,191,113,0.10)' : 'transparent'}>
                           {user.first_name} {user.last_name} ({user.username})<br/>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #94a3b8)' }}>{user.email}</span>
+                          <span style={{ fontSize: '0.75rem', color: T.textM }}>{user.email}</span>
                         </div>
                       )) : (
-                        <div style={{ padding: '12px 16px', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem' }}>
+                        <div style={{ padding: '12px 16px', color: T.textD, fontSize: '0.875rem' }}>
                           {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
                         </div>
                       )}
@@ -1081,39 +1096,39 @@ const Devices: React.FC = () => {
             </div>
 
             {/* Network / Provisioning */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
+            <div style={{ background: 'rgba(47,191,113,0.06)', borderRadius: 12, padding: '20px', marginBottom: 16, border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #34d399, #10b981)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#34d399' : '#10b981' }}>Network / Provisioning</span>
+                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2FBF71' }}>Network / Provisioning</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi&#8209;Fi SSID</label>
+                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Wi&#8209;Fi SSID</label>
                   <input type="text"
                     value={editingDevice ? editForm.wifi_ssid : createForm.wifi_ssid}
                     onChange={(e) => editingDevice ? setEditForm({ ...editForm, wifi_ssid: e.target.value }) : setCreateForm({ ...createForm, wifi_ssid: e.target.value })}
                     autoComplete="off" placeholder="Optional — SSID to provision on the device"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
+                    style={{ padding: '10px 12px', borderRadius: 10, width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Wi&#8209;Fi Password</label>
+                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Wi&#8209;Fi Password</label>
                   {editingDevice ? (
                     showChangeWifiPassword ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <input type="password" value={editForm.wifi_password}
                           onChange={(e) => setEditForm({ ...editForm, wifi_password: e.target.value })}
                           autoComplete="new-password" placeholder="Enter new Wi-Fi password"
-                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
+                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                         <button type="button" onClick={() => { setShowChangeWifiPassword(false); setEditForm({ ...editForm, wifi_password: '' }); }}
-                          style={{ background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', textAlign: 'left', fontSize: '0.8rem' }}>Cancel password change</button>
+                          style={{ background: 'transparent', border: 'none', color: T.textM, cursor: 'pointer', textAlign: 'left', fontSize: '0.8rem' }}>Cancel password change</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <small style={{ fontSize: '0.875rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                        <small style={{ fontSize: '0.875rem', color: T.textM }}>
                           {editingDevice.wifi_password ? 'Password stored (hidden).' : 'No password stored.'}
                         </small>
                         <button type="button" onClick={() => setShowChangeWifiPassword(true)}
-                          style={{ background: 'transparent', border: `1px solid ${isDark ? 'rgba(99,102,241,0.4)' : 'rgba(99,102,241,0.35)'}`, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', color: isDark ? '#a5b4fc' : '#6366f1', fontSize: '0.8rem' }}>
+                          style={{ background: 'transparent', border: `1px solid ${isDark ? 'rgba(47,191,113,0.35)' : 'rgba(47,191,113,0.28)'}`, padding: '6px 10px', borderRadius: 10, cursor: 'pointer', color: '#2FBF71', fontSize: '0.8rem' }}>
                           Change password
                         </button>
                       </div>
@@ -1122,42 +1137,42 @@ const Devices: React.FC = () => {
                     <input type="password" value={createForm.wifi_password}
                       onChange={(e) => setCreateForm({ ...createForm, wifi_password: e.target.value })}
                       autoComplete="new-password" placeholder="Optional Wi-Fi password"
-                      style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
+                      style={{ padding: '10px 12px', borderRadius: 10, width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                   )}
                 </div>
-                <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                <small style={{ fontSize: '0.75rem', color: T.textM }}>
                   If provided, credentials are returned to the device when it calls.
                 </small>
               </div>
             </div>
 
             {/* Configuration */}
-            <div style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', borderRadius: 12, padding: '20px', marginBottom: 16, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)' }}>
+            <div style={{ background: 'rgba(47,191,113,0.06)', borderRadius: 12, padding: '20px', marginBottom: 16, border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                 <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Configuration</span>
+                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2FBF71' }}>Configuration</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Template</label>
+                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Preset Template</label>
                   <select value={editingDevice ? editForm.config_version : createForm.config_version}
                     onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}>
+                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }}>
                     <option value="">-- Manual Configuration --</option>
                     {presetsLoading && <option value="" disabled>Loading presets...</option>}
                     {!presetsLoading && presets.map((preset) => (
                       <option key={preset.id} value={getPresetConfigId(preset)}>{preset.name} ({getPresetConfigId(preset) || 'no ID'})</option>
                     ))}
                   </select>
-                  <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Selecting a preset sets the Config Version ID below.</small>
+                  <small style={{ fontSize: '0.75rem', color: T.textM }}>Selecting a preset sets the Config Version ID below.</small>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config Version ID</label>
+                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Config Version ID</label>
                   <input type="text"
                     value={editingDevice ? editForm.config_version : createForm.config_version}
                     onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
                     autoComplete="off" placeholder="Manual Config ID"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }} />
+                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                 </div>
               </div>
             </div>
@@ -1168,7 +1183,7 @@ const Devices: React.FC = () => {
           </div>
 
           {/* Footer — Refined */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', padding: '20px 32px', borderTop: '1px solid rgba(203,213,225,0.1)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', padding: '18px 24px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(47,191,113,0.08)'}`, flexShrink: 0 }}>
             <button
               type="button"
               onClick={handleCancel}
@@ -1178,11 +1193,11 @@ const Devices: React.FC = () => {
                 fontWeight: 600,
                 border: '1px solid rgba(203, 213, 225, 0.3)',
                 background: 'transparent',
-                color: isDark ? '#cbd5e1' : '#94a3b8',
+                color: T.textM,
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
+                fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(203, 213, 225, 0.1)';
@@ -1205,16 +1220,14 @@ const Devices: React.FC = () => {
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
+                boxShadow: '0 4px 12px rgba(47,191,113,0.22)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(47,191,113,0.25), 0 6px 16px rgba(47,191,113,0.35)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(47,191,113,0.22)';
               }}
             >
               {editingDevice ? 'Update' : 'Register Device'} →
@@ -1237,9 +1250,8 @@ const Devices: React.FC = () => {
           padding: '10px 16px',
           marginBottom: '20px',
           borderRadius: '12px',
-          background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(247,255,249,0.95)',
-          backdropFilter: 'blur(12px)',
-          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,166,62,0.15)',
+          background: T.surface,
+          border: `1px solid ${T.border}`,
           boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.08)',
         }}>
           {/* Left: back + title + status */}
@@ -1250,13 +1262,13 @@ const Devices: React.FC = () => {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                color: isDark ? '#94a3b8' : '#94a3b8',
+                background: T.borderM,
+                color: T.textM,
                 transition: 'background 150ms, color 150ms',
                 flexShrink: 0,
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.borderM; }}
             >
               <ChevronLeft size={18} />
             </button>
@@ -1305,11 +1317,11 @@ const Devices: React.FC = () => {
                   padding: '5px 10px', borderRadius: 7, border: 'none', fontSize: '0.8rem', fontWeight: 500,
                   transition: 'background 150ms, color 150ms',
                   background: 'transparent',
-                  color: color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : isDark ? '#cbd5e1' : '#94a3b8',
+                  color: color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : T.textM,
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLButtonElement;
-                  el.style.background = color === 'red' ? 'rgba(239,68,68,0.1)' : color === 'amber' ? 'rgba(245,158,11,0.1)' : isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+                  el.style.background = color === 'red' ? 'rgba(239,68,68,0.1)' : color === 'amber' ? 'rgba(245,158,11,0.1)' : T.borderM;
                 }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
@@ -1348,9 +1360,9 @@ const Devices: React.FC = () => {
               : { display: 'Synced', sub: `v${selectedDevice.config_ack_ver ?? '—'} · ${selectedDevice.config_version}`, status: 'ok' as const };
 
           const deviceOnline = !!selectedDevice.is_online;
-          const textMain = isDark ? '#f1f5f9' : '#0f172a';
-          const textMute = isDark ? '#64748b' : '#94a3b8';
-          const textSub  = isDark ? '#94a3b8' : '#94a3b8';
+          const textMain = T.text;
+          const textMute = T.textD;
+          const textSub  = T.textM;
 
           const kpiCards = [
             {
@@ -1394,7 +1406,7 @@ const Devices: React.FC = () => {
                 const cardStyle: React.CSSProperties = {
                   padding: 20, borderRadius: 14, position: 'relative', overflow: 'hidden',
                   cursor: href ? 'pointer' : 'default',
-                  background: isDark ? '#0f172a' : '#ffffff',
+                  background: T.surface,
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)'}`,
                   boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
                   transition: 'transform 150ms, box-shadow 150ms',
@@ -1402,7 +1414,7 @@ const Devices: React.FC = () => {
                 };
                 const inner = (
                   <>
-                    <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', display: 'block' }} />
+                    <span style={{ position: 'absolute', top: -24, right: -24, width: 64, height: 64, borderRadius: '50%', background: T.borderM, display: 'block' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
                         {icon}
@@ -1441,13 +1453,13 @@ const Devices: React.FC = () => {
             <div style={{
               marginBottom: 24,
               borderRadius: 14,
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,166,62,0.15)'}`,
-              background: isDark ? '#0f172a' : '#fff',
+              border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
+              background: T.surface,
               overflow: 'hidden',
             }}>
               <div style={{
                 padding: '14px 18px',
-                borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.1)'}`,
+                borderBottom: `1px solid ${isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.08)'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1456,7 +1468,7 @@ const Devices: React.FC = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Bell size={16} style={{ color: '#f59e0b' }} />
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#111827' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: T.text }}>
                     Active Alerts
                   </span>
                   <span style={{
@@ -1464,8 +1476,8 @@ const Devices: React.FC = () => {
                     fontWeight: 700,
                     padding: '2px 9px',
                     borderRadius: 999,
-                    background: selectedAlerts.length > 0 ? 'rgba(245,158,11,0.15)' : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
-                    color: selectedAlerts.length > 0 ? '#f59e0b' : (isDark ? '#94a3b8' : '#64748b'),
+                    background: selectedAlerts.length > 0 ? 'rgba(245,158,11,0.15)' : (T.borderM),
+                    color: selectedAlerts.length > 0 ? '#f59e0b' : (T.textM),
                   }}>
                     {selectedAlerts.length}
                   </span>
@@ -1501,9 +1513,9 @@ const Devices: React.FC = () => {
 
               <div style={{ padding: '12px 18px 14px' }}>
                 {alertsLoading ? (
-                  <div style={{ fontSize: '0.85rem', color: isDark ? '#64748b' : '#94a3b8' }}>Loading alerts…</div>
+                  <div style={{ fontSize: '0.85rem', color: T.textD }}>Loading alerts…</div>
                 ) : selectedAlerts.length === 0 ? (
-                  <div style={{ fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                  <div style={{ fontSize: '0.85rem', color: T.textM }}>
                     No active alerts for this device.
                   </div>
                 ) : (
@@ -1511,7 +1523,7 @@ const Devices: React.FC = () => {
                     {selectedAlerts.slice(0, 5).map(alert => (
                       <div key={`${alert.id}-${alert.timestamp}`} style={{
                         borderRadius: 10,
-                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                        border: `1px solid ${T.borderM}`,
                         background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
                         padding: '10px 12px',
                       }}>
@@ -1537,7 +1549,7 @@ const Devices: React.FC = () => {
                               {alert.fault_code}
                             </code>
                           )}
-                          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: isDark ? '#64748b' : '#94a3b8' }}>
+                          <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: T.textD }}>
                             {new Date(alert.timestamp).toLocaleString()}
                           </span>
                         </div>
@@ -1547,7 +1559,7 @@ const Devices: React.FC = () => {
                       </div>
                     ))}
                     {selectedAlerts.length > 5 && (
-                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                      <div style={{ fontSize: '0.78rem', color: T.textM }}>
                         Showing latest 5 of {selectedAlerts.length} active alerts.
                       </div>
                     )}
@@ -1560,7 +1572,7 @@ const Devices: React.FC = () => {
 
         {/* ── Site Energy Dashboard ── */}
         {siteLoading && !siteDetails && (
-          <div style={{ marginBottom: 24, padding: 24, borderRadius: 14, background: isDark ? '#0f172a' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.12)'}`, display: 'flex', alignItems: 'center', gap: 10, color: isDark ? '#64748b' : '#94a3b8' }}>
+          <div style={{ marginBottom: 24, padding: 24, borderRadius: 14, background: T.surface, border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.12)'}`, display: 'flex', alignItems: 'center', gap: 10, color: T.textD }}>
             <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '0.875rem' }}>Loading site energy data…</span>
           </div>
@@ -1599,7 +1611,7 @@ const Devices: React.FC = () => {
                   </span>
                 )},
                 { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
-                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: isDark ? '#94a3b8' : '#94a3b8' }}>{selectedDevice.hw_id || '—'}</span> },
+                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: T.textM }}>{selectedDevice.hw_id || '—'}</span> },
                 { label: 'Model', content: <span>{selectedDevice.model || '—'}</span> },
                 { label: 'Assigned User', content: <span>{selectedDevice.user || '—'}</span> },
                 {
@@ -1633,22 +1645,22 @@ const Devices: React.FC = () => {
                 },
               ].map(({ label, content }) => (
                 <div key={label}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>{label}</div>
-                  <div style={{ fontSize: '0.9rem', color: isDark ? '#e2e8f0' : '#1e293b' }}>{content}</div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: '0.9rem', color: T.text }}>{content}</div>
                 </div>
               ))}
-              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-sync-card">
+              <div style={{ gridColumn: '1 / -1', padding: '15px', backgroundColor: 'transparent', borderRadius: '8px', border: `1px solid ${T.border}` }} className="config-sync-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
                     <strong style={{ fontSize: '0.95rem', color: 'inherit' }} className="config-heading">Configuration</strong>
                     {devicePreset && (
-                      <div style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginTop: '2px' }} className="config-label">
+                      <div style={{ fontSize: '0.875rem', color: T.textM, marginTop: '2px' }} className="config-label">
                         {devicePreset.name || selectedDevice.config_version}
                       </div>
                     )}
                   </div>
                   {!selectedDevice.config_version ? (
-                    <span style={{ color: isDark ? '#a0a0a0' : 'rgba(0, 0, 0, 0.5)', fontSize: '0.875rem' }} className="config-no-preset">No preset assigned</span>
+                    <span style={{ color: T.textM, fontSize: '0.875rem' }} className="config-no-preset">No preset assigned</span>
                   ) : selectedDevice.pending_config_update ? (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -1665,31 +1677,31 @@ const Devices: React.FC = () => {
                 </div>
                 {selectedDevice.config_version && (
                   <div className="device-info-grid responsive-grid-2">
-                    <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                      <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Preset ID</div>
+                    <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}` }} className="config-info-box">
+                      <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Preset ID</div>
                       <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>{selectedDevice.config_version}</div>
                     </div>
                     {devicePreset?.slaves_count != null && (
-                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Slaves</div>
+                      <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}` }} className="config-info-box">
+                        <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Slaves</div>
                         <div style={{ fontWeight: '500', color: 'inherit' }}>{devicePreset.slaves_count} device{devicePreset.slaves_count !== 1 ? 's' : ''}</div>
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version != null && (
                       <div style={{ 
                         padding: '8px', 
-                        backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', 
+                        backgroundColor: T.cardEl, 
                         borderRadius: '6px',
                         gridColumn: '1 / -1',
                         border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #dcfce7' : '2px solid #fef9c3'
                       }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '4px' }} className="config-label">Version Status</div>
+                        <div style={{ color: T.textM, marginBottom: '4px' }} className="config-label">Version Status</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <span style={{ fontSize: '0.75rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)' }} className="config-label">Device: </span>
+                            <span style={{ fontSize: '0.75rem', color: T.textM }} className="config-label">Device: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</span>
                             <span style={{ margin: '0 8px', color: isDark ? '#808080' : 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
-                            <span style={{ fontSize: '0.75rem', color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)' }} className="config-label">Latest: </span>
+                            <span style={{ fontSize: '0.75rem', color: T.textM }} className="config-label">Latest: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{devicePreset.version}</span>
                           </div>
                           {selectedDevice.config_ack_ver === devicePreset.version ? (
@@ -1701,22 +1713,22 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_ack_ver != null && devicePreset?.version == null && (
-                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Device Version</div>
+                      <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}` }} className="config-info-box">
+                        <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Device Version</div>
                         <div style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</div>
                       </div>
                     )}
                     {devicePreset?.gateway_configuration?.general_settings?.last_updated && (
-                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)' }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Modified</div>
+                      <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}` }} className="config-info-box">
+                        <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Last Modified</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(devicePreset.gateway_configuration.general_settings.last_updated).toLocaleDateString()}
                         </div>
                       </div>
                     )}
                     {selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Last Synced</div>
+                      <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}`, gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Last Synced</div>
                         <div style={{ fontWeight: '500', fontSize: '0.75rem', color: 'inherit' }}>
                           {new Date(selectedDevice.config_acked_at).toLocaleString()}
                           {(() => {
@@ -1735,11 +1747,11 @@ const Devices: React.FC = () => {
                       </div>
                     )}
                     {selectedDevice.config_downloaded_at && selectedDevice.config_acked_at && (
-                      <div style={{ padding: '8px', backgroundColor: isDark ? '#242424' : 'rgba(0, 0, 0, 0.05)', borderRadius: '6px', border: isDark ? '1px solid #404040' : '1px solid rgba(0, 0, 0, 0.1)', gridColumn: '1 / -1' }} className="config-info-box">
-                        <div style={{ color: isDark ? '#b0b0b0' : 'rgba(0, 0, 0, 0.6)', marginBottom: '2px' }} className="config-label">Apply Duration</div>
+                      <div style={{ padding: '8px', backgroundColor: T.cardEl, borderRadius: '6px', border: `1px solid ${T.border}`, gridColumn: '1 / -1' }} className="config-info-box">
+                        <div style={{ color: T.textM, marginBottom: '2px' }} className="config-label">Apply Duration</div>
                         <div style={{ fontWeight: '500', color: 'inherit' }}>
                           {Math.round((new Date(selectedDevice.config_acked_at).getTime() - new Date(selectedDevice.config_downloaded_at).getTime()) / 1000)} seconds
-                          <span style={{ color: isDark ? '#a0a0a0' : 'rgba(0, 0, 0, 0.5)', marginLeft: '8px', fontSize: '0.75rem' }} className="config-label">
+                          <span style={{ color: T.textM, marginLeft: '8px', fontSize: '0.75rem' }} className="config-label">
                             (download → acknowledge)
                           </span>
                         </div>
@@ -1749,14 +1761,14 @@ const Devices: React.FC = () => {
                 )}
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Provisioned At</div>
-                <div style={{ fontSize: '0.9rem', fontFamily: 'JetBrains Mono, monospace', color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Provisioned At</div>
+                <div style={{ fontSize: '0.9rem', fontFamily: 'JetBrains Mono, monospace', color: T.text }}>
                   {selectedDevice.provisioned_at ? new Date(selectedDevice.provisioned_at).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Created By</div>
-                <div style={{ fontSize: '0.9rem', color: isDark ? '#e2e8f0' : '#1e293b' }}>{selectedDevice.created_by_username || '—'}</div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Created By</div>
+                <div style={{ fontSize: '0.9rem', color: T.text }}>{selectedDevice.created_by_username || '—'}</div>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
@@ -1764,10 +1776,10 @@ const Devices: React.FC = () => {
                     type="checkbox"
                     checked={selectedDevice.logs_enabled || false}
                     onChange={(e) => handleToggleLogs(selectedDevice, e.target.checked)}
-                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                    style={{ background: T.surface, border: `1px solid ${T.border}` }}
                   />
                   <strong>Enable Device Logs</strong>
-                  <span style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#9ca3af' }}>
+                  <span style={{ fontSize: '0.875rem', color: T.textM }}>
                     (Device will send logs when enabled)
                   </span>
                 </label>
@@ -1778,10 +1790,10 @@ const Devices: React.FC = () => {
                     type="checkbox"
                     checked={selectedDevice.auto_reboot_enabled || false}
                     onChange={(e) => handleToggleAutoReboot(selectedDevice, e.target.checked)}
-                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                    style={{ background: T.surface, border: `1px solid ${T.border}` }}
                   />
                   <strong>Auto Reboot</strong>
-                  <span style={{ fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#9ca3af' }}>
+                  <span style={{ fontSize: '0.875rem', color: T.textM }}>
                     (Automatically reboot device when RS-485 registers freeze)
                   </span>
                 </label>
@@ -1796,8 +1808,8 @@ const Devices: React.FC = () => {
         <div style={{
           marginTop: 24,
           borderRadius: 14,
-          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,166,62,0.15)'}`,
-          background: isDark ? '#0f172a' : '#fff',
+          border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
+          background: T.surface,
           overflow: 'hidden',
         }}>
           {/* Header */}
@@ -1806,12 +1818,12 @@ const Devices: React.FC = () => {
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer',
-              borderBottom: regCoverageExpanded ? `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.1)'}` : 'none',
+              borderBottom: regCoverageExpanded ? `1px solid ${isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.08)'}` : 'none',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Activity size={16} style={{ color: '#22c55e' }} />
-              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDark ? '#f1f5f9' : '#111827', fontFamily: 'Poppins, sans-serif' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: T.text, fontFamily: 'Poppins, sans-serif' }}>
                 Register Coverage
               </span>
               {regCoverage && !regCoverageLoading && (
@@ -1829,13 +1841,13 @@ const Devices: React.FC = () => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {regCoverage && !regCoverageLoading && (
-                <span style={{ fontSize: '0.78rem', color: isDark ? '#64748b' : '#94a3b8', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                <span style={{ fontSize: '0.78rem', color: T.textD, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
                   {regCoverage.total_received} / {regCoverage.total_configured} registers
                 </span>
               )}
               {regCoverageExpanded
-                ? <ChevronDown size={16} style={{ color: isDark ? '#64748b' : '#94a3b8', transition: 'transform 200ms' }} />
-                : <ChevronRight size={16} style={{ color: isDark ? '#64748b' : '#94a3b8', transition: 'transform 200ms' }} />
+                ? <ChevronDown size={16} style={{ color: T.textD, transition: 'transform 200ms' }} />
+                : <ChevronRight size={16} style={{ color: T.textD, transition: 'transform 200ms' }} />
               }
             </div>
           </button>
@@ -1854,29 +1866,29 @@ const Devices: React.FC = () => {
                   ))}
                 </div>
               ) : !regCoverage ? (
-                <div style={{ padding: '24px 20px', textAlign: 'center', color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.85rem' }}>
+                <div style={{ padding: '24px 20px', textAlign: 'center', color: T.textD, fontSize: '0.85rem' }}>
                   No telemetry data available yet.
                 </div>
               ) : (
                 <>
                   {/* Summary bar */}
-                  <div style={{ padding: '12px 20px 8px', display: 'flex', gap: 20, flexWrap: 'wrap', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+                  <div style={{ padding: '12px 20px 8px', display: 'flex', gap: 20, flexWrap: 'wrap', borderBottom: `1px solid ${T.borderM}` }}>
                     {[
-                      { label: 'Configured', value: regCoverage.total_configured, color: isDark ? '#94a3b8' : '#64748b' },
+                      { label: 'Configured', value: regCoverage.total_configured, color: T.textM },
                       { label: 'Received', value: regCoverage.total_received, color: '#22c55e' },
                       { label: 'Missing', value: regCoverage.total_configured - regCoverage.total_received, color: '#ef4444' },
-                      { label: 'Last sample', value: new Date(regCoverage.last_telemetry_at).toLocaleTimeString(), color: isDark ? '#94a3b8' : '#64748b' },
+                      { label: 'Last sample', value: new Date(regCoverage.last_telemetry_at).toLocaleTimeString(), color: T.textM },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? '#94a3b8' : '#94a3b8' }}>{label}</span>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textM }}>{label}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>{value}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Coverage bar */}
-                  <div style={{ padding: '10px 20px', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
-                    <div style={{ height: 6, borderRadius: 99, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 20px', borderBottom: `1px solid ${T.borderM}` }}>
+                    <div style={{ height: 6, borderRadius: 99, background: T.borderM, overflow: 'hidden' }}>
                       <div style={{
                         height: '100%', borderRadius: 99, transition: 'width 600ms ease',
                         width: `${regCoverage.coverage_pct}%`,
@@ -1899,23 +1911,23 @@ const Devices: React.FC = () => {
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ScrollText size={16} style={{ color: isDark ? '#94a3b8' : '#64748b' }} />
+              <ScrollText size={16} style={{ color: T.textM }} />
               <h2 style={{ margin: 0 }}>Session Logs</h2>
               {logFilesTotal > 0 && (
-                <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#94a3b8' }}>{logFilesTotal} files</span>
+                <span style={{ fontSize: '0.75rem', color: T.textD }}>{logFilesTotal} files</span>
               )}
             </div>
             <button onClick={() => fetchDeviceLogFiles(selectedDevice.id, 0, fileFilterFrom || undefined, fileFilterTo || undefined)} disabled={logFilesLoading}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', fontSize: '0.8rem', fontWeight: 500, cursor: logFilesLoading ? 'not-allowed' : 'pointer', opacity: logFilesLoading ? 0.6 : 1 }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: T.textM, fontSize: '0.8rem', fontWeight: 500, cursor: logFilesLoading ? 'not-allowed' : 'pointer', opacity: logFilesLoading ? 0.6 : 1 }}>
               <RefreshCw size={13} style={{ animation: logFilesLoading ? 'spin 1s linear infinite' : 'none' }} />
               {logFilesLoading ? 'Loading…' : 'Refresh'}
             </button>
           </div>
           <div style={{ padding: '16px 20px 20px' }}>
             {!selectedDevice.logs_enabled && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, background: T.borderM, border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', marginBottom: 12 }}>
                 <Info size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                <p style={{ margin: 0, color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                <p style={{ margin: 0, color: T.textD, fontSize: '0.875rem', fontStyle: 'italic' }}>
                   Logging is disabled. Enable it in Device Details to receive logs.
                 </p>
               </div>
@@ -1923,9 +1935,9 @@ const Devices: React.FC = () => {
             {/* Date filter + fetch + bulk download */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
               <input type="datetime-local" value={fileFilterFrom} onChange={e => setFileFilterFrom(e.target.value)} title="From (IST)"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: `1px solid ${T.border}`, background: T.surface, color: T.text, outline: 'none' }} />
               <input type="datetime-local" value={fileFilterTo} onChange={e => setFileFilterTo(e.target.value)} title="To (IST)"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: isDark ? '#1a1a1a' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }} />
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: `1px solid ${T.border}`, background: T.surface, color: T.text, outline: 'none' }} />
               <button onClick={() => {
                 const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
                 setLogFilesPage(0);
@@ -1936,12 +1948,12 @@ const Devices: React.FC = () => {
               </button>
               <button onClick={handleBulkDownload} disabled={bulkDownloading || logFilesTotal === 0}
                 title="Download all files in the selected range as a single .txt"
-                style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: (bulkDownloading || logFilesTotal === 0) ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: (bulkDownloading || logFilesTotal === 0) ? 0.5 : 1 }}>
+                style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: (bulkDownloading || logFilesTotal === 0) ? 'not-allowed' : 'pointer', border: `1px solid ${T.border}`, background: 'transparent', color: T.textM, opacity: (bulkDownloading || logFilesTotal === 0) ? 0.5 : 1 }}>
                 {bulkDownloading ? 'Downloading…' : 'Download All'}
               </button>
               <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)}
                 title="Pick a date to scan all logs for that day"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1px solid rgba(239,68,68,0.25)', background: isDark ? '#1a1a1a' : '#fff8f8', color: isDark ? '#fca5a5' : '#b91c1c', outline: 'none' }} />
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1px solid rgba(239,68,68,0.25)', background: T.surface, color: isDark ? '#fca5a5' : '#b91c1c', outline: 'none' }} />
               <button onClick={handleScanDay} disabled={scanLoading || !scanDate}
                 title="Scan all log files for the selected date (server-side, no pagination limit)"
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 700, cursor: (scanLoading || !scanDate) ? 'not-allowed' : 'pointer', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.09)', color: '#f87171', opacity: (scanLoading || !scanDate) ? 0.5 : 1, letterSpacing: '0.01em' }}>
@@ -1949,28 +1961,28 @@ const Devices: React.FC = () => {
               </button>
             </div>
 
-            {logFilesLoading && <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>Loading…</p>}
+            {logFilesLoading && <p style={{ color: T.textD, fontSize: '0.875rem', margin: 0 }}>Loading…</p>}
             {!logFilesLoading && deviceLogFiles.length === 0 && (
-              <p style={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.875rem', margin: 0 }}>No log files found.</p>
+              <p style={{ color: T.textD, fontSize: '0.875rem', margin: 0 }}>No log files found.</p>
             )}
 
             {deviceLogFiles.length > 0 && (
               <>
-                <div style={{ borderRadius: 10, border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{ borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden', marginBottom: 12 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                     <thead>
-                      <tr style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
+                      <tr style={{ background: T.borderM }}>
                         {['Filename', 'Size', 'Uploaded', ''].map(h => (
-                          <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: isDark ? '#64748b' : '#94a3b8', fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                          <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: T.textD, fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {deviceLogFiles.map((f: any) => (
                         <tr key={f.id} style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
-                          <td style={{ padding: '8px 14px', color: isDark ? '#e2e8f0' : '#1e293b', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
-                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
-                          <td style={{ padding: '8px 14px', color: isDark ? '#94a3b8' : '#64748b', whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                          <td style={{ padding: '8px 14px', color: T.text, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
+                          <td style={{ padding: '8px 14px', color: T.textM, whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
+                          <td style={{ padding: '8px 14px', color: T.textM, whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                           <td style={{ padding: '8px 14px' }}>
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button onClick={() => handleViewLogFile(f.id, f.filename)}
@@ -1978,7 +1990,7 @@ const Devices: React.FC = () => {
                                 View
                               </button>
                               <button onClick={() => handleDownloadLogFile(f.id)}
-                                style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b' }}>
+                                style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: `1px solid ${T.border}`, background: 'transparent', color: T.textM }}>
                                 Download
                               </button>
                             </div>
@@ -1992,20 +2004,20 @@ const Devices: React.FC = () => {
                 {/* Pagination */}
                 {logFilesTotal > LOG_FILES_PAGE_SIZE && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <span style={{ fontSize: '0.8rem', color: isDark ? '#64748b' : '#94a3b8' }}>
+                    <span style={{ fontSize: '0.8rem', color: T.textD }}>
                       {logFilesPage * LOG_FILES_PAGE_SIZE + 1}–{Math.min((logFilesPage + 1) * LOG_FILES_PAGE_SIZE, logFilesTotal)} of {logFilesTotal}
                     </span>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={() => fetchDeviceLogFiles(selectedDevice.id, logFilesPage - 1, fileFilterFrom || undefined, fileFilterTo || undefined)}
                         disabled={logFilesPage === 0 || logFilesLoading}
-                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: logFilesPage === 0 ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: logFilesPage === 0 ? 0.4 : 1 }}>
+                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: logFilesPage === 0 ? 'not-allowed' : 'pointer', border: `1px solid ${T.border}`, background: 'transparent', color: T.textM, opacity: logFilesPage === 0 ? 0.4 : 1 }}>
                         ← Prev
                       </button>
                       <button
                         onClick={() => fetchDeviceLogFiles(selectedDevice.id, logFilesPage + 1, fileFilterFrom || undefined, fileFilterTo || undefined)}
                         disabled={(logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal || logFilesLoading}
-                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 'not-allowed' : 'pointer', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: isDark ? '#94a3b8' : '#64748b', opacity: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 0.4 : 1 }}>
+                        style={{ padding: '5px 12px', borderRadius: 7, fontSize: '0.8rem', cursor: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 'not-allowed' : 'pointer', border: `1px solid ${T.border}`, background: 'transparent', color: T.textM, opacity: (logFilesPage + 1) * LOG_FILES_PAGE_SIZE >= logFilesTotal ? 0.4 : 1 }}>
                         Next →
                       </button>
                     </div>
@@ -2027,7 +2039,7 @@ const Devices: React.FC = () => {
             zIndex: 9999, padding: '20px',
           }} onClick={() => setEditingSite(false)}>
             <div style={{
-              background: isDark ? '#1a1a1a' : '#ffffff',
+              background: T.surface,
               borderRadius: 16,
               boxShadow: isDark
                 ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -2039,7 +2051,7 @@ const Devices: React.FC = () => {
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '24px 28px',
-                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                borderBottom: `1px solid ${T.border}`,
                 flexShrink: 0,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -2052,18 +2064,18 @@ const Devices: React.FC = () => {
                     <MapPin size={22} color="white" />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
                       {siteDetails ? 'Edit Site' : 'Add Site'}
                     </div>
-                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                    <div style={{ fontSize: '0.813rem', color: T.textM, marginTop: 2 }}>
                       Configure solar site parameters
                     </div>
                   </div>
                 </div>
                 <button type="button" onClick={() => setEditingSite(false)} style={{
                   width: 40, height: 40, borderRadius: 10, border: 'none',
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  background: T.borderM,
+                  color: T.textM, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <X size={18} />
@@ -2129,9 +2141,9 @@ const Devices: React.FC = () => {
 
                   Identification
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -2141,7 +2153,7 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Site ID *</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Site ID *</label>
                         <input
                           type="text"
                           required
@@ -2152,16 +2164,16 @@ const Devices: React.FC = () => {
                           autoComplete="off"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                         {!!siteDetails && <small className="form-hint">Site ID cannot be changed after creation.</small>}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Display Name</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Display Name</label>
                         <input
                           type="text"
                           value={siteForm.display_name}
@@ -2170,9 +2182,9 @@ const Devices: React.FC = () => {
                           autoComplete="off"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
@@ -2182,9 +2194,9 @@ const Devices: React.FC = () => {
 
                   Location
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -2194,7 +2206,7 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Latitude *</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Latitude *</label>
                         <input
                           type="number"
                           required
@@ -2204,15 +2216,15 @@ const Devices: React.FC = () => {
                           placeholder="19.0760"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Longitude *</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Longitude *</label>
                         <input
                           type="number"
                           required
@@ -2222,15 +2234,15 @@ const Devices: React.FC = () => {
                           placeholder="72.8777"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Timezone</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Timezone</label>
                         <input
                           type="text"
                           value={siteForm.timezone}
@@ -2239,9 +2251,9 @@ const Devices: React.FC = () => {
                           autoComplete="off"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
@@ -2251,9 +2263,9 @@ const Devices: React.FC = () => {
 
                   Panel Configuration
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -2263,7 +2275,7 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>PV Capacity (kW) *</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>PV Capacity (kW) *</label>
                         <input
                           type="number"
                           required
@@ -2273,15 +2285,15 @@ const Devices: React.FC = () => {
                           placeholder="5.0"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Inverter Capacity (kW)</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Inverter Capacity (kW)</label>
                         <input
                           type="number"
                           step="any"
@@ -2290,15 +2302,15 @@ const Devices: React.FC = () => {
                           placeholder="5.0"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Tilt (°)</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Tilt (°)</label>
                         <input
                           type="number"
                           step="any"
@@ -2306,15 +2318,15 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, tilt_deg: e.target.value })}
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Azimuth (°)</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Azimuth (°)</label>
                         <input
                           type="number"
                           step="any"
@@ -2322,16 +2334,16 @@ const Devices: React.FC = () => {
                           onChange={e => setSiteForm({ ...siteForm, azimuth_deg: e.target.value })}
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>
                         <input
                           type="checkbox"
                           id="dev-site-active"
@@ -2355,7 +2367,7 @@ const Devices: React.FC = () => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Station ID</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Station ID</label>
                       <input
                         type="number"
                         inputMode="numeric"
@@ -2364,19 +2376,19 @@ const Devices: React.FC = () => {
                         placeholder="e.g. 12616"
                         style={{
                           padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
+                          border: `1px solid ${T.border}`,
+                          background: T.surface,
+                          color: T.text,
                           fontSize: '0.875rem',
                         }}
                       />
-                      <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#9ca3af' }}>
+                      <span style={{ fontSize: '0.75rem', color: T.textD }}>
                         Deye Cloud portal → Station settings.
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Logger Serial</label>
-                      <span style={{ fontSize: '0.75rem', color: isDark ? '#64748b' : '#9ca3af', fontStyle: 'italic' }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Logger Serial</label>
+                      <span style={{ fontSize: '0.75rem', color: T.textD, fontStyle: 'italic' }}>
                         Now set on the Device (Gateway Settings tab in Site Detail).
                       </span>
                     </div>
@@ -2387,14 +2399,14 @@ const Devices: React.FC = () => {
                 <div style={{
                   display: 'flex', gap: 10, justifyContent: 'flex-end',
                   padding: '16px 28px',
-                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  borderTop: `1px solid ${T.border}`,
                   flexShrink: 0,
                 }}>
                   <button type="button" onClick={() => setEditingSite(false)} disabled={siteSaving} style={{
                     padding: '10px 20px', borderRadius: 8,
-                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    border: `1px solid ${T.border}`,
+                    background: T.cardEl,
+                    color: T.textM, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                   }}>Cancel</button>
                   <button type="submit" disabled={siteSaving} style={{
                     padding: '10px 20px', borderRadius: 8, border: 'none',
@@ -2481,7 +2493,7 @@ const Devices: React.FC = () => {
             zIndex: 9999, padding: '20px',
           }}>
             <div style={{
-              background: isDark ? '#1a1a1a' : '#ffffff',
+              background: T.surface,
               borderRadius: 16,
               boxShadow: isDark
                 ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -2498,14 +2510,14 @@ const Devices: React.FC = () => {
                   }}>
                     <AlertTriangle size={22} color="white" />
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Hard Reset Warning</span>
+                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>Hard Reset Warning</span>
                 </div>
                 <button
                   onClick={() => setHardResetModal({ show: false, device: null })}
                   style={{
                     width: 36, height: 36, borderRadius: 8, border: 'none',
-                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    color: isDark ? '#9ca3af' : '#6b7280',
+                    background: T.borderM,
+                    color: T.textM,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
                 >
@@ -2513,8 +2525,8 @@ const Devices: React.FC = () => {
                 </button>
               </div>
               <div style={{ padding: '20px 24px' }}>
-                <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
-                  Device to reset: <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{hardResetModal.device.device_serial}</strong>
+                <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+                  Device to reset: <strong style={{ color: T.text }}>{hardResetModal.device.device_serial}</strong>
                 </p>
                 <div style={{
                   background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
@@ -2538,9 +2550,9 @@ const Devices: React.FC = () => {
                   onClick={() => setHardResetModal({ show: false, device: null })}
                   style={{
                     padding: '10px 18px', borderRadius: 8,
-                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                    color: isDark ? '#d1d5db' : '#374151',
+                    border: `1px solid ${T.border}`,
+                    background: T.cardEl,
+                    color: T.textM,
                     fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                   }}
                 >
@@ -2599,7 +2611,7 @@ const Devices: React.FC = () => {
             zIndex: 9999, padding: '20px',
           }}>
             <div style={{
-              background: isDark ? '#1a1a1a' : '#ffffff',
+              background: T.surface,
               borderRadius: 16,
               boxShadow: isDark
                 ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -2616,14 +2628,14 @@ const Devices: React.FC = () => {
                   }}>
                     <CheckCircle2 size={22} color="white" />
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Command Queued</span>
+                  <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>Command Queued</span>
                 </div>
                 <button
                   onClick={() => setSuccessModal({ show: false, message: '' })}
                   style={{
                     width: 36, height: 36, borderRadius: 8, border: 'none',
-                    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    color: isDark ? '#9ca3af' : '#6b7280',
+                    background: T.borderM,
+                    color: T.textM,
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
                 >
@@ -2631,7 +2643,7 @@ const Devices: React.FC = () => {
                 </button>
               </div>
               <div style={{ padding: '20px 24px' }}>
-                <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+                <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
                   {successModal.message}
                 </p>
               </div>
@@ -2823,7 +2835,7 @@ const Devices: React.FC = () => {
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h2 style={{ margin: 0 }}>Devices</h2>
-            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', color: isDark ? '#94a3b8' : '#64748b' }}>{filteredDevices.length}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: T.borderM, color: T.textM }}>{filteredDevices.length}</span>
           </div>
           <div className="card-actions">
             <input
@@ -2832,33 +2844,43 @@ const Devices: React.FC = () => {
               value={searchTerm}
               onChange={handleSearch}
               className="search-input"
-              style={{ background: isDark ? '#1a1a1a' : 'white', color: isDark ? '#e0e0e0' : 'inherit', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+              style={{ background: T.surface, color: isDark ? '#e0e0e0' : 'inherit', border: `1px solid ${T.border}` }}
             />
             {selectedDevices.size > 0 && (
-              <button 
+              <button
                 onClick={handleBulkDelete}
                 disabled={bulkDeleteLoading}
-                style={{ 
-                  background: 'var(--danger-color, #ef4444)',
-                  color: 'white',
-                  border: 'none',
+                style={{
+                  background: 'rgba(239,68,68,0.10)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.25)',
                   padding: '8px 16px',
-                  borderRadius: '6px',
+                  borderRadius: '10px',
                   cursor: bulkDeleteLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  opacity: bulkDeleteLoading ? '0.6' : '1'
+                  fontSize: '0.825rem',
+                  fontWeight: 600,
+                  opacity: bulkDeleteLoading ? 0.6 : 1,
                 }}
               >
-                {bulkDeleteLoading ? `Deleting ${selectedDevices.size}...` : `Delete Selected (${selectedDevices.size})`}
+                {bulkDeleteLoading ? `Deleting ${selectedDevices.size}...` : `Delete (${selectedDevices.size})`}
               </button>
             )}
-            <button onClick={() => {
-              setCreatingDevice(true);
-              setUserSearchTerm('');
-              setShowUserDropdown(false);
-            }} className="btn">
-              Register New Device
+            <button
+              onClick={() => { setCreatingDevice(true); setUserSearchTerm(''); setShowUserDropdown(false); }}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: `linear-gradient(90deg, #2FBF71, #1A9A56)`,
+                color: '#fff',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(47,191,113,0.35)',
+                letterSpacing: '0.01em',
+              }}
+            >
+              + Register Device
             </button>
           </div>
         </div>
@@ -2871,7 +2893,7 @@ const Devices: React.FC = () => {
                   checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
                   onChange={handleSelectAll}
                   title="Select all displayed devices"
-                  style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                  style={{ background: T.surface, border: `1px solid ${T.border}` }}
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
@@ -2900,7 +2922,7 @@ const Devices: React.FC = () => {
                 key={device.id}
                 onClick={() => handleViewDevice(device)}
                 style={{
-                  background: selectedDevices.has(device.id) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  background: selectedDevices.has(device.id) ? 'rgba(47,191,113,0.08)' : 'transparent',
                   cursor: 'pointer'
                 }}
                 className="clickable-row"
@@ -2911,7 +2933,7 @@ const Devices: React.FC = () => {
                     checked={selectedDevices.has(device.id)}
                     onChange={() => handleSelectDevice(device.id)}
                     onClick={(e) => e.stopPropagation()}
-                    style={{ background: isDark ? '#1a1a1a' : 'white', border: isDark ? '1px solid #404040' : '1px solid #ced4da' }}
+                    style={{ background: T.surface, border: `1px solid ${T.border}` }}
                   />
                 </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
@@ -2933,7 +2955,7 @@ const Devices: React.FC = () => {
                   {(() => {
                     const count = (activeAlertsByDevice.get(device.device_serial) || []).length;
                     if (count === 0) {
-                      return <span style={{ color: isDark ? '#64748b' : '#94a3b8' }}>—</span>;
+                      return <span style={{ color: T.textD }}>—</span>;
                     }
                     return (
                       <span style={{
@@ -2975,7 +2997,7 @@ const Devices: React.FC = () => {
                       e.stopPropagation();
                       handleEdit(device);
                     }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)', margin: '0 6px' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textM, margin: '0 6px', borderRadius: 6, padding: 4, transition: 'color 150ms' }}
                     title="Edit"
                   >
                     <Pencil size={16} strokeWidth={2} />
@@ -2985,7 +3007,7 @@ const Devices: React.FC = () => {
                       e.stopPropagation();
                       handleDelete(device);
                     }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)', margin: '0 6px' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', margin: '0 6px', borderRadius: 6, padding: 4, transition: 'color 150ms' }}
                     title="Delete"
                   >
                     <Trash2 size={16} strokeWidth={2} />
@@ -3000,10 +3022,10 @@ const Devices: React.FC = () => {
         {totalCount > 0 && (
           <div className="pagination-bar devices-pagination-bar" style={{
             padding: '16px',
-            borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
+            borderTop: `1px solid ${T.border}`,
             gap: '16px'
           }}>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+            <div style={{ fontSize: '0.875rem', color: T.textM }}>
               Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} devices
             </div>
             
@@ -3012,16 +3034,17 @@ const Devices: React.FC = () => {
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 style={{
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                  borderRadius: '6px',
-                  background: currentPage === 1 ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
-                  color: 'var(--text-primary, #f8fafc)',
+                  padding: '8px 14px',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  color: T.textM,
                   cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === 1 ? '0.5' : '1'
+                  opacity: currentPage === 1 ? 0.4 : 1,
+                  fontSize: '0.825rem', fontWeight: 500,
                 }}
               >
-                ← Previous
+                ← Prev
               </button>
               
               <div className="pagination-pages">
@@ -3039,13 +3062,13 @@ const Devices: React.FC = () => {
                           onClick={() => setCurrentPage(i)}
                           style={{
                             padding: '6px 10px',
-                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                            borderRadius: '4px',
-                            background: i === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                            color: 'var(--text-primary, #f8fafc)',
+                            border: i === currentPage ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
+                            borderRadius: '8px',
+                            background: i === currentPage ? 'rgba(47,191,113,0.12)' : 'transparent',
+                            color: i === currentPage ? T.accent : T.textM,
                             cursor: 'pointer',
-                            fontWeight: i === currentPage ? 'bold' : 'normal',
-                            minWidth: '32px'
+                            fontWeight: i === currentPage ? 700 : 400,
+                            minWidth: '32px', fontSize: '0.825rem',
                           }}
                         >
                           {i}
@@ -3054,7 +3077,7 @@ const Devices: React.FC = () => {
                     } else if (pages[pages.length - 1]?.key !== 'ellipsis-' + Math.floor(i / 10)) {
                       // Add ellipsis if we skipped pages and haven't added one recently
                       pages.push(
-                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--text-secondary, #94a3b8)' }}>
+                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: T.textD }}>
                           ...
                         </span>
                       );
@@ -3069,13 +3092,14 @@ const Devices: React.FC = () => {
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 style={{
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                  borderRadius: '6px',
-                  background: currentPage === totalPages ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
-                  color: 'var(--text-primary, #f8fafc)',
+                  padding: '8px 14px',
+                  border: `1px solid ${T.border}`,
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  color: T.textM,
                   cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === totalPages ? '0.5' : '1'
+                  opacity: currentPage === totalPages ? 0.4 : 1,
+                  fontSize: '0.825rem', fontWeight: 500,
                 }}
               >
                 Next →
@@ -3090,13 +3114,13 @@ const Devices: React.FC = () => {
                 setCurrentPage(1);
               }}
               style={{
-                padding: '8px',
-                border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
-                borderRadius: '6px',
-                background: isDark ? '#1a1a1a' : '#0f172a',
-                color: isDark ? '#e0e0e0' : '#f8fafc',
+                padding: '8px 10px',
+                border: `1px solid ${T.border}`,
+                borderRadius: '8px',
+                background: T.surface,
+                color: T.textM,
                 cursor: 'pointer',
-                fontSize: '0.875rem'
+                fontSize: '0.825rem',
               }}
             >
               <option value={10}>10 per page</option>
@@ -3143,7 +3167,7 @@ const Devices: React.FC = () => {
         zIndex: 9999, padding: '20px',
       }}>
         <div style={{
-          background: isDark ? '#1a1a1a' : '#ffffff',
+          background: T.surface,
           borderRadius: 16,
           boxShadow: isDark
             ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -3160,14 +3184,14 @@ const Devices: React.FC = () => {
               }}>
                 <AlertTriangle size={22} color="white" />
               </div>
-              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Hard Reset Warning</span>
+              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>Hard Reset Warning</span>
             </div>
             <button
               onClick={() => setHardResetModal({ show: false, device: null })}
               style={{
                 width: 36, height: 36, borderRadius: 8, border: 'none',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                color: isDark ? '#9ca3af' : '#6b7280',
+                background: T.borderM,
+                color: T.textM,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -3175,8 +3199,8 @@ const Devices: React.FC = () => {
             </button>
           </div>
           <div style={{ padding: '20px 24px' }}>
-            <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
-              Device to reset: <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{hardResetModal.device.device_serial}</strong>
+            <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+              Device to reset: <strong style={{ color: T.text }}>{hardResetModal.device.device_serial}</strong>
             </p>
             <div style={{
               background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
@@ -3200,9 +3224,9 @@ const Devices: React.FC = () => {
               onClick={() => setHardResetModal({ show: false, device: null })}
               style={{
                 padding: '10px 18px', borderRadius: 8,
-                border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                color: isDark ? '#d1d5db' : '#374151',
+                border: `1px solid ${T.border}`,
+                background: T.cardEl,
+                color: T.textM,
                 fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -3261,7 +3285,7 @@ const Devices: React.FC = () => {
         zIndex: 9999, padding: '20px',
       }}>
         <div style={{
-          background: isDark ? '#1a1a1a' : '#ffffff',
+          background: T.surface,
           borderRadius: 16,
           boxShadow: isDark
             ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -3278,14 +3302,14 @@ const Devices: React.FC = () => {
               }}>
                 <CheckCircle2 size={22} color="white" />
               </div>
-              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Command Queued</span>
+              <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>Command Queued</span>
             </div>
             <button
               onClick={() => setSuccessModal({ show: false, message: '' })}
               style={{
                 width: 36, height: 36, borderRadius: 8, border: 'none',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                color: isDark ? '#9ca3af' : '#6b7280',
+                background: T.borderM,
+                color: T.textM,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -3293,7 +3317,7 @@ const Devices: React.FC = () => {
             </button>
           </div>
           <div style={{ padding: '20px 24px' }}>
-            <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
+            <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 16 }}>
               {successModal.message}
             </p>
           </div>

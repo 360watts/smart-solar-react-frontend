@@ -1,9 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { AreaChart, Area, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { SmartDeviceNode } from './types';
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement, Filler,
+  Tooltip as CJTooltip, Legend as CJLegend,
+} from 'chart.js';
+import { Line as CJLine } from 'react-chartjs-2';
+import ZoomPlugin from 'chartjs-plugin-zoom';
+import { SmartDeviceNode, InverterPhases } from './types';
 import { apiService, CtMeterReading } from '../../../services/api';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, CJTooltip, CJLegend, ZoomPlugin);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,7 +36,9 @@ export interface NodeData {
   deviceType?: string;
   circuit?: string;
   ctReading?: CtMeterReading;
-  loadSplit?: { solarKw: number; gridKw: number };
+  inverterPhases?: InverterPhases;
+  loadSplit?: { solarKw: number; gridKw: number; evKw?: number };
+  evDevice?: SmartDeviceNode;
 }
 
 interface NodeDetailModalProps {
@@ -123,6 +134,7 @@ const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => 
   },
   battery: (r) => r.battery_power_w != null ? Number(r.battery_power_w) / 1000 : null,
   grid:    (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
+  ctmeter: (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
   load:    (r) => r.load_power_w    != null ? Number(r.load_power_w)    / 1000 : null,
 };
 
@@ -171,11 +183,11 @@ function MetricTile({ label, value, sub, accent }: { label: string; value: strin
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
       fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-      color: DS.colors.textDim, marginBottom: 10,
+      color: DS.colors.textDim, marginBottom: 10, ...style,
     }}>
       {children}
     </div>
@@ -190,14 +202,24 @@ function TrendIcon({ kw }: { kw: number }) {
 
 // ─── Load split panel ─────────────────────────────────────────────────────────
 
-function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: number; isDark: boolean }) {
-  const total = solarKw + gridKw;
-  const solarPct = total > 0 ? (solarKw / total) * 100 : 50;
-  const gridPct  = total > 0 ? (gridKw  / total) * 100 : 50;
+function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark }: {
+  solarKw: number; gridKw: number; evKw?: number; evDevice?: SmartDeviceNode; isDark: boolean;
+}) {
+  const hasEv = evDevice != null;
+  const total = solarKw + gridKw + evKw;
+  const solarPct = total > 0 ? (solarKw / total) * 100 : 0;
+  const gridPct  = total > 0 ? (gridKw  / total) * 100 : 0;
+  const evPct    = total > 0 ? (evKw    / total) * 100 : 0;
   const fmtKw = (kw: number) => {
     const abs = Math.abs(kw);
     return abs >= 1 ? `${abs.toFixed(2)} kW` : `${(abs * 1000).toFixed(0)} W`;
   };
+  const evLatest = evDevice?.latest as { power_w?: number; voltage_v?: number; switch_on?: boolean } | null | undefined;
+  const evCharging = evKw > 0;
+  const evPlugged  = evLatest?.switch_on ?? false;
+  const evColor    = '#34d399';
+
+  const cols = hasEv ? '1fr 1fr 1fr' : '1fr 1fr';
 
   return (
     <div style={{
@@ -206,8 +228,7 @@ function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: 
       borderRadius: DS.radius.sm,
       padding: '12px 14px',
     }}>
-      {/* Two columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 10, marginBottom: 12 }}>
         {/* Solar load */}
         <div style={{
           background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.07)',
@@ -216,17 +237,42 @@ function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
-            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f59e0b' }}>
-              Solar Load
-            </span>
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f59e0b' }}>Solar</span>
           </div>
           <div style={{ fontSize: 18, fontWeight: 900, color: isDark ? DS.colors.textPrimary : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {fmtKw(solarKw)}
           </div>
-          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>
-            {solarPct.toFixed(0)}% of total · Inverter
-          </div>
+          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>{solarPct.toFixed(0)}% · Inverter</div>
         </div>
+
+        {/* EV tile — shown whenever an EV device is registered */}
+        {hasEv && (
+          <div style={{
+            background: isDark ? `${evColor}0e` : `${evColor}0a`,
+            border: `1px solid ${evCharging ? `${evColor}40` : `${evColor}22`}`,
+            borderRadius: DS.radius.sm, padding: '10px 12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: evCharging ? evColor : '#94a3b8', flexShrink: 0 }} />
+                <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: evCharging ? evColor : DS.colors.textDim }}>EV</span>
+              </div>
+              <span style={{
+                fontSize: 7.5, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                background: evCharging ? `${evColor}20` : 'rgba(148,163,184,0.12)',
+                color: evCharging ? evColor : DS.colors.textDim,
+              }}>
+                {evCharging ? 'Charging' : evPlugged ? 'Plugged in' : 'Idle'}
+              </span>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: isDark ? DS.colors.textPrimary : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {fmtKw(evKw)}
+            </div>
+            <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>
+              {evCharging ? `${evPct.toFixed(0)}% of total` : evLatest?.voltage_v != null ? `${evLatest.voltage_v.toFixed(0)} V` : '—'}
+            </div>
+          </div>
+        )}
 
         {/* Grid load */}
         <div style={{
@@ -236,38 +282,26 @@ function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#60a5fa', flexShrink: 0 }} />
-            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#60a5fa' }}>
-              Grid Load
-            </span>
+            <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#60a5fa' }}>Grid</span>
           </div>
           <div style={{ fontSize: 18, fontWeight: 900, color: isDark ? DS.colors.textPrimary : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {fmtKw(gridKw)}
           </div>
-          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>
-            {gridPct.toFixed(0)}% of total · CT Meter
-          </div>
+          <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>{gridPct.toFixed(0)}% · Energy Meter</div>
         </div>
       </div>
 
       {/* Proportional bar */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 8, color: DS.colors.textDim, fontWeight: 600 }}>
-          <span>Solar</span>
-          <span>Grid</span>
-        </div>
         <div style={{ height: 6, borderRadius: 3, overflow: 'hidden', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', display: 'flex' }}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${solarPct}%` }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            style={{ height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '3px 0 0 3px' }}
-          />
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${gridPct}%` }}
-            transition={{ duration: 0.7, ease: 'easeOut', delay: 0.05 }}
-            style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '0 3px 3px 0' }}
-          />
+          <motion.div initial={{ width: 0 }} animate={{ width: `${solarPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }}
+            style={{ height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
+          {hasEv && evKw > 0 && (
+            <motion.div initial={{ width: 0 }} animate={{ width: `${evPct}%` }} transition={{ duration: 0.7, ease: 'easeOut', delay: 0.05 }}
+              style={{ height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+          )}
+          <motion.div initial={{ width: 0 }} animate={{ width: `${gridPct}%` }} transition={{ duration: 0.7, ease: 'easeOut', delay: evKw > 0 ? 0.1 : 0.05 }}
+            style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '0 3px 3px 0' }} />
         </div>
         {total > 0 && (
           <div style={{ fontSize: 8.5, color: DS.colors.textMuted, marginTop: 5, textAlign: 'center' }}>
@@ -279,90 +313,309 @@ function LoadSplitPanel({ solarKw, gridKw, isDark }: { solarKw: number; gridKw: 
   );
 }
 
-// ─── 3-Phase CT panel ─────────────────────────────────────────────────────────
+// ─── Phase colours (consistent with SiteDataPanel) ───────────────────────────
 
-function PhaseCell({ value, unit, isDark }: { value: number | null; unit: string; isDark: boolean }) {
-  const display = value != null ? `${Math.abs(value).toFixed(unit === 'V' || unit === 'W' || unit === 'var' || unit === 'VA' ? 1 : 3)}` : '—';
+const PC = { L1: '#3b82f6', L2: '#f59e0b', L3: '#8b5cf6' };
+
+// ─── Single metric bar group: 3 animated bars for L1 / L2 / L3 ───────────────
+
+interface PhaseMetricBarProps {
+  label: string;
+  unit: string;
+  vals: [number | null, number | null, number | null];
+  total?: number | null;
+  isDark: boolean;
+  delay?: number;
+}
+
+function PhaseMetricBar({ label, unit, vals, total, isDark, delay = 0 }: PhaseMetricBarProps) {
+  const abs = vals.map(v => (v != null ? Math.abs(v) : null));
+  const max = Math.max(...abs.filter((v): v is number => v != null), 0.001);
+  const fmt = (v: number | null, decimals: number) =>
+    v != null ? `${Math.abs(v).toFixed(decimals)}${unit}` : '—';
+  const decimals = unit === '' ? 3 : unit === 'Hz' ? 2 : 1;
+
   return (
-    <td style={{
-      padding: '5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums',
-      fontSize: 11, fontWeight: 600, color: isDark ? DS.colors.textPrimary : '#1e293b',
-      borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
-    }}>
-      {display}
-      {value != null && <span style={{ fontSize: 9, opacity: 0.55, marginLeft: 2 }}>{unit}</span>}
-    </td>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.28, ease: 'easeOut' }}
+      style={{
+        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+        border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
+        borderRadius: DS.radius.sm,
+        padding: '10px 12px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim }}>
+          {label}
+        </span>
+        {total != null && (
+          <span style={{ fontSize: 10, fontWeight: 800, color: isDark ? DS.colors.textPrimary : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+            {fmt(total, decimals)} <span style={{ fontSize: 8, opacity: 0.55 }}>total</span>
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {(['L1', 'L2', 'L3'] as const).map((phase, i) => {
+          const val = abs[i];
+          const pct = val != null ? (val / max) * 100 : 0;
+          const color = PC[phase];
+          return (
+            <div key={phase} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color, width: 16, flexShrink: 0 }}>{phase}</span>
+              <div style={{ flex: 1, height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ duration: 0.55, delay: delay + i * 0.07, ease: 'easeOut' }}
+                  style={{ height: '100%', background: color, borderRadius: 3, opacity: val != null ? 1 : 0 }}
+                />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? DS.colors.textPrimary : '#1e293b', fontVariantNumeric: 'tabular-nums', minWidth: 52, textAlign: 'right' }}>
+                {val != null ? fmt(val, decimals) : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 
-function ThreePhasePanel({ r, isDark, accent }: { r: CtMeterReading; isDark: boolean; accent: string }) {
-  const rows: { label: string; unit: string; vals: (number | null)[] }[] = [
-    { label: 'Voltage',         unit: 'V',   vals: [r.voltage_l1,        r.voltage_l2,        r.voltage_l3,        null] },
-    { label: 'Current',         unit: 'A',   vals: [r.current_l1,        r.current_l2,        r.current_l3,        null] },
-    { label: 'Frequency',       unit: 'Hz',  vals: [r.frequency_l1,      r.frequency_l2,      r.frequency_l3,      null] },
-    { label: 'Active Power',    unit: 'W',   vals: [r.active_power_l1,   r.active_power_l2,   r.active_power_l3,   r.active_power_total] },
-    { label: 'Reactive Power',  unit: 'var', vals: [r.reactive_power_l1, r.reactive_power_l2, r.reactive_power_l3, r.reactive_power_total] },
-    { label: 'Apparent Power',  unit: 'VA',  vals: [r.apparent_power_l1, r.apparent_power_l2, r.apparent_power_l3, r.apparent_power_total] },
-    { label: 'Power Factor',    unit: '',    vals: [r.power_factor_l1,   r.power_factor_l2,   r.power_factor_l3,   r.power_factor_total] },
-  ];
+// ─── Energy Meter 3-phase bar panel ───────────────────────────────────────────────
 
-  const thStyle: React.CSSProperties = {
-    padding: '5px 8px', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
-    textTransform: 'uppercase', color: accent, textAlign: 'center',
-    borderBottom: isDark ? `1px solid ${accent}30` : `1px solid ${accent}40`,
-  };
-  const rowLabelStyle: React.CSSProperties = {
-    padding: '5px 8px', fontSize: 10, fontWeight: 700, color: isDark ? DS.colors.textMuted : '#64748b',
-    borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
-    whiteSpace: 'nowrap',
-  };
+function CtPhasePanel({ r, isDark }: { r: CtMeterReading; isDark: boolean }) {
+  const metrics: PhaseMetricBarProps[] = [
+    { label: 'Active Power', unit: 'W',  vals: [r.active_power_l1,  r.active_power_l2,  r.active_power_l3],  total: r.active_power_total,  isDark, delay: 0 },
+    { label: 'Voltage',      unit: 'V',  vals: [r.voltage_l1,       r.voltage_l2,       r.voltage_l3],       total: null,                  isDark, delay: 0.06 },
+    { label: 'Current',      unit: 'A',  vals: [r.current_l1,       r.current_l2,       r.current_l3],       total: null,                  isDark, delay: 0.12 },
+    { label: 'Power Factor', unit: '',   vals: [r.power_factor_l1,  r.power_factor_l2,  r.power_factor_l3],  total: r.power_factor_total,  isDark, delay: 0.18 },
+    { label: 'Frequency',    unit: 'Hz', vals: [r.frequency_l1,     r.frequency_l2,     r.frequency_l3],     total: null,                  isDark, delay: 0.24 },
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {metrics.map(m => <PhaseMetricBar key={m.label} {...m} />)}
+    </div>
+  );
+}
+
+// ─── Inverter 3-phase bar panel ───────────────────────────────────────────────
+
+function InverterPhasePanel({ p, isDark }: { p: InverterPhases; isDark: boolean }) {
+  // Frequency and PF: single aggregate — broadcast to all 3 phase slots
+  const f = p.grid_frequency_hz;
+  const pf = p.grid_power_factor;
+  const metrics: PhaseMetricBarProps[] = [
+    { label: 'Load Power',   unit: 'W',  vals: [p.l1.power_w,        p.l2.power_w,        p.l3.power_w],        total: (p.l1.power_w ?? 0) + (p.l2.power_w ?? 0) + (p.l3.power_w ?? 0), isDark, delay: 0 },
+    { label: 'Voltage',      unit: 'V',  vals: [p.grid_l1.voltage_v, p.grid_l2.voltage_v, p.grid_l3.voltage_v], total: null,                isDark, delay: 0.06 },
+    { label: 'Current',      unit: 'A',  vals: [p.grid_l1.current_a, p.grid_l2.current_a, p.grid_l3.current_a], total: null,                isDark, delay: 0.12 },
+    { label: 'Power Factor', unit: '',   vals: [pf, pf, pf],                                                     total: null,                isDark, delay: 0.18 },
+    { label: 'Frequency',    unit: 'Hz', vals: [f, f, f],                                                        total: null,                isDark, delay: 0.24 },
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {metrics.map(m => <PhaseMetricBar key={m.label} {...m} />)}
+      <div style={{ fontSize: 8.5, color: DS.colors.textDim, paddingLeft: 2 }}>
+        Power factor and frequency are aggregate — inverter reports no per-phase breakdown
+      </div>
+    </div>
+  );
+}
+
+// ─── Side-by-side comparison: Inverter vs Energy Meter per metric ────────────────
+
+interface ComparisonMetricRowProps {
+  label: string;
+  unit: string;
+  invVals: [number | null, number | null, number | null];
+  ctVals:  [number | null, number | null, number | null];
+  invTotal?: number | null;
+  ctTotal?:  number | null;
+  isDark: boolean;
+  delay?: number;
+}
+
+function ComparisonMetricRow({ label, unit, invVals, ctVals, invTotal, ctTotal, isDark, delay = 0 }: ComparisonMetricRowProps) {
+  const allVals = [...invVals, ...ctVals].filter((v): v is number => v != null).map(Math.abs);
+  const max = Math.max(...allVals, 0.001);
+  const decimals = unit === '' ? 3 : unit === 'Hz' ? 2 : 1;
+  const fmt = (v: number | null) => v != null ? `${Math.abs(v).toFixed(decimals)}${unit}` : '—';
 
   return (
-    <div style={{ overflowX: 'auto', borderRadius: DS.radius.sm, border: isDark ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${accent}28` }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-        <thead>
-          <tr style={{ background: isDark ? `${accent}14` : `${accent}0d` }}>
-            <th style={{ ...thStyle, textAlign: 'left' }}>Measurement</th>
-            <th style={thStyle}>L1</th>
-            <th style={thStyle}>L2</th>
-            <th style={thStyle}>L3</th>
-            <th style={{ ...thStyle, color: isDark ? DS.colors.textPrimary : '#0f172a' }}>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={row.label} style={{ background: i % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)') }}>
-              <td style={rowLabelStyle}>{row.label}</td>
-              <PhaseCell value={row.vals[0]} unit={row.unit} isDark={isDark} />
-              <PhaseCell value={row.vals[1]} unit={row.unit} isDark={isDark} />
-              <PhaseCell value={row.vals[2]} unit={row.unit} isDark={isDark} />
-              {row.vals[3] != null ? (
-                <td style={{
-                  padding: '5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums',
-                  fontSize: 11, fontWeight: 800, color: accent,
-                  borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
-                }}>
-                  {Math.abs(row.vals[3]).toFixed(row.unit === '' ? 3 : 1)}
-                  {row.unit && <span style={{ fontSize: 9, opacity: 0.65, marginLeft: 2 }}>{row.unit}</span>}
-                </td>
-              ) : (
-                <td style={{ borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }} />
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.28, ease: 'easeOut' }}
+      style={{
+        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+        border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
+        borderRadius: DS.radius.sm,
+        padding: '10px 12px',
+      }}
+    >
+      {/* Row label + totals */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim }}>
+          {label}
+        </span>
+        <div style={{ display: 'flex', gap: 14 }}>
+          {invTotal != null && (
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#f59e0b', fontVariantNumeric: 'tabular-nums' }}>
+              {fmt(invTotal)} <span style={{ fontSize: 7, opacity: 0.6 }}>INV</span>
+            </span>
+          )}
+          {ctTotal != null && (
+            <span style={{ fontSize: 9, fontWeight: 800, color: '#60a5fa', fontVariantNumeric: 'tabular-nums' }}>
+              {fmt(ctTotal)} <span style={{ fontSize: 7, opacity: 0.6 }}>CT</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Per-phase comparison rows */}
+      {(['L1', 'L2', 'L3'] as const).map((phase, i) => {
+        const inv = invVals[i] != null ? Math.abs(invVals[i]!) : null;
+        const ct  = ctVals[i]  != null ? Math.abs(ctVals[i]!)  : null;
+        const color = PC[phase];
+
+        return (
+          <div key={phase} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: i < 2 ? 5 : 0 }}>
+            {/* Phase label */}
+            <span style={{ fontSize: 9, fontWeight: 800, color, width: 16, flexShrink: 0 }}>{phase}</span>
+
+            {/* Inverter bar (grows right-to-left from centre) */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 38, textAlign: 'right', fontSize: 9, fontWeight: 700, color: '#f59e0b', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                {inv != null ? fmt(inv) : '—'}
+              </div>
+              <div style={{ flex: 1, height: 5, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', justifyContent: 'flex-end' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: inv != null ? `${(inv / max) * 100}%` : 0 }}
+                  transition={{ duration: 0.55, delay: delay + i * 0.06, ease: 'easeOut' }}
+                  style={{ height: '100%', background: '#f59e0b', borderRadius: 2, opacity: 0.85 }}
+                />
+              </div>
+            </div>
+
+            {/* Centre divider */}
+            <div style={{ width: 1, height: 14, background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
+
+            {/* CT bar (grows left-to-right) */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ flex: 1, height: 5, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: ct != null ? `${(ct / max) * 100}%` : 0 }}
+                  transition={{ duration: 0.55, delay: delay + i * 0.06 + 0.03, ease: 'easeOut' }}
+                  style={{ height: '100%', background: '#60a5fa', borderRadius: 2, opacity: 0.85 }}
+                />
+              </div>
+              <div style={{ width: 38, fontSize: 9, fontWeight: 700, color: '#60a5fa', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                {ct != null ? fmt(ct) : '—'}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
+function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases; ct: CtMeterReading; isDark: boolean }) {
+  const invPowerTotal = (inv.l1.power_w ?? 0) + (inv.l2.power_w ?? 0) + (inv.l3.power_w ?? 0);
+  // Inverter reports a single aggregate frequency — broadcast to all 3 phase slots
+  const f = inv.grid_frequency_hz;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Column headers */}
+      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 22 }}>
+        <div style={{ flex: 1, textAlign: 'right', paddingRight: 8, fontSize: 8, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#f59e0b' }}>
+          Inverter
+        </div>
+        <div style={{ width: 1, height: 10, flexShrink: 0 }} />
+        <div style={{ flex: 1, textAlign: 'left', paddingLeft: 8, fontSize: 8, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#60a5fa' }}>
+          Energy Meter
+        </div>
+      </div>
+
+      <ComparisonMetricRow
+        label="Active Power" unit="W"
+        invVals={[inv.l1.power_w, inv.l2.power_w, inv.l3.power_w]}
+        ctVals={[ct.active_power_l1, ct.active_power_l2, ct.active_power_l3]}
+        invTotal={invPowerTotal} ctTotal={ct.active_power_total}
+        isDark={isDark} delay={0}
+      />
+      <ComparisonMetricRow
+        label="Voltage" unit="V"
+        invVals={[inv.grid_l1.voltage_v, inv.grid_l2.voltage_v, inv.grid_l3.voltage_v]}
+        ctVals={[ct.voltage_l1, ct.voltage_l2, ct.voltage_l3]}
+        isDark={isDark} delay={0.06}
+      />
+      <ComparisonMetricRow
+        label="Current" unit="A"
+        invVals={[inv.grid_l1.current_a, inv.grid_l2.current_a, inv.grid_l3.current_a]}
+        ctVals={[ct.current_l1, ct.current_l2, ct.current_l3]}
+        isDark={isDark} delay={0.12}
+      />
+      <ComparisonMetricRow
+        label="Power Factor" unit=""
+        invVals={[inv.grid_power_factor, inv.grid_power_factor, inv.grid_power_factor]}
+        ctVals={[ct.power_factor_l1, ct.power_factor_l2, ct.power_factor_l3]}
+        ctTotal={ct.power_factor_total}
+        isDark={isDark} delay={0.18}
+      />
+      <ComparisonMetricRow
+        label="Frequency" unit="Hz"
+        invVals={[f, f, f]}
+        ctVals={[ct.frequency_l1, ct.frequency_l2, ct.frequency_l3]}
+        isDark={isDark} delay={0.24}
+      />
+      <div style={{ fontSize: 8.5, color: DS.colors.textDim, paddingLeft: 2 }}>
+        Inverter power factor and frequency are aggregate registers — same value shown per phase
+      </div>
     </div>
   );
 }
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
-type SparkPoint = { t: string; v: number };
+type SparkPoint = { t: string; v: number; grid?: number; ev?: number };
 
 export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeDetailModalProps) {
   const [sparkData, setSparkData] = useState<SparkPoint[]>([]);
   const [sparkLoading, setSparkLoading] = useState(false);
+  const [chartFullscreen, setChartFullscreen] = useState(false);
+  const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({ v: true, grid: true, ev: true });
+  const [isCompact, setIsCompact] = useState(false);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Chart.js zoom state (inline — matches SiteDataPanel pattern)
+  const chartRef = useRef<any>(null);
+  const fsChartRef = useRef<any>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isFsZoomed, setIsFsZoomed] = useState(false);
+  const resetZoom = useCallback(() => { chartRef.current?.resetZoom(); setIsZoomed(false); }, []);
+  const resetFsZoom = useCallback(() => { fsChartRef.current?.resetZoom(); setIsFsZoomed(false); }, []);
+
+  const toggleSeries = useCallback((key: string) => {
+    setVisibleSeries(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (Object.values(next).every(v => !v)) return prev;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 480px)');
+    const sync = () => setIsCompact(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   // ESC to close
   useEffect(() => {
@@ -385,21 +638,50 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     const load = async () => {
       try {
         let points: SparkPoint[] = [];
+        const fmtTime = (ts: string) =>
+          new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         if (node.type === 'device' && node.device) {
-          // Smart device: use dedicated readings endpoint
           const rows = await apiService.getSmartDeviceReadings(node.device.id, 24);
           points = rows
             .filter(r => r.power_w != null)
-            .map(r => ({
-              t: new Date(r.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }),
-              v: (r.power_w ?? 0) / 1000,
-            }));
+            .map(r => ({ t: fmtTime(r.timestamp), v: (r.power_w ?? 0) / 1000 }));
+
+        } else if (node.type === 'load' && siteId) {
+          // Fetch inverter load history and EV device readings in parallel.
+          // energy meter history is NOT available in getSiteHistory (inverter telemetry only).
+          const extractLoad = HISTORY_EXTRACT.load!;
+          const [histRows, evRows] = await Promise.all([
+            apiService.getSiteHistory(siteId, { start_date: today, end_date: tomorrow, aggregate: '15min' }),
+            node.evDevice ? apiService.getSmartDeviceReadings(node.evDevice.id, 24) : Promise.resolve([]),
+          ]);
+
+          const evMap = new Map<string, number>();
+          for (const r of evRows) {
+            if (r.power_w == null) continue;
+            evMap.set(fmtTime(r.timestamp), (r.power_w ?? 0) / 1000);
+          }
+
+          const extractGrid = HISTORY_EXTRACT.grid!;
+          points = histRows
+            .map(r => {
+              const t = fmtTime(r.timestamp ?? '');
+              const v = extractLoad(r as Record<string, unknown>);
+              if (v == null || isNaN(v)) return null;
+              const pt: SparkPoint = { t, v: Math.abs(v) };
+              const gv = extractGrid(r as Record<string, unknown>);
+              if (gv != null && !isNaN(gv)) pt.grid = Math.abs(gv);
+              const evVal = evMap.get(t);
+              if (evVal != null) pt.ev = evVal;
+              return pt;
+            })
+            .filter((p): p is SparkPoint => p !== null);
+
         } else if (siteId && HISTORY_EXTRACT[node.type]) {
           const extract = HISTORY_EXTRACT[node.type]!;
           const rows = await apiService.getSiteHistory(siteId, { start_date: today, end_date: tomorrow, aggregate: '15min' });
           points = rows
-            .map(r => ({ t: new Date(r.timestamp ?? '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }), v: extract(r as Record<string, unknown>) }))
+            .map(r => ({ t: fmtTime(r.timestamp ?? ''), v: extract(r as Record<string, unknown>) }))
             .filter((p): p is { t: string; v: number } => p.v != null && !isNaN(p.v))
             .map(p => ({ ...p, v: Math.abs(p.v) }));
         }
@@ -435,7 +717,215 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     ...extraEntries,
   ];
 
+  const buildChartData = (isLoad: boolean) => {
+    const labels = sparkData.map(p => p.t);
+    const datasets = isLoad
+      ? [
+          ...(visibleSeries.v ? [{
+            label: 'Inverter Load',
+            data: sparkData.map(p => p.v),
+            borderColor: '#f87171',
+            borderWidth: 2,
+            backgroundColor: isDark ? 'rgba(248,113,113,0.12)' : 'rgba(248,113,113,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            spanGaps: true,
+          }] : []),
+          ...(visibleSeries.grid ? [{
+            label: 'Energy Meter',
+            data: sparkData.map(p => p.grid ?? null),
+            borderColor: '#60a5fa',
+            borderWidth: 1.5,
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0,
+            spanGaps: true,
+          }] : []),
+          ...(visibleSeries.ev && node?.evDevice ? [{
+            label: 'EV Charging',
+            data: sparkData.map(p => p.ev ?? null),
+            borderColor: '#34d399',
+            borderWidth: 1.5,
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0,
+            spanGaps: true,
+          }] : []),
+        ]
+      : [{
+          label: 'Power',
+          data: sparkData.map(p => p.v),
+          borderColor: accentColor,
+          borderWidth: 2,
+          backgroundColor: isDark ? `${accentColor}26` : `${accentColor}18`,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          spanGaps: true,
+        }];
+    return { labels, datasets };
+  };
+
+  const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false as const,
+    interaction: { mode: 'index' as const, intersect: false },
+    scales: {
+      x: {
+        ticks: {
+          color: DS.colors.textDim, font: { size: 9, weight: 600 as const },
+          maxTicksLimit: 7, maxRotation: 0,
+        },
+        grid: { display: false },
+        border: { display: false },
+      },
+      y: {
+        display: fullscreen,
+        ticks: { color: DS.colors.textDim, font: { size: 9 }, callback: (v: unknown) => `${Number(v).toFixed(1)}` },
+        grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+        border: { display: false },
+      },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? '#0d1117' : '#ffffff',
+        borderColor: `${accentColor}40`,
+        borderWidth: 1,
+        titleColor: isDark ? DS.colors.textPrimary : '#0F172A',
+        bodyColor: isDark ? DS.colors.textPrimary : '#0F172A',
+        padding: 8,
+        callbacks: {
+          label: (item: any) => `${item.dataset.label}: ${item.parsed.y != null ? item.parsed.y.toFixed(2) : '—'} kW`,
+        },
+      },
+      zoom: {
+        wheel: { enabled: true, speed: 0.08 },
+        drag: {
+          enabled: true,
+          backgroundColor: 'rgba(0,166,62,0.14)',
+          borderColor: 'rgba(0,166,62,0.7)',
+          borderWidth: 1,
+        },
+        pinch: { enabled: true },
+        mode: 'x' as const,
+        onZoomComplete: onZoom,
+      },
+      pan: { enabled: false, mode: 'x' as const },
+    },
+  });
+
+  const renderChart = (isLoad: boolean, fullscreen: boolean) => {
+    const ref = fullscreen ? fsChartRef : chartRef;
+    const onZoom = fullscreen ? () => setIsFsZoomed(true) : () => setIsZoomed(true);
+    return (
+      <CJLine
+        ref={ref}
+        data={buildChartData(isLoad)}
+        options={buildChartOptions(fullscreen, ref, onZoom) as any}
+      />
+    );
+  };
+
+  // Chart fullscreen portal — rendered outside the modal so framer-motion
+  // transforms on the modal panel don't break position:fixed
+  const fullscreenPortal = chartFullscreen && node && ReactDOM.createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="chart-fs"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: isDark ? 'rgba(8,12,20,0.97)' : 'rgba(244,246,248,0.98)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex', flexDirection: 'column',
+          padding: '24px 24px 16px',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? DS.colors.textPrimary : '#0f172a' }}>
+              {node.title} · 24h Trend
+            </div>
+            <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 2 }}>
+              Drag to zoom · scroll to zoom · reset to restore
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isFsZoomed && (
+              <button onClick={resetFsZoom} style={{
+                border: '1px solid rgba(0,166,62,0.35)', background: 'transparent',
+                color: '#00a63e', borderRadius: 6, cursor: 'pointer',
+                padding: '5px 12px', fontSize: 10, fontWeight: 600,
+              }}>Reset Zoom</button>
+            )}
+            <button
+              onClick={() => setChartFullscreen(false)}
+              style={{
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                padding: '6px 14px', fontSize: 11, fontWeight: 600,
+                color: DS.colors.textDim, display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <X size={12} /> Close
+            </button>
+          </div>
+        </div>
+
+        {/* Series toggles (load node only) */}
+        {node.type === 'load' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            {([
+              { key: 'v',    label: 'Inverter Load', color: '#f87171', dash: false },
+              { key: 'grid', label: 'Energy Meter',      color: '#60a5fa', dash: true  },
+              ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#34d399', dash: false }] : []),
+            ] as { key: string; label: string; color: string; dash: boolean }[]).map(({ key, label, color, dash }) => {
+              const on = visibleSeries[key] !== false;
+              return (
+                <button key={key} onClick={() => toggleSeries(key)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px 5px 10px', borderRadius: 20, cursor: 'pointer',
+                  border: `1px solid ${on ? `${color}50` : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                  background: on ? `${color}15` : 'transparent', transition: 'all 0.15s',
+                }}>
+                  <span style={{
+                    width: 22, height: 2, display: 'inline-block', borderRadius: 2,
+                    ...(dash
+                      ? { backgroundImage: `repeating-linear-gradient(90deg,${on ? color : '#888'} 0,${on ? color : '#888'} 4px,transparent 4px,transparent 7px)` }
+                      : { background: on ? color : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }),
+                  }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: on ? color : DS.colors.textDim }}>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Chart fills remaining space */}
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          {sparkData.length > 0 ? renderChart(node.type === 'load', true) : (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 13, color: DS.colors.textDim }}>No data for today</span>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
+  );
+
   return (
+    <>
+    {fullscreenPortal}
     <AnimatePresence>
       {node && (
         <>
@@ -454,7 +944,8 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 998,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: isCompact ? 'flex-end' : 'center', justifyContent: 'center',
+              padding: isCompact ? 0 : 12,
             }}
           >
             {/* ── Modal card ── */}
@@ -467,11 +958,12 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               onClick={e => e.stopPropagation()}
               style={{
                 position: 'relative',
-                width: 'min(94vw, 460px)',
-                maxHeight: '88dvh',
+                width: isCompact ? '100vw' : 'min(94vw, 460px)',
+                maxWidth: isCompact ? '100vw' : '460px',
+                maxHeight: isCompact ? '82dvh' : '88dvh',
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                borderRadius: DS.radius.lg,
+                borderRadius: isCompact ? '18px 18px 0 0' : DS.radius.lg,
                 background: isDark
                   ? 'rgba(8,12,22,0.92)'
                   : 'rgba(255,255,255,0.96)',
@@ -487,6 +979,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 borderTop: `3px solid ${accentColor}`,
                 zIndex: 999,
                 scrollbarWidth: 'none',
+                paddingBottom: isCompact ? 'max(12px, env(safe-area-inset-bottom))' : 0,
               }}
             >
               {/* Glow halo behind modal */}
@@ -503,14 +996,14 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 custom={0} variants={rowVariants} initial="hidden" animate="visible"
                 style={{
                   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-                  padding: '18px 18px 14px',
+                  padding: isCompact ? '14px 14px 12px' : '18px 18px 14px',
                   borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                 }}
               >
                 {/* Icon + title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 10 : 12 }}>
                   <div style={{
-                    width: 40, height: 40, borderRadius: DS.radius.sm,
+                    width: isCompact ? 34 : 40, height: isCompact ? 34 : 40, borderRadius: DS.radius.sm,
                     background: `${accentColor}18`,
                     border: `1.5px solid ${accentColor}38`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -520,13 +1013,13 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   </div>
                   <div>
                     <div style={{
-                      fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2,
+                      fontSize: isCompact ? 13 : 15, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2,
                       color: isDark ? DS.colors.textPrimary : '#0F172A',
                     }}>
                       {node.title}
                     </div>
                     {node.subtitle && (
-                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: DS.colors.textDim, marginTop: 2 }}>
+                      <div style={{ fontSize: isCompact ? 9 : 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: DS.colors.textDim, marginTop: 2 }}>
                         {node.subtitle}
                       </div>
                     )}
@@ -538,7 +1031,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   onClick={onClose}
                   aria-label="Close"
                   style={{
-                    width: 30, height: 30, borderRadius: DS.radius.sm,
+                    width: isCompact ? 28 : 30, height: isCompact ? 28 : 30, borderRadius: DS.radius.sm,
                     background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
                     border: isDark ? '1px solid rgba(255,255,255,0.09)' : '1px solid rgba(0,0,0,0.09)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -549,11 +1042,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; }}
                 >
-                  <X size={14} />
+                  <X size={isCompact ? 13 : 14} />
                 </button>
               </motion.div>
 
-              <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ padding: isCompact ? '12px 14px 14px' : '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: isCompact ? 12 : 14 }}>
 
                 {/* ── Power hero ── */}
                 <motion.div
@@ -562,7 +1055,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
                     border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                     borderRadius: DS.radius.md,
-                    padding: '14px 16px',
+                    padding: isCompact ? '12px 13px' : '14px 16px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     position: 'relative', overflow: 'hidden',
                   }}
@@ -576,7 +1069,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
                   <div style={{ paddingLeft: 8 }}>
                     <div style={{
-                      fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+                      fontSize: isCompact ? 8 : 9, fontWeight: 700, letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       color: isDark ? DS.colors.textDim : 'rgba(15,23,42,0.38)',
                       marginBottom: 6,
@@ -585,21 +1078,21 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
                       <span style={{
-                        fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
+                        fontSize: isCompact ? 24 : 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                         color: isDark ? DS.colors.textPrimary : '#0F172A',
                         fontVariantNumeric: 'tabular-nums',
                       }}>
                         {pwr.value}
                       </span>
                       <span style={{
-                        fontSize: 13, fontWeight: 700,
+                        fontSize: isCompact ? 11 : 13, fontWeight: 700,
                         color: isDark ? DS.colors.textMuted : 'rgba(15,23,42,0.52)',
                       }}>
                         {pwr.unit}
                       </span>
                     </div>
                     {node.timestamp && (
-                      <div style={{ fontSize: 10, color: DS.colors.textDim, marginTop: 5 }}>
+                      <div style={{ fontSize: isCompact ? 9 : 10, color: DS.colors.textDim, marginTop: 5 }}>
                         Updated {fmtRelTime(node.timestamp)}
                       </div>
                     )}
@@ -615,7 +1108,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 {node.loadSplit && (
                   <motion.div custom={2} variants={rowVariants} initial="hidden" animate="visible">
                     <SectionLabel>Load Breakdown</SectionLabel>
-                    <LoadSplitPanel solarKw={node.loadSplit.solarKw} gridKw={node.loadSplit.gridKw} isDark={isDark} />
+                    <LoadSplitPanel solarKw={node.loadSplit.solarKw} gridKw={node.loadSplit.gridKw} evKw={node.loadSplit.evKw} evDevice={node.evDevice} isDark={isDark} />
                   </motion.div>
                 )}
 
@@ -625,7 +1118,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     <SectionLabel>Details</SectionLabel>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                      gridTemplateColumns: isCompact ? '1fr 1fr' : 'repeat(auto-fill, minmax(160px, 1fr))',
                       gap: 8,
                     }}>
                       {allDetails.slice(0, 6).map(([k, v], i) => (
@@ -640,70 +1133,102 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   </motion.div>
                 )}
 
-                {/* ── CT Meter 3-phase table ── */}
-                {node.ctReading && (
+                {/* CT card: phase measurements removed — shown only in Total Load comparison */}
+
+                {/* Inverter standalone card: phase measurements removed — shown only in Total Load comparison */}
+
+                {/* ── Total Load: side-by-side Inverter vs CT comparison ── */}
+                {node.type === 'load' && node.inverterPhases && node.ctReading && (
                   <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
-                    <SectionLabel>3-Phase Measurements</SectionLabel>
-                    <ThreePhasePanel r={node.ctReading} isDark={isDark} accent={accentColor} />
+                    <SectionLabel>Phase Comparison · Inverter vs Energy Meter</SectionLabel>
+                    <ComparisonPhasePanel inv={node.inverterPhases} ct={node.ctReading} isDark={isDark} />
+                  </motion.div>
+                )}
+
+                {/* ── Total Load: single source fallback if only one available ── */}
+                {node.type === 'load' && !(node.inverterPhases && node.ctReading) && (node.inverterPhases || node.ctReading) && (
+                  <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
+                    <SectionLabel>Phase Measurements</SectionLabel>
+                    {node.inverterPhases && <InverterPhasePanel p={node.inverterPhases} isDark={isDark} />}
+                    {node.ctReading && <CtPhasePanel r={node.ctReading} isDark={isDark} />}
                   </motion.div>
                 )}
 
                 {/* ── Sparkline chart ── */}
-                {node.type !== 'ctmeter' && (
+                {(HISTORY_EXTRACT[node.type] != null || node.type === 'device') && (
                 <motion.div custom={4} variants={rowVariants} initial="hidden" animate="visible">
-                  <SectionLabel>24h Trend</SectionLabel>
-                  <div style={{
+                  {/* Header row: label + fullscreen toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <SectionLabel style={{ marginBottom: 0 }}>24h Trend</SectionLabel>
+                    <button
+                      onClick={() => setChartFullscreen(f => !f)}
+                      title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                      style={{
+                        background: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                        borderRadius: 6, cursor: 'pointer', padding: '3px 7px',
+                        color: DS.colors.textDim, fontSize: 10, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      {chartFullscreen ? '⊠ Exit' : '⛶ Expand'}
+                    </button>
+                  </div>
+
+                  {/* Series toggles (load node only) */}
+                  {node.type === 'load' && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {([
+                        { key: 'v',    label: 'Inverter Load', color: '#f87171' },
+                        { key: 'grid', label: 'Energy Meter',      color: '#60a5fa' },
+                        ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#34d399' }] : []),
+                      ] as { key: string; label: string; color: string }[]).map(({ key, label, color }) => {
+                        const on = visibleSeries[key] !== false;
+                        return (
+                          <button key={key} onClick={() => toggleSeries(key)} style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            padding: '3px 9px 3px 7px', borderRadius: 20, cursor: 'pointer',
+                            border: `1px solid ${on ? `${color}50` : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                            background: on ? `${color}12` : 'transparent',
+                            transition: 'all 0.15s',
+                          }}>
+                            <span style={{
+                              width: 18, height: 2,
+                              background: on ? color : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+                              display: 'inline-block', borderRadius: 2,
+                            }} />
+                            <span style={{ fontSize: 9, fontWeight: 600, color: on ? color : DS.colors.textDim }}>{label}</span>
+                          </button>
+                        );
+                      })}
+                      {isZoomed && (
+                        <button onClick={resetZoom} style={{
+                          border: '1px solid rgba(0,166,62,0.35)', background: 'transparent',
+                          color: '#00a63e', borderRadius: 6, cursor: 'pointer',
+                          padding: '3px 9px', fontSize: 9, fontWeight: 600, marginLeft: 'auto',
+                        }}>Reset Zoom</button>
+                      )}
+                    </div>
+                  )}
+
+                  <div ref={chartContainerRef} style={{
                     background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)',
                     border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                     borderRadius: DS.radius.sm,
-                    padding: '8px 4px 4px',
-                    height: 108,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: isCompact ? '6px 2px 2px' : '8px 4px 4px',
+                    height: isCompact ? 104 : 120,
                   }}>
                     {sparkLoading ? (
-                      <span style={{ fontSize: 11, color: DS.colors.textDim }}>Loading…</span>
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 11, color: DS.colors.textDim }}>Loading…</span>
+                      </div>
                     ) : sparkData.length === 0 ? (
-                      <span style={{ fontSize: 11, color: DS.colors.textDim }}>No data for today</span>
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 11, color: DS.colors.textDim }}>No data for today</span>
+                      </div>
                     ) : (
-                    <ResponsiveContainer width="100%" height={100}>
-                      <AreaChart data={sparkData} margin={{ top: 4, right: 6, left: 6, bottom: 4 }}>
-                        <XAxis
-                          dataKey="t"
-                          tick={{ fontSize: 9, fill: DS.colors.textDim, fontWeight: 600 }}
-                          tickLine={false}
-                          axisLine={false}
-                          interval={Math.max(0, Math.floor(sparkData.length / 6) - 1)}
-                        />
-                        <defs>
-                          <linearGradient id={`grad-${node.id}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="10%" stopColor={accentColor} stopOpacity={isDark ? 0.3 : 0.2} />
-                            <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <Tooltip
-                          contentStyle={{
-                            background: isDark ? '#0d1117' : '#ffffff',
-                            border: `1px solid ${accentColor}40`,
-                            borderRadius: 8,
-                            fontSize: 11,
-                            color: isDark ? DS.colors.textPrimary : '#0F172A',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                          }}
-                          formatter={(v: unknown) => [`${typeof v === 'number' ? v.toFixed(2) : v} kW`, 'Power']}
-                          labelFormatter={(l: unknown) => `${String(l)}`}
-                          cursor={{ stroke: `${accentColor}40`, strokeWidth: 1 }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="v"
-                          stroke={accentColor}
-                          strokeWidth={2}
-                          fill={`url(#grad-${node.id})`}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                      <div style={{ position: 'relative', height: '100%' }}>
+                        {renderChart(node.type === 'load', false)}
+                      </div>
                     )}
                   </div>
                 </motion.div>
@@ -716,19 +1241,21 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     paddingTop: 10,
                     borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
+                    gap: 10,
                   }}
                 >
-                  <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.04em', color: DS.colors.textDim }}>
+                  <span style={{ fontSize: isCompact ? 8 : 9, fontWeight: 600, letterSpacing: '0.04em', color: DS.colors.textDim, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     NODE · {node.type.toUpperCase()} · {node.id.toUpperCase()}
                   </span>
                   <button
                     onClick={onClose}
                     style={{
-                      fontSize: 10, fontWeight: 700, color: accentColor,
+                      fontSize: isCompact ? 9 : 10, fontWeight: 700, color: accentColor,
                       background: `${accentColor}14`, border: `1px solid ${accentColor}28`,
-                      borderRadius: DS.radius.sm, padding: '4px 12px',
+                      borderRadius: DS.radius.sm, padding: isCompact ? '4px 10px' : '4px 12px',
                       cursor: 'pointer', letterSpacing: '0.04em',
                       transition: 'all 0.18s ease',
+                      flexShrink: 0,
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}28`; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}14`; }}
@@ -743,5 +1270,6 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         </>
       )}
     </AnimatePresence>
+    </>
   );
 }

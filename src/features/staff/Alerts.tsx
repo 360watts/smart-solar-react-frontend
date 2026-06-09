@@ -66,16 +66,17 @@ type AlertDiagnostic = NonNullable<NonNullable<Alert['metadata']>['diagnostic']>
 
 // ─── Design tokens (shared with OTA page) ────────────────────────────────────
 
+// ── Design tokens aligned with mobile AppTheme ─────────────────────────────
 const tok = {
-  bgPage:  (d: boolean) => d ? '#0F172A' : '#F1F5F9',
-  bgCard:  (d: boolean) => d ? '#1E293B' : '#FFFFFF',
-  bgSub:   (d: boolean) => d ? '#0F172A' : '#F8FAFC',
-  bgInput: (d: boolean) => d ? '#0F172A' : '#FFFFFF',
-  bgMuted: (d: boolean) => d ? 'rgba(255,255,255,0.04)' : '#F3F4F6',
-  border:  (d: boolean) => d ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
-  textPrimary:   (d: boolean) => d ? '#F8FAFC' : '#0F172A',
-  textSecondary: (d: boolean) => d ? '#94A3B8' : '#64748B',
-  textMuted:     (d: boolean) => d ? '#64748B' : '#94A3B8',
+  bgPage:  (d: boolean) => d ? '#080C14' : '#F4F6F8',
+  bgCard:  (d: boolean) => d ? '#0F1623' : '#FFFFFF',
+  bgSub:   (d: boolean) => d ? '#080C14' : '#F4F6F8',
+  bgInput: (d: boolean) => d ? '#0F1623' : '#FFFFFF',
+  bgMuted: (d: boolean) => d ? 'rgba(255,255,255,0.05)' : 'rgba(18,21,26,0.04)',
+  border:  (d: boolean) => d ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)',
+  textPrimary:   (d: boolean) => d ? '#F0F4FF' : '#12151A',
+  textSecondary: (d: boolean) => d ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)',
+  textMuted:     (d: boolean) => d ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)',
 };
 
 const SEVERITY_CONFIG = {

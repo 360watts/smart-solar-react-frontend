@@ -12,11 +12,12 @@
    We map dark theme to the existing `.dark-mode` wrapper.
    ──────────────────────────────────────────────────────────────────────────── */
 @theme inline {
-  --radius: 0.75rem;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Radius — aligned with mobile AppTheme.radii */
+  --radius: 1.125rem;     /* 18px = AppTheme.radii.lg (card default) */
+  --radius-sm: 0.375rem;  /*  6px */
+  --radius-md: 0.625rem;  /* 10px */
+  --radius-lg: 1.125rem;  /* 18px */
+  --radius-xl: 1.5rem;    /* 24px */
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

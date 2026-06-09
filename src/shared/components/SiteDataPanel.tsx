@@ -99,8 +99,8 @@ const TABS = [
   { id: 'details',   label: 'Details',   icon: <Activity size={tabIconSize} /> },
   { id: 'weather',   label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
   { id: 'history',   label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
-  { id: 'forecast',  label: 'Solar Forecast',  icon: <Sun size={tabIconSize} /> },
-  { id: 'phase-load', label: 'Load Forecast', icon: <Layers size={tabIconSize} /> },
+  { id: 'forecast',  label: 'Solar',  icon: <Sun size={tabIconSize} /> },
+  { id: 'phase-load', label: 'Load', icon: <Layers size={tabIconSize} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -119,6 +119,13 @@ const VS_ACTUAL_SERIES = [
   { key: 'Delta', label: 'Δ %' },
 ] as const;
 type VsActualSeriesKey = typeof VS_ACTUAL_SERIES[number]['key'];
+
+const LOAD_SOURCE_META = {
+  inverter: { label: 'Inverter Load', color: '#f59e0b' },
+  grid: { label: 'Grid Load', color: '#60a5fa' },
+  ev: { label: 'EV Load', color: '#34d399' },
+} as const;
+type LoadSourceKey = keyof typeof LOAD_SOURCE_META;
 
 // ── Animation Variants ──────────────────────────────────────────────────────────
 
@@ -527,12 +534,8 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
           fontFamily: 'JetBrains Mono, monospace',
           fontSize: '1.75rem',
           fontWeight: 800,
-          color: 'var(--text-primary)',
           lineHeight: 1,
-          background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
+          color: accent,
         }}
       >
         {value}
@@ -2764,24 +2767,31 @@ const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts, amps, 
 };
 
 const PhaseLoadTab: React.FC<{
+  siteId: string;
   phaseLoad: any[];
   loadForecast: any[];
+  smartDevices: any[];
   latest: any;
   isDark: boolean;
   hours: number;
   onHoursChange: (h: number) => void;
   forecastAccuracy?: any;
   onRefreshVsActual?: () => void;
-}> = ({ phaseLoad, loadForecast, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual }) => {
+}> = ({ siteId, phaseLoad, loadForecast, smartDevices, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual }) => {
   // Allow switching between forecast chart and accuracy view
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
-  const [showTotalLoad, setShowTotalLoad] = useState(false);
+  const [loadSourceView, setLoadSourceView] = useState<LoadSourceKey | 'total'>('inverter');
+  const [selectedLoadDate, setSelectedLoadDate] = useState('');
   const phaseLoadChartZoom = useChartZoomState();
   const loadForecastChartZoom = useChartZoomState();
   const vsActualLoadChartZoom = useChartZoomState();
   const [showVsActual, setShowVsActual] = useState(false);
   const [vsActual7d, setVsActual7d] = useState(false);
   const vsActualFetchedRef = useRef(false);
+  const [evHistory, setEvHistory] = useState<any[]>([]);
+  const [ctLatest, setCtLatest] = useState<any | null>(null);
+  const [siteHistoryRows, setSiteHistoryRows] = useState<any[]>([]);
+  const loadBucketMinutes = 15;
 
   // Force-refresh vs-actual data (bypass cache) the first time the chart is shown
   useEffect(() => {
@@ -2790,36 +2800,311 @@ const PhaseLoadTab: React.FC<{
       onRefreshVsActual?.();
     }
   }, [showVsActual, onRefreshVsActual]);
-  const { chartData, chartData15 } = useMemo(() => {
-    if (!phaseLoad.length) return { chartData: [], chartData15: [] };
 
-    const make = (bucketMinutes: number) => {
-      const bucketMs = bucketMinutes * 60 * 1000;
-      const map = new Map<string, { ts: Date; l1: number; l2: number; l3: number; n: number }>();
-      for (const row of phaseLoad) {
-        const baseTs = new Date(row.hour || row.timestamp);
-        if (Number.isNaN(baseTs.getTime())) continue;
-        const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
-        const key = new Date(snapped).toISOString();
-        if (!map.has(key)) map.set(key, { ts: new Date(snapped), l1: 0, l2: 0, l3: 0, n: 0 });
-        const b = map.get(key)!;
-        b.l1 += Number(row.load_l1_kw ?? 0);
-        b.l2 += Number(row.load_l2_kw ?? 0);
-        b.l3 += Number(row.load_l3_kw ?? 0);
-        b.n += 1;
-      }
-      return Array.from(map.values())
-        .sort((a, b) => a.ts.getTime() - b.ts.getTime())
-        .map(b => ({
-          time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-          L1: +Number(b.l1 / (b.n || 1)).toFixed(2),
-          L2: +Number(b.l2 / (b.n || 1)).toFixed(2),
-          L3: +Number(b.l3 / (b.n || 1)).toFixed(2),
-        }));
+  useEffect(() => {
+    let cancelled = false;
+    if (!siteId) return;
+    apiService.getLatestEnergyMeter(siteId)
+      .then(data => {
+        if (!cancelled) setCtLatest(data ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setCtLatest(null);
+      });
+    return () => { cancelled = true; };
+  }, [siteId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!siteId) return;
+    const end = new Date();
+    const start = new Date(end.getTime() - hours * 3600 * 1000);
+    apiService.getSiteHistory(siteId, {
+      start_date: start.toISOString(),
+      end_date: end.toISOString(),
+      aggregate: '15min',
+    }).then(rows => {
+      if (!cancelled) setSiteHistoryRows(Array.isArray(rows) ? rows : []);
+    }).catch(() => {
+      if (!cancelled) setSiteHistoryRows([]);
+    });
+    return () => { cancelled = true; };
+  }, [siteId, hours]);
+  useEffect(() => {
+    let cancelled = false;
+    const evDevices = smartDevices.filter((d: any) => d.appliance_label === 'ev_charger');
+    if (evDevices.length === 0) {
+      setEvHistory([]);
+      return;
+    }
+    Promise.all(evDevices.map((d: any) => apiService.getSmartDeviceReadings(d.id, Math.max(hours, 24))))
+      .then(results => {
+        if (cancelled) return;
+        const rows = results.flatMap((items, idx) =>
+          (Array.isArray(items) ? items : []).map((row: any) => ({
+            ...row,
+            __device_id: evDevices[idx]?.id,
+          }))
+        );
+        setEvHistory(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setEvHistory([]);
+      });
+    return () => { cancelled = true; };
+  }, [smartDevices, hours]);
+
+  const { chartData, availableLoadDates } = useMemo(() => {
+    const toKw = (value: unknown) => {
+      if (value == null || value === '') return null;
+      const num = Number(value);
+      if (!Number.isFinite(num)) return null;
+      return Math.abs(num) > 1000 ? num / 1000 : num;
     };
+    const pickFirstKw = (row: any, keys: string[]) => {
+      for (const key of keys) {
+        const val = toKw(row?.[key]);
+        if (val != null) return val;
+      }
+      return null;
+    };
+    const evByBucket = new Map<string, number>();
+    for (const row of evHistory) {
+      const baseTs = new Date(row.timestamp);
+      if (Number.isNaN(baseTs.getTime())) continue;
+      const bucket = Math.floor(baseTs.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000);
+      const key = new Date(bucket).toISOString();
+      evByBucket.set(key, (evByBucket.get(key) ?? 0) + ((row.power_w ?? 0) / 1000));
+    }
 
-    return { chartData: make(5), chartData15: make(15) };
-  }, [phaseLoad]);
+    const bucketMs = loadBucketMinutes * 60 * 1000;
+    const map = new Map<string, {
+      ts: Date;
+      inverterL1: number; inverterL2: number; inverterL3: number;
+      gridL1: number; gridL2: number; gridL3: number;
+      ev: number;
+      n: number;
+    }>();
+    const ensureBucket = (key: string, snapped: number) => {
+      if (!map.has(key)) {
+        map.set(key, {
+          ts: new Date(snapped),
+          inverterL1: 0,
+          inverterL2: 0,
+          inverterL3: 0,
+          gridL1: 0,
+          gridL2: 0,
+          gridL3: 0,
+          ev: 0,
+          n: 0,
+        });
+      }
+      return map.get(key)!;
+    };
+    for (const row of phaseLoad) {
+      const baseTs = new Date(row.hour || row.timestamp);
+      if (Number.isNaN(baseTs.getTime())) continue;
+      const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
+      const key = new Date(snapped).toISOString();
+      const b = ensureBucket(key, snapped);
+      const inverterL1 = pickFirstKw(row, ['inverter_load_l1_kw', 'load_l1_kw', 'inverter_l1_kw', 'load_l1_power_w']) ?? 0;
+      const inverterL2 = pickFirstKw(row, ['inverter_load_l2_kw', 'load_l2_kw', 'inverter_l2_kw', 'load_l2_power_w']) ?? 0;
+      const inverterL3 = pickFirstKw(row, ['inverter_load_l3_kw', 'load_l3_kw', 'inverter_l3_kw', 'load_l3_power_w']) ?? 0;
+      const gridL1 = pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1', 'grid_l1_power_w']) ?? 0;
+      const gridL2 = pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2', 'grid_l2_power_w']) ?? 0;
+      const gridL3 = pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3', 'grid_l3_power_w']) ?? 0;
+      const ev = pickFirstKw(row, ['ev_load_kw', 'ev_kw', 'ev_charger_kw', 'smart_device_kw']) ?? evByBucket.get(key) ?? 0;
+      b.inverterL1 += inverterL1;
+      b.inverterL2 += inverterL2;
+      b.inverterL3 += inverterL3;
+      b.gridL1 += gridL1;
+      b.gridL2 += gridL2;
+      b.gridL3 += gridL3;
+      b.ev += ev;
+      b.n += 1;
+    }
+
+    for (const row of siteHistoryRows) {
+      const baseTs = new Date(row.timestamp);
+      if (Number.isNaN(baseTs.getTime())) continue;
+      const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
+      const key = new Date(snapped).toISOString();
+      const b = ensureBucket(key, snapped);
+      if ((b.gridL1 + b.gridL2 + b.gridL3) === 0) {
+        const gridTotal = toKw(row.grid_power_w) ?? 0;
+        b.gridL1 = gridTotal;
+      }
+      if ((b.inverterL1 + b.inverterL2 + b.inverterL3) === 0) {
+        const inverterTotal = toKw(row.load_power_w) ?? 0;
+        b.inverterL1 = inverterTotal;
+      }
+      if (b.n === 0) b.n = 1;
+    }
+
+    for (const [key, ev] of evByBucket.entries()) {
+      const snapped = new Date(key).getTime();
+      const bucket = ensureBucket(key, snapped);
+      if (bucket.n === 0) bucket.n = 1;
+      bucket.ev = ev;
+    }
+
+    const rows = Array.from(map.values())
+      .sort((a, b) => a.ts.getTime() - b.ts.getTime())
+      .map(b => {
+        const rawDate = new Date(b.ts).toLocaleDateString('en-CA', { timeZone: IST });
+        const inverterL1 = +Number(b.inverterL1 / (b.n || 1)).toFixed(2);
+        const inverterL2 = +Number(b.inverterL2 / (b.n || 1)).toFixed(2);
+        const inverterL3 = +Number(b.inverterL3 / (b.n || 1)).toFixed(2);
+        const gridL1 = +Number(b.gridL1 / (b.n || 1)).toFixed(2);
+        const gridL2 = +Number(b.gridL2 / (b.n || 1)).toFixed(2);
+        const gridL3 = +Number(b.gridL3 / (b.n || 1)).toFixed(2);
+        const ev = +Number(b.ev / (b.n || 1)).toFixed(2);
+        return {
+          rawTs: b.ts.getTime(),
+          rawDate,
+          time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          dateLabel: b.ts.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', timeZone: IST }),
+          inverterL1,
+          inverterL2,
+          inverterL3,
+          inverter: +(inverterL1 + inverterL2 + inverterL3).toFixed(2),
+          gridL1,
+          gridL2,
+          gridL3,
+          grid: +(gridL1 + gridL2 + gridL3).toFixed(2),
+          ev,
+        };
+      });
+    const dates = Array.from(new Set(rows.map(row => row.rawDate))).sort();
+    return { chartData: rows, availableLoadDates: dates };
+  }, [phaseLoad, evHistory, siteHistoryRows, loadBucketMinutes]);
+
+  useEffect(() => {
+    if (hours <= 24) {
+      setSelectedLoadDate('');
+      return;
+    }
+    if (!availableLoadDates.length) return;
+    if (!selectedLoadDate || !availableLoadDates.includes(selectedLoadDate)) {
+      setSelectedLoadDate(availableLoadDates[availableLoadDates.length - 1]);
+    }
+  }, [hours, availableLoadDates, selectedLoadDate]);
+
+  const filteredLoadChartData = useMemo(() => {
+    if (hours <= 24 || !selectedLoadDate) return chartData;
+    return chartData.filter(row => row.rawDate === selectedLoadDate);
+  }, [chartData, hours, selectedLoadDate]);
+
+  const loadWindowLabel = useMemo(() => {
+    if (hours <= 24) return `last ${hours}h`;
+    if (selectedLoadDate) return `${selectedLoadDate} within last ${hours === 48 ? '48h' : '7d'}`;
+    return `last ${hours === 48 ? '48h' : '7d'}`;
+  }, [hours, selectedLoadDate]);
+
+  const resolvedLoadChartData = useMemo(() => {
+    const now = new Date();
+    const todayIst = now.toLocaleDateString('en-CA', { timeZone: IST });
+    const isCurrentWindow = hours <= 24 || !selectedLoadDate || selectedLoadDate === todayIst;
+    const freshSmartLatest = (device: any) => {
+      const ts = device?.latest?.timestamp;
+      if (!ts) return null;
+      return Date.now() - new Date(ts).getTime() <= 5 * 60 * 1000 ? device.latest : null;
+    };
+    const evLatestKw = smartDevices
+      .filter((d: any) => d.appliance_label === 'ev_charger')
+      .reduce((sum: number, d: any) => sum + ((freshSmartLatest(d)?.power_w ?? 0) / 1000), 0);
+    const invL1 = latest?.load_l1_power_w != null ? Number(latest.load_l1_power_w) / 1000 : 0;
+    const invL2 = latest?.load_l2_power_w != null ? Number(latest.load_l2_power_w) / 1000 : 0;
+    const invL3 = latest?.load_l3_power_w != null ? Number(latest.load_l3_power_w) / 1000 : 0;
+    const gridL1 = ctLatest?.active_power_l1 != null ? Math.abs(Number(ctLatest.active_power_l1)) / 1000 : 0;
+    const gridL2 = ctLatest?.active_power_l2 != null ? Math.abs(Number(ctLatest.active_power_l2)) / 1000 : 0;
+    const gridL3 = ctLatest?.active_power_l3 != null ? Math.abs(Number(ctLatest.active_power_l3)) / 1000 : 0;
+
+    const base = filteredLoadChartData.length > 0
+      ? filteredLoadChartData
+      : isCurrentWindow
+      ? [{
+          rawTs: now.getTime(),
+          rawDate: todayIst,
+          time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          dateLabel: now.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', timeZone: IST }),
+          inverterL1: 0, inverterL2: 0, inverterL3: 0, inverter: 0,
+          gridL1: 0, gridL2: 0, gridL3: 0, grid: 0,
+          ev: 0,
+        }]
+      : [];
+
+    if (!isCurrentWindow || base.length === 0) return base;
+
+    const hasNonZero = (key: string) => base.some((row: any) => Math.abs(Number(row[key] ?? 0)) > 0.001);
+    const useInvFallback = !hasNonZero('inverterL1') && !hasNonZero('inverterL2') && !hasNonZero('inverterL3') && (invL1 > 0 || invL2 > 0 || invL3 > 0);
+    const useGridFallback = !hasNonZero('gridL1') && !hasNonZero('gridL2') && !hasNonZero('gridL3') && (gridL1 > 0 || gridL2 > 0 || gridL3 > 0);
+    const useEvFallback = !hasNonZero('ev') && evLatestKw > 0;
+
+    return base.map((row: any) => {
+      const next = { ...row };
+      if (useInvFallback) {
+        next.inverterL1 = +invL1.toFixed(2);
+        next.inverterL2 = +invL2.toFixed(2);
+        next.inverterL3 = +invL3.toFixed(2);
+        next.inverter = +(invL1 + invL2 + invL3).toFixed(2);
+      }
+      if (useGridFallback) {
+        next.gridL1 = +gridL1.toFixed(2);
+        next.gridL2 = +gridL2.toFixed(2);
+        next.gridL3 = +gridL3.toFixed(2);
+        next.grid = +(gridL1 + gridL2 + gridL3).toFixed(2);
+      }
+      if (useEvFallback) next.ev = +evLatestKw.toFixed(2);
+      return next;
+    });
+  }, [filteredLoadChartData, hours, selectedLoadDate, smartDevices, latest, ctLatest]);
+
+  const hasInverterPhaseBreakdown = useMemo(
+    () => resolvedLoadChartData.some((row: any) => Math.abs(Number(row.inverterL2 ?? 0)) > 0.001 || Math.abs(Number(row.inverterL3 ?? 0)) > 0.001),
+    [resolvedLoadChartData]
+  );
+  const hasGridPhaseBreakdown = useMemo(
+    () => resolvedLoadChartData.some((row: any) => Math.abs(Number(row.gridL2 ?? 0)) > 0.001 || Math.abs(Number(row.gridL3 ?? 0)) > 0.001),
+    [resolvedLoadChartData]
+  );
+  const loadViewTitle = useMemo(() => {
+    if (loadSourceView === 'total') return 'Load Split Trends';
+    if (loadSourceView === 'ev') return 'EV Charging Trace';
+    if (loadSourceView === 'grid') return 'Grid Load Profile';
+    return 'Inverter Load Profile';
+  }, [loadSourceView]);
+  const loadViewSubtitle = useMemo(() => {
+    if (loadSourceView === 'total') return 'All three sources in one monitoring surface';
+    if (loadSourceView === 'ev') return 'Smart-device charging demand over time';
+    if (loadSourceView === 'grid') return hasGridPhaseBreakdown ? 'Phase-wise CT meter draw' : 'Grid import/export magnitude from history';
+    return hasInverterPhaseBreakdown ? 'Phase-wise inverter-side load' : 'Inverter-side total load from history';
+  }, [loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
+  const loadInfoChips = useMemo(() => {
+    const activeSource = loadSourceView === 'total' ? 'All sources' : LOAD_SOURCE_META[loadSourceView].label;
+    return [
+      { label: 'Source', value: activeSource, color: loadSourceView === 'total' ? '#0f172a' : LOAD_SOURCE_META[loadSourceView].color },
+      { label: 'Timezone', value: 'IST', color: '#14b8a6' },
+    ];
+  }, [loadSourceView]);
+
+  const loadRangeTotals = useMemo(() => {
+    const keys: LoadSourceKey[] = ['inverter', 'grid', 'ev'];
+    const totals = { inverter: 0, grid: 0, ev: 0 } as Record<LoadSourceKey, number>;
+    if (resolvedLoadChartData.length > 1) {
+      for (let i = 0; i < resolvedLoadChartData.length - 1; i += 1) {
+        const current = resolvedLoadChartData[i];
+        const next = resolvedLoadChartData[i + 1];
+        const hoursDelta = (next.rawTs - current.rawTs) / 3_600_000;
+        for (const key of keys) {
+          totals[key] += ((current[key] ?? 0) + (next[key] ?? 0)) / 2 * hoursDelta;
+        }
+      }
+    } else if (resolvedLoadChartData.length === 1) {
+      for (const key of keys) totals[key] = resolvedLoadChartData[0][key];
+    }
+    return totals;
+  }, [resolvedLoadChartData]);
 
   const loadForecastChartData = useMemo(() => {
     return loadForecast.map((r: any) => {
@@ -2865,7 +3150,7 @@ const PhaseLoadTab: React.FC<{
 
   useEffect(() => {
     phaseLoadChartZoom.resetZoom();
-  }, [hours]);
+  }, [hours, selectedLoadDate, loadSourceView]);
 
   // Per-phase load power — use dedicated load-side registers only.
   // Preserve legitimate zero readings so a real 0 W phase does not fall through to unrelated grid values.
@@ -2878,25 +3163,23 @@ const PhaseLoadTab: React.FC<{
   const unknownPhases = (rawL1W == null ? 1 : 0) + (rawL2W == null ? 1 : 0) + (rawL3W == null ? 1 : 0);
   const remainderW = totalLoadW != null ? Math.max(0, totalLoadW - knownW) : null;
   const estUnknownW = remainderW != null && unknownPhases > 0 ? Math.round(remainderW / unknownPhases) : null;
-  const liveW1: number | null = rawL1W ?? estUnknownW ?? null;
-  const liveW2: number | null = rawL2W ?? estUnknownW ?? null;
-  const liveW3: number | null = rawL3W ?? estUnknownW ?? null;
-  const liveV1: number | null = latest?.load_l1_voltage_v ?? null;
-  const liveV2: number | null = latest?.load_l2_voltage_v ?? null;
-  const liveV3: number | null = latest?.load_l3_voltage_v ?? null;
-  const liveA1: number | null = latest?.load_l1_current_a ?? null;
-  const liveA2: number | null = latest?.load_l2_current_a ?? null;
-  const liveA3: number | null = latest?.load_l3_current_a ?? null;
-  // Show cards whenever we have any live telemetry
-  const hasLive = latest != null && latest.load_power_w !== undefined;
-
-  
-
   const phaseLoadChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'center',
+        labels: {
+          color: isDark ? '#cbd5e1' : '#334155',
+          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          boxWidth: 10,
+          pointStyle: 'circle',
+          usePointStyle: true,
+          padding: 16,
+        },
+      },
       tooltip: {
         backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
         titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
@@ -2907,8 +3190,38 @@ const PhaseLoadTab: React.FC<{
       zoom: createDragZoomPlugins(() => phaseLoadChartZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(1) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: {
+        title: {
+          display: true,
+          text: 'Time (IST)',
+          color: isDark ? '#cbd5e1' : '#475569',
+          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          padding: { top: 10, bottom: 0 },
+        },
+        ticks: {
+          color: isDark ? '#94a3b8' : '#64748b',
+          font: { family: 'Inter, sans-serif', size: 11 },
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 8,
+        },
+        grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Load (kW)',
+          color: isDark ? '#cbd5e1' : '#475569',
+          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          padding: { bottom: 6 },
+        },
+        ticks: {
+          color: isDark ? '#94a3b8' : '#64748b',
+          font: { family: 'JetBrains Mono, monospace', size: 11 },
+          callback: (v: any) => v.toFixed(1),
+        },
+        grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
+      },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -2986,10 +3299,10 @@ const PhaseLoadTab: React.FC<{
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>
-            Three Phase Load Monitoring
+            Load Source Monitoring
           </h2>
           <p style={{ margin: '2px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem', opacity: 0.55, color: isDark ? '#e2e8f0' : '#94a3b8' }}>
-            Real-time per-phase load analysis and 48-hour forecast
+            Inverter, energy meter, and EV demand across live and recent windows
           </p>
           {/* Sub-tab toggle: Forecast / Accuracy */}
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load forecast sub tabs">
@@ -3019,95 +3332,233 @@ const PhaseLoadTab: React.FC<{
             </button>
           </div>
         </div>
-        <select
-          value={hours}
-          onChange={e => onHoursChange(Number(e.target.value))}
-          style={{
-            background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
-            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-            borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem',
-            color: isDark ? '#e2e8f0' : '#334155',
-            cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <option value={6}>6 hours</option>
-          <option value={12}>12 hours</option>
-          <option value={24}>24 hours</option>
-          <option value={48}>48 hours</option>
-        </select>
-      </div>
-
-      {/* ── Phase KPI Cards ── always shown when we have any live reading ── */}
-      {hasLive && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 20 }}>
-          <PhaseKpiCard phase="L1" watts={liveW1} volts={liveV1} amps={liveA1} color={PHASE_COLORS.L1} isDark={isDark} index={0} estimated={rawL1W == null && liveW1 != null} />
-          <PhaseKpiCard phase="L2" watts={liveW2} volts={liveV2} amps={liveA2} color={PHASE_COLORS.L2} isDark={isDark} index={1} estimated={rawL2W == null && liveW2 != null} />
-          <PhaseKpiCard phase="L3" watts={liveW3} volts={liveV3} amps={liveA3} color={PHASE_COLORS.L3} isDark={isDark} index={2} estimated={rawL3W == null && liveW3 != null} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {hours > 24 && (
+            <input
+              type="date"
+              value={selectedLoadDate}
+              min={availableLoadDates[0] ?? ''}
+              max={availableLoadDates[availableLoadDates.length - 1] ?? ''}
+              onChange={e => setSelectedLoadDate(e.target.value)}
+              style={{
+                background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                borderRadius: 10, padding: '7px 10px', fontSize: '0.78rem',
+                color: isDark ? '#e2e8f0' : '#334155',
+                fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+              }}
+            />
+          )}
+          <select
+            value={hours}
+            onChange={e => onHoursChange(Number(e.target.value))}
+            style={{
+              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem',
+              color: isDark ? '#e2e8f0' : '#334155',
+              cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            <option value={6}>6 hours</option>
+            <option value={12}>12 hours</option>
+            <option value={24}>24 hours</option>
+            <option value={48}>48 hours</option>
+            <option value={168}>7 days</option>
+          </select>
         </div>
-      )}
+      </div>
 
       {/* ── Stacked area chart with glow strokes ── */}
       <ChartCard
-        title={showTotalLoad ? 'Total Phase Load (15 min)' : 'Phase Load Distribution (5 min)'}
-        subtitle={showTotalLoad ? `L1 + L2 + L3 combined · 15-minute buckets · last ${hours}h · drag to zoom` : `L1 + L2 + L3 stacked · 5-minute buckets · last ${hours}h · drag to zoom`}
+        title={loadViewTitle}
+        subtitle={
+          loadViewSubtitle
+        }
         isDark={isDark}
         isLive={true}
-        height={chartData.length === 0 ? 100 : 300}
+        height={resolvedLoadChartData.length === 0 ? 100 : 320}
         accentColor="#3b82f6"
         delay={0.3}
         headerRight={
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              onClick={() => setShowTotalLoad(prev => !prev)}
-              style={{
-                border: '1px solid rgba(59,130,246,0.25)',
-                background: showTotalLoad ? 'rgba(59,130,246,0.14)' : 'transparent',
-                color: showTotalLoad ? '#3b82f6' : 'var(--text-muted)',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'Poppins, sans-serif',
-              }}
-            >
-              Total Load
-            </button>
-            <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch', width: '100%' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
+              {(['inverter', 'grid', 'ev', 'total'] as const).map(view => (
+                <button
+                  key={view}
+                  onClick={() => setLoadSourceView(view)}
+                  style={{
+                    border: `1px solid ${view === 'total' ? (isDark ? 'rgba(248,250,252,0.22)' : 'rgba(15,23,42,0.18)') : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}55`}`,
+                    background: loadSourceView === view
+                      ? (view === 'total'
+                          ? (isDark ? 'rgba(248,250,252,0.12)' : 'rgba(15,23,42,0.08)')
+                          : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}24`)
+                      : 'transparent',
+                    color: loadSourceView === view
+                      ? (view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6')
+                      : 'var(--text-muted)',
+                    borderRadius: 999,
+                    padding: '7px 12px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Poppins, sans-serif',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    boxShadow: loadSourceView === view
+                      ? (view === 'total' ? 'none' : `0 0 0 3px ${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}18`)
+                      : 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6',
+                      opacity: loadSourceView === view ? 1 : 0.55,
+                    }}
+                  />
+                  {view === 'total' ? 'Total Load' : LOAD_SOURCE_META[view].label.replace(' Load', '')}
+                </button>
+              ))}
+              <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
+              {loadInfoChips.map(chip => (
+                <span
+                  key={`${chip.label}-${chip.value}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    padding: '5px 9px',
+                    borderRadius: 999,
+                    background: isDark ? 'rgba(15,23,42,0.42)' : 'rgba(255,255,255,0.78)',
+                    border: `1px solid ${chip.color}30`,
+                    color: isDark ? '#e2e8f0' : '#334155',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.6rem' }}>{chip.label}</span>
+                  <span>{chip.value}</span>
+                </span>
+              ))}
+              {loadSourceView === 'total' && (['inverter', 'grid', 'ev'] as const).map(key => (
+                <span
+                  key={key}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '5px 9px',
+                    borderRadius: 999,
+                    background: isDark ? 'rgba(15,23,42,0.42)' : 'rgba(255,255,255,0.78)',
+                    border: `1px solid ${LOAD_SOURCE_META[key].color}35`,
+                    color: isDark ? '#e2e8f0' : '#334155',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: LOAD_SOURCE_META[key].color }} />
+                  {key === 'ev' ? 'EV' : LOAD_SOURCE_META[key].label.replace(' Load', '')} {loadRangeTotals[key].toFixed(1)} kWh
+                </span>
+              ))}
+            </div>
           </div>
         }
       >
-        {chartData.length === 0 ? (
+        {resolvedLoadChartData.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
             <Layers size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
-            <div>No phase load data for this period.</div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Per-phase registers (load_l1_power, load_l2_power, load_l3_power) must be mapped in the device config.</div>
+            <div>No load source data for this period.</div>
+            <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Inverter load, energy meter load, and EV smart-device history appear when those sources are mapped and reporting.</div>
           </div>
         ) : (
-          <div style={{ height: 300 }}>
+          <div
+            style={{
+              height: '100%',
+              position: 'relative',
+              padding: '4px 0 0',
+            }}
+          >
             <CJLine
               ref={phaseLoadChartZoom.chartRef}
               data={{
-                labels: (showTotalLoad ? chartData15 : chartData).map((d: any) => d.time),
-                datasets: showTotalLoad
-                  ? [{
-                      label: 'Total Load',
-                      data: chartData15.map((d: any) => +(d.L1 + d.L2 + d.L3).toFixed(2)),
-                      borderColor: isDark ? '#f8fafc' : '#111827',
+                labels: resolvedLoadChartData.map((d: any) => d.time),
+                datasets: loadSourceView === 'total'
+                  ? (['inverter', 'grid', 'ev'] as const).map(key => ({
+                      label: LOAD_SOURCE_META[key].label,
+                      data: resolvedLoadChartData.map((d: any) => d[key] as number),
+                      borderColor: LOAD_SOURCE_META[key].color,
+                      borderWidth: key === 'inverter' ? 2.4 : 2,
+                      tension: 0.35,
+                      pointRadius: 0,
+                      fill: false,
+                    }))
+                  : loadSourceView === 'inverter'
+                  ? (hasInverterPhaseBreakdown ? ([
+                      { key: 'inverterL1', label: 'L1', color: PHASE_COLORS.L1 },
+                      { key: 'inverterL2', label: 'L2', color: PHASE_COLORS.L2 },
+                      { key: 'inverterL3', label: 'L3', color: PHASE_COLORS.L3 },
+                    ] as const).map(series => ({
+                      label: series.label,
+                      data: resolvedLoadChartData.map((d: any) => d[series.key] as number),
+                      borderColor: series.color,
+                      borderWidth: 2.2,
+                      tension: 0.35,
+                      pointRadius: 0,
+                      fill: false,
+                    })) : [{
+                      label: LOAD_SOURCE_META.inverter.label,
+                      data: resolvedLoadChartData.map((d: any) => d.inverter as number),
+                      borderColor: LOAD_SOURCE_META.inverter.color,
                       borderWidth: 2.4,
-                      tension: 0.25,
+                      tension: 0.35,
+                      pointRadius: 0,
+                      fill: false,
+                    }])
+                  : loadSourceView === 'grid'
+                  ? (hasGridPhaseBreakdown ? ([
+                      { key: 'gridL1', label: 'L1', color: PHASE_COLORS.L1 },
+                      { key: 'gridL2', label: 'L2', color: PHASE_COLORS.L2 },
+                      { key: 'gridL3', label: 'L3', color: PHASE_COLORS.L3 },
+                    ] as const).map(series => ({
+                      label: series.label,
+                      data: resolvedLoadChartData.map((d: any) => d[series.key] as number),
+                      borderColor: series.color,
+                      borderWidth: 2.2,
+                      tension: 0.35,
+                      pointRadius: 0,
+                      fill: false,
+                    })) : [{
+                      label: LOAD_SOURCE_META.grid.label,
+                      data: resolvedLoadChartData.map((d: any) => d.grid as number),
+                      borderColor: LOAD_SOURCE_META.grid.color,
+                      borderWidth: 2.4,
+                      tension: 0.35,
+                      pointRadius: 0,
+                      fill: false,
+                    }])
+                  : [{
+                      label: LOAD_SOURCE_META[loadSourceView].label,
+                      data: resolvedLoadChartData.map((d: any) => d[loadSourceView] as number),
+                      borderColor: LOAD_SOURCE_META[loadSourceView].color,
+                      borderWidth: 2.4,
+                      tension: 0.35,
                       pointRadius: 0,
                       fill: 'origin',
-                      backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return 'rgba(100,116,139,0.3)'; return makeGradient(chart.ctx, chart.chartArea, isDark ? '#94a3b8' : '#64748b', 0.45, 0.05); },
-                    }]
-                  : (['L1', 'L2', 'L3'] as const).map(ph => ({
-                      label: `Phase ${ph}`,
-                      data: chartData.map((d: any) => d[ph] as number),
-                      borderColor: PHASE_COLORS[ph], borderWidth: 2.2, tension: 0.4, pointRadius: 0,
-                      fill: ph === 'L1' ? 'origin' : '-1',
-                      backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return PHASE_COLORS[ph] + '30'; return makeGradient(chart.ctx, chart.chartArea, PHASE_COLORS[ph], 0.55, 0.05); },
-                    })),
+                      backgroundColor: (ctx: any) => {
+                        const { chart } = ctx;
+                        if (!chart.chartArea) return `${LOAD_SOURCE_META[loadSourceView].color}25`;
+                        return makeGradient(chart.ctx, chart.chartArea, LOAD_SOURCE_META[loadSourceView].color, 0.35, 0.04);
+                      },
+                    }],
               }}
               options={phaseLoadChartOptions}
             />
@@ -3118,7 +3569,7 @@ const PhaseLoadTab: React.FC<{
       {/* ── 7-Day Load Forecast / vs Actual (sub-tab) ── */}
       <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
         <ChartCard
-          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '48-Hour Load Forecast'}
+          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
           subtitle={showVsActual
             ? `Historical scored forecasts (15-min slots · IST) · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
             : (() => {
@@ -3139,7 +3590,7 @@ const PhaseLoadTab: React.FC<{
               <button
                 onClick={() => setShowVsActual(v => !v)}
                 aria-pressed={showVsActual}
-                title={showVsActual ? 'Show 48-hour forward forecast' : 'Show historical forecast vs actual'}
+                title={showVsActual ? 'Show 7-day forward forecast' : 'Show historical forecast vs actual'}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '5px 10px', borderRadius: 8,
@@ -3585,7 +4036,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       Promise.allSettled([
         apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw'),
         apiService.getForecastAccuracy(siteId, 30),
-        apiService.getLoadForecast(siteId, 2),
+        apiService.getLoadForecast(siteId, 7),
         apiService.getWeatherAccuracy(siteId, 7),
         apiService.getLoadForecastAccuracy(siteId, 7),
       ]).then(([pl, fa, lf, wa, lfa]) => {
@@ -3806,7 +4257,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     { label: 'L3', powerW: gridL3PowerW, voltageV: gridL3VoltageV, currentA: gridL3CurrentA },
   ] : null;
 
-  // Per-phase load data (power only — no per-phase load voltage/current polled)
+  // Per-phase load data — power, voltage, current from inverter registers
   const loadL1PowerW = latest?.load_l1_power_w || null;
   const loadL2PowerW = latest?.load_l2_power_w || null;
   const loadL3PowerW = latest?.load_l3_power_w || null;
@@ -3821,6 +4272,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     { label: 'L2', powerW: loadL2PowerW },
     { label: 'L3', powerW: loadL3PowerW },
   ] : null;
+  const inverterPhasesForFlow = {
+    l1: { power_w: loadL1PowerW, voltage_v: latest?.load_l1_voltage_v ?? null, current_a: latest?.load_l1_current_a ?? null },
+    l2: { power_w: loadL2PowerW, voltage_v: latest?.load_l2_voltage_v ?? null, current_a: latest?.load_l2_current_a ?? null },
+    l3: { power_w: loadL3PowerW, voltage_v: latest?.load_l3_voltage_v ?? null, current_a: latest?.load_l3_current_a ?? null },
+    // Grid-side voltage & current from inverter — same AC bus as energy meter
+    grid_l1: { voltage_v: gridL1VoltageV, current_a: gridL1CurrentA },
+    grid_l2: { voltage_v: gridL2VoltageV, current_a: gridL2CurrentA },
+    grid_l3: { voltage_v: gridL3VoltageV, current_a: gridL3CurrentA },
+    // Single aggregate grid frequency and power factor — inverter has no per-phase breakdown
+    grid_frequency_hz: latest?.grid_frequency_hz ?? null,
+    grid_power_factor: latest?.grid_power_factor ?? null,
+  };
 
   // DC transformer temperature (addr 540)
   const dcTemp = latest?.dc_temp_c ?? null;
@@ -4519,6 +4982,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     battSoc={batSoc}
                     smartDevices={smartDevices}
                     siteId={siteId}
+                    inverterPhases={inverterPhasesForFlow}
                   />
                 ) : (
                   <div style={{
@@ -5410,8 +5874,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 transition={tabTransition}
               >
                 <PhaseLoadTab
+                  siteId={siteId}
                   phaseLoad={phaseLoad}
                   loadForecast={loadForecast}
+                  smartDevices={smartDevices}
                   latest={latest}
                   isDark={isDark}
                   hours={phaseLoadHours}

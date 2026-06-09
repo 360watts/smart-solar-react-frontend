@@ -159,23 +159,24 @@ export interface SmartCardProps {
   onClick?: () => void;
   isDark: boolean;
   accentColor?: string;
+  compact?: boolean;
 }
 
 export function SmartCard({
-  label, icon, valueStr, unit, active, isAnomalous, onClick, isDark, accentColor,
+  label, icon, valueStr, unit, active, isAnomalous, onClick, isDark, accentColor, compact = false,
 }: SmartCardProps) {
   const color = accentColor ?? '#a78bfa';
   return (
     <div
       onClick={onClick}
       style={{
-        width: 90,
+        width: compact ? 78 : 90,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 5,
-        padding: '9px 8px 9px',
-        borderRadius: 10,
+        gap: compact ? 4 : 5,
+        padding: compact ? '7px 6px 8px' : '9px 8px 9px',
+        borderRadius: compact ? 9 : 10,
         background: isDark
           ? active ? `${color}12` : 'rgba(13,17,23,0.92)'
           : active ? `${color}09` : 'rgba(255,255,255,0.98)',
@@ -216,7 +217,7 @@ export function SmartCard({
           }} />
         )}
         <div style={{
-          width: 34, height: 34, borderRadius: '50%',
+          width: compact ? 30 : 34, height: compact ? 30 : 34, borderRadius: '50%',
           background: active ? `${color}16` : isDark ? '#1e293b' : '#f3f6fb',
           border: `1.5px solid ${active ? `${color}45` : isDark ? '#475569' : '#e5eaf3'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -228,24 +229,24 @@ export function SmartCard({
 
       {/* Value */}
       <div style={{
-        fontSize: 14, fontWeight: 800, lineHeight: 1,
+        fontSize: compact ? 12 : 14, fontWeight: 800, lineHeight: 1,
         color: active ? color : isDark ? '#94a3b8' : '#9ca3af',
         fontVariantNumeric: 'tabular-nums',
         display: 'flex', alignItems: 'baseline', gap: 1.5,
         letterSpacing: '-0.01em',
       }}>
         {valueStr}
-        <span style={{ fontSize: 8.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
+        <span style={{ fontSize: compact ? 7.5 : 8.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
       </div>
 
       {/* Label */}
       <span style={{
-        fontSize: 7.5, fontWeight: 800,
+        fontSize: compact ? 6.8 : 7.5, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.09em',
         color: active ? color : isDark ? '#94a3b8' : '#b0bcc8',
         opacity: active ? 0.85 : 1,
         whiteSpace: 'nowrap', textAlign: 'center',
-        maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis',
+        maxWidth: compact ? 70 : 80, overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {label}
       </span>

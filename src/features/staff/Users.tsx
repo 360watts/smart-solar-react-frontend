@@ -60,6 +60,18 @@ const Users: React.FC = () => {
   if (isMobile) return <MobileUsers />;
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  // ── Design tokens — mobile AppTheme aligned ──────────────────────────────
+  const T = {
+    bg:      isDark ? '#080C14'                      : '#F4F6F8',
+    surface: isDark ? '#0F1623'                      : '#FFFFFF',
+    cardEl:  isDark ? '#111927'                      : '#EDF0F4',
+    border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
+    borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
+    text:    isDark ? '#F0F4FF'                      : '#12151A',
+    textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
+    textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
+    accent:  '#2FBF71',
+  };
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -419,7 +431,7 @@ const Users: React.FC = () => {
             zIndex: 9999, padding: '20px',
           }} onClick={handleCancel}>
             <div style={{
-              background: isDark ? '#1a1a1a' : '#ffffff',
+              background: T.surface,
               borderRadius: 16,
               boxShadow: isDark
                 ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -431,7 +443,7 @@ const Users: React.FC = () => {
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '24px 28px',
-                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                borderBottom: `1px solid ${T.border}`,
                 flexShrink: 0,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -444,18 +456,18 @@ const Users: React.FC = () => {
                     <Pencil size={22} color="white" />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
                       Edit User: {editingUser.username}
                     </div>
-                    <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                    <div style={{ fontSize: '0.813rem', color: T.textM, marginTop: 2 }}>
                       Update user account details
                     </div>
                   </div>
                 </div>
                 <button type="button" onClick={handleCancel} style={{
                   width: 40, height: 40, borderRadius: 10, border: 'none',
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                  background: T.borderM,
+                  color: T.textM, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <X size={18} />
@@ -466,9 +478,9 @@ const Users: React.FC = () => {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
                   {/* Account Information */}
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -478,7 +490,7 @@ const Users: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Email Address</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Email Address</label>
                         <input
                           type="email"
                           value={editForm.email}
@@ -488,9 +500,9 @@ const Users: React.FC = () => {
                           placeholder="john.doe@example.com"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
@@ -500,9 +512,9 @@ const Users: React.FC = () => {
 
                   {/* Personal Details */}
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -512,7 +524,7 @@ const Users: React.FC = () => {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>First Name</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>First Name</label>
                         <input
                           type="text"
                           value={editForm.first_name}
@@ -522,15 +534,15 @@ const Users: React.FC = () => {
                           placeholder="John"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Last Name</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Last Name</label>
                         <input
                           type="text"
                           value={editForm.last_name}
@@ -540,9 +552,9 @@ const Users: React.FC = () => {
                           placeholder="Doe"
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
@@ -552,9 +564,9 @@ const Users: React.FC = () => {
 
                   {/* Contact Information */}
                   <div style={{
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                    background: T.borderM,
                     borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                    border: `1px solid ${T.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -564,7 +576,7 @@ const Users: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Mobile Number</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Mobile Number</label>
                         <PhoneInput
                           value={editForm.mobile_number}
                           onChange={(v) => setEditForm({...editForm, mobile_number: v})}
@@ -574,7 +586,7 @@ const Users: React.FC = () => {
                         />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Address</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Address</label>
                         <textarea
                           value={editForm.address}
                           onChange={(e) => setEditForm({...editForm, address: e.target.value})}
@@ -583,9 +595,9 @@ const Users: React.FC = () => {
                           placeholder="123 Solar Street..."
                           style={{
                             padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            background: isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                            border: `1px solid ${T.border}`,
+                            background: T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                             resize: 'vertical',
                           }}
@@ -598,14 +610,14 @@ const Users: React.FC = () => {
                 <div style={{
                   display: 'flex', gap: 10, justifyContent: 'flex-end',
                   padding: '16px 28px',
-                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                  borderTop: `1px solid ${T.border}`,
                   flexShrink: 0,
                 }}>
                   <button type="button" onClick={handleCancel} style={{
                     padding: '10px 20px', borderRadius: 8,
-                    border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                    background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                    color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                    border: `1px solid ${T.border}`,
+                    background: T.cardEl,
+                    color: T.textM, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                   }}>Cancel</button>
                   <button type="submit" style={{
                     padding: '10px 20px', borderRadius: 8, border: 'none',
@@ -835,7 +847,7 @@ const Users: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={handleCancel}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: T.surface,
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -847,7 +859,7 @@ const Users: React.FC = () => {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '24px 28px',
-              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderBottom: `1px solid ${T.border}`,
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -860,18 +872,18 @@ const Users: React.FC = () => {
                   {editingUser ? <Pencil size={22} color="white" /> : <UserPlus size={22} color="white" />}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
                     {editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}
                   </div>
-                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>
+                  <div style={{ fontSize: '0.813rem', color: T.textM, marginTop: 2 }}>
                     {editingUser ? 'Update user account details' : 'Create a new user account'}
                   </div>
                 </div>
               </div>
               <button type="button" onClick={handleCancel} style={{
                 width: 40, height: 40, borderRadius: 10, border: 'none',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer',
+                background: T.borderM,
+                color: T.textM, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <X size={18} />
@@ -883,9 +895,9 @@ const Users: React.FC = () => {
 
                 {/* Account Information */}
                 <div style={{
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  background: T.borderM,
                   borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  border: `1px solid ${T.border}`,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -898,13 +910,13 @@ const Users: React.FC = () => {
                       <>
                         <input type="text" autoComplete="username" style={{display: 'none'}} />
                         <input type="password" autoComplete="current-password" style={{display: 'none'}} />
-                        <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 8 }}>
+                        <p style={{ fontSize: '0.813rem', color: T.textM, marginBottom: 8 }}>
                           Username and password will be auto-generated and sent to the user's email along with download link for the mobile app.
                         </p>
                       </>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>
                         Email Address
                         {!editingUser && emailVerifyStep === 'verified' && (
                           <span style={{ marginLeft: 8, color: '#22c55e', fontSize: '0.75rem', fontWeight: 700 }}>✓ Verified</span>
@@ -930,11 +942,11 @@ const Users: React.FC = () => {
                             flex: 1, padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
                             border: !editingUser && emailVerifyStep === 'verified'
                               ? '1px solid rgba(34,197,94,0.4)'
-                              : isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                              : `1px solid ${T.border}`,
                             background: !editingUser && emailVerifyStep === 'verified'
                               ? 'rgba(34,197,94,0.07)'
-                              : isDark ? '#2a2a2a' : '#ffffff',
-                            color: isDark ? '#f3f4f6' : '#111827',
+                              : T.surface,
+                            color: T.text,
                             fontSize: '0.875rem',
                           }}
                         />
@@ -982,14 +994,14 @@ const Users: React.FC = () => {
                             <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: isDark ? '#a5b4fc' : '#6366f1' }}>
                               Waiting for customer to verify…
                             </p>
-                            <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8' }}>
+                            <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: T.textD }}>
                               Verification email sent to <strong>{createForm.email}</strong>. Page updates automatically.
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={handleSendVerificationOtp}
-                            style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                            style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: '0.72rem', color: T.textD, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                           >
                             Resend
                           </button>
@@ -1005,9 +1017,9 @@ const Users: React.FC = () => {
 
                 {/* Personal Details */}
                 <div style={{
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  background: T.borderM,
                   borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  border: `1px solid ${T.border}`,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -1017,7 +1029,7 @@ const Users: React.FC = () => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>First Name</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>First Name</label>
                       <input
                         type="text"
                         value={editingUser ? editForm.first_name : createForm.first_name}
@@ -1027,15 +1039,15 @@ const Users: React.FC = () => {
                         placeholder="John"
                         style={{
                           padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
+                          border: `1px solid ${T.border}`,
+                          background: T.surface,
+                          color: T.text,
                           fontSize: '0.875rem',
                         }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Last Name</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Last Name</label>
                       <input
                         type="text"
                         value={editingUser ? editForm.last_name : createForm.last_name}
@@ -1045,9 +1057,9 @@ const Users: React.FC = () => {
                         placeholder="Doe"
                         style={{
                           padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
+                          border: `1px solid ${T.border}`,
+                          background: T.surface,
+                          color: T.text,
                           fontSize: '0.875rem',
                         }}
                       />
@@ -1057,9 +1069,9 @@ const Users: React.FC = () => {
 
                 {/* Contact Information */}
                 <div style={{
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                  background: T.borderM,
                   borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  border: `1px solid ${T.border}`,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
@@ -1069,7 +1081,7 @@ const Users: React.FC = () => {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Mobile Number</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Mobile Number</label>
                       <PhoneInput
                         value={editingUser ? editForm.mobile_number : createForm.mobile_number}
                         onChange={(v) => editingUser ? setEditForm({...editForm, mobile_number: v}) : setCreateForm({...createForm, mobile_number: v})}
@@ -1079,7 +1091,7 @@ const Users: React.FC = () => {
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Address</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Address</label>
                       <textarea
                         value={editingUser ? editForm.address : createForm.address}
                         onChange={(e) => editingUser ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
@@ -1088,9 +1100,9 @@ const Users: React.FC = () => {
                         placeholder="123 Solar Street..."
                         style={{
                           padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                          background: isDark ? '#2a2a2a' : '#ffffff',
-                          color: isDark ? '#f3f4f6' : '#111827',
+                          border: `1px solid ${T.border}`,
+                          background: T.surface,
+                          color: T.text,
                           fontSize: '0.875rem',
                           resize: 'vertical',
                         }}
@@ -1104,14 +1116,14 @@ const Users: React.FC = () => {
               <div style={{
                 display: 'flex', gap: 10, justifyContent: 'flex-end',
                 padding: '16px 28px',
-                borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                borderTop: `1px solid ${T.border}`,
                 flexShrink: 0,
               }}>
                 <button type="button" onClick={handleCancel} disabled={creatingLoading || savingLoading} style={{
                   padding: '10px 20px', borderRadius: 8,
-                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                  color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
+                  border: `1px solid ${T.border}`,
+                  background: T.cardEl,
+                  color: T.textM, fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
                   opacity: creatingLoading || savingLoading ? 0.6 : 1,
                 }}>Cancel</button>
                 <button
@@ -1155,7 +1167,7 @@ const Users: React.FC = () => {
           padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: T.surface,
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -1179,7 +1191,7 @@ const Users: React.FC = () => {
                 }}>
                   <AlertTriangle size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
                   Delete User
                 </span>
               </div>
@@ -1190,8 +1202,8 @@ const Users: React.FC = () => {
                   height: 36,
                   borderRadius: 8,
                   border: 'none',
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  background: T.borderM,
+                  color: T.textM,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1203,7 +1215,7 @@ const Users: React.FC = () => {
             </div>
 
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+              <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
                 Are you sure you want to delete user <strong>{deleteModal.user.username}</strong>?
               </p>
               <div style={{
@@ -1225,9 +1237,9 @@ const Users: React.FC = () => {
                 style={{
                   padding: '10px 18px',
                   borderRadius: 8,
-                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                  color: isDark ? '#d1d5db' : '#374151',
+                  border: `1px solid ${T.border}`,
+                  background: T.cardEl,
+                  color: T.textM,
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   cursor: deletingLoading ? 'not-allowed' : 'pointer',
@@ -1282,7 +1294,7 @@ const Users: React.FC = () => {
           padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: T.surface,
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -1306,7 +1318,7 @@ const Users: React.FC = () => {
                 }}>
                   <CheckCircle2 size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
                   Success
                 </span>
               </div>
@@ -1317,8 +1329,8 @@ const Users: React.FC = () => {
                   height: 36,
                   borderRadius: 8,
                   border: 'none',
-                  background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  background: T.borderM,
+                  color: T.textM,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1330,7 +1342,7 @@ const Users: React.FC = () => {
             </div>
 
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+              <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
                 {successModal.message}
               </p>
             </div>

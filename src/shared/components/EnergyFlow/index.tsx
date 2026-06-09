@@ -4,7 +4,7 @@ import { Sun, Battery, Home, Zap, Wind, Droplets, Waves, Plug, Activity, Grid, C
 import { useTheme } from '../../../contexts/ThemeContext';
 import { NodeCard, SmartCard } from './DeviceCard';
 import AnomalyBanner from './AnomalyBanner';
-import NodeDetailModal, { NodeData, NodeType } from './NodeDetailModal';
+import NodeDetailModal, { NodeData } from './NodeDetailModal';
 import { EnergyFlowBlockProps, SmartDeviceNode, ApplianceLabel } from './types';
 import { apiService, CtMeterReading } from '../../../services/api';
 
@@ -108,7 +108,7 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
   }
 };
 
-const GRID_APPLIANCES: ApplianceLabel[] = ['ev_charger', 'geyser', 'ac_unit', 'washing_machine'];
+const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine'];
 const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' =>
   d.circuit ?? (GRID_APPLIANCES.includes(d.appliance_label) ? 'grid' : 'solar');
 const deviceLabel = (device: SmartDeviceNode) =>
@@ -119,11 +119,6 @@ const freshLatest = (device: SmartDeviceNode) =>
   device.latest && isFreshReading(device.latest.timestamp) ? device.latest : null;
 
 // ── SVG beam primitives ───────────────────────────────────────────────────────
-
-// Track: always-visible dim guide line
-function Track({ d, color }: { d: string; color: string }) {
-  return <path d={d} stroke={color} strokeWidth={2} strokeOpacity={0.22} fill="none" strokeLinecap="round" />;
-}
 
 // Flowing dashed-line beam — no particles, no blinking.
 // Animates stroke-dashoffset directly (avoids Framer Motion pathLength/Chrome bug)
@@ -232,10 +227,13 @@ interface SubSectionProps {
   devices: SmartDeviceNode[];
   isDark: boolean;
   onDeviceClick: (d: SmartDeviceNode) => void;
-  emptyTitle: string;
-  emptyDesc: string;
+  compact?: boolean;
   ctTotalKw?: number;
   onCtHeaderClick?: () => void;
+  inverterKw?: number;
+  onInverterClick?: () => void;
+  evTotalKw?: number;
+  onEvClick?: () => void;
 }
 
 // Helper to convert device to comprehensive NodeData
@@ -265,26 +263,21 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
   };
 }
 
-// ── Empty state placeholder ────────────────────────────────────────────────────
-
-function EmptyPlaceholder({ title, desc, accent, isDark }: {
-  title: string; desc: string; accent: string; isDark: boolean;
-}) {
+function EmptyPlaceholder({ isDark }: { isDark: boolean }) {
   return (
-    <div style={{
-      border: `1.5px dashed ${accent}38`,
-      borderRadius: 8,
-      padding: '12px 10px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-      textAlign: 'center',
-    }}>
-      <Plug size={14} color={`${accent}70`} />
-      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', color: isDark ? `${accent}cc` : accent }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 8, color: isDark ? 'rgba(148,163,184,0.65)' : '#94a3b8', lineHeight: 1.5, maxWidth: 160 }}>
-        {desc}
-      </div>
+    <div
+      style={{
+        borderRadius: 8,
+        border: `1px dashed ${isDark ? 'rgba(148,163,184,0.22)' : 'rgba(148,163,184,0.35)'}`,
+        padding: '10px 12px',
+        color: isDark ? '#94a3b8' : '#64748b',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        textAlign: 'center',
+        background: isDark ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.85)',
+      }}
+    >
+      No live devices on this branch.
     </div>
   );
 }
@@ -292,51 +285,62 @@ function EmptyPlaceholder({ title, desc, accent, isDark }: {
 // ── Sub-section ────────────────────────────────────────────────────────────────
 
 function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
-                      emptyTitle, emptyDesc, ctTotalKw, onCtHeaderClick }: SubSectionProps) {
+                      compact = false,
+                      ctTotalKw, onCtHeaderClick,
+                      inverterKw, onInverterClick,
+                      evTotalKw, onEvClick }: SubSectionProps) {
   const devicesTotalKw = devices.reduce((s, d) => s + (freshLatest(d)?.power_w ?? 0), 0) / 1000;
   const hasCtTotal = ctTotalKw != null;
+  const hasInverter = inverterKw != null;
+  const hasEvCard = evTotalKw != null;
+  const hasContent = hasCtTotal || hasInverter || hasEvCard || devices.length > 0;
 
-  // Header power: CT meter is authoritative for grid load; device sum for solar load
-  const headerKw = hasCtTotal ? ctTotalKw : (devices.length > 0 ? devicesTotalKw : null);
+  // Header power: CT/Inverter/EV is authoritative if present; otherwise device sum
+  const headerKw = hasCtTotal ? ctTotalKw : hasInverter ? inverterKw : hasEvCard ? evTotalKw : (devices.length > 0 ? devicesTotalKw : null);
   const headerFmt = headerKw != null ? fmtPower(headerKw) : null;
 
   return (
     <div style={{
-      borderRadius: 12,
+      borderRadius: compact ? 10 : 12,
       border: `1.5px solid ${isDark ? `${accentColor}34` : `${accentColor}38`}`,
       background: isDark
         ? `linear-gradient(135deg, ${accentColor}14 0%, ${accentColor}07 100%)`
         : `linear-gradient(135deg, ${accentColor}13 0%, ${accentColor}06 100%)`,
       boxShadow: `0 0 20px ${accentColor}08, 0 2px 8px rgba(0,0,0,0.08)`,
-      padding: '10px 12px 12px', flex: '1 1 0', minWidth: 0,
+      padding: compact ? '8px 9px 9px' : '10px 12px 12px', flex: '1 1 0', minWidth: 0,
       display: 'flex', flexDirection: 'column', transition: 'all 0.25s ease-in-out',
     }}>
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 6, marginBottom: compact ? 7 : 10 }}>
         <div style={{
-          width: 20, height: 20, borderRadius: 5, background: `${accentColor}22`,
+          width: compact ? 18 : 20, height: compact ? 18 : 20, borderRadius: compact ? 4 : 5, background: `${accentColor}22`,
           border: `1.5px solid ${accentColor}40`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{icon}</div>
         <span style={{
-          fontSize: 8.5, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+          fontSize: compact ? 7.5 : 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
           color: isDark ? `${accentColor}dd` : accentColor,
         }}>{title}</span>
         {headerFmt && (
           <span
-            onClick={hasCtTotal && onCtHeaderClick ? onCtHeaderClick : undefined}
+            onClick={hasCtTotal && onCtHeaderClick ? onCtHeaderClick : hasInverter && onInverterClick ? onInverterClick : undefined}
             style={{
-              marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+              marginLeft: 'auto', fontSize: compact ? 8.5 : 9.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
               color: isDark ? '#cbd5e1' : '#64748b',
-              cursor: hasCtTotal && onCtHeaderClick ? 'pointer' : 'default',
+              cursor: (hasCtTotal && onCtHeaderClick) || (hasInverter && onInverterClick) ? 'pointer' : 'default',
               display: 'flex', alignItems: 'baseline', gap: 3,
             }}
           >
             {headerFmt.valueStr} {headerFmt.unit}
             {hasCtTotal && (
-              <span style={{ fontSize: 7, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: accentColor, opacity: 0.8 }}>
+              <span style={{ fontSize: compact ? 6.2 : 7, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: accentColor, opacity: 0.8 }}>
                 CT
+              </span>
+            )}
+            {hasInverter && !hasCtTotal && (
+              <span style={{ fontSize: compact ? 6.2 : 7, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: accentColor, opacity: 0.8 }}>
+                INV
               </span>
             )}
           </span>
@@ -344,7 +348,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: compact ? 6 : 8 }}>
 
         {/* Grid load with CT total */}
         {hasCtTotal && (
@@ -355,7 +359,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
                 cursor: 'pointer',
                 background: isDark ? `${accentColor}12` : `${accentColor}0e`,
                 border: `1px solid ${accentColor}30`,
-                borderRadius: 8, padding: '9px 11px',
+                borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 transition: 'background 0.15s',
               }}
@@ -363,33 +367,81 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
               onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
             >
               <div>
-                <div style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
-                  CT Meter · Total Load
+                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
+                  Energy Meter · Total Load
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                   {(() => { const f = fmtPower(ctTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
                 </div>
               </div>
-              <div style={{ fontSize: 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
+              <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
                 3-Phase ›
               </div>
             </div>
-            {devices.length === 0 && (
-              <EmptyPlaceholder title={emptyTitle} desc={emptyDesc} accent={accentColor} isDark={isDark} />
-            )}
           </>
         )}
 
-        {/* No devices, no CT — pure placeholder */}
-        {devices.length === 0 && !hasCtTotal && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <EmptyPlaceholder title={emptyTitle} desc={emptyDesc} accent={accentColor} isDark={isDark} />
+        {/* Solar load with Inverter total */}
+        {hasInverter && (
+          <div
+            onClick={onInverterClick}
+            style={{
+              cursor: 'pointer',
+              background: isDark ? `${accentColor}12` : `${accentColor}0e`,
+              border: `1px solid ${accentColor}30`,
+              borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accentColor}20` : `${accentColor}18`)}
+            onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
+          >
+            <div>
+                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
+                  Inverter · Solar Load
+                </div>
+              <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {(() => { const f = fmtPower(inverterKw!); return `${f.valueStr} ${f.unit}`; })()}
+              </div>
+            </div>
+            <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
+              AC Output ›
+            </div>
+          </div>
+        )}
+
+        {/* EV charger summary card */}
+        {hasEvCard && (
+          <div
+            onClick={onEvClick}
+            style={{
+              cursor: 'pointer',
+              background: isDark ? `${accentColor}12` : `${accentColor}0e`,
+              border: `1px solid ${accentColor}30`,
+              borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accentColor}20` : `${accentColor}18`)}
+            onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
+          >
+            <div>
+                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
+                  EV Charger
+                </div>
+              <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {(() => { const f = fmtPower(evTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
+              </div>
+            </div>
+            <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
+              {evTotalKw! > 0 ? 'Charging ›' : 'Plugged in ›'}
+            </div>
           </div>
         )}
 
         {/* Smart device cards */}
         {devices.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 6 : 8 }}>
             {devices.map(device => {
               const latest = freshLatest(device);
               const sdKw = (latest?.power_w ?? 0) / 1000;
@@ -403,20 +455,22 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
                   icon={applIcon(device.appliance_label, deviceColor)}
                   valueStr={sdFmt.valueStr} unit={sdFmt.unit}
                   active={sdActive} isAnomalous={device.is_active && device.latest === null}
-                  isDark={isDark} accentColor={accentColor}
+                  isDark={isDark} accentColor={accentColor} compact={compact}
                   onClick={() => onDeviceClick(device)}
                 />
               );
             })}
           </div>
         )}
+
+        {!hasContent && <EmptyPlaceholder isDark={isDark} />}
       </div>
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc, smartDevices = [], siteId }: EnergyFlowBlockProps) {
+export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc, smartDevices = [], siteId, inverterPhases }: EnergyFlowBlockProps) {
   const { isDark } = useTheme();
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
@@ -464,26 +518,27 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   }, [siteId]);
 
   const nonGridDevices  = smartDevices.filter(d => d.appliance_label !== 'grid');
-  const solarLoads      = nonGridDevices.filter(d => circuitOf(d) === 'solar');
-  const gridLoads       = nonGridDevices.filter(d => circuitOf(d) === 'grid');
-  const solarLoadPowerKw = solarLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
-  const gridLoadPowerKw  = gridLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
-  const solarLoadActive  = solarLoadPowerKw > 0.01;
-  const gridLoadActive   = gridLoadPowerKw  > 0.01;
+  const evLoads         = nonGridDevices.filter(d => d.appliance_label === 'ev_charger');
+  const solarLoads      = nonGridDevices.filter(d => d.appliance_label !== 'ev_charger' && circuitOf(d) === 'solar');
+  const gridLoads       = nonGridDevices.filter(d => d.appliance_label !== 'ev_charger' && circuitOf(d) === 'grid');
+  const evLoadPowerKw  = evLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
+  const gridLoadPowerKw = gridLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
+  const evLoadActive   = evLoadPowerKw  > 0;
+  const gridLoadActive = gridLoadPowerKw > 0;
 
   const pv   = pvKw   ?? 0;
   const load = loadKw ?? 0;
   const grid = gridKw ?? 0;
   const batt = battKw ?? 0;
 
-  const isExporting   = grid < -0.01;
-  const isImporting   = grid >  0.01;
-  const isCharging    = batt < -0.01;
-  const isDischarging = batt >  0.01;
-  const pvActive      = pv   >  0.01;
-  const loadActive    = load >  0.01;
-  const gridActive    = Math.abs(grid) > 0.01;
-  const battActive    = Math.abs(batt) > 0.01;
+  const isExporting   = grid < 0;
+  const isImporting   = grid > 0;
+  const isCharging    = batt < 0;
+  const isDischarging = batt > 0;
+  const pvActive      = pv   > 0;
+  const loadActive    = load > 0;
+  const gridActive    = Math.abs(grid) > 0;
+  const battActive    = Math.abs(batt) > 0;
   const battPresent   = battActive || (battSoc ?? 0) > 0;
   const gridColor     = isExporting ? '#34d399' : '#60a5fa';
 
@@ -497,10 +552,12 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const branchDash = compactFlow ? 8 : 10;
   const branchGap = compactFlow ? 8 : 10;
   const branchDur = compactFlow ? 2.1 : 2.4;
+  const branchMidY = compactFlow ? 18 : 22;
+  const branchEndY = compactFlow ? 34 : 44;
 
   const pvFmt   = fmtPower(pv);
   const battFmt = fmtPower(batt);
-  const loadFmt = fmtPower(load);
+
   const gridFmt = fmtPower(grid);
 
   const anomalous = nonGridDevices.filter(d => d.is_active && d.latest === null).map(deviceLabel);
@@ -677,97 +734,151 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         </div>
       </div>
 
-      {/* Total Load + Y-connector + Sub-loads */}
+      {/* Total Load + EV node (if present) + Y-connector + Sub-loads */}
       <div style={{ padding: '0 18px 0', marginTop: -10 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
-          <div style={{ display: 'inline-block', transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
-            type: 'load',
-            id: 'load',
-            title: 'Total Load',
-            power_kw: load,
-            status: loadActive ? 'active' : 'inactive',
-            color: '#f87171',
-            icon: <Home size={24} color="#f87171" />,
-            loadSplit: {
-              solarKw: load,
-              gridKw: ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0,
-            },
-          })}>
-            <NodeCard label="Total Load"
-              icon={<Home size={22} color={loadActive ? '#f87171' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
-              valueStr={loadFmt.valueStr} unit={loadFmt.unit}
-              color="#f87171" active={loadActive} isDark={isDark} />
-          </div>
-        </div>
-
-        {/* Y-connector SVG — each branch animates only when that subsection has active power */}
         {(() => {
           const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
-          const solarBranchActive = solarLoadActive && solarLoads.length > 0;
-          const gridBranchActive  = gridLoadActive || ctGridKw > 0.01;
-          const stemActive = solarBranchActive || gridBranchActive;
+          const totalLoadKw = load + ctGridKw;
+          const totalLoadFmt = fmtPower(totalLoadKw);
+          const totalLoadActive = totalLoadKw > 0;
           return (
-            <svg width="100%" height="44" viewBox="0 0 200 44"
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
+              <div style={{ display: 'inline-block', transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
+                type: 'load',
+                id: 'load',
+                title: 'Total Load',
+                power_kw: totalLoadKw,
+                status: totalLoadActive ? 'active' : 'inactive',
+                color: '#f87171',
+                icon: <Home size={24} color="#f87171" />,
+                loadSplit: {
+                  solarKw: load,
+                  gridKw: ctGridKw,
+                  evKw: evLoadPowerKw > 0 ? evLoadPowerKw : undefined,
+                },
+                evDevice: evLoads[0] ?? undefined,
+                ctReading: ctReading ?? undefined,
+                inverterPhases: inverterPhases ?? undefined,
+              })}>
+                <NodeCard label="Total Load"
+                  icon={<Home size={22} color={totalLoadActive ? '#f87171' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
+                  valueStr={totalLoadFmt.valueStr} unit={totalLoadFmt.unit}
+                  color="#f87171" active={totalLoadActive} isDark={isDark} />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Y-connector — 3 branches when EV present, 2 branches otherwise */}
+        {(() => {
+          const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
+          const solarBranchActive = load > 0;
+          const gridBranchActive  = gridLoadActive || ctGridKw > 0;
+          const evBranchActive    = evLoadActive;
+          const hasEv             = evLoads.length > 0;
+          const stemActive = solarBranchActive || gridBranchActive || evBranchActive;
+          const solarX = hasEv ? 25  : 50;
+          const gridX  = hasEv ? 175 : 150;
+          return (
+            <svg width="100%" height={branchEndY} viewBox={`0 0 200 ${branchEndY}`}
               style={{ display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
               <style>{`
                 @keyframes flow-f87171{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
                 @keyframes flow-f59e0b{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
                 @keyframes flow-60a5fa{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
+                @keyframes flow-34d399{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
               `}</style>
-              {/* Vertical stem from Total Load down to junction — always draw track, animate if any branch active */}
-              <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+              {/* Stem */}
+              <line x1="100" y1="0" x2="100" y2={branchMidY} stroke="#f87171" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {stemActive && (
-                <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth={branchStrokeWidth} strokeLinecap="round"
+                <line x1="100" y1="0" x2="100" y2={branchMidY} stroke="#f87171" strokeWidth={branchStrokeWidth} strokeLinecap="round"
                   strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f87171 ${branchDur}s linear infinite` }} />
               )}
-              {/* Solar Load branch (amber) */}
-              <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {solarBranchActive && (
-                <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth={branchStrokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />
-              )}
-              <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth={compactFlow ? 3.5 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {solarBranchActive && (
-                <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth={compactFlow ? 1.2 : 1.5} strokeLinecap="round"
-                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />
-              )}
-              {/* Grid Load branch (blue) */}
-              <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {gridBranchActive && (
-                <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth={branchStrokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />
-              )}
-              <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth={compactFlow ? 3.5 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {gridBranchActive && (
-                <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth={compactFlow ? 1.2 : 1.5} strokeLinecap="round"
-                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />
-              )}
+              {/* Solar branch (amber, left) */}
+              <line x1="100" y1={branchMidY} x2={solarX} y2={branchMidY} stroke="#f59e0b" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+              {solarBranchActive && <line x1="100" y1={branchMidY} x2={solarX} y2={branchMidY} stroke="#f59e0b" strokeWidth={branchStrokeWidth} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />}
+              <line x1={solarX} y1={branchMidY} x2={solarX} y2={branchEndY} stroke="#f59e0b" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+              {solarBranchActive && <line x1={solarX} y1={branchMidY} x2={solarX} y2={branchEndY} stroke="#f59e0b" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />}
+              {/* EV branch (green, center) — only when EV device exists */}
+              {hasEv && <>
+                <line x1="100" y1={branchMidY} x2="100" y2={branchEndY} stroke="#34d399" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+                {evBranchActive && <line x1="100" y1={branchMidY} x2="100" y2={branchEndY} stroke="#34d399" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-34d399 ${branchDur}s linear infinite` }} />}
+              </>}
+              {/* Grid branch (blue, right) */}
+              <line x1="100" y1={branchMidY} x2={gridX} y2={branchMidY} stroke="#60a5fa" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+              {gridBranchActive && <line x1="100" y1={branchMidY} x2={gridX} y2={branchMidY} stroke="#60a5fa" strokeWidth={branchStrokeWidth} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />}
+              <line x1={gridX} y1={branchMidY} x2={gridX} y2={branchEndY} stroke="#60a5fa" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
+              {gridBranchActive && <line x1={gridX} y1={branchMidY} x2={gridX} y2={branchEndY} stroke="#60a5fa" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />}
             </svg>
           );
         })()}
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', paddingBottom: 14 }}>
+        {/* Sub-load row: Solar SubSection | EV NodeCard | Grid SubSection */}
+        <div style={{ display: 'flex', gap: compactFlow ? 8 : 10, alignItems: 'stretch', paddingBottom: 14, marginTop: compactFlow ? -4 : 0 }}>
           <SubSection
             title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
+            compact={compactFlow}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f59e0b'))}
-            emptyTitle="No Solar Devices"
-            emptyDesc="Assign smart plugs to the solar circuit to monitor individual loads"
+            inverterKw={load > 0 ? load : undefined}
+            onInverterClick={() => handleNodeClick({
+              type: 'solar',
+              id: 'inverter-load',
+              title: 'Inverter · Solar Load',
+              subtitle: 'AC Output',
+              power_kw: load,
+              status: load > 0 ? 'active' : 'inactive',
+              color: '#f59e0b',
+              icon: <Sun size={24} color="#f59e0b" />,
+              details: {
+                'Solar Load': `${fmtPower(load).valueStr} ${fmtPower(load).unit}`,
+                'PV Generation': `${fmtPower(pv).valueStr} ${fmtPower(pv).unit}`,
+                'Self-consumption': pv > 0 ? `${Math.min(100, Math.round((load / pv) * 100))}%` : '—',
+                'Status': load > 0 ? 'Active' : 'Idle',
+              },
+              inverterPhases: inverterPhases ?? undefined,
+            })}
           />
+
+          {evLoads.length > 0 && (
+            <SubSection
+              title="EV Charging" icon={<Car size={11} color="#34d399" />}
+              accentColor="#34d399" devices={[]} isDark={isDark}
+              compact={compactFlow}
+              onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#34d399'))}
+              evTotalKw={evLoadPowerKw}
+              onEvClick={() => evLoads[0] && handleNodeClick({
+                type: 'device',
+                id: String(evLoads[0].id),
+                title: evLoads[0].display_name ?? 'EV Charger',
+                subtitle: evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                power_kw: evLoadPowerKw,
+                status: evLoadActive ? 'active' : 'inactive',
+                color: '#34d399',
+                icon: <Car size={24} color="#34d399" />,
+                details: {
+                  'Charging Power': `${fmtPower(evLoadPowerKw).valueStr} ${fmtPower(evLoadPowerKw).unit}`,
+                  'Voltage': evLoads[0].latest?.voltage_v != null ? `${evLoads[0].latest.voltage_v.toFixed(0)} V` : '—',
+                  'Status': evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                },
+                device: evLoads[0],
+              })}
+            />
+          )}
+
           <SubSection
             title="Grid Load" icon={<Grid size={11} color="#60a5fa" />}
             accentColor="#60a5fa" devices={gridLoads} isDark={isDark}
+            compact={compactFlow}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#60a5fa'))}
-            emptyTitle="No Grid Devices"
-            emptyDesc="Assign smart plugs to the grid circuit to monitor individual loads"
             ctTotalKw={ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : undefined}
             onCtHeaderClick={() => ctReading && handleNodeClick({
               type: 'ctmeter',
               id: 'ctmeter',
-              title: 'Grid Load · CT Meter',
+              title: 'Grid Load · Energy Meter',
               subtitle: '3-Phase Measurement',
               power_kw: Math.abs(ctReading.active_power_total ?? 0) / 1000,
-              status: (Math.abs(ctReading.active_power_total ?? 0) / 1000) > 0.01 ? 'active' : 'inactive',
+              status: (Math.abs(ctReading.active_power_total ?? 0) / 1000) > 0 ? 'active' : 'inactive',
               color: '#60a5fa',
               icon: <Activity size={24} color="#60a5fa" />,
               details: {

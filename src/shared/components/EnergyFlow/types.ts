@@ -31,6 +31,21 @@ export interface SmartDeviceNode {
   circuit?: 'solar' | 'grid';
 }
 
+export interface InverterPhases {
+  /** Load-side power from inverter load registers */
+  l1: { power_w: number | null; voltage_v: number | null; current_a: number | null };
+  l2: { power_w: number | null; voltage_v: number | null; current_a: number | null };
+  l3: { power_w: number | null; voltage_v: number | null; current_a: number | null };
+  /** Grid-side voltage & current — same AC bus as CT meter */
+  grid_l1: { voltage_v: number | null; current_a: number | null };
+  grid_l2: { voltage_v: number | null; current_a: number | null };
+  grid_l3: { voltage_v: number | null; current_a: number | null };
+  /** Single aggregate frequency from inverter grid register — no per-phase breakdown */
+  grid_frequency_hz: number | null;
+  /** Single aggregate power factor from inverter grid register — no per-phase breakdown */
+  grid_power_factor: number | null;
+}
+
 export interface EnergyFlowBlockProps {
   pvKw: number | null;
   loadKw: number | null;
@@ -39,4 +54,5 @@ export interface EnergyFlowBlockProps {
   battSoc: number | null;
   smartDevices?: SmartDeviceNode[];
   siteId?: string;
+  inverterPhases?: InverterPhases;
 }

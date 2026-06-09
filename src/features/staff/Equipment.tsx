@@ -175,12 +175,12 @@ const hasDuplicateMakeSerial = <T extends { id: number; make: string; serial_num
 const inputStyle = (isDark: boolean): React.CSSProperties => ({
   padding: '8px 10px', borderRadius: 7, width: '100%', boxSizing: 'border-box',
   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #d1d5db',
-  background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827',
+  background: T.surface, color: T.text,
   fontSize: '0.875rem',
 });
 
 const labelStyle = (isDark: boolean): React.CSSProperties => ({
-  fontSize: '0.8rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151',
+  fontSize: '0.8rem', fontWeight: 600, color: T.textM,
   display: 'block', marginBottom: 4,
 });
 
@@ -217,7 +217,7 @@ const SectionHeader: React.FC<{
   }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{ color: '#22c55e' }}>{icon}</span>
-      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: isDark ? '#f9fafb' : '#111827' }}>
+      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: T.text }}>
         {title}
       </h3>
       <span style={{
@@ -242,11 +242,11 @@ const DeleteConfirmModal: React.FC<{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 12, padding: 28, width: 380, maxWidth: '95vw',
+        background: T.surface, borderRadius: 12, padding: 28, width: 380, maxWidth: '95vw',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
       }}>
-        <h3 style={{ margin: '0 0 10px', color: isDark ? '#f9fafb' : '#111827' }}>Delete {label}?</h3>
-        <p style={{ margin: '0 0 22px', color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.9rem' }}>
+        <h3 style={{ margin: '0 0 10px', color: T.text }}>Delete {label}?</h3>
+        <p style={{ margin: '0 0 22px', color: T.textM, fontSize: '0.9rem' }}>
           This cannot be undone.
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -338,7 +338,7 @@ const InverterSection: React.FC<{
                 <tr key={inv.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{inv.make}</div>
-                    {inv.model_name && <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{inv.model_name}</div>}
+                    {inv.model_name && <div style={{ fontSize: '0.75rem', color: T.textM }}>{inv.model_name}</div>}
                   </td>
                   <td><code style={{ fontSize: '0.8rem' }}>{inv.serial_number}</code></td>
                   <td>{inv.capacity_kva} kVA</td>
@@ -370,11 +370,11 @@ const InverterSection: React.FC<{
 
       {modal.open && ReactDOM.createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 12, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+          <div style={{ background: T.surface, borderRadius: 12, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb' }}>
-              <h3 style={{ margin: 0, color: isDark ? '#f9fafb' : '#111827' }}>{modal.item ? 'Edit Inverter' : 'Add Inverter'}</h3>
-              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#9ca3af' : '#6b7280' }}><X size={20} /></button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+              <h3 style={{ margin: 0, color: T.text }}>{modal.item ? 'Edit Inverter' : 'Add Inverter'}</h3>
+              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textM }}><X size={20} /></button>
             </div>
             {/* Body */}
             <div style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -411,7 +411,7 @@ const InverterSection: React.FC<{
               </div>
             </div>
             {/* Footer */}
-            <div style={{ padding: '14px 20px', borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal({ open: false, item: null })} className="btn btn-secondary">Cancel</button>
               <button onClick={handleSave} className="btn" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
             </div>
@@ -507,7 +507,7 @@ const BatterySection: React.FC<{
                 <tr key={bat.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{bat.make}</div>
-                    {bat.model_name && <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{bat.model_name}</div>}
+                    {bat.model_name && <div style={{ fontSize: '0.75rem', color: T.textM }}>{bat.model_name}</div>}
                   </td>
                   <td><code style={{ fontSize: '0.8rem' }}>{bat.serial_number}</code></td>
                   <td>{bat.capacity_kwh} kWh</td>
@@ -539,10 +539,10 @@ const BatterySection: React.FC<{
 
       {modal.open && ReactDOM.createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 12, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb' }}>
-              <h3 style={{ margin: 0, color: isDark ? '#f9fafb' : '#111827' }}>{modal.item ? 'Edit Battery' : 'Add Battery'}</h3>
-              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#9ca3af' : '#6b7280' }}><X size={20} /></button>
+          <div style={{ background: T.surface, borderRadius: 12, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+              <h3 style={{ margin: 0, color: T.text }}>{modal.item ? 'Edit Battery' : 'Add Battery'}</h3>
+              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textM }}><X size={20} /></button>
             </div>
             <div style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -579,7 +579,7 @@ const BatterySection: React.FC<{
                 <textarea value={form.notes} onChange={e => f('notes', e.target.value)} rows={2} style={{ ...inputStyle(isDark), resize: 'vertical' }} placeholder="Optional notes (installation, service, remarks)" />
               </div>
             </div>
-            <div style={{ padding: '14px 20px', borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal({ open: false, item: null })} className="btn btn-secondary">Cancel</button>
               <button onClick={handleSave} className="btn" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
             </div>
@@ -675,7 +675,7 @@ const PanelSection: React.FC<{
                 <tr key={p.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{p.make}</div>
-                    {p.model_name && <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{p.model_name}</div>}
+                    {p.model_name && <div style={{ fontSize: '0.75rem', color: T.textM }}>{p.model_name}</div>}
                   </td>
                   <td><code style={{ fontSize: '0.8rem' }}>{p.serial_number}</code></td>
                   <td>{toPanelWp(p.capacity_wp).toFixed(0)}</td>
@@ -704,10 +704,10 @@ const PanelSection: React.FC<{
 
       {modal.open && ReactDOM.createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: isDark ? '#1a1a1a' : '#ffffff', borderRadius: 12, width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb' }}>
-              <h3 style={{ margin: 0, color: isDark ? '#f9fafb' : '#111827' }}>{modal.item ? 'Edit Panel' : 'Add Panel'}</h3>
-              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#9ca3af' : '#6b7280' }}><X size={20} /></button>
+          <div style={{ background: T.surface, borderRadius: 12, width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+              <h3 style={{ margin: 0, color: T.text }}>{modal.item ? 'Edit Panel' : 'Add Panel'}</h3>
+              <button onClick={() => setModal({ open: false, item: null })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textM }}><X size={20} /></button>
             </div>
             <div style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -744,7 +744,7 @@ const PanelSection: React.FC<{
                 <textarea value={form.notes} onChange={e => f('notes', e.target.value)} rows={2} style={{ ...inputStyle(isDark), resize: 'vertical' }} placeholder="Optional notes (installation, service, remarks)" />
               </div>
             </div>
-            <div style={{ padding: '14px 20px', borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div style={{ padding: '14px 20px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal({ open: false, item: null })} className="btn btn-secondary">Cancel</button>
               <button onClick={handleSave} className="btn" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
             </div>
@@ -763,6 +763,18 @@ const Equipment: React.FC = () => {
   const isMobile = useIsMobile();
   if (isMobile) return <MobileEquipment />;
   const { isDark } = useTheme();
+  // ── Design tokens — mobile AppTheme aligned ──────────────────────────────
+  const T = {
+    bg:      isDark ? '#080C14'                      : '#F4F6F8',
+    surface: isDark ? '#0F1623'                      : '#FFFFFF',
+    cardEl:  isDark ? '#111927'                      : '#EDF0F4',
+    border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
+    borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
+    text:    isDark ? '#F0F4FF'                      : '#12151A',
+    textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
+    textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
+    accent:  '#2FBF71',
+  };
   const [searchParams] = useSearchParams();
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
@@ -837,7 +849,7 @@ const Equipment: React.FC = () => {
         subtitle="Manage hardware inventory per site"
         rightSlot={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <label style={{ fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Site:</label>
+          <label style={{ fontSize: '0.875rem', fontWeight: 600, color: T.textM }}>Site:</label>
           <div style={{ position: 'relative' }}>
             <select
               value={selectedSiteId}
@@ -856,7 +868,7 @@ const Equipment: React.FC = () => {
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: isDark ? '#9ca3af' : '#6b7280' }} />
+            <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.textM }} />
           </div>
           </div>
         }
