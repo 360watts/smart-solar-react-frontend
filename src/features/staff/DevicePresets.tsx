@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobileDevicePresets from '../mobile/MobileDevicePresets';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
 import PageHeader from '../../shared/layout/PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../../app/constants';
@@ -62,6 +64,8 @@ interface RegisterMapping {
 }
 
 const DevicePresets: React.FC = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileDevicePresets />;
   const { isDark } = useTheme();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [filteredPresets, setFilteredPresets] = useState<Preset[]>([]);

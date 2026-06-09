@@ -491,6 +491,12 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const gridIntensity = gridActive ? Math.min(1, Math.abs(grid) / 10) : 0;
   const battIntensity = battActive ? Math.min(1, Math.abs(batt) / 10) : 0;
   const loadIntensity = loadActive ? Math.min(1, load / 10) : 0;
+  const compactFlow = containerWidth < 480;
+  const branchStrokeWidth = compactFlow ? 2.2 : 2.5;
+  const branchTrackWidth = compactFlow ? 6 : 10;
+  const branchDash = compactFlow ? 8 : 10;
+  const branchGap = compactFlow ? 8 : 10;
+  const branchDur = compactFlow ? 2.1 : 2.4;
 
   const pvFmt   = fmtPower(pv);
   const battFmt = fmtPower(batt);
@@ -698,43 +704,43 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         {(() => {
           const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
           const solarBranchActive = solarLoadActive && solarLoads.length > 0;
-          const gridBranchActive  = gridLoads.length > 0 ? gridLoadActive : ctGridKw > 0.01;
+          const gridBranchActive  = gridLoadActive || ctGridKw > 0.01;
           const stemActive = solarBranchActive || gridBranchActive;
           return (
             <svg width="100%" height="44" viewBox="0 0 200 44"
               style={{ display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
               <style>{`
-                @keyframes flow-f87171{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
-                @keyframes flow-f59e0b{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
-                @keyframes flow-60a5fa{from{stroke-dashoffset:0}to{stroke-dashoffset:-20}}
+                @keyframes flow-f87171{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
+                @keyframes flow-f59e0b{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
+                @keyframes flow-60a5fa{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
               `}</style>
               {/* Vertical stem from Total Load down to junction — always draw track, animate if any branch active */}
-              <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
+              <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {stemActive && (
-                <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"
-                  strokeDasharray="10 10" style={{ animation: 'flow-f87171 2.4s linear infinite' }} />
+                <line x1="100" y1="0" x2="100" y2="22" stroke="#f87171" strokeWidth={branchStrokeWidth} strokeLinecap="round"
+                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f87171 ${branchDur}s linear infinite` }} />
               )}
               {/* Solar Load branch (amber) */}
-              <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
+              <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {solarBranchActive && (
-                <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"
-                  strokeDasharray="10 10" style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
+                <line x1="100" y1="22" x2="50" y2="22" stroke="#f59e0b" strokeWidth={branchStrokeWidth} strokeLinecap="round"
+                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />
               )}
-              <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth="5" strokeLinecap="round" strokeOpacity={0.06} />
+              <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth={compactFlow ? 3.5 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {solarBranchActive && (
-                <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"
-                  strokeDasharray="10 10" style={{ animation: 'flow-f59e0b 2.4s linear infinite' }} />
+                <line x1="50" y1="22" x2="50" y2="44" stroke="#f59e0b" strokeWidth={compactFlow ? 1.2 : 1.5} strokeLinecap="round"
+                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />
               )}
               {/* Grid Load branch (blue) */}
-              <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth="10" strokeLinecap="round" strokeOpacity={0.06} />
+              <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {gridBranchActive && (
-                <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round"
-                  strokeDasharray="10 10" style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
+                <line x1="100" y1="22" x2="150" y2="22" stroke="#60a5fa" strokeWidth={branchStrokeWidth} strokeLinecap="round"
+                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />
               )}
-              <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeOpacity={0.06} />
+              <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth={compactFlow ? 3.5 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
               {gridBranchActive && (
-                <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round"
-                  strokeDasharray="10 10" style={{ animation: 'flow-60a5fa 2.4s linear infinite' }} />
+                <line x1="150" y1="22" x2="150" y2="44" stroke="#60a5fa" strokeWidth={compactFlow ? 1.2 : 1.5} strokeLinecap="round"
+                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />
               )}
             </svg>
           );

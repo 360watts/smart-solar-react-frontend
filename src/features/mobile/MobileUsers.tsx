@@ -5,7 +5,7 @@ import finalLogo from '../../assets/finalLogo.png';
 import {
   RefreshCw, Search, UserCheck, UserX, Shield, Crown,
   ChevronDown, ChevronUp, Plus, Edit2, Trash2, X, Check,
-  Mail, Phone, MapPin, Calendar, Cpu,
+  Mail, Phone, MapPin, Calendar, Building2, Zap, Activity,
   Menu,
 } from 'lucide-react';
 
@@ -22,12 +22,17 @@ interface User {
   date_joined: string;
 }
 
-interface Device {
-  id: number;
-  device_serial: string;
-  hw_id?: string;
-  model?: string;
-  provisioned_at?: string;
+interface UserSite {
+  id?: number;
+  site_id?: string;
+  display_name?: string;
+  name?: string;
+  address?: string;
+  capacity_kw?: number;
+  inverter_capacity_kw?: number;
+  site_status?: string;
+  is_active?: boolean;
+  devices?: unknown[];
 }
 
 const COLORS = ['#6366f1','#2FBF71','#F59E0B','#60A5FA','#ec4899','#14b8a6','#F87171','#8b5cf6'];
@@ -52,8 +57,8 @@ const MobileUsers: React.FC = () => {
   const [search, setSearch]         = useState('');
   const [filter, setFilter]         = useState<'all'|'staff'|'admin'>('all');
   const [expanded, setExpanded]     = useState<Set<number>>(new Set());
-  const [devices, setDevices]       = useState<Record<number, Device[]>>({});
-  const [loadingDev, setLoadingDev] = useState<Set<number>>(new Set());
+  const [userSites, setUserSites]   = useState<Record<number, UserSite | null>>({});
+  const [loadingSite, setLoadingSite] = useState<Set<number>>(new Set());
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -84,20 +89,20 @@ const MobileUsers: React.FC = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  const loadDevices = async (uid: number) => {
-    if (devices[uid]) return;
-    setLoadingDev(prev => new Set(prev).add(uid));
+  const loadSite = async (uid: number) => {
+    if (Object.prototype.hasOwnProperty.call(userSites, uid)) return;
+    setLoadingSite(prev => new Set(prev).add(uid));
     try {
-      const d = await apiService.getUserDevices(uid);
-      setDevices(prev => ({ ...prev, [uid]: Array.isArray(d) ? d : [] }));
-    } catch { setDevices(prev => ({ ...prev, [uid]: [] })); }
-    finally { setLoadingDev(prev => { const n = new Set(prev); n.delete(uid); return n; }); }
+      const site = await apiService.getUserSite(uid);
+      setUserSites(prev => ({ ...prev, [uid]: site || null }));
+    } catch { setUserSites(prev => ({ ...prev, [uid]: null })); }
+    finally { setLoadingSite(prev => { const n = new Set(prev); n.delete(uid); return n; }); }
   };
 
   const toggleExpand = (id: number) => {
     setExpanded(prev => {
       const n = new Set(prev);
-      if (n.has(id)) { n.delete(id); } else { n.add(id); loadDevices(id); }
+      if (n.has(id)) { n.delete(id); } else { n.add(id); loadSite(id); }
       return n;
     });
   };
@@ -229,7 +234,7 @@ const MobileUsers: React.FC = () => {
           {displayed.map(u => {
             const isExp = expanded.has(u.id);
             const ac = avatarColor(u.username);
-            const devList = devices[u.id] ?? [];
+            const assignedSite = userSites[u.id];
             const role = roleBadge(u);
             return (
               <div key={u.id} style={card()}>
@@ -272,22 +277,30 @@ const MobileUsers: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div>
+                      <div>
                       <div style={{ fontSize:'0.58rem', color:muted, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6, fontFamily:"'DM Sans', sans-serif" }}>
-                        Devices {loadingDev.has(u.id) ? '…' : `(${devList.length})`}
+                        Site {loadingSite.has(u.id) ? '…' : ''}
                       </div>
-                      {devList.length > 0 ? (
-                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                          {devList.map(d => (
-                            <div key={d.id} style={{ display:'flex', alignItems:'center', gap:8, background: isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.02)', borderRadius:8, padding:'7px 10px', border:`1px solid ${border}` }}>
-                              <Cpu size={12} color={accent}/>
-                              <span style={{ fontSize:'0.72rem', fontFamily:"'JetBrains Mono', monospace", color:text }}>{d.device_serial}</span>
-                              {d.model && <span style={{ fontSize:'0.65rem', color:muted, fontFamily:"'DM Sans', sans-serif" }}>· {d.model}</span>}
-                            </div>
-                          ))}
+                      {assignedSite ? (
+                        <div style={{ display:'flex', flexDirection:'column', gap:7, background: isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.02)', borderRadius:10, padding:'10px 11px', border:`1px solid ${border}` }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <Building2 size={13} color={accent}/>
+                            <span style={{ fontSize:'0.8rem', fontWeight:700, color:text, fontFamily:"'DM Sans', sans-serif", minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {assignedSite.display_name || assignedSite.name || assignedSite.site_id || 'Assigned site'}
+                            </span>
+                            <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, fontSize:'0.58rem', fontWeight:700, color: assignedSite.is_active === false ? '#64748b' : accent, background: assignedSite.is_active === false ? 'rgba(100,116,139,0.12)' : 'rgba(47,191,113,0.12)', fontFamily:"'DM Sans', sans-serif" }}>
+                              {assignedSite.site_status || (assignedSite.is_active === false ? 'Inactive' : 'Active')}
+                            </span>
+                          </div>
+                          <div style={{ display:'flex', gap:8, flexWrap:'wrap', fontSize:'0.66rem', color:muted, fontFamily:"'DM Sans', sans-serif" }}>
+                            {assignedSite.site_id && <span style={{ fontFamily:"'JetBrains Mono', monospace" }}>{assignedSite.site_id}</span>}
+                            {assignedSite.capacity_kw != null && <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}><Zap size={10}/>{assignedSite.capacity_kw} kW</span>}
+                            {Array.isArray(assignedSite.devices) && <span style={{ display:'inline-flex', alignItems:'center', gap:3 }}><Activity size={10}/>{assignedSite.devices.length} device{assignedSite.devices.length !== 1 ? 's' : ''}</span>}
+                          </div>
+                          {assignedSite.address && <div style={{ display:'flex', alignItems:'flex-start', gap:5, fontSize:'0.66rem', color:muted, lineHeight:1.35, fontFamily:"'DM Sans', sans-serif" }}><MapPin size={10} style={{ marginTop:2, flexShrink:0 }}/>{assignedSite.address}</div>}
                         </div>
-                      ) : !loadingDev.has(u.id) && (
-                        <div style={{ fontSize:'0.72rem', color:muted, fontStyle:'italic', fontFamily:"'DM Sans', sans-serif" }}>No devices assigned</div>
+                      ) : !loadingSite.has(u.id) && (
+                        <div style={{ fontSize:'0.72rem', color:muted, fontStyle:'italic', fontFamily:"'DM Sans', sans-serif" }}>No site assigned</div>
                       )}
                     </div>
                     <div style={{ display:'flex', gap:8, marginTop:4 }}>

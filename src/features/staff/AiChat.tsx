@@ -70,6 +70,24 @@ function normalizeAssistantContent(content: string): string {
     .trimStart();
 }
 
+function extractStreamText(payload: string): string | null {
+  if (!payload || payload === '[DONE]' || payload === '[KEEPALIVE]') return null;
+  if (payload.startsWith('[ERROR]')) return payload;
+  try {
+    const parsed = JSON.parse(payload);
+    const text =
+      parsed?.content ??
+      parsed?.delta ??
+      parsed?.text ??
+      parsed?.message?.content ??
+      parsed?.choices?.[0]?.delta?.content ??
+      parsed?.choices?.[0]?.text;
+    return typeof text === 'string' ? text : null;
+  } catch {
+    return payload;
+  }
+}
+
 const AiChat: React.FC = () => {
   const { isDark } = useTheme();
   const isMobile = useIsMobile();
@@ -173,7 +191,7 @@ const AiChat: React.FC = () => {
             });
             break;
           }
-          const text = normalizeStreamFragment(token?.replace(/\\n/g, '\n') ?? '');
+          const text = normalizeStreamFragment(extractStreamText(token)?.replace(/\\n/g, '\n') ?? '');
           if (!text) continue;
           setMessages(prev => {
             const next = [...prev];
@@ -183,6 +201,15 @@ const AiChat: React.FC = () => {
           });
         }
       }
+
+      setMessages(prev => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === 'assistant' && !last.isError && !normalizeAssistantContent(last.content)) {
+          next[next.length - 1] = { ...last, content: 'No response was generated. Please try again.' };
+        }
+        return next;
+      });
     } catch {
       setMessages(prev => {
         const next = [...prev];
@@ -204,10 +231,10 @@ const AiChat: React.FC = () => {
 
   // Panel dimensions
   const isFullscreen = panelSize === 'fullscreen';
-  const panelW = isFullscreen ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 380;
-  const panelH = isFullscreen ? '100dvh' : isMobile ? 'calc(100dvh - 128px)' : 560;
-  const panelBottom = isFullscreen ? 0 : isMobile ? 92 : 88;
-  const panelRight = isFullscreen ? 0 : isMobile ? 8 : 24;
+  const panelW = isFullscreen ? '100vw' : isMobile ? 'min(360px, calc(100vw - 24px))' : 380;
+  const panelH = isFullscreen ? '100dvh' : isMobile ? 'min(560px, 68dvh)' : 560;
+  const panelBottom = isFullscreen ? 0 : isMobile ? 76 : 88;
+  const panelRight = isFullscreen ? 0 : isMobile ? 12 : 24;
   const panelRadius = isFullscreen ? 0 : 18;
 
   const SizeIcon = panelSize === 'fullscreen' ? Minimize2 : Maximize2;
@@ -329,7 +356,8 @@ const AiChat: React.FC = () => {
                                     style={isDark ? oneDark : oneLight}
                                     language={match[1]}
                                     PreTag="div"
-                                    customStyle={{ margin: 0, borderRadius: '0 0 8px 8px', fontSize: '0.78rem' }}
+                                    wrapLongLines
+                                    customStyle={{ margin: 0, borderRadius: '0 0 8px 8px', fontSize: '0.78rem', maxWidth: '100%' }}
                                   >
                                     {codeStr}
                                   </SyntaxHighlighter>
@@ -605,6 +633,7 @@ const AiChat: React.FC = () => {
         }
         .ai-msg__bubble {
           max-width: 82%; position: relative; min-width: 0;
+          overflow-wrap: anywhere;
         }
         .ai-msg--user .ai-msg__bubble > span {
           display: block;
@@ -634,6 +663,8 @@ const AiChat: React.FC = () => {
           border-radius: 4px 16px 16px 16px;
           font-size: 0.85rem; line-height: 1.65;
           max-width: 100%; overflow-x: auto; box-sizing: border-box;
+          overflow-wrap: anywhere;
+          word-break: normal;
           transform: translateZ(0); /* For crisp subpixel rendering */
         }
         .ai-panel--light .ai-markdown { background: rgba(241, 245, 249, 0.8); color: #0f172a; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
@@ -641,7 +672,10 @@ const AiChat: React.FC = () => {
         .ai-markdown p { margin: 0 0 0.5em 0; }
         .ai-markdown p:last-child { margin-bottom: 0; }
         .ai-markdown ul, .ai-markdown ol { padding-left: 1.2em; margin: 0.4em 0; }
-        .ai-markdown li { margin: 0.2em 0; }
+        .ai-markdown li { margin: 0.2em 0; overflow-wrap: anywhere; }
+        .ai-markdown a { color: #008c3a; overflow-wrap: anywhere; }
+        .ai-panel--dark .ai-markdown a { color: #6ee7b7; }
+        .ai-markdown pre { max-width: 100%; overflow-x: auto; }
         .ai-markdown strong { font-weight: 700; }
         .ai-markdown em { font-style: italic; }
         .ai-panel--light .ai-markdown code { background: rgba(0,0,0,0.07); padding: 1px 4px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.78em; }
@@ -742,6 +776,11 @@ const AiChat: React.FC = () => {
           .ai-messages { padding: 12px 10px; }
           .ai-input-area { padding: 10px 10px 8px; }
           .ai-msg__bubble { max-width: 86%; }
+          .ai-msg__ts { opacity: 0.72; bottom: -16px; }
+          .ai-markdown { padding: 10px 12px; font-size: 0.81rem; line-height: 1.55; }
+          .ai-markdown table { min-width: 320px; font-size: 0.82em; }
+          .ai-markdown th, .ai-markdown td { padding: 5px 8px; }
+          .ai-code-block__header { padding: 4px 8px; }
         }
       `}</style>
     </>

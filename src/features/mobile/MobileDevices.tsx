@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { apiService } from '../../services/api';
 import {
   Wifi, WifiOff, RefreshCw, Thermometer, Signal, AlertTriangle,
-  Search, X, FileText, ChevronDown, ChevronUp, Loader2,
+  Search, X, FileText, ChevronDown, ChevronUp, Loader2, Eye,
   Activity, Cpu, Clock, Radio, Settings, Shield, MoreVertical,
   RotateCcw, Trash2, Pencil, Download, BellOff, Bell, Menu
 } from 'lucide-react';
@@ -12,6 +12,11 @@ import finalLogo from '../../assets/finalLogo.png';
 interface Device {
   id: number;
   device_serial: string;
+  user?: string;
+  config_version?: string;
+  wifi_ssid?: string;
+  wifi_password?: string;
+  alerts_muted_until?: string | null;
   hw_id?: string;
   model?: string;
   firmware_version?: string;
@@ -35,27 +40,66 @@ interface LogEntry {
   timestamp: string;
   log_level: string;
   message: string;
+  filename?: string;
+  size_bytes?: number;
 }
 
-const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; muted: string; sub: string }> = ({ deviceId, isDark, border, muted, sub }) => {
+const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; muted: string; text: string }> = ({ deviceId, isDark, border, muted, text }) => {
   const [logs, setLogs]       = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
+  const [from, setFrom]       = useState('');
+  const [to, setTo]           = useState('');
+  const [scanDate, setScanDate] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [viewing, setViewing] = useState<{ name: string; content: string } | null>(null);
 
-  useEffect(() => {
+  const loadLogs = useCallback((start?: string, end?: string) => {
     let cancelled = false;
     setLoading(true); setError('');
-    setLogs([]);
-    setLoading(false);
+    apiService.getDeviceLogFiles(deviceId, 8, 0, start, end)
+      .then((response) => {
+        if (cancelled) return;
+        const files = Array.isArray(response?.files) ? response.files : [];
+        setLogs(files.map((file: any) => ({
+          id: file.id,
+          timestamp: file.created_at || file.modified_at || file.last_modified || file.timestamp,
+          log_level: file.level || 'FILE',
+          message: file.filename || file.name || 'Device log file',
+          filename: file.filename || file.name,
+          size_bytes: file.size_bytes || file.size,
+        })));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLogs([]);
+          setError('Failed to load device log files');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => { cancelled = true; };
+  }, [deviceId]);
+
+  useEffect(() => {
+    const cleanup = loadLogs();
+    return cleanup;
   }, [deviceId]);
 
   const levelColor = (l: string) => {
     const u = l.toUpperCase();
     if (u === 'ERROR' || u === 'CRITICAL') return '#F87171';
     if (u === 'WARNING' || u === 'WARN')   return '#F59E0B';
-    if (u === 'INFO')                       return '#60A5FA';
+    if (u === 'INFO' || u === 'FILE')       return '#60A5FA';
     return muted;
+  };
+
+  const fmtSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${bytes} B`;
   };
 
   if (loading) return (
@@ -68,6 +112,30 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
 
   return (
     <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', overflow: 'hidden' }}>
+      <div style={{ padding: '9px 10px', borderBottom: `1px solid ${border}`, display: 'grid', gap: 8, background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: isDark ? '#CBD5E1' : '#334155', fontSize: '0.72rem' }} />
+          <input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: isDark ? '#CBD5E1' : '#334155', fontSize: '0.72rem' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <button onClick={() => loadLogs(from || undefined, to || undefined)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: '0.72rem', fontWeight: 700 }}>Fetch</button>
+          <button onClick={() => apiService.bulkDownloadLogFiles(deviceId, from || undefined, to || undefined).catch(() => setError('Failed to download logs'))} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, fontSize: '0.72rem', fontWeight: 700 }}>All</button>
+          <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.22)`, background: 'transparent', color: '#ef4444', fontSize: '0.72rem' }} />
+        </div>
+        <button onClick={async () => {
+          if (!scanDate) return;
+          setScanLoading(true); setError('');
+          try {
+            const result = await apiService.scanDeviceLogFiles(deviceId, scanDate);
+            const summary = [`Scanned ${result.files_scanned} files`, `${result.total_errors} errors`, `${result.total_warnings} warnings`].join(' · ');
+            setViewing({ name: `Scan ${scanDate}`, content: `${summary}\n\n${result.results.map((r: any) => [`# ${r.filename}`, ...r.errors.map((e: any) => `ERROR line ${e.line}: ${e.text}`), ...r.warnings.map((w: any) => `WARN line ${w.line}: ${w.text}`)].join('\n')).join('\n\n') || 'No issues found.'}` });
+          } catch {
+            setError('Failed to scan logs for selected date');
+          } finally {
+            setScanLoading(false);
+          }
+        }} disabled={!scanDate || scanLoading} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.22)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.72rem', fontWeight: 700 }}>{scanLoading ? 'Scanning…' : 'Scan Log Day'}</button>
+      </div>
       <div style={{ maxHeight: 240, overflowY: 'auto' }}>
         {logs.map((entry, i) => (
           <div key={entry.id} style={{ display: 'flex', gap: 8, padding: '7px 11px', borderTop: i === 0 ? 'none' : `1px solid ${border}` }}>
@@ -77,12 +145,34 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '0.68rem', color: isDark ? '#CBD5E1' : '#334155', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{entry.message}</div>
               <div style={{ fontSize: '0.6rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
-                {new Date(entry.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'No timestamp'}
+                {entry.size_bytes ? ` · ${fmtSize(entry.size_bytes)}` : ''}
               </div>
             </div>
+            {entry.id && (
+              <div style={{ alignSelf: 'center', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button onClick={() => apiService.getDeviceLogFileContent(deviceId, entry.id).then(content => setViewing({ name: entry.filename || entry.message, content })).catch(() => setError('Failed to open log file'))} style={{ border: 'none', background: 'transparent', color: muted, cursor: 'pointer', padding: 4, display: 'flex' }} title="View log">
+                  <Eye size={12} />
+                </button>
+                <button onClick={() => apiService.getDeviceLogFileDownloadUrl(deviceId, entry.id).then(({ url }) => window.open(url, '_blank')).catch(() => setError('Failed to download log file'))} style={{ border: 'none', background: 'transparent', color: muted, cursor: 'pointer', padding: 4, display: 'flex' }} title="Download log">
+                  <Download size={12} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
+      {viewing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 70, display: 'flex', alignItems: 'flex-end' }} onClick={() => setViewing(null)}>
+          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '75dvh', border: `1px solid ${border}`, display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewing.name}</div>
+              <button onClick={() => setViewing(null)} style={{ width: 32, height: 32, borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
+            </div>
+            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontSize: '0.68rem', lineHeight: 1.5, color: isDark ? '#CBD5E1' : '#334155', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{viewing.content}</pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -131,6 +221,19 @@ const MobileDevices: React.FC = () => {
   const [logsOpen,   setLogsOpen]   = useState<Set<number>>(new Set());
   const [actionMenu, setActionMenu] = useState<number | null>(null);
   const [modal,      setModal]      = useState<{ type: 'reboot' | 'reset' | 'delete' | null; device: Device | null }>({ type: null, device: null });
+  const [actionBusy, setActionBusy] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
+  const [editForm, setEditForm] = useState({
+    device_serial: '',
+    user: '',
+    config_version: '',
+    wifi_ssid: '',
+    wifi_password: '',
+  });
 
   const fetchDevices = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -141,6 +244,88 @@ const MobileDevices: React.FC = () => {
   }, []);
 
   useEffect(() => { fetchDevices(); }, [fetchDevices]);
+
+  const openEdit = useCallback(async (device: Device) => {
+    setActionMenu(null);
+    setEditError('');
+    setShowWifiPassword(false);
+    setEditLoading(true);
+    try {
+      const fullDevice = await apiService.getDevice(device.id);
+      setEditingDevice(fullDevice);
+      setEditForm({
+        device_serial: fullDevice.device_serial || device.device_serial,
+        user: fullDevice.user || '',
+        config_version: fullDevice.config_version || '',
+        wifi_ssid: fullDevice.wifi_ssid || '',
+        wifi_password: '',
+      });
+    } catch {
+      setEditingDevice(device);
+      setEditForm({
+        device_serial: device.device_serial,
+        user: device.user || '',
+        config_version: device.config_version || '',
+        wifi_ssid: device.wifi_ssid || '',
+        wifi_password: '',
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!editingDevice) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const payload: Record<string, unknown> = {
+        user: editForm.user || '',
+        config_version: editForm.config_version || '',
+        wifi_ssid: editForm.wifi_ssid || '',
+      };
+      if (showWifiPassword && editForm.wifi_password) {
+        payload.wifi_password = editForm.wifi_password;
+      }
+      await apiService.patchDevice(editingDevice.id, payload);
+      setEditingDevice(null);
+      setShowWifiPassword(false);
+      await fetchDevices(true);
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'Failed to update device');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editingDevice, editForm, showWifiPassword, fetchDevices]);
+
+  const confirmAction = useCallback(async () => {
+    if (!modal.type || !modal.device) return;
+    setActionBusy(true);
+    try {
+      if (modal.type === 'reboot') await apiService.rebootDevice(modal.device.id);
+      if (modal.type === 'reset') await apiService.hardResetDevice(modal.device.id);
+      if (modal.type === 'delete') await apiService.deleteDevice(modal.device.id);
+      setModal({ type: null, device: null });
+      await fetchDevices(true);
+    } finally {
+      setActionBusy(false);
+    }
+  }, [modal, fetchDevices]);
+
+  const toggleAlertsMute = useCallback(async (device: Device) => {
+    setActionMenu(null);
+    const muted = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
+    try {
+      if (muted) {
+        await apiService.unmuteDeviceAlerts(device.id);
+      } else {
+        await apiService.muteDeviceAlerts(device.id, null);
+      }
+      await fetchDevices(true);
+    } catch {
+      // keep UI stable; list refresh remains source of truth
+    }
+  }, [fetchDevices]);
 
   const filtered = devices.filter(d => {
     if (filter === 'online'  && !d.is_online) return false;
@@ -285,6 +470,7 @@ const MobileDevices: React.FC = () => {
             const uptime = fmtUptime(device.uptime_seconds);
             const freeMem = fmtBytes(device.free_memory_bytes);
             const onlineColor = device.is_online ? '#2FBF71' : '#475569';
+            const alertsMuted = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
 
             return (
               <div key={device.id} style={{ background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -396,6 +582,7 @@ const MobileDevices: React.FC = () => {
                           { label: 'Auto Reboot', on: device.auto_reboot_enabled },
                           { label: 'Logs',        on: device.logs_enabled !== false },
                           { label: 'Config Sync', on: !device.pending_config_update },
+                          { label: alertsMuted ? 'Alerts Muted' : 'Alerts Live', on: !alertsMuted },
                         ].map(({ label, on }) => (
                           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(47,191,113,0.1)' : 'rgba(71,85,105,0.12)', color: on ? '#2FBF71' : '#64748b', border: `1px solid ${on ? 'rgba(47,191,113,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'DM Sans', sans-serif" }}>
                             <Settings size={9} />{label}
@@ -413,7 +600,7 @@ const MobileDevices: React.FC = () => {
                         {isLogs ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
                       </button>
 
-                      {isLogs && <LogPanel deviceId={device.id} isDark={isDark} border={border} muted={muted} sub={muted} />}
+                      {isLogs && <LogPanel deviceId={device.id} isDark={isDark} border={border} muted={muted} text={text} />}
                     </div>
                   </div>
                 )}
@@ -437,9 +624,14 @@ const MobileDevices: React.FC = () => {
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}`, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Actions</div>
             <div style={{ padding: '8px' }}>
               {[
-                { label: 'Edit', icon: <Pencil size={16} />, onClick: () => { setActionMenu(null); }, color: '#3B82F6' },
+                { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEdit(filtered.find(d => d.id === actionMenu)!), color: '#3B82F6' },
                 { label: 'Reboot', icon: <RotateCcw size={16} />, onClick: () => { setModal({ type: 'reboot', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
                 { label: 'Hard Reset', icon: <AlertTriangle size={16} />, onClick: () => { setModal({ type: 'reset', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
+                ((() => {
+                  const device = filtered.find(d => d.id === actionMenu)!;
+                  const mutedNow = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
+                  return { label: mutedNow ? 'Unmute Alerts' : 'Mute Alerts', icon: mutedNow ? <Bell size={16} /> : <BellOff size={16} />, onClick: () => toggleAlertsMute(device), color: '#94A3B8' };
+                })()),
                 { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => { setModal({ type: 'delete', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#EF4444' },
               ].map(({ label, icon, onClick, color }) => (
                 <button key={label} onClick={onClick} style={{
@@ -478,12 +670,61 @@ const MobileDevices: React.FC = () => {
               <button onClick={() => setModal({ type: null, device: null })} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: `1px solid ${border}`,
                 background: 'transparent', color: muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
-              }}>Cancel</button>
-              <button onClick={() => { setModal({ type: null, device: null }); }} style={{
+              }} disabled={actionBusy}>Cancel</button>
+              <button onClick={confirmAction} disabled={actionBusy} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: 'none',
                 background: modal.type === 'delete' ? '#EF4444' : '#F59E0B', color: '#FFFFFF', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
-              }}>{modal.type === 'reboot' ? 'Reboot' : modal.type === 'reset' ? 'Reset' : 'Delete'}</button>
+              }}>{actionBusy ? 'Working…' : modal.type === 'reboot' ? 'Reboot' : modal.type === 'reset' ? 'Reset' : 'Delete'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingDevice && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 45, display: 'flex', alignItems: 'flex-end' }} onClick={() => !editSaving && setEditingDevice(null)}>
+          <div style={{ width: '100%', maxHeight: '88dvh', overflowY: 'auto', borderRadius: '20px 20px 0 0', background: surface, borderTop: `1px solid ${border}`, padding: '18px 16px 28px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Edit device</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif" }}>{editForm.device_serial}</div>
+              </div>
+              <button onClick={() => setEditingDevice(null)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
+            </div>
+
+            {editLoading ? (
+              <div style={{ padding: '18px 0', textAlign: 'center', fontSize: '0.78rem', color: muted }}>Loading device details…</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Assigned User</label>
+                  <input value={editForm.user} onChange={e => setEditForm(prev => ({ ...prev, user: e.target.value }))} placeholder="Username" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi SSID</label>
+                  <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi Password</label>
+                    <button type="button" onClick={() => { setShowWifiPassword(v => !v); if (showWifiPassword) setEditForm(prev => ({ ...prev, wifi_password: '' })); }} style={{ border: `1px solid ${border}`, background: 'transparent', color: text, borderRadius: 999, padding: '5px 9px', fontSize: '0.68rem', fontWeight: 700 }}>
+                      {showWifiPassword ? 'Cancel' : 'Change'}
+                    </button>
+                  </div>
+                  {showWifiPassword && (
+                    <input type="password" value={editForm.wifi_password} onChange={e => setEditForm(prev => ({ ...prev, wifi_password: e.target.value }))} placeholder="New Wi-Fi password" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                  )}
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Config Version ID</label>
+                  <input value={editForm.config_version} onChange={e => setEditForm(prev => ({ ...prev, config_version: e.target.value }))} placeholder="Config version" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                </div>
+                {editError && <div style={{ fontSize: '0.72rem', color: '#F87171', lineHeight: 1.4 }}>{editError}</div>}
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button onClick={() => setEditingDevice(null)} disabled={editSaving} style={{ flex: 1, padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: text, fontWeight: 700 }}>Cancel</button>
+                  <button onClick={saveEdit} disabled={editSaving || editLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#2FBF71', color: '#fff', fontWeight: 700 }}>{editSaving ? 'Saving…' : 'Save'}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

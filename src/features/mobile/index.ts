@@ -9,3 +9,5 @@ export { default as MobileSiteDetail } from './MobileSiteDetail';
 export { default as MobileEquipment } from './MobileEquipment';
 export { default as MobileOTA } from './MobileOTA';
 export { default as MobileProfile } from './MobileProfile';
+export { default as MobileQuotationPage } from './MobileQuotationPage';
+export { default as MobileDevicePresets } from './MobileDevicePresets';

@@ -99,6 +99,7 @@ const MobileDashboard: React.FC = () => {
     const ids = new Set(site.devices.map(d => d.device_id));
     return allAlerts.filter(a => ids.has(parseInt(a.device_id)) && !a.resolved && (a.status === 'active' || a.status === 'acknowledged' || a.status == null));
   }, [allAlerts, site]);
+  const hasCriticalAlerts = activeAlerts.some(a => a.severity === 'critical');
 
   const lastTelemetry = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
   const dataIsStale = !!lastTelemetry && !isFreshTelemetry(lastTelemetry);
@@ -166,6 +167,16 @@ const MobileDashboard: React.FC = () => {
     const id = setInterval(() => fetchTelemetry(selectedId), 60_000);
     return () => clearInterval(id);
   }, [selectedId, fetchTelemetry, fetchWeather]);
+
+  useEffect(() => {
+    if (activeAlerts.length === 0) {
+      setAlertsOpen(false);
+      return;
+    }
+    if (hasCriticalAlerts || !online || dataIsStale) {
+      setAlertsOpen(true);
+    }
+  }, [activeAlerts.length, hasCriticalAlerts, online, dataIsStale]);
 
   const chartData = useMemo(() => {
     const rows = telemetry.filter(r => r.pv1_power_w != null || r.load_power_w != null);
@@ -487,6 +498,68 @@ const MobileDashboard: React.FC = () => {
               style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
           </button>
 
+          {activeAlerts.length > 0 && (
+            <div style={{
+              borderRadius: 12,
+              overflow: 'hidden',
+              border: `1px solid ${hasCriticalAlerts ? 'rgba(239,68,68,0.24)' : 'rgba(245,158,11,0.24)'}`,
+              background: hasCriticalAlerts
+                ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
+                : (isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)'),
+            }}>
+              <button
+                onClick={() => setAlertsOpen(o => !o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', border: 'none', background: 'transparent',
+                  color: hasCriticalAlerts ? '#EF4444' : '#F59E0B', cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                  <div style={{ textAlign: 'left', minWidth: 0 }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 800, fontFamily: "'DM Sans', sans-serif" }}>{activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}</div>
+                    <div style={{ fontSize: '0.62rem', opacity: 0.85, fontFamily: "'DM Sans', sans-serif", whiteSpace: 'normal', lineHeight: 1.35 }}>
+                      {activeAlerts[0]?.message}
+                    </div>
+                  </div>
+                </div>
+                {alertsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+              {alertsOpen && (
+                <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {activeAlerts.map(a => {
+                    const palette = a.severity === 'critical'
+                      ? { bg: isDark ? 'rgba(127,29,29,0.35)' : 'rgba(254,226,226,0.9)', border: 'rgba(239,68,68,0.28)', color: '#EF4444' }
+                      : a.severity === 'warning'
+                        ? { bg: isDark ? 'rgba(120,53,15,0.28)' : 'rgba(255,247,237,0.95)', border: 'rgba(245,158,11,0.28)', color: '#F59E0B' }
+                        : { bg: isDark ? 'rgba(30,64,175,0.22)' : 'rgba(239,246,255,0.95)', border: 'rgba(96,165,250,0.28)', color: '#60A5FA' };
+                    return (
+                      <div key={a.id} style={{ borderRadius: 10, border: `1px solid ${palette.border}`, background: palette.bg, padding: '9px 10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                          <AlertTriangle size={12} color={palette.color} style={{ marginTop: 2, flexShrink: 0 }} />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            {a.fault_code && (
+                              <div style={{ fontSize: '0.58rem', fontWeight: 800, color: palette.color, fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>
+                                {a.fault_code}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '0.69rem', fontWeight: 700, color: palette.color, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.35 }}>
+                              {a.message}
+                            </div>
+                            <div style={{ fontSize: '0.58rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
+                              Device {a.device_id}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {(dataIsStale || !lastTelemetry) && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
@@ -573,63 +646,6 @@ const MobileDashboard: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* ── Active alerts strip ── */}
-          {(() => {
-            const sevPalette: Record<string, { bg: string; color: string; border: string }> = {
-              critical: { bg: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)', color: '#EF4444', border: 'rgba(239,68,68,0.25)' },
-              warning:  { bg: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.07)', color: '#F59E0B', border: 'rgba(245,158,11,0.25)' },
-              info:     { bg: isDark ? 'rgba(96,165,250,0.12)' : 'rgba(96,165,250,0.07)', color: '#60A5FA', border: 'rgba(96,165,250,0.25)' },
-            };
-            if (activeAlerts.length === 0) {
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.2)' }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2FBF71', boxShadow: '0 0 6px #2FBF71' }} />
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#2FBF71', fontFamily: "'DM Sans', sans-serif" }}>All systems normal</span>
-                </div>
-              );
-            }
-            const hasCritical = activeAlerts.some(a => a.severity === 'critical');
-            const headerColor = hasCritical ? '#EF4444' : '#F59E0B';
-            return (
-              <div style={{ ...card(), padding: 0, overflow: 'hidden', border: `1px solid ${hasCritical ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.25)'}` }}>
-                <button
-                  onClick={() => setAlertsOpen(o => !o)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: hasCritical ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)') : (isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.05)'), border: 'none', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AlertTriangle size={13} color={headerColor} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: headerColor, fontFamily: "'DM Sans', sans-serif" }}>
-                      {activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  {alertsOpen ? <ChevronUp size={13} color={headerColor} /> : <ChevronDown size={13} color={headerColor} />}
-                </button>
-                {alertsOpen && (
-                  <div style={{ padding: '8px 10px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {activeAlerts.map(a => {
-                      const p = sevPalette[a.severity] ?? sevPalette.info;
-                      return (
-                        <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 0, borderRadius: 9, overflow: 'hidden', border: `1px solid ${p.border}`, background: p.bg }}>
-                          <div style={{ width: 3, alignSelf: 'stretch', background: p.color, flexShrink: 0 }} />
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', flex: 1, minWidth: 0 }}>
-                            <AlertTriangle size={11} color={p.color} style={{ flexShrink: 0, marginTop: 2 }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              {a.fault_code && (
-                                <span style={{ fontSize: '0.58rem', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", padding: '1px 5px', borderRadius: 999, background: `${p.color}20`, color: p.color, marginRight: 5, display: 'inline-block', marginBottom: 3 }}>{a.fault_code}</span>
-                              )}
-                              <div style={{ fontSize: '0.71rem', fontWeight: 600, color: p.color, fontFamily: "'DM Sans', sans-serif" }}>{a.message}</div>
-                              <div style={{ fontSize: '0.58rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>Device {a.device_id}</div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
 
           <EnergyFlowBlock
             pvKw={pvW != null ? pvW / 1000 : null}

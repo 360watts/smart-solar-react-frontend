@@ -13,6 +13,7 @@ import { usePdfExport, generatePdfBlob } from './hooks/usePdfExport';
 import { useSaveDraft } from './hooks/useSaveDraft';
 import { calcEbBill } from './utils/roiCalculator';
 import type { QuotationData } from './types/quotation';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
 
 function formatRelativeTime(date: Date): string {
   const secs = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -163,6 +164,7 @@ interface WizardProps {
 }
 
 export default function QuotationWizard({ publicId, onSaved }: WizardProps = {}) {
+  const isMobile = useIsMobile();
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
   const [loadingDraft, setLoadingDraft] = useState(!!publicId);
@@ -284,10 +286,10 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
 
   return (
     <>
-    <div className="sq-layout">
+    <div className={`sq-layout ${isMobile ? 'sq-layout--mobile' : ''}`}>
 
       {/* ── Sidebar ── */}
-      <aside className="sq-sidebar">
+      {!isMobile && <aside className="sq-sidebar">
         <p className="sq-sidebar-label">Steps</p>
 
         {/* Vertical spine */}
@@ -332,10 +334,38 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             <div className="sq-progress-fill" style={{ width: `${pct}%` }} />
           </div>
         </div>
-      </aside>
+      </aside>}
 
       {/* ── Content ── */}
       <div className="sq-content">
+        {isMobile && (
+          <div className="sq-mobile-steps">
+            <div className="sq-mobile-steps__top">
+              <span className="sq-mobile-steps__eyebrow">Proposal Flow</span>
+              <span className="sq-mobile-steps__progress">{step}/{STEPS.length}</span>
+            </div>
+            <div className="sq-mobile-steps__rail">
+              {STEPS.map((s) => {
+                const done = step > s.id;
+                const active = step === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => goTo(s.id)}
+                    className={`sq-mobile-step-chip ${active ? 'active' : ''} ${done ? 'done' : ''}`}
+                  >
+                    <span className="sq-mobile-step-chip__num">{done ? 'OK' : s.num}</span>
+                    <span className="sq-mobile-step-chip__label">{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="sq-mobile-steps__bar">
+              <div className="sq-mobile-steps__bar-fill" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
 
         {/* Content header */}
         <div className="sq-content-header">
@@ -410,7 +440,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             Back
           </button>
 
-          <span className="sq-step-counter">{step} / {STEPS.length}</span>
+          {!isMobile && <span className="sq-step-counter">{step} / {STEPS.length}</span>}
 
           <button
             type="button"

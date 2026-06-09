@@ -3736,6 +3736,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const deyeCloudAgeMs = isDeyeCloud ? latestAgeMs : null;
   // Logger considered offline/standby if Deye Cloud data is older than 20 min
   const loggerOffline = isDeyeCloud && deyeCloudAgeMs != null && deyeCloudAgeMs > 20 * 60 * 1000;
+  const gatewayIsOnline = gatewayOnline === null ? null : gatewayOnline === true;
 
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
@@ -4422,7 +4423,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 }}
                 transition={tabTransition}
               >
-                {/* ── Deye Cloud Fallback Banner ── */}
+                {/* ── Deye Cloud Status Banner ── */}
                 {isDeyeCloud && (
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
@@ -4434,10 +4435,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       marginBottom: 16,
                       padding: '10px 16px',
                       borderRadius: 10,
-                      background: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)',
-                      border: '1px solid rgba(59,130,246,0.35)',
+                      background: loggerOffline
+                        ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)')
+                        : (isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)'),
+                      border: loggerOffline ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(59,130,246,0.35)',
                       fontSize: '0.8rem',
-                      color: '#3b82f6',
+                      color: loggerOffline ? '#ef4444' : '#3b82f6',
                     }}
                   >
                     <span style={{ fontSize: '1rem' }}>☁️</span>
@@ -4447,11 +4450,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 4,
                           padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600,
-                          background: 'rgba(239,68,68,0.12)', color: '#ef4444',
-                          border: '1px solid rgba(239,68,68,0.3)',
+                          background: gatewayOffline ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
+                          color: gatewayOffline ? '#ef4444' : '#3b82f6',
+                          border: `1px solid ${gatewayOffline ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`,
                         }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                          Gateway offline
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: gatewayOffline ? '#ef4444' : '#3b82f6', display: 'inline-block' }} />
+                          {gatewayOffline ? 'Gateway offline' : 'Gateway online'}
                         </span>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -4468,7 +4472,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       <span style={{ opacity: 0.85 }}>
                         {loggerOffline
                           ? <>RS-485 monitoring unavailable. Deye Cloud data is <strong>{Math.round((deyeCloudAgeMs ?? 0) / 60000)} min old</strong> — logger may be in nighttime standby.</>
-                          : <>RS-485 gateway offline. Showing last known values from the <strong>Deye Cloud logger</strong> (WiFi stick).</>
+                          : <>
+                              Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick).
+                              {gatewayIsOnline === true ? ' RS-485 gateway is online.' : gatewayIsOnline === false ? ' RS-485 gateway is offline.' : ''}
+                            </>
                         }
                       </span>
                     </div>

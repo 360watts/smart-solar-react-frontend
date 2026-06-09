@@ -6,6 +6,9 @@ import { apiService, QuotationListItem } from '../../services/api';
 import { generatePdfBlob } from './hooks/usePdfExport';
 import type { QuotationData } from './types/quotation';
 import QuotationWizard from './QuotationWizard';
+import PageHeader from '../../shared/layout/PageHeader';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobileQuotationPage from '../mobile/MobileQuotationPage';
 import './quotation.css';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
@@ -248,6 +251,8 @@ function Loader2({ style, className }: { style?: React.CSSProperties; className?
 }
 
 export default function QuotationPage() {
+  const isMobile = useIsMobile();
+  if (isMobile) return <MobileQuotationPage />;
   const [view, setView] = useState<'list' | 'wizard'>('list');
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -329,21 +334,19 @@ export default function QuotationPage() {
 
   if (view === 'wizard') {
     return (
-      <div className="sq-root sq-page">
-        <div className="sq-page-inner">
-          <header className="sq-header">
-            <div className="sq-header-left">
-              <button
-                type="button"
-                onClick={backToList}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-muted)', fontSize: '0.75rem', padding: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                ← All Quotations
-              </button>
-              <h1 className="sq-header-title">{editId ? 'Edit' : 'New'} <em>Solar</em> Proposal</h1>
-            </div>
-            <span className="sq-header-badge">Proposal Generator v2</span>
-          </header>
+      <div className="admin-container responsive-page sq-root">
+        <PageHeader
+          icon={<FileText size={20} color="white" />}
+          title={editId ? 'Edit Solar Proposal' : 'New Solar Proposal'}
+          subtitle="Proposal generator for customer quotation workflows"
+          rightSlot={(
+            <button type="button" className="btn btn-secondary" onClick={backToList}>
+              <ChevronLeft style={{ width: 14, height: 14, marginRight: 6 }} />
+              All Quotations
+            </button>
+          )}
+        />
+        <div className="sq-page-inner sq-page-inner--embedded">
           <QuotationWizard publicId={editId} onSaved={backToList} />
         </div>
       </div>
@@ -351,44 +354,42 @@ export default function QuotationPage() {
   }
 
   return (
-    <div className="sq-root sq-page">
+    <div className="admin-container responsive-page sq-root">
       <div className="sq-history-page">
-
-        {/* Header */}
-        <div className="sq-history-header">
-          <div>
-            <p className="sq-header-eyebrow">360Watts CRM</p>
-            <h1 className="sq-header-title">Solar <em>Quotations</em></h1>
-          </div>
-          <button type="button" className="sq-btn sq-btn-primary" onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <PageHeader
+          icon={<FileText size={20} color="white" />}
+          title="Solar Quotations"
+          subtitle="Create, share, and manage customer solar proposals"
+          rightSlot={(
+            <button type="button" className="btn" onClick={openNew}>
             <Plus style={{ width: 14, height: 14 }} />
             New Quotation
           </button>
-        </div>
-
-        {/* Filters */}
-        <div className="sq-history-filters">
-          <input
-            type="text"
-            className="sq-input sq-history-search"
-            placeholder="Search by customer or quote #…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select className="sq-select" value={status} onChange={e => setStatus(e.target.value as StatusFilter)}>
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>
-                {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-          </select>
-          {!loading && total > 0 && (
-            <span className="sq-history-count">{total} quote{total !== 1 ? 's' : ''}</span>
           )}
-        </div>
+        />
 
-        {/* Table */}
-        <div className="sq-history-table-wrap">
+        <div className="card sq-history-card">
+          <div className="card-header">
+            <h2>Quotations{!loading && total > 0 ? ` (${total})` : ''}</h2>
+            <div className="card-actions sq-history-filters">
+              <input
+                type="text"
+                className="search-input sq-history-search"
+                placeholder="Search by customer or quote #..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <select className="sq-select" value={status} onChange={e => setStatus(e.target.value as StatusFilter)}>
+                {STATUS_OPTIONS.map(s => (
+                  <option key={s} value={s}>
+                    {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="sq-history-table-wrap">
           <table className="sq-history-table">
             <thead>
               <tr>
@@ -472,11 +473,12 @@ export default function QuotationPage() {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
 
-        {!loading && !error && (
-          <Pagination page={page} totalPages={totalPages} onChange={p => { setPage(p); fetchPage(p, search, status); }} />
-        )}
+          {!loading && !error && (
+            <Pagination page={page} totalPages={totalPages} onChange={p => { setPage(p); fetchPage(p, search, status); }} />
+          )}
+        </div>
       </div>
 
       {deleteTarget && (
