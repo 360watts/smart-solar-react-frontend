@@ -101,6 +101,7 @@ const AiChat: React.FC = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isStreamingRef = useRef(false);
   const [ticks, setTicks] = useState(0);
+  const compactChat = isMobile && panelSize === 'compact';
 
   // Tick timestamps every 30s for relative time display
   useEffect(() => {
@@ -231,11 +232,12 @@ const AiChat: React.FC = () => {
 
   // Panel dimensions
   const isFullscreen = panelSize === 'fullscreen';
-  const panelW = isFullscreen ? '100vw' : isMobile ? 'min(360px, calc(100vw - 24px))' : 380;
-  const panelH = isFullscreen ? '100dvh' : isMobile ? 'min(560px, 68dvh)' : 560;
+  const panelW = isFullscreen ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 372;
+  const panelH = isFullscreen ? '100dvh' : isMobile ? 'min(500px, 62dvh)' : 548;
   const panelBottom = isFullscreen ? 0 : isMobile ? 76 : 88;
-  const panelRight = isFullscreen ? 0 : isMobile ? 12 : 24;
-  const panelRadius = isFullscreen ? 0 : 18;
+  const panelRight = isFullscreen ? 0 : isMobile ? 8 : 24;
+  const panelRadius = isFullscreen ? 0 : compactChat ? 16 : 18;
+  const visibleSuggestions = compactChat ? SUGGESTED.slice(0, 2) : SUGGESTED;
 
   const SizeIcon = panelSize === 'fullscreen' ? Minimize2 : Maximize2;
 
@@ -274,7 +276,7 @@ const AiChat: React.FC = () => {
           }}
         >
           {/* Header */}
-          <div className="ai-header">
+          <div className={`ai-header ${compactChat ? 'ai-header--compact' : ''}`}>
             <div className="ai-header__identity">
               <div className="ai-avatar">
                 <BotMessageSquare size={16} color="white" />
@@ -303,9 +305,11 @@ const AiChat: React.FC = () => {
             </div>
           </div>
 
-          <div className="ai-hero">
-            <div className="ai-hero__eyebrow">Internal operations console</div>
-          </div>
+          {!compactChat && (
+            <div className="ai-hero">
+              <div className="ai-hero__eyebrow">Internal operations console</div>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="ai-messages">
@@ -316,7 +320,7 @@ const AiChat: React.FC = () => {
                 </div>
                 <div className="ai-empty__title">Start with a device question</div>
                 <div className="ai-suggestions">
-                  {SUGGESTED.map(({ icon: Icon, label }) => (
+                  {visibleSuggestions.map(({ icon: Icon, label }) => (
                     <button key={label} className="ai-chip" onClick={() => sendMessage(label)}>
                       <Icon size={13} />
                       {label}
@@ -486,6 +490,7 @@ const AiChat: React.FC = () => {
           border-bottom: 1px solid rgba(0,0,0,0.15);
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        .ai-header--compact { padding: 12px 13px; }
         .ai-header__identity { display: flex; align-items: center; gap: 12px; }
         .ai-avatar {
           position: relative;
@@ -567,7 +572,7 @@ const AiChat: React.FC = () => {
 
         /* ── Messages ── */
         .ai-messages {
-          flex: 1; overflow-y: auto; padding: 14px 12px;
+          flex: 1; overflow-y: auto; padding: 12px 10px;
           display: flex; flex-direction: column; gap: 12px;
           scroll-behavior: smooth;
         }
@@ -577,7 +582,7 @@ const AiChat: React.FC = () => {
         /* ── Empty state ── */
         .ai-empty {
           flex: 1; display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 14px; padding: 36px 12px; text-align: center;
+          justify-content: center; gap: 12px; padding: 24px 10px 16px; text-align: center;
         }
         .ai-empty__icon {
           width: 56px; height: 56px; border-radius: 18px;
@@ -599,8 +604,8 @@ const AiChat: React.FC = () => {
         }
         .ai-chip {
           display: flex; align-items: center; gap: 8px;
-          padding: 10px 12px; border-radius: 12px;
-          font-size: 0.8rem; cursor: pointer; text-align: left;
+          padding: 9px 11px; border-radius: 12px;
+          font-size: 0.78rem; cursor: pointer; text-align: left;
           transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s, border-color 0.2s;
         }
         .ai-panel--light .ai-chip {
@@ -632,12 +637,12 @@ const AiChat: React.FC = () => {
           display: flex; align-items: center; justify-content: center;
         }
         .ai-msg__bubble {
-          max-width: 82%; position: relative; min-width: 0;
+          max-width: 84%; position: relative; min-width: 0;
           overflow-wrap: anywhere;
         }
         .ai-msg--user .ai-msg__bubble > span {
           display: block;
-          padding: 10px 14px;
+          padding: 9px 12px;
           border-radius: 16px 16px 4px 16px;
           background: linear-gradient(135deg, #00a63e 0%, #00c94a 100%);
           color: #fff; font-size: 0.85rem; line-height: 1.55;
@@ -659,9 +664,9 @@ const AiChat: React.FC = () => {
 
         /* ── Markdown ── */
         .ai-markdown {
-          padding: 12px 16px;
+          padding: 10px 13px;
           border-radius: 4px 16px 16px 16px;
-          font-size: 0.85rem; line-height: 1.65;
+          font-size: 0.83rem; line-height: 1.58;
           max-width: 100%; overflow-x: auto; box-sizing: border-box;
           overflow-wrap: anywhere;
           word-break: normal;
@@ -730,7 +735,7 @@ const AiChat: React.FC = () => {
 
         /* ── Input area ── */
         .ai-input-area {
-          padding: 12px 14px 10px; flex-shrink: 0;
+          padding: 10px 12px 10px; flex-shrink: 0;
         }
         .ai-panel--light .ai-input-area { border-top: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.7); }
         .ai-panel--dark  .ai-input-area { border-top: 1px solid rgba(255,255,255,0.05); background: rgba(15,25,35,0.7); }
@@ -768,16 +773,30 @@ const AiChat: React.FC = () => {
         .ai-panel--light .ai-input-hint { color: #94a3b8; }
         .ai-panel--dark  .ai-input-hint { color: #94a3b8; }
         @media (max-width: 640px) {
-          .ai-fab { width: 44px; height: 44px; box-shadow: 0 6px 22px rgba(0,166,62,0.34), inset 0 2px 4px rgba(255,255,255,0.24); }
+          .ai-fab { width: 42px; height: 42px; box-shadow: 0 6px 18px rgba(0,166,62,0.28), inset 0 2px 4px rgba(255,255,255,0.24); }
           .ai-fab__ring { inset: -3px; }
-          .ai-hero { padding: 14px 14px 10px; }
-          .ai-hero__metrics { grid-template-columns: 1fr; }
+          .ai-header { padding: 12px 13px; }
+          .ai-header__identity { gap: 9px; min-width: 0; }
+          .ai-avatar { width: 32px; height: 32px; border-radius: 10px; }
+          .ai-header__name { font-size: 0.85rem; }
+          .ai-header__status { font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+          .ai-hdr-btn { padding: 5px 8px; font-size: 0.69rem; }
+          .ai-hdr-btn--icon { padding: 5px; }
+          .ai-hero { padding: 10px 12px 8px; }
           .ai-suggestions { grid-template-columns: 1fr; }
-          .ai-messages { padding: 12px 10px; }
-          .ai-input-area { padding: 10px 10px 8px; }
-          .ai-msg__bubble { max-width: 86%; }
+          .ai-messages { padding: 10px 9px; gap: 10px; }
+          .ai-input-area { padding: 9px 9px 8px; }
+          .ai-msg__bubble { max-width: 90%; }
           .ai-msg__ts { opacity: 0.72; bottom: -16px; }
-          .ai-markdown { padding: 10px 12px; font-size: 0.81rem; line-height: 1.55; }
+          .ai-markdown { padding: 9px 11px; font-size: 0.79rem; line-height: 1.52; }
+          .ai-msg--user .ai-msg__bubble > span { padding: 8px 11px; font-size: 0.8rem; line-height: 1.5; }
+          .ai-empty { padding: 12px 6px 8px; gap: 10px; }
+          .ai-empty__icon { width: 44px; height: 44px; border-radius: 14px; }
+          .ai-empty__title { font-size: 0.95rem !important; }
+          .ai-chip { padding: 8px 10px; font-size: 0.75rem; border-radius: 10px; }
+          .ai-input-box { padding: 4px 6px; border-radius: 12px; }
+          .ai-textarea { font-size: 0.82rem; max-height: 88px; }
+          .ai-send-btn { width: 30px; height: 30px; border-radius: 8px; }
           .ai-markdown table { min-width: 320px; font-size: 0.82em; }
           .ai-markdown th, .ai-markdown td { padding: 5px 8px; }
           .ai-code-block__header { padding: 4px 8px; }

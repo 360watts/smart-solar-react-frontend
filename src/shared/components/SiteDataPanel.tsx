@@ -2790,6 +2790,7 @@ const PhaseLoadTab: React.FC<{
   const vsActualFetchedRef = useRef(false);
   const [evHistory, setEvHistory] = useState<any[]>([]);
   const [ctLatest, setCtLatest] = useState<any | null>(null);
+  const [ctHistoryRows, setCtHistoryRows] = useState<any[]>([]);
   const [siteHistoryRows, setSiteHistoryRows] = useState<any[]>([]);
   const loadBucketMinutes = 15;
 
@@ -2819,6 +2820,15 @@ const PhaseLoadTab: React.FC<{
     if (!siteId) return;
     const end = new Date();
     const start = new Date(end.getTime() - hours * 3600 * 1000);
+    apiService.getEnergyMeterHistory(siteId, {
+      start_date: start.toISOString(),
+      end_date: end.toISOString(),
+      aggregate: '15min',
+    }).then(rows => {
+      if (!cancelled) setCtHistoryRows(Array.isArray(rows) ? rows : []);
+    }).catch(() => {
+      if (!cancelled) setCtHistoryRows([]);
+    });
     apiService.getSiteHistory(siteId, {
       start_date: start.toISOString(),
       end_date: end.toISOString(),
@@ -2861,9 +2871,25 @@ const PhaseLoadTab: React.FC<{
       if (!Number.isFinite(num)) return null;
       return Math.abs(num) > 1000 ? num / 1000 : num;
     };
+    const fieldToKw = (row: any, key: string) => {
+      const raw = row?.[key];
+      if (raw == null || raw === '') return null;
+      const num = Number(raw);
+      if (!Number.isFinite(num)) return null;
+      if (key.endsWith('_kw')) return num;
+      if (
+        key.endsWith('_power_w') ||
+        key.startsWith('active_power_') ||
+        key.startsWith('reactive_power_') ||
+        key.startsWith('apparent_power_')
+      ) {
+        return num / 1000;
+      }
+      return toKw(num);
+    };
     const pickFirstKw = (row: any, keys: string[]) => {
       for (const key of keys) {
-        const val = toKw(row?.[key]);
+        const val = fieldToKw(row, key);
         if (val != null) return val;
       }
       return null;
@@ -2883,7 +2909,9 @@ const PhaseLoadTab: React.FC<{
       inverterL1: number; inverterL2: number; inverterL3: number;
       gridL1: number; gridL2: number; gridL3: number;
       ev: number;
-      n: number;
+      inverterN: number;
+      gridN: number;
+      evN: number;
     }>();
     const ensureBucket = (key: string, snapped: number) => {
       if (!map.has(key)) {
@@ -2896,7 +2924,9 @@ const PhaseLoadTab: React.FC<{
           gridL2: 0,
           gridL3: 0,
           ev: 0,
-          n: 0,
+          inverterN: 0,
+          gridN: 0,
+          evN: 0,
         });
       }
       return map.get(key)!;
@@ -2910,9 +2940,9 @@ const PhaseLoadTab: React.FC<{
       const inverterL1 = pickFirstKw(row, ['inverter_load_l1_kw', 'load_l1_kw', 'inverter_l1_kw', 'load_l1_power_w']) ?? 0;
       const inverterL2 = pickFirstKw(row, ['inverter_load_l2_kw', 'load_l2_kw', 'inverter_l2_kw', 'load_l2_power_w']) ?? 0;
       const inverterL3 = pickFirstKw(row, ['inverter_load_l3_kw', 'load_l3_kw', 'inverter_l3_kw', 'load_l3_power_w']) ?? 0;
-      const gridL1 = pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1', 'grid_l1_power_w']) ?? 0;
-      const gridL2 = pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2', 'grid_l2_power_w']) ?? 0;
-      const gridL3 = pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3', 'grid_l3_power_w']) ?? 0;
+      const gridL1 = Math.max(0, pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1']) ?? 0);
+      const gridL2 = Math.max(0, pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2']) ?? 0);
+      const gridL3 = Math.max(0, pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3']) ?? 0);
       const ev = pickFirstKw(row, ['ev_load_kw', 'ev_kw', 'ev_charger_kw', 'smart_device_kw']) ?? evByBucket.get(key) ?? 0;
       b.inverterL1 += inverterL1;
       b.inverterL2 += inverterL2;
@@ -2921,7 +2951,24 @@ const PhaseLoadTab: React.FC<{
       b.gridL2 += gridL2;
       b.gridL3 += gridL3;
       b.ev += ev;
-      b.n += 1;
+      if (inverterL1 !== 0 || inverterL2 !== 0 || inverterL3 !== 0) b.inverterN += 1;
+      if (gridL1 !== 0 || gridL2 !== 0 || gridL3 !== 0) b.gridN += 1;
+      if (ev !== 0) b.evN += 1;
+    }
+
+    for (const row of ctHistoryRows) {
+      const baseTs = new Date(row.timestamp);
+      if (Number.isNaN(baseTs.getTime())) continue;
+      const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
+      const key = new Date(snapped).toISOString();
+      const b = ensureBucket(key, snapped);
+      const nextGridL1 = row.active_power_l1 != null && Number.isFinite(Number(row.active_power_l1)) ? Math.max(0, Number(row.active_power_l1) / 1000) : null;
+      const nextGridL2 = row.active_power_l2 != null && Number.isFinite(Number(row.active_power_l2)) ? Math.max(0, Number(row.active_power_l2) / 1000) : null;
+      const nextGridL3 = row.active_power_l3 != null && Number.isFinite(Number(row.active_power_l3)) ? Math.max(0, Number(row.active_power_l3) / 1000) : null;
+      if (nextGridL1 != null) b.gridL1 += nextGridL1;
+      if (nextGridL2 != null) b.gridL2 += nextGridL2;
+      if (nextGridL3 != null) b.gridL3 += nextGridL3;
+      if (nextGridL1 != null || nextGridL2 != null || nextGridL3 != null) b.gridN += 1;
     }
 
     for (const row of siteHistoryRows) {
@@ -2930,35 +2977,33 @@ const PhaseLoadTab: React.FC<{
       const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
       const key = new Date(snapped).toISOString();
       const b = ensureBucket(key, snapped);
-      if ((b.gridL1 + b.gridL2 + b.gridL3) === 0) {
-        const gridTotal = toKw(row.grid_power_w) ?? 0;
-        b.gridL1 = gridTotal;
-      }
       if ((b.inverterL1 + b.inverterL2 + b.inverterL3) === 0) {
-        const inverterTotal = toKw(row.load_power_w) ?? 0;
+        const inverterTotal = row.load_power_w != null && Number.isFinite(Number(row.load_power_w))
+          ? Number(row.load_power_w) / 1000
+          : 0;
         b.inverterL1 = inverterTotal;
+        b.inverterN = Math.max(b.inverterN, 1);
       }
-      if (b.n === 0) b.n = 1;
     }
 
     for (const [key, ev] of evByBucket.entries()) {
       const snapped = new Date(key).getTime();
       const bucket = ensureBucket(key, snapped);
-      if (bucket.n === 0) bucket.n = 1;
       bucket.ev = ev;
+      bucket.evN = Math.max(bucket.evN, 1);
     }
 
     const rows = Array.from(map.values())
       .sort((a, b) => a.ts.getTime() - b.ts.getTime())
       .map(b => {
         const rawDate = new Date(b.ts).toLocaleDateString('en-CA', { timeZone: IST });
-        const inverterL1 = +Number(b.inverterL1 / (b.n || 1)).toFixed(2);
-        const inverterL2 = +Number(b.inverterL2 / (b.n || 1)).toFixed(2);
-        const inverterL3 = +Number(b.inverterL3 / (b.n || 1)).toFixed(2);
-        const gridL1 = +Number(b.gridL1 / (b.n || 1)).toFixed(2);
-        const gridL2 = +Number(b.gridL2 / (b.n || 1)).toFixed(2);
-        const gridL3 = +Number(b.gridL3 / (b.n || 1)).toFixed(2);
-        const ev = +Number(b.ev / (b.n || 1)).toFixed(2);
+        const inverterL1 = +Number(b.inverterL1 / (b.inverterN || 1)).toFixed(2);
+        const inverterL2 = +Number(b.inverterL2 / (b.inverterN || 1)).toFixed(2);
+        const inverterL3 = +Number(b.inverterL3 / (b.inverterN || 1)).toFixed(2);
+        const gridL1 = +Number(b.gridL1 / (b.gridN || 1)).toFixed(2);
+        const gridL2 = +Number(b.gridL2 / (b.gridN || 1)).toFixed(2);
+        const gridL3 = +Number(b.gridL3 / (b.gridN || 1)).toFixed(2);
+        const ev = +Number(b.ev / (b.evN || 1)).toFixed(2);
         return {
           rawTs: b.ts.getTime(),
           rawDate,
@@ -2977,23 +3022,22 @@ const PhaseLoadTab: React.FC<{
       });
     const dates = Array.from(new Set(rows.map(row => row.rawDate))).sort();
     return { chartData: rows, availableLoadDates: dates };
-  }, [phaseLoad, evHistory, siteHistoryRows, loadBucketMinutes]);
+  }, [phaseLoad, evHistory, ctHistoryRows, siteHistoryRows, loadBucketMinutes]);
 
   useEffect(() => {
     if (hours <= 24) {
       setSelectedLoadDate('');
       return;
     }
-    if (!availableLoadDates.length) return;
-    if (!selectedLoadDate || !availableLoadDates.includes(selectedLoadDate)) {
-      setSelectedLoadDate(availableLoadDates[availableLoadDates.length - 1]);
+    if (selectedLoadDate && !availableLoadDates.includes(selectedLoadDate)) {
+      setSelectedLoadDate('');
     }
   }, [hours, availableLoadDates, selectedLoadDate]);
 
   const filteredLoadChartData = useMemo(() => {
-    if (hours <= 24 || !selectedLoadDate) return chartData;
+    if (!selectedLoadDate) return chartData;
     return chartData.filter(row => row.rawDate === selectedLoadDate);
-  }, [chartData, hours, selectedLoadDate]);
+  }, [chartData, selectedLoadDate]);
 
   const loadWindowLabel = useMemo(() => {
     if (hours <= 24) return `last ${hours}h`;
@@ -3016,9 +3060,9 @@ const PhaseLoadTab: React.FC<{
     const invL1 = latest?.load_l1_power_w != null ? Number(latest.load_l1_power_w) / 1000 : 0;
     const invL2 = latest?.load_l2_power_w != null ? Number(latest.load_l2_power_w) / 1000 : 0;
     const invL3 = latest?.load_l3_power_w != null ? Number(latest.load_l3_power_w) / 1000 : 0;
-    const gridL1 = ctLatest?.active_power_l1 != null ? Math.abs(Number(ctLatest.active_power_l1)) / 1000 : 0;
-    const gridL2 = ctLatest?.active_power_l2 != null ? Math.abs(Number(ctLatest.active_power_l2)) / 1000 : 0;
-    const gridL3 = ctLatest?.active_power_l3 != null ? Math.abs(Number(ctLatest.active_power_l3)) / 1000 : 0;
+    const gridL1 = ctLatest?.active_power_l1 != null ? Math.max(0, Number(ctLatest.active_power_l1) / 1000) : 0;
+    const gridL2 = ctLatest?.active_power_l2 != null ? Math.max(0, Number(ctLatest.active_power_l2) / 1000) : 0;
+    const gridL3 = ctLatest?.active_power_l3 != null ? Math.max(0, Number(ctLatest.active_power_l3) / 1000) : 0;
 
     const base = filteredLoadChartData.length > 0
       ? filteredLoadChartData
@@ -3106,6 +3150,29 @@ const PhaseLoadTab: React.FC<{
     return totals;
   }, [resolvedLoadChartData]);
 
+  const loadChartHasMultipleDays = new Set(resolvedLoadChartData.map((row: any) => row.rawDate)).size > 1;
+  const loadChartLabels = resolvedLoadChartData.map((row: any) => (loadChartHasMultipleDays ? [row.dateLabel, row.time] : row.time));
+  const loadChartValues = useMemo(() => {
+    if (loadSourceView === 'total') {
+      return resolvedLoadChartData.flatMap((row: any) => [row.inverter, row.grid, row.ev]).filter((v: any) => Number.isFinite(v));
+    }
+    if (loadSourceView === 'inverter') {
+      return resolvedLoadChartData.flatMap((row: any) => hasInverterPhaseBreakdown ? [row.inverterL1, row.inverterL2, row.inverterL3] : [row.inverter]).filter((v: any) => Number.isFinite(v));
+    }
+    if (loadSourceView === 'grid') {
+      return resolvedLoadChartData.flatMap((row: any) => hasGridPhaseBreakdown ? [row.gridL1, row.gridL2, row.gridL3] : [row.grid]).filter((v: any) => Number.isFinite(v));
+    }
+    return resolvedLoadChartData.map((row: any) => row[loadSourceView]).filter((v: any) => Number.isFinite(v));
+  }, [resolvedLoadChartData, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
+  const loadChartUseWatts = useMemo(
+    () => loadChartValues.length > 0 && loadChartValues.every((value: number) => Math.abs(value) < 1),
+    [loadChartValues]
+  );
+  const formatLoadChartValue = (value: number) => {
+    if (loadChartUseWatts) return `${(value * 1000).toFixed(0)} W`;
+    return `${value.toFixed(2)} kW`;
+  };
+
   const loadForecastChartData = useMemo(() => {
     return loadForecast.map((r: any) => {
       const d = new Date(r.forecast_for);
@@ -3185,7 +3252,14 @@ const PhaseLoadTab: React.FC<{
         titleColor: isDark ? '#e2e8f0' : '#334155', bodyColor: isDark ? '#94a3b8' : '#374151',
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
+        callbacks: {
+          title: (items: TooltipItem<'line'>[]) => {
+            const row = resolvedLoadChartData[items[0]?.dataIndex ?? -1];
+            if (!row) return '';
+            return loadChartHasMultipleDays ? `${row.dateLabel} · ${row.time}` : row.time;
+          },
+          label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${formatLoadChartValue(Number(item.parsed.y))}`,
+        },
       },
       zoom: createDragZoomPlugins(() => phaseLoadChartZoom.onZoomComplete.current()),
     } as any,
@@ -3193,7 +3267,7 @@ const PhaseLoadTab: React.FC<{
       x: {
         title: {
           display: true,
-          text: 'Time (IST)',
+          text: loadChartHasMultipleDays ? 'Day / Time (IST)' : 'Time (IST)',
           color: isDark ? '#cbd5e1' : '#475569',
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { top: 10, bottom: 0 },
@@ -3210,7 +3284,7 @@ const PhaseLoadTab: React.FC<{
       y: {
         title: {
           display: true,
-          text: 'Load (kW)',
+          text: loadChartUseWatts ? 'Load (W)' : 'Load (kW)',
           color: isDark ? '#cbd5e1' : '#475569',
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { bottom: 6 },
@@ -3218,13 +3292,13 @@ const PhaseLoadTab: React.FC<{
         ticks: {
           color: isDark ? '#94a3b8' : '#64748b',
           font: { family: 'JetBrains Mono, monospace', size: 11 },
-          callback: (v: any) => v.toFixed(1),
+          callback: (v: any) => loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1),
         },
         grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
+  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData, loadChartUseWatts]);
 
   const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
@@ -3490,7 +3564,7 @@ const PhaseLoadTab: React.FC<{
             <CJLine
               ref={phaseLoadChartZoom.chartRef}
               data={{
-                labels: resolvedLoadChartData.map((d: any) => d.time),
+                labels: loadChartLabels,
                 datasets: loadSourceView === 'total'
                   ? (['inverter', 'grid', 'ev'] as const).map(key => ({
                       label: LOAD_SOURCE_META[key].label,

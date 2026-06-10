@@ -63,7 +63,7 @@ const STAFF_STYLES = `
     white-space: nowrap;
     overflow: hidden;
   }
-  .staff-nav-link:hover { color: #12151A; background: rgba(47,191,113,0.08); }
+  .staff-nav-link:hover { color: inherit; }
   .staff-nav-link.active {
     color: #2FBF71;
     background: rgba(47,191,113,0.12);
@@ -84,7 +84,7 @@ const STAFF_STYLES = `
 
   /* Light mode overrides */
   body:not(.dark-mode) .staff-nav-link { color: #667085; }
-  body:not(.dark-mode) .staff-nav-link:hover { color: #12151A; background: rgba(47,191,113,0.08); }
+  body:not(.dark-mode) .staff-nav-link:hover { color: inherit; }
   body:not(.dark-mode) .staff-nav-link.active { color: #2FBF71; background: rgba(47,191,113,0.1); }
   body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: #2FBF71; box-shadow: 0 0 6px rgba(47,191,113,0.4); }
 

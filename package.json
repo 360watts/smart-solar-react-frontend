@@ -82,6 +82,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:poll": "CHOKIDAR_USEPOLLING=1 vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "jest"
