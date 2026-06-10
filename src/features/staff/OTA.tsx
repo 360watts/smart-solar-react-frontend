@@ -571,7 +571,7 @@ export const OTA: React.FC = () => {
 
   const handleCancelDeployment = () => {
     if (!activeDeployment) return;
-    setDangerModal({
+    setConfirmActionModal({
       show: true,
       title: 'Cancel Deployment',
       message: `Cancel deployment #${activeDeployment.id} (${activeDeployment.target_firmware?.version || 'N/A'})?`,
