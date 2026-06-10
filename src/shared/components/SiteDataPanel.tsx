@@ -3178,26 +3178,39 @@ const PhaseLoadTab: React.FC<{
 
   const loadChartHasMultipleDays = new Set(resolvedLoadChartData.map((row: any) => row.rawDate)).size > 1;
   const loadChartLabels = resolvedLoadChartData.map((row: any) => (loadChartHasMultipleDays ? [row.dateLabel, row.time] : row.time));
+
+  // Cumulative kWh series — trapezoidal integration, resets at each new IST date boundary
+  const cumulativeLoadChartData = useMemo(() => {
+    const rows = resolvedLoadChartData;
+    if (rows.length === 0) return [];
+    type CumRow = { inverter: number; grid: number; ev: number; inverterL1: number; inverterL2: number; inverterL3: number; gridL1: number; gridL2: number; gridL3: number; rawDate: string };
+    const keys = ['inverter', 'grid', 'ev', 'inverterL1', 'inverterL2', 'inverterL3', 'gridL1', 'gridL2', 'gridL3'] as const;
+    const acc: CumRow = { inverter: 0, grid: 0, ev: 0, inverterL1: 0, inverterL2: 0, inverterL3: 0, gridL1: 0, gridL2: 0, gridL3: 0, rawDate: rows[0].rawDate };
+    return rows.map((row: any, i: number) => {
+      if (i === 0) return { ...acc, rawDate: row.rawDate };
+      // Reset accumulators at each new day boundary
+      if (row.rawDate !== acc.rawDate) {
+        for (const k of keys) acc[k] = 0;
+        acc.rawDate = row.rawDate;
+      }
+      const prev = rows[i - 1];
+      const dt = (row.rawTs - prev.rawTs) / 3_600_000;
+      for (const k of keys) {
+        acc[k] = +(acc[k] + ((Number(prev[k] ?? 0) + Number(row[k] ?? 0)) / 2) * dt).toFixed(3);
+      }
+      return { ...acc, rawDate: row.rawDate };
+    });
+  }, [resolvedLoadChartData]);
+
   const loadChartValues = useMemo(() => {
-    if (loadSourceView === 'total') {
-      return resolvedLoadChartData.flatMap((row: any) => [row.inverter, row.grid, row.ev]).filter((v: any) => Number.isFinite(v));
-    }
-    if (loadSourceView === 'inverter') {
-      return resolvedLoadChartData.flatMap((row: any) => hasInverterPhaseBreakdown ? [row.inverterL1, row.inverterL2, row.inverterL3] : [row.inverter]).filter((v: any) => Number.isFinite(v));
-    }
-    if (loadSourceView === 'grid') {
-      return resolvedLoadChartData.flatMap((row: any) => hasGridPhaseBreakdown ? [row.gridL1, row.gridL2, row.gridL3] : [row.grid]).filter((v: any) => Number.isFinite(v));
-    }
-    return resolvedLoadChartData.map((row: any) => row[loadSourceView]).filter((v: any) => Number.isFinite(v));
-  }, [resolvedLoadChartData, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
-  const loadChartUseWatts = useMemo(
-    () => loadChartValues.length > 0 && loadChartValues.every((value: number) => Math.abs(value) < 1),
-    [loadChartValues]
-  );
-  const formatLoadChartValue = (value: number) => {
-    if (loadChartUseWatts) return `${(value * 1000).toFixed(0)} W`;
-    return `${value.toFixed(2)} kW`;
-  };
+    const cum = cumulativeLoadChartData;
+    if (loadSourceView === 'total') return cum.flatMap((r: any) => [r.inverter, r.grid, r.ev]).filter((v: any) => Number.isFinite(v));
+    if (loadSourceView === 'inverter') return cum.flatMap((r: any) => hasInverterPhaseBreakdown ? [r.inverterL1, r.inverterL2, r.inverterL3] : [r.inverter]).filter((v: any) => Number.isFinite(v));
+    if (loadSourceView === 'grid') return cum.flatMap((r: any) => hasGridPhaseBreakdown ? [r.gridL1, r.gridL2, r.gridL3] : [r.grid]).filter((v: any) => Number.isFinite(v));
+    return cum.map((r: any) => r[loadSourceView]).filter((v: any) => Number.isFinite(v));
+  }, [cumulativeLoadChartData, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
+
+  const formatLoadChartValue = (value: number) => `${value.toFixed(2)} kWh`;
 
   const loadForecastChartData = useMemo(() => {
     return loadForecast.map((r: any) => {
@@ -3310,7 +3323,7 @@ const PhaseLoadTab: React.FC<{
       y: {
         title: {
           display: true,
-          text: loadChartUseWatts ? 'Load (W)' : 'Load (kW)',
+          text: 'Energy (kWh)',
           color: isDark ? '#cbd5e1' : '#475569',
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { bottom: 6 },
@@ -3318,13 +3331,13 @@ const PhaseLoadTab: React.FC<{
         ticks: {
           color: isDark ? '#94a3b8' : '#64748b',
           font: { family: 'JetBrains Mono, monospace', size: 11 },
-          callback: (v: any) => loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1),
+          callback: (v: any) => Number(v).toFixed(1),
         },
         grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData, loadChartUseWatts]);
+  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData]);
 
   const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
@@ -3599,7 +3612,7 @@ const PhaseLoadTab: React.FC<{
                 datasets: loadSourceView === 'total'
                   ? (['inverter', 'grid', 'ev'] as const).map(key => ({
                       label: LOAD_SOURCE_META[key].label,
-                      data: resolvedLoadChartData.map((d: any) => d[key] as number),
+                      data: cumulativeLoadChartData.map((d: any) => d[key] as number),
                       borderColor: LOAD_SOURCE_META[key].color,
                       borderWidth: key === 'inverter' ? 2.4 : 2,
                       tension: 0.35,
@@ -3613,7 +3626,7 @@ const PhaseLoadTab: React.FC<{
                       { key: 'inverterL3', label: 'L3', color: PHASE_COLORS.L3 },
                     ] as const).map(series => ({
                       label: series.label,
-                      data: resolvedLoadChartData.map((d: any) => d[series.key] as number),
+                      data: cumulativeLoadChartData.map((d: any) => d[series.key] as number),
                       borderColor: series.color,
                       borderWidth: 2.2,
                       tension: 0.35,
@@ -3621,7 +3634,7 @@ const PhaseLoadTab: React.FC<{
                       fill: false,
                     })) : [{
                       label: LOAD_SOURCE_META.inverter.label,
-                      data: resolvedLoadChartData.map((d: any) => d.inverter as number),
+                      data: cumulativeLoadChartData.map((d: any) => d.inverter as number),
                       borderColor: LOAD_SOURCE_META.inverter.color,
                       borderWidth: 2.4,
                       tension: 0.35,
@@ -3635,7 +3648,7 @@ const PhaseLoadTab: React.FC<{
                       { key: 'gridL3', label: 'L3', color: PHASE_COLORS.L3 },
                     ] as const).map(series => ({
                       label: series.label,
-                      data: resolvedLoadChartData.map((d: any) => d[series.key] as number),
+                      data: cumulativeLoadChartData.map((d: any) => d[series.key] as number),
                       borderColor: series.color,
                       borderWidth: 2.2,
                       tension: 0.35,
@@ -3643,7 +3656,7 @@ const PhaseLoadTab: React.FC<{
                       fill: false,
                     })) : [{
                       label: LOAD_SOURCE_META.grid.label,
-                      data: resolvedLoadChartData.map((d: any) => d.grid as number),
+                      data: cumulativeLoadChartData.map((d: any) => d.grid as number),
                       borderColor: LOAD_SOURCE_META.grid.color,
                       borderWidth: 2.4,
                       tension: 0.35,
@@ -3652,7 +3665,7 @@ const PhaseLoadTab: React.FC<{
                     }])
                   : [{
                       label: LOAD_SOURCE_META[loadSourceView].label,
-                      data: resolvedLoadChartData.map((d: any) => d[loadSourceView] as number),
+                      data: cumulativeLoadChartData.map((d: any) => d[loadSourceView] as number),
                       borderColor: LOAD_SOURCE_META[loadSourceView].color,
                       borderWidth: 2.4,
                       tension: 0.35,

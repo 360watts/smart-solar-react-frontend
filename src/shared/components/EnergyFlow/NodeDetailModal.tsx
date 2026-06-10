@@ -170,10 +170,10 @@ function MetricTile({ label, value, sub, accent }: { label: string; value: strin
       borderRadius: DS.radius.sm,
       padding: '10px 12px',
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim, marginBottom: 5 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim, marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: accent ?? DS.colors.textPrimary, letterSpacing: '-0.01em', lineHeight: 1 }}>
+      <div style={{ fontSize: 17, fontWeight: 800, color: accent ?? DS.colors.textPrimary, letterSpacing: '-0.02em', lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>
         {value}
       </div>
       {sub && (
@@ -944,14 +944,14 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 998,
-              display: 'flex', alignItems: isCompact ? 'flex-end' : 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: isCompact ? 0 : 12,
             }}
           >
             {/* ── Modal card ── */}
             <motion.div
               key="modal"
-              variants={modalVariants}
+              variants={isCompact ? { hidden: { opacity: 0, y: 80 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 34 } }, exit: { opacity: 0, y: 60, transition: { duration: 0.2 } } } : modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -960,28 +960,29 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 position: 'relative',
                 width: isCompact ? '100vw' : 'min(94vw, 460px)',
                 maxWidth: isCompact ? '100vw' : '460px',
-                maxHeight: isCompact ? '82dvh' : '88dvh',
+                maxHeight: isCompact ? '88dvh' : '88dvh',
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                borderRadius: isCompact ? '18px 18px 0 0' : DS.radius.lg,
-                background: isDark
-                  ? 'rgba(8,12,22,0.92)'
-                  : 'rgba(255,255,255,0.96)',
-                backdropFilter: 'blur(24px)',
-                WebkitBackdropFilter: 'blur(24px)',
+                borderRadius: isCompact ? '22px 22px 0 0' : DS.radius.lg,
+                background: isDark ? 'rgba(7,10,20,0.96)' : 'rgba(255,255,255,0.97)',
+                backdropFilter: 'blur(32px)',
+                WebkitBackdropFilter: 'blur(32px)',
                 boxShadow: isDark
-                  ? DS.shadow.modal
-                  : '0 24px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
-                border: isDark
-                  ? `1px solid rgba(255,255,255,0.07)`
-                  : `1px solid rgba(0,0,0,0.08)`,
-                // Colored top accent strip
+                  ? '0 -4px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.07)'
+                  : '0 -4px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.07)',
+                border: isDark ? `1px solid rgba(255,255,255,0.08)` : `1px solid rgba(0,0,0,0.07)`,
                 borderTop: `3px solid ${accentColor}`,
                 zIndex: 999,
                 scrollbarWidth: 'none',
-                paddingBottom: isCompact ? 'max(12px, env(safe-area-inset-bottom))' : 0,
+                paddingBottom: isCompact ? 'max(16px, env(safe-area-inset-bottom))' : 0,
               }}
             >
+              {/* Drag handle — mobile only */}
+              {isCompact && (
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 2 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)' }} />
+                </div>
+              )}
               {/* Glow halo behind modal */}
               {active && (
                 <div style={{
@@ -1076,16 +1077,17 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     }}>
                       Live Power
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                       <span style={{
-                        fontSize: isCompact ? 24 : 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
+                        fontSize: isCompact ? 36 : 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                         color: isDark ? DS.colors.textPrimary : '#0F172A',
                         fontVariantNumeric: 'tabular-nums',
+                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                       }}>
                         {pwr.value}
                       </span>
                       <span style={{
-                        fontSize: isCompact ? 11 : 13, fontWeight: 700,
+                        fontSize: isCompact ? 14 : 13, fontWeight: 700,
                         color: isDark ? DS.colors.textMuted : 'rgba(15,23,42,0.52)',
                       }}>
                         {pwr.unit}
@@ -1215,7 +1217,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                     borderRadius: DS.radius.sm,
                     padding: isCompact ? '6px 2px 2px' : '8px 4px 4px',
-                    height: isCompact ? 104 : 120,
+                    height: isCompact ? 130 : 140,
                   }}>
                     {sparkLoading ? (
                       <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

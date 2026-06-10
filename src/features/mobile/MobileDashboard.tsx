@@ -676,7 +676,7 @@ const MobileDashboard: React.FC = () => {
             ))}
           </div>
 
-          <div style={{ ...card(), padding: '14px 14px' }}>
+          <div style={{ ...card(), padding: '14px 14px', marginTop: 6 }}>
             <div style={sectionLabel}>Today's Energy</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: 8 }}>
               {[

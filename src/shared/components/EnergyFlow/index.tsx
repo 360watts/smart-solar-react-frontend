@@ -17,7 +17,7 @@ import { apiService, CtMeterReading } from '../../../services/api';
 // Cross topology: Gateway hub at centre, Battery above, Solar left, Grid right, Load below.
 const VW  = 700;
 const HUB_R    = 38;
-const NODE_R   = 65;
+const NODE_R   = 85;
 const BATT_TRIM = 36;
 
 function trimEnd(x1: number, y1: number, x2: number, y2: number, trim: number) {
@@ -72,21 +72,19 @@ function computeLayout(vh: number, nodes: { pv: NodePos; hub: NodePos; batt: Nod
 }
 
 // Wide layout — desktop / tablet (container ≥ 480 px)
-const WIDE_LAYOUT = computeLayout(240, {
-  pv:   { x: 90,  y: 125 },
-  hub:  { x: 350, y: 125 },
-  batt: { x: 350, y: 32  },
-  grid: { x: 610, y: 125 },
+const WIDE_LAYOUT = computeLayout(312, {
+  pv:   { x: 90,  y: 163 },
+  hub:  { x: 350, y: 163 },
+  batt: { x: 350, y: 42  },
+  grid: { x: 610, y: 163 },
 });
 
 // Narrow layout — mobile (container < 480 px).
-// Taller viewBox (320 vs 240) and battery repositioned to y=80 so the node
-// card clears the container top even at the reduced mobile scale.
-const NARROW_LAYOUT = computeLayout(320, {
-  pv:   { x: 90,  y: 200 },
-  hub:  { x: 350, y: 200 },
-  batt: { x: 350, y: 45  },
-  grid: { x: 610, y: 200 },
+const NARROW_LAYOUT = computeLayout(416, {
+  pv:   { x: 90,  y: 260 },
+  hub:  { x: 350, y: 260 },
+  batt: { x: 350, y: 59  },
+  grid: { x: 610, y: 260 },
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -299,144 +297,113 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
   const headerKw = hasCtTotal ? ctTotalKw : hasInverter ? inverterKw : hasEvCard ? evTotalKw : (devices.length > 0 ? devicesTotalKw : null);
   const headerFmt = headerKw != null ? fmtPower(headerKw) : null;
 
+  // ── Item card helper ──────────────────────────────────────────────────────
+  const ItemCard = ({ label, valueFmt, chevron, onClick: oc }: {
+    label: string; valueFmt: string; chevron: string; onClick?: () => void;
+  }) => (
+    <div
+      onClick={oc}
+      role={oc ? 'button' : undefined}
+      style={{
+        cursor: oc ? 'pointer' : 'default',
+        background: isDark ? `${accentColor}0d` : `${accentColor}09`,
+        border: `1px solid ${isDark ? `${accentColor}28` : `${accentColor}30`}`,
+        borderLeft: `3px solid ${accentColor}`,
+        borderRadius: compact ? 7 : 8,
+        padding: compact ? '7px 8px 7px 10px' : '9px 10px 9px 12px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6,
+        transition: 'background 0.14s',
+        minHeight: compact ? 44 : 52,
+      }}
+      onMouseEnter={e => { if (oc) (e.currentTarget as HTMLElement).style.background = isDark ? `${accentColor}18` : `${accentColor}16`; }}
+      onMouseLeave={e => { if (oc) (e.currentTarget as HTMLElement).style.background = isDark ? `${accentColor}0d` : `${accentColor}09`; }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: compact ? 7.5 : 8, fontWeight: 800, letterSpacing: '0.07em',
+          textTransform: 'uppercase', color: accentColor, marginBottom: 3,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{label}</div>
+        <div style={{
+          fontSize: compact ? 15 : 19, fontWeight: 900,
+          color: isDark ? '#f1f5f9' : '#0f172a',
+          letterSpacing: '-0.03em', lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+        }}>{valueFmt}</div>
+      </div>
+      {oc && <div style={{
+        fontSize: compact ? 9 : 10, fontWeight: 600,
+        color: isDark ? `${accentColor}80` : `${accentColor}90`,
+        flexShrink: 0, letterSpacing: '0.02em',
+      }}>{chevron}</div>}
+    </div>
+  );
+
   return (
     <div style={{
       borderRadius: compact ? 10 : 12,
-      border: `1.5px solid ${isDark ? `${accentColor}34` : `${accentColor}38`}`,
+      border: `1.5px solid ${isDark ? `${accentColor}30` : `${accentColor}38`}`,
       background: isDark
-        ? `linear-gradient(135deg, ${accentColor}14 0%, ${accentColor}07 100%)`
-        : `linear-gradient(135deg, ${accentColor}13 0%, ${accentColor}06 100%)`,
-      boxShadow: `0 0 20px ${accentColor}08, 0 2px 8px rgba(0,0,0,0.08)`,
-      padding: compact ? '8px 9px 9px' : '10px 12px 12px', flex: '1 1 0', minWidth: 0,
-      display: 'flex', flexDirection: 'column', transition: 'all 0.25s ease-in-out',
+        ? `linear-gradient(160deg, ${accentColor}12 0%, ${accentColor}06 100%)`
+        : `linear-gradient(160deg, ${accentColor}10 0%, ${accentColor}04 100%)`,
+      boxShadow: `0 0 18px ${accentColor}0a, 0 2px 8px rgba(0,0,0,0.1)`,
+      flex: '1 1 0', minWidth: 0,
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
     }}>
 
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 5 : 6, marginBottom: compact ? 7 : 10 }}>
+      {/* ── Header strip ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        padding: compact ? '7px 9px 6px' : '9px 11px 8px',
+        borderBottom: `1px solid ${isDark ? `${accentColor}1c` : `${accentColor}24`}`,
+        background: isDark ? `${accentColor}0a` : `${accentColor}07`,
+      }}>
         <div style={{
-          width: compact ? 18 : 20, height: compact ? 18 : 20, borderRadius: compact ? 4 : 5, background: `${accentColor}22`,
-          border: `1.5px solid ${accentColor}40`,
+          width: compact ? 16 : 18, height: compact ? 16 : 18, borderRadius: 4,
+          background: `${accentColor}22`, border: `1.5px solid ${accentColor}44`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{icon}</div>
         <span style={{
-          fontSize: compact ? 7.5 : 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
-          color: isDark ? `${accentColor}dd` : accentColor,
+          fontSize: compact ? 8.5 : 9, fontWeight: 800, letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: isDark ? `${accentColor}e0` : accentColor,
+          flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{title}</span>
-        {headerFmt && (
-          <span
-            onClick={hasCtTotal && onCtHeaderClick ? onCtHeaderClick : hasInverter && onInverterClick ? onInverterClick : undefined}
-            style={{
-              marginLeft: 'auto', fontSize: compact ? 8.5 : 9.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-              color: isDark ? '#cbd5e1' : '#64748b',
-              cursor: (hasCtTotal && onCtHeaderClick) || (hasInverter && onInverterClick) ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'baseline', gap: 3,
-            }}
-          >
-            {headerFmt.valueStr} {headerFmt.unit}
-            {hasCtTotal && (
-              <span style={{ fontSize: compact ? 6.2 : 7, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: accentColor, opacity: 0.8 }}>
-                CT
-              </span>
-            )}
-            {hasInverter && !hasCtTotal && (
-              <span style={{ fontSize: compact ? 6.2 : 7, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: accentColor, opacity: 0.8 }}>
-                INV
-              </span>
-            )}
-          </span>
-        )}
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: compact ? 6 : 8 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: compact ? 5 : 7, padding: compact ? '7px 7px 8px' : '9px 9px 10px' }}>
 
         {/* Grid load with CT total */}
         {hasCtTotal && (
-          <>
-            <div
-              onClick={onCtHeaderClick}
-              style={{
-                cursor: 'pointer',
-                background: isDark ? `${accentColor}12` : `${accentColor}0e`,
-                border: `1px solid ${accentColor}30`,
-                borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accentColor}20` : `${accentColor}18`)}
-              onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
-            >
-              <div>
-                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
-                  Energy Meter · Total Load
-                </div>
-                <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                  {(() => { const f = fmtPower(ctTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
-                </div>
-              </div>
-              <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
-                3-Phase ›
-              </div>
-            </div>
-          </>
+          <ItemCard
+            label="Energy Meter · Grid"
+            valueFmt={(() => { const f = fmtPower(ctTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
+            chevron="3-Phase ›"
+            onClick={onCtHeaderClick}
+          />
         )}
 
         {/* Solar load with Inverter total */}
         {hasInverter && (
-          <div
+          <ItemCard
+            label="Inverter · AC Output"
+            valueFmt={(() => { const f = fmtPower(inverterKw!); return `${f.valueStr} ${f.unit}`; })()}
+            chevron="Detail ›"
             onClick={onInverterClick}
-            style={{
-              cursor: 'pointer',
-              background: isDark ? `${accentColor}12` : `${accentColor}0e`,
-              border: `1px solid ${accentColor}30`,
-              borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accentColor}20` : `${accentColor}18`)}
-            onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
-          >
-            <div>
-                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
-                  Inverter · Solar Load
-                </div>
-              <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {(() => { const f = fmtPower(inverterKw!); return `${f.valueStr} ${f.unit}`; })()}
-              </div>
-            </div>
-            <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
-              AC Output ›
-            </div>
-          </div>
+          />
         )}
 
         {/* EV charger summary card */}
         {hasEvCard && (
-          <div
+          <ItemCard
+            label="EV Charger"
+            valueFmt={(() => { const f = fmtPower(evTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
+            chevron={evTotalKw! > 0 ? 'Charging ›' : 'Idle ›'}
             onClick={onEvClick}
-            style={{
-              cursor: 'pointer',
-              background: isDark ? `${accentColor}12` : `${accentColor}0e`,
-              border: `1px solid ${accentColor}30`,
-              borderRadius: compact ? 7 : 8, padding: compact ? '7px 9px' : '9px 11px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = isDark ? `${accentColor}20` : `${accentColor}18`)}
-            onMouseLeave={e => (e.currentTarget.style.background = isDark ? `${accentColor}12` : `${accentColor}0e`)}
-          >
-            <div>
-                <div style={{ fontSize: compact ? 6.6 : 7.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: accentColor, marginBottom: 2 }}>
-                  EV Charger
-                </div>
-              <div style={{ fontSize: compact ? 16 : 20, fontWeight: 900, color: isDark ? '#f1f5f9' : '#0f172a', letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {(() => { const f = fmtPower(evTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
-              </div>
-            </div>
-            <div style={{ fontSize: compact ? 6.6 : 7.5, color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
-              {evTotalKw! > 0 ? 'Charging ›' : 'Plugged in ›'}
-            </div>
-          </div>
+          />
         )}
 
         {/* Smart device cards */}
@@ -487,7 +454,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       const w = entry.contentRect.width;
       setContainerWidth(w);
       // Narrower divisor on mobile so nodes shrink enough to clear edges
-      setNodeScale(Math.min(1, Math.max(0.55, w / 540)));
+      setNodeScale(Math.min(1, Math.max(0.65, w / 480)));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -552,8 +519,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const branchDash = compactFlow ? 8 : 10;
   const branchGap = compactFlow ? 8 : 10;
   const branchDur = compactFlow ? 2.1 : 2.4;
-  const branchMidY = compactFlow ? 18 : 22;
-  const branchEndY = compactFlow ? 34 : 44;
+  const branchMidY = compactFlow ? 13 : 15;
+  const branchEndY = compactFlow ? 24 : 31;
 
   const pvFmt   = fmtPower(pv);
   const battFmt = fmtPower(batt);
@@ -735,15 +702,15 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       </div>
 
       {/* Total Load + EV node (if present) + Y-connector + Sub-loads */}
-      <div style={{ padding: '0 18px 0', marginTop: -10 }}>
+      <div style={{ padding: '0 18px 0', marginTop: 0 }}>
         {(() => {
           const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
           const totalLoadKw = load + ctGridKw;
           const totalLoadFmt = fmtPower(totalLoadKw);
           const totalLoadActive = totalLoadKw > 0;
           return (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
-              <div style={{ display: 'inline-block', transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: `${-(1 - nodeScale) * 93}px` }}>
+              <div style={{ display: 'inline-block', width: 108, transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
                 type: 'load',
                 id: 'load',
                 title: 'Total Load',
@@ -814,7 +781,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         })()}
 
         {/* Sub-load row: Solar SubSection | EV NodeCard | Grid SubSection */}
-        <div style={{ display: 'flex', gap: compactFlow ? 8 : 10, alignItems: 'stretch', paddingBottom: 14, marginTop: compactFlow ? -4 : 0 }}>
+        <div style={{ display: 'flex', gap: compactFlow ? 8 : 10, alignItems: 'stretch', paddingBottom: 14, marginTop: 0 }}>
           <SubSection
             title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
             accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
