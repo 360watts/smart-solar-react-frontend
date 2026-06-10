@@ -3150,8 +3150,31 @@ const PhaseLoadTab: React.FC<{
     } else if (resolvedLoadChartData.length === 1) {
       for (const key of keys) totals[key] = resolvedLoadChartData[0][key];
     }
+
+    // EV: compute directly from raw evHistory timestamps to avoid bucket-averaging
+    // artifacts (the phaseLoad zero anchor at the bucket boundary before charging
+    // starts creates a false ramp-up triangle that over-counts by ~0.3–0.4 kWh).
+    const evRows = evHistory
+      .filter((r: any) => r.power_w != null)
+      .map((r: any) => ({ ts: new Date(r.timestamp).getTime(), kw: (r.power_w as number) / 1000 }))
+      .filter((r) => {
+        if (!selectedLoadDate) return true;
+        const d = new Date(r.ts).toLocaleDateString('en-CA', { timeZone: IST });
+        return d === selectedLoadDate;
+      })
+      .sort((a, b) => a.ts - b.ts);
+    if (evRows.length > 1) {
+      totals.ev = evRows.reduce((acc, cur, i) => {
+        if (i === 0) return acc;
+        const prev = evRows[i - 1];
+        return acc + (prev.kw + cur.kw) / 2 * (cur.ts - prev.ts) / 3_600_000;
+      }, 0);
+    } else if (evRows.length === 1) {
+      totals.ev = 0;
+    }
+
     return totals;
-  }, [resolvedLoadChartData]);
+  }, [resolvedLoadChartData, evHistory, selectedLoadDate]);
 
   const loadChartHasMultipleDays = new Set(resolvedLoadChartData.map((row: any) => row.rawDate)).size > 1;
   const loadChartLabels = resolvedLoadChartData.map((row: any) => (loadChartHasMultipleDays ? [row.dateLabel, row.time] : row.time));
