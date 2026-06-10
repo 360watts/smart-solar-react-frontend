@@ -3032,14 +3032,10 @@ const PhaseLoadTab: React.FC<{
   }, [phaseLoad, evHistory, ctHistoryRows, siteHistoryRows, loadBucketMinutes]);
 
   useEffect(() => {
-    if (hours <= 24) {
-      setSelectedLoadDate('');
-      return;
-    }
-    if (selectedLoadDate && !availableLoadDates.includes(selectedLoadDate)) {
+    if (selectedLoadDate && !availableLoadDates.includes(selectedLoadDate) && availableLoadDates.length > 0) {
       setSelectedLoadDate('');
     }
-  }, [hours, availableLoadDates, selectedLoadDate]);
+  }, [availableLoadDates, selectedLoadDate]);
 
   const filteredLoadChartData = useMemo(() => {
     if (!selectedLoadDate) return chartData;
@@ -3417,9 +3413,16 @@ const PhaseLoadTab: React.FC<{
           <input
             type="date"
             value={selectedLoadDate}
-            min={availableLoadDates[0] ?? ''}
-            max={availableLoadDates[availableLoadDates.length - 1] ?? ''}
-            onChange={e => setSelectedLoadDate(e.target.value)}
+            max={istDateOffset(0)}
+            onChange={e => {
+              const picked = e.target.value;
+              if (!picked) { setSelectedLoadDate(''); return; }
+              // Auto-expand to 7d if the picked date is outside the current window
+              const pickedMs = new Date(picked + 'T00:00:00+05:30').getTime();
+              const windowStartMs = Date.now() - hours * 3_600_000;
+              if (pickedMs < windowStartMs && onHoursChange) onHoursChange(168);
+              setSelectedLoadDate(picked);
+            }}
             style={{
               background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
