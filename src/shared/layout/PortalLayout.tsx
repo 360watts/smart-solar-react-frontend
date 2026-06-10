@@ -4,6 +4,7 @@ import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, Menu, X, Zap } fro
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import PortalChat from '../../features/portal/PortalChat';
+import { getDesignTokens } from '../theme';
 
 const NAV_ITEMS = [
   { path: '/portal',        label: 'Overview',  icon: LayoutDashboard, end: true  },
@@ -44,9 +45,9 @@ const PORTAL_STYLES = `
     border-radius: 10px;
     text-decoration: none;
     font-size: 14px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
-    color: #8892A4;
+    color: var(--muted-foreground);
     background: transparent;
     transition: all 0.18s ease;
     position: relative;
@@ -60,22 +61,22 @@ const PORTAL_STYLES = `
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(47,191,113,0.06);
+    background: var(--green-soft);
     border-radius: 10px;
     opacity: 0;
     transition: opacity 0.18s ease;
   }
-  .portal-nav-link:hover { color: #2FBF71; }
+  .portal-nav-link:hover { color: var(--primary); }
   .portal-nav-link:hover::before { opacity: 1; }
   .portal-nav-link.active {
-    color: #2FBF71;
-    background: rgba(47,191,113,0.1);
+    color: var(--primary);
+    background: var(--green-soft);
     font-weight: 600;
   }
   .portal-nav-link.active .portal-nav-dot {
     opacity: 1;
-    background: #2FBF71;
-    box-shadow: 0 0 8px rgba(47,191,113,0.8);
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--green-soft);
   }
   .portal-nav-dot {
     width: 5px; height: 5px;
@@ -91,13 +92,13 @@ const PORTAL_STYLES = `
     display: flex; align-items: center; gap: 8px;
     padding: 9px 12px; border-radius: 9px; border: none;
     background: transparent; cursor: pointer; font-size: 13px;
-    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    font-family: var(--font-body); font-weight: 500;
     transition: all 0.18s ease; width: 100%; text-align: left;
-    color: #8892A4;
+    color: var(--muted-foreground);
   }
-  .portal-btn:hover { background: rgba(255,255,255,0.05); color: #F0F4FF; }
-  .portal-btn.danger { color: #F87171; }
-  .portal-btn.danger:hover { background: rgba(248,113,113,0.08); color: #FCA5A5; }
+  .portal-btn:hover { background: var(--green-soft); color: var(--foreground); }
+  .portal-btn.danger { color: var(--destructive); }
+  .portal-btn.danger:hover { background: rgba(239,68,68,0.10); color: var(--destructive); }
 `;
 
 function injectPortalStyles() {
@@ -121,11 +122,11 @@ const SunMark: React.FC = () => (
     {/* icon bg */}
     <div style={{
       width: 36, height: 36, borderRadius: '50%',
-      background: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+      background: 'linear-gradient(135deg, var(--secondary) 0%, var(--chart-warning) 100%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       boxShadow: '0 0 16px rgba(245,158,11,0.5)',
     }}>
-      <Zap size={16} color="#0A0E1A" strokeWidth={2.5} />
+      <Zap size={16} color="var(--secondary-foreground)" strokeWidth={2.5} />
     </div>
     {/* spinning spokes */}
     <div style={{
@@ -153,6 +154,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
   const { user, logout } = useAuth();
   const { isDark: isDarkCtx, toggleTheme } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : isDarkCtx;
+  const tokens = getDesignTokens(isDark);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -164,13 +166,13 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
   const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase()
     || user?.username?.[0]?.toUpperCase() || '?';
 
-  const sideBg    = isDark ? 'linear-gradient(180deg, #0D1422 0%, #080C14 100%)' : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)';
-  const sideBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-  const sideText   = isDark ? '#F0F4FF' : '#0A0E1A';
-  const sideMuted  = isDark ? '#4A5568' : '#94A3B8';
-  const userBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
-  const userBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-  const userText   = isDark ? '#E2E8F0' : '#1E293B';
+  const sideBg    = `linear-gradient(180deg, ${tokens.surface} 0%, ${tokens.pageBg} 100%)`;
+  const sideBorder = tokens.border;
+  const sideText   = tokens.text;
+  const sideMuted  = tokens.textMuted;
+  const userBg     = tokens.surfaceMuted;
+  const userBorder = tokens.border;
+  const userText   = tokens.text;
 
   return (
     <div style={{
@@ -179,17 +181,17 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
       borderRight: `1px solid ${sideBorder}`,
       display: 'flex', flexDirection: 'column',
       padding: '0',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "var(--font-body)",
     }}>
       {/* Brand */}
       <div style={{
         padding: '24px 20px 20px',
-        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
+        borderBottom: `1px solid ${tokens.border}`,
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <SunMark />
         <div>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: sideText, letterSpacing: '-0.01em' }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: sideText, letterSpacing: '-0.01em' }}>
             360Watts
           </div>
           <div style={{ fontSize: 11, color: sideMuted, marginTop: 1, letterSpacing: '0.03em' }}>
@@ -214,7 +216,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
               end={end}
               onClick={onClose}
               className={`portal-nav-link portal-fade-in-${i + 1} ${isActive ? 'active' : ''}`}
-              style={!isDark && !isActive ? { color: '#94a3b8' } : undefined}
+              style={!isDark && !isActive ? { color: tokens.textMuted } : undefined}
             >
               <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
               {label}
@@ -225,7 +227,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
       </nav>
 
       {/* Divider */}
-      <div style={{ height: 1, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)', margin: '0 12px' }} />
+      <div style={{ height: 1, background: tokens.border, margin: '0 12px' }} />
 
       {/* User block — clicks through to profile */}
       <div style={{ padding: '16px 12px 8px' }}>
@@ -235,8 +237,8 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
           style={({ isActive }) => ({
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '8px 10px', borderRadius: 10,
-            background: isActive ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)') : userBg,
-            border: isActive ? '1px solid rgba(47,191,113,0.25)' : `1px solid ${userBorder}`,
+            background: isActive ? tokens.primarySoft : userBg,
+            border: isActive ? `1px solid ${tokens.primary}` : `1px solid ${userBorder}`,
             marginBottom: 4,
             textDecoration: 'none',
             cursor: 'pointer',
@@ -245,9 +247,9 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
         >
           <div style={{
             width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, #2FBF71, #1A9955)',
+            background: `linear-gradient(135deg, ${tokens.primary}, ${tokens.primaryHover})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 12, color: '#FFFFFF',
+            fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, color: tokens.textInverse,
           }}>
             {initials}
           </div>
@@ -265,7 +267,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 
       {/* Footer actions */}
       <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <button className="portal-btn" onClick={toggleTheme} style={!isDark ? { color: '#94a3b8' } : undefined}>
+        <button className="portal-btn" onClick={toggleTheme} style={!isDark ? { color: tokens.textMuted } : undefined}>
           {isDark ? <Sun size={14} /> : <Moon size={14} />}
           {isDark ? 'Light mode' : 'Dark mode'}
         </button>
@@ -281,31 +283,29 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 /* ─── Main layout ─────────────────────────────────────────────────────────── */
 const PortalLayout: React.FC = () => {
   const { isDark } = useTheme();
+  const tokens = getDesignTokens(isDark);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => { injectPortalStyles(); }, []);
 
-  const bg = isDark ? '#080C14' : '#F0F4FF';
-  const text = isDark ? '#F0F4FF' : '#0A0E1A';
-
   return (
-    <div style={{ background: bg, minHeight: '100vh', width: '100%', color: text, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ background: tokens.pageBg, minHeight: '100vh', width: '100%', color: tokens.text, fontFamily: "var(--font-body)" }}>
       {/* Mobile topbar */}
       <header style={{
         display: 'none',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '12px 16px',
-        background: isDark ? '#0D1422' : '#fff',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: tokens.surface,
+        borderBottom: `1px solid ${tokens.border}`,
         position: 'sticky', top: 0, zIndex: 40,
       }}
         className="portal-mobile-topbar"
       >
-        <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>360Watts</div>
+        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: tokens.text }}>360Watts</div>
         <button
           onClick={() => setMobileOpen(true)}
-          style={{ padding: 8, borderRadius: 8, border: 'none', background: 'rgba(47,191,113,0.1)', color: '#2FBF71', cursor: 'pointer' }}
+          style={{ padding: 8, borderRadius: 8, border: 'none', background: tokens.primarySoft, color: tokens.primary, cursor: 'pointer' }}
         >
           <Menu size={18} />
         </button>
@@ -315,7 +315,7 @@ const PortalLayout: React.FC = () => {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 45, backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(18,21,26,0.46)', zIndex: 45, backdropFilter: 'blur(4px)' }}
         />
       )}
 

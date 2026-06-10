@@ -10,16 +10,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import finalLogo from '../../assets/finalLogo.png';
+import { getDesignTokens } from '../theme';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
-const tok = {
-  bg:          (d: boolean) => d ? '#080C14'  : '#FFFFFF',
-  border:      (d: boolean) => d ? 'rgba(255,255,255,0.07)' : '#e4e7eb',
-  text:        (d: boolean) => d ? '#F0F4FF'  : '#1c1e2e',
-  muted:       (d: boolean) => d ? '#8892A4'  : '#64748B',
-  hover:       (d: boolean) => d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-  dropdownBg:  (d: boolean) => d ? '#0F1623'  : '#FFFFFF',
-  mobileBg:    (d: boolean) => d ? '#0D1422'  : '#F8FAFC',
+const getNavbarTokens = (isDark: boolean) => {
+  const tokens = getDesignTokens(isDark);
+  return {
+    ...tokens,
+    bg: tokens.surface,
+    hover: tokens.surfaceMuted,
+    dropdownBg: tokens.surfaceRaised,
+    mobileBg: tokens.surfaceRaised,
+    avatarBg: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.secondary} 100%)`,
+  };
 };
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -64,6 +67,7 @@ const Navbar: React.FC = () => {
   const isStaff = !!(user?.is_staff);
   const { setIsNavigating, navigationHistory } = useNavigation();
   const { isDark, toggleTheme } = useTheme();
+  const tok = getNavbarTokens(isDark);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -146,9 +150,7 @@ const Navbar: React.FC = () => {
 
   if (location.pathname === '/login' || !isAuthenticated) return null;
 
-  const avatarBg = isDark
-    ? 'linear-gradient(135deg, #22C55E 0%, #6366F1 100%)'
-    : 'linear-gradient(135deg, #16A34A 0%, #4F46E5 100%)';
+  const avatarBg = tok.avatarBg;
 
   const initials = user
     ? `${(user.first_name || '').charAt(0).toUpperCase()}${(user.last_name || '').charAt(0).toUpperCase()}` || user.username.substring(0, 2).toUpperCase()
@@ -166,8 +168,8 @@ const Navbar: React.FC = () => {
     textDecoration: 'none',
     fontSize: 13,
     fontWeight: isActive ? 600 : 450,
-    color: isActive ? '#22C55E' : tok.muted(isDark),
-    background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
+    color: isActive ? tok.primary : tok.textMuted,
+    background: isActive ? tok.primarySoft : 'transparent',
     transition: 'all 0.15s ease',
     whiteSpace: 'nowrap',
     position: 'relative',
@@ -185,11 +187,9 @@ const Navbar: React.FC = () => {
           right: 0,
           height: 64,
           zIndex: 1000,
-          background: tok.bg(isDark),
-          borderBottom: `1px solid ${tok.border(isDark)}`,
-          boxShadow: isDark
-            ? '0 1px 0 rgba(255,255,255,0.04)'
-            : '0 1px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+          background: tok.bg,
+          borderBottom: `1px solid ${tok.border}`,
+          boxShadow: isDark ? 'none' : tok.shadow,
           display: 'flex',
           alignItems: 'center',
           backdropFilter: 'blur(12px)',
@@ -224,15 +224,15 @@ const Navbar: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 3px 12px rgba(34,197,94,0.35)',
+              boxShadow: tok.shadow,
               flexShrink: 0,
               overflow: 'visible',
             }}>
               <img src={finalLogo} alt="360watts" style={{ width: 68, height: 68, objectFit: 'contain' }} />
             </div>
             <div className="topnav-brand-text" style={{ lineHeight: 1.25 }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: tok.text(isDark), letterSpacing: '-0.01em' }}>360Watts</div>
-              <div style={{ fontSize: 11, color: tok.muted(isDark), fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>IoT Platform</div>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: tok.text, letterSpacing: '-0.01em' }}>360Watts</div>
+              <div style={{ fontSize: 11, color: tok.textMuted, fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>IoT Platform</div>
             </div>
           </Link>
 
@@ -259,18 +259,18 @@ const Navbar: React.FC = () => {
                   style={navLinkStyle(isActive)}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      (e.currentTarget as HTMLElement).style.color = tok.text(isDark);
-                      (e.currentTarget as HTMLElement).style.background = tok.hover(isDark);
+                      (e.currentTarget as HTMLElement).style.color = tok.text;
+                      (e.currentTarget as HTMLElement).style.background = tok.hover;
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      (e.currentTarget as HTMLElement).style.color = tok.muted(isDark);
+                      (e.currentTarget as HTMLElement).style.color = tok.textMuted;
                       (e.currentTarget as HTMLElement).style.background = 'transparent';
                     }
                   }}
                 >
-                  <span style={{ color: isActive ? '#22C55E' : 'inherit', display: 'flex' }}>{item.icon}</span>
+                  <span style={{ color: isActive ? tok.primary : 'inherit', display: 'flex' }}>{item.icon}</span>
                   <span className="topnav-link-label">{item.label}</span>
                   {isActive && (
                     <span style={{
@@ -280,7 +280,7 @@ const Navbar: React.FC = () => {
                       right: 8,
                       height: 2,
                       borderRadius: 2,
-                      background: '#22C55E',
+                      background: tok.primary,
                     }} />
                   )}
                 </Link>
@@ -300,7 +300,7 @@ const Navbar: React.FC = () => {
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 34, height: 34, borderRadius: 8, border: 'none',
-                  background: 'transparent', color: tok.muted(isDark), cursor: 'pointer',
+                  background: 'transparent', color: tok.textMuted, cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -316,7 +316,7 @@ const Navbar: React.FC = () => {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 8, border: 'none',
-                background: 'transparent', color: tok.muted(isDark), cursor: 'pointer',
+                background: 'transparent', color: tok.textMuted, cursor: 'pointer',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -332,8 +332,8 @@ const Navbar: React.FC = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 7,
                   padding: '5px 10px 5px 5px',
-                  borderRadius: 9, border: `1px solid ${tok.border(isDark)}`,
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                  borderRadius: 9, border: `1px solid ${tok.border}`,
+                  background: tok.surfaceMuted,
                   cursor: 'pointer', transition: 'all 0.15s ease',
                 }}
               >
@@ -341,14 +341,14 @@ const Navbar: React.FC = () => {
                   width: 28, height: 28, borderRadius: 8,
                   background: avatarBg,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, color: '#fff',
-                  boxShadow: '0 2px 6px rgba(34,197,94,0.2)',
+                  fontSize: 11, fontWeight: 700, color: tok.textInverse,
+                  boxShadow: tok.shadow,
                   flexShrink: 0,
                 }}>
                   {initials}
                 </div>
                 <span className="topnav-username" style={{
-                  fontSize: 13, fontWeight: 600, color: tok.text(isDark),
+                  fontSize: 13, fontWeight: 600, color: tok.text,
                   maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {displayName}
@@ -356,7 +356,7 @@ const Navbar: React.FC = () => {
                 <ChevronDown
                   size={13}
                   style={{
-                    color: tok.muted(isDark),
+                    color: tok.textMuted,
                     transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.2s ease',
                   }}
@@ -370,12 +370,10 @@ const Navbar: React.FC = () => {
                   top: 'calc(100% + 8px)',
                   right: 0,
                   width: 'min(220px, calc(100vw - 32px))',
-                  background: tok.dropdownBg(isDark),
-                  border: `1px solid ${tok.border(isDark)}`,
+                  background: tok.dropdownBg,
+                  border: `1px solid ${tok.border}`,
                   borderRadius: 12,
-                  boxShadow: isDark
-                    ? '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)'
-                    : '0 16px 40px rgba(0,0,0,0.12)',
+                  boxShadow: tok.shadow,
                   overflow: 'hidden',
                   zIndex: 2000,
                 }}>
@@ -383,22 +381,22 @@ const Navbar: React.FC = () => {
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '12px 14px',
-                    borderBottom: `1px solid ${tok.border(isDark)}`,
+                    borderBottom: `1px solid ${tok.border}`,
                   }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: 9,
                       background: avatarBg, display: 'flex',
                       alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: '#fff',
+                      fontSize: 13, fontWeight: 700, color: tok.textInverse,
                       flexShrink: 0,
                     }}>
                       {initials}
                     </div>
                     <div style={{ overflow: 'hidden' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: tok.text(isDark), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: tok.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {displayName}
                       </div>
-                      <div style={{ fontSize: 11, color: '#22C55E', fontWeight: 500 }}>{roleName}</div>
+                      <div style={{ fontSize: 11, color: tok.primary, fontWeight: 500 }}>{roleName}</div>
                     </div>
                   </div>
 
@@ -410,17 +408,17 @@ const Navbar: React.FC = () => {
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 14px',
                       textDecoration: 'none',
-                      fontSize: 13, color: tok.text(isDark),
+                      fontSize: 13, color: tok.text,
                       transition: 'background 0.12s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = tok.hover(isDark))}
+                    onMouseEnter={e => (e.currentTarget.style.background = tok.hover)}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <User size={14} style={{ color: tok.muted(isDark) }} />
+                    <User size={14} style={{ color: tok.textMuted }} />
                     My Profile
                   </Link>
 
-                  <div style={{ height: 1, background: tok.border(isDark), margin: '0 14px' }} />
+                  <div style={{ height: 1, background: tok.border, margin: '0 14px' }} />
 
                   {/* Logout */}
                   <button
@@ -429,11 +427,11 @@ const Navbar: React.FC = () => {
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 14px', width: '100%',
                       background: 'transparent', border: 'none',
-                      fontSize: 13, color: '#EF4444',
+                      fontSize: 13, color: tok.danger,
                       cursor: 'pointer', transition: 'background 0.12s',
                       textAlign: 'left',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = tok.dangerSoft)}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <LogOut size={14} />
@@ -452,9 +450,9 @@ const Navbar: React.FC = () => {
                 display: 'none', // shown via CSS at ≤900px
                 alignItems: 'center', justifyContent: 'center',
                 width: 36, height: 36, borderRadius: 8,
-                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                border: `1px solid ${tok.border(isDark)}`,
-                color: tok.text(isDark), cursor: 'pointer',
+                background: tok.surfaceMuted,
+                border: `1px solid ${tok.border}`,
+                color: tok.text, cursor: 'pointer',
               }}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
@@ -470,15 +468,15 @@ const Navbar: React.FC = () => {
             onClick={() => setMobileOpen(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 999,
-              background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)',
+              background: isDark ? 'rgba(0,0,0,0.58)' : 'rgba(18,21,26,0.36)', backdropFilter: 'blur(2px)',
             }}
           />
           <div style={{
             position: 'fixed', bottom: 64, left: 0, right: 0,
             zIndex: 1001,
-            background: tok.mobileBg(isDark),
-            borderTop: `1px solid ${tok.border(isDark)}`,
-            boxShadow: '0 -8px 24px rgba(0,0,0,0.2)',
+            background: tok.mobileBg,
+            borderTop: `1px solid ${tok.border}`,
+            boxShadow: tok.shadow,
             overflowY: 'auto',
             maxHeight: 'calc(100dvh - 128px)',
             borderRadius: '16px 16px 0 0',
@@ -499,14 +497,14 @@ const Navbar: React.FC = () => {
                         padding: '13px 14px', borderRadius: 10,
                         textDecoration: 'none', marginBottom: 2,
                         minHeight: 48,
-                        background: isActive ? (isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)') : 'transparent',
-                        color: isActive ? '#22C55E' : tok.text(isDark),
+                        background: isActive ? tok.primarySoft : 'transparent',
+                        color: isActive ? tok.primary : tok.text,
                         fontWeight: isActive ? 600 : 450,
                         fontSize: 14,
-                        borderLeft: isActive ? '3px solid #22C55E' : '3px solid transparent',
+                        borderLeft: isActive ? `3px solid ${tok.primary}` : '3px solid transparent',
                       }}
                     >
-                      <span style={{ color: isActive ? '#22C55E' : tok.muted(isDark), display: 'flex' }}>{item.icon}</span>
+                      <span style={{ color: isActive ? tok.primary : tok.textMuted, display: 'flex' }}>{item.icon}</span>
                       {item.label}
                     </Link>
                   );
@@ -514,7 +512,7 @@ const Navbar: React.FC = () => {
 
               {/* Footer controls */}
               <div style={{
-                borderTop: `1px solid ${tok.border(isDark)}`,
+                borderTop: `1px solid ${tok.border}`,
                 marginTop: 8, paddingTop: 10,
                 display: 'flex', flexDirection: 'column', gap: 2,
               }}>
@@ -524,11 +522,11 @@ const Navbar: React.FC = () => {
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     background: 'transparent', border: 'none',
-                    color: tok.text(isDark), fontSize: 14, fontWeight: 450,
+                    color: tok.text, fontSize: 14, fontWeight: 450,
                     cursor: 'pointer', textAlign: 'left', width: '100%',
                   }}
                 >
-                  {isDark ? <Sun size={15} style={{ color: tok.muted(isDark) }} /> : <Moon size={15} style={{ color: tok.muted(isDark) }} />}
+                  {isDark ? <Sun size={15} style={{ color: tok.textMuted }} /> : <Moon size={15} style={{ color: tok.textMuted }} />}
                   {isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 </button>
                 <Link
@@ -538,10 +536,10 @@ const Navbar: React.FC = () => {
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     textDecoration: 'none',
-                    color: tok.text(isDark), fontSize: 14, fontWeight: 450,
+                    color: tok.text, fontSize: 14, fontWeight: 450,
                   }}
                 >
-                  <User size={15} style={{ color: tok.muted(isDark) }} />
+                  <User size={15} style={{ color: tok.textMuted }} />
                   My Profile
                 </Link>
                 <button
@@ -550,7 +548,7 @@ const Navbar: React.FC = () => {
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '13px 14px', borderRadius: 10, minHeight: 48,
                     background: 'transparent', border: 'none',
-                    color: '#EF4444', fontSize: 14, fontWeight: 500,
+                    color: tok.danger, fontSize: 14, fontWeight: 500,
                     cursor: 'pointer', textAlign: 'left', width: '100%',
                   }}
                 >
@@ -572,11 +570,9 @@ const Navbar: React.FC = () => {
             bottom: 0, left: 0, right: 0,
             height: 64,
             zIndex: 998,
-            background: tok.bg(isDark),
-            borderTop: `1px solid ${tok.border(isDark)}`,
-            boxShadow: isDark
-              ? '0 -1px 0 rgba(255,255,255,0.04), 0 -4px 16px rgba(0,0,0,0.3)'
-              : '0 -1px 0 #e4e7eb, 0 -4px 16px rgba(0,0,0,0.06)',
+            background: tok.bg,
+            borderTop: `1px solid ${tok.border}`,
+            boxShadow: isDark ? 'none' : tok.shadow,
             display: 'flex',
             alignItems: 'stretch',
           }}
@@ -596,9 +592,9 @@ const Navbar: React.FC = () => {
                   justifyContent: 'center',
                   gap: 3,
                   textDecoration: 'none',
-                  color: isActive ? '#22C55E' : tok.muted(isDark),
+                  color: isActive ? tok.primary : tok.textMuted,
                   background: 'transparent',
-                  borderTop: `2px solid ${isActive ? '#22C55E' : 'transparent'}`,
+                  borderTop: `2px solid ${isActive ? tok.primary : 'transparent'}`,
                   transition: 'color 0.15s',
                   minWidth: 48,
                   WebkitTapHighlightColor: 'transparent',
@@ -625,8 +621,8 @@ const Navbar: React.FC = () => {
               gap: 3,
               background: 'transparent',
               border: 'none',
-              borderTop: `2px solid ${mobileOpen ? '#22C55E' : 'transparent'}`,
-              color: mobileOpen ? '#22C55E' : tok.muted(isDark),
+              borderTop: `2px solid ${mobileOpen ? tok.primary : 'transparent'}`,
+              color: mobileOpen ? tok.primary : tok.textMuted,
               cursor: 'pointer',
               minWidth: 48,
               WebkitTapHighlightColor: 'transparent',

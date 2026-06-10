@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getDesignTokens } from '../theme';
 
 interface PageHeaderProps {
   icon?: React.ReactNode;
@@ -11,11 +12,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, rightSlot, backAction }: PageHeaderProps) {
   const { isDark } = useTheme();
-
-  const text     = isDark ? '#F0F4FF' : '#12151A';
-  const textMute = isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)';
-  const card     = isDark ? '#0F1623' : '#FFFFFF';
-  const border   = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(18,21,26,0.09)';
+  const tokens = getDesignTokens(isDark);
 
   return (
     <div style={{
@@ -29,16 +26,16 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
             onClick={backAction}
             style={{
               width: 36, height: 36, borderRadius: 18,
-              background: card, border: `1px solid ${border}`,
+              background: tokens.surface, border: `1px solid ${tokens.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              cursor: 'pointer', boxShadow: tokens.shadow,
               flexShrink: 0,
             }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M10 3L5 8l5 5" stroke={text} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 3L5 8l5 5" stroke={tokens.text} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         )}
@@ -48,7 +45,7 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
             fontSize: '1.625rem',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: text,
+            color: tokens.text,
             lineHeight: 1.2,
           }}>
             {title}
@@ -56,7 +53,7 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
           <p style={{
             margin: '3px 0 0',
             fontSize: '0.8125rem',
-            color: textMute,
+            color: tokens.textMuted,
             letterSpacing: '-0.01em',
           }}>
             {subtitle}
@@ -87,22 +84,23 @@ export function HeaderPillButton({
   href?: string;
 }) {
   const { isDark } = useTheme();
+  const tokens = getDesignTokens(isDark);
 
   const styles: Record<string, React.CSSProperties> = {
     accent: {
-      background: 'rgba(47,191,113,0.10)',
-      border: '1px solid rgba(47,191,113,0.30)',
-      color: '#2FBF71',
+      background: tokens.primarySoft,
+      border: `1px solid ${tokens.primary}`,
+      color: tokens.primary,
     },
     danger: {
-      background: 'rgba(239,68,68,0.10)',
-      border: '1px solid rgba(239,68,68,0.30)',
-      color: '#EF4444',
+      background: tokens.dangerSoft,
+      border: `1px solid ${tokens.danger}`,
+      color: tokens.danger,
     },
     muted: {
-      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(18,21,26,0.05)',
-      border: `1px solid ${isDark ? 'rgba(255,255,255,0.09)' : 'rgba(18,21,26,0.09)'}`,
-      color: isDark ? '#8892A4' : '#717182',
+      background: tokens.surfaceMuted,
+      border: `1px solid ${tokens.border}`,
+      color: tokens.textMuted,
     },
   };
 
@@ -142,13 +140,16 @@ export function GradientCTAButton({
   onClick?: () => void;
   href?: string;
 }) {
+  const { isDark } = useTheme();
+  const tokens = getDesignTokens(isDark);
+
   const base: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 8,
     padding: '10px 20px', borderRadius: 14,
     border: 'none', cursor: 'pointer',
-    background: 'linear-gradient(90deg, #00D95F, #00A63E)',
-    color: '#fff', fontSize: '0.9375rem', fontWeight: 700, letterSpacing: '0.01em',
-    boxShadow: '0 4px 14px rgba(47,191,113,0.35)',
+    background: `linear-gradient(90deg, ${tokens.primary}, ${tokens.primaryHover})`,
+    color: tokens.textInverse, fontSize: '0.9375rem', fontWeight: 700, letterSpacing: '0.01em',
+    boxShadow: tokens.shadow,
     transition: 'opacity 0.15s, box-shadow 0.15s',
     textDecoration: 'none',
   };
@@ -156,15 +157,15 @@ export function GradientCTAButton({
   if (href) {
     return (
       <a href={href} style={base}
-        onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(47,191,113,0.5)'; }}
-        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(47,191,113,0.35)'; }}
+        onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = tokens.shadow; }}
+        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = tokens.shadow; }}
       >{children}</a>
     );
   }
   return (
     <button onClick={onClick} style={base}
-      onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(47,191,113,0.5)'; }}
-      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(47,191,113,0.35)'; }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = tokens.shadow; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = tokens.shadow; }}
     >{children}</button>
   );
 }

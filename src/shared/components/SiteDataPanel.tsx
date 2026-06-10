@@ -649,8 +649,8 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                       top: -10,
                       fontSize: '0.625rem',
                       fontWeight: 700,
-                      background: '#00a63e',
-                      color: '#fff',
+                      background: '#2FBF71',
+                      color: '#0A0E1A',
                       padding: '2px 8px',
                       borderRadius: 6,
                       fontFamily: 'Poppins, sans-serif',
@@ -2894,13 +2894,17 @@ const PhaseLoadTab: React.FC<{
       }
       return null;
     };
-    const evByBucket = new Map<string, number>();
+    const evByBucket = new Map<string, { sum: number; count: number }>();
     for (const row of evHistory) {
       const baseTs = new Date(row.timestamp);
-      if (Number.isNaN(baseTs.getTime())) continue;
-      const bucket = Math.floor(baseTs.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000);
-      const key = new Date(bucket).toISOString();
-      evByBucket.set(key, (evByBucket.get(key) ?? 0) + ((row.power_w ?? 0) / 1000));
+      if (Number.isNaN(baseTs.getTime()) || row.power_w == null) continue;
+      const bucketMs = loadBucketMinutes * 60 * 1000;
+      const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
+      const key = new Date(snapped).toISOString();
+      const cur = evByBucket.get(key) ?? { sum: 0, count: 0 };
+      cur.sum += row.power_w / 1000;
+      cur.count += 1;
+      evByBucket.set(key, cur);
     }
 
     const bucketMs = loadBucketMinutes * 60 * 1000;
@@ -2943,7 +2947,8 @@ const PhaseLoadTab: React.FC<{
       const gridL1 = Math.max(0, pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1']) ?? 0);
       const gridL2 = Math.max(0, pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2']) ?? 0);
       const gridL3 = Math.max(0, pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3']) ?? 0);
-      const ev = pickFirstKw(row, ['ev_load_kw', 'ev_kw', 'ev_charger_kw', 'smart_device_kw']) ?? evByBucket.get(key) ?? 0;
+      const evFb = evByBucket.get(key);
+      const ev = pickFirstKw(row, ['ev_load_kw', 'ev_kw', 'ev_charger_kw', 'smart_device_kw']) ?? (evFb ? evFb.sum / evFb.count : 0);
       b.inverterL1 += inverterL1;
       b.inverterL2 += inverterL2;
       b.inverterL3 += inverterL3;
@@ -2986,11 +2991,13 @@ const PhaseLoadTab: React.FC<{
       }
     }
 
-    for (const [key, ev] of evByBucket.entries()) {
+    for (const [key, { sum, count }] of evByBucket.entries()) {
       const snapped = new Date(key).getTime();
       const bucket = ensureBucket(key, snapped);
-      bucket.ev = ev;
-      bucket.evN = Math.max(bucket.evN, 1);
+      if (bucket.evN === 0) {
+        bucket.ev = sum / count;
+        bucket.evN = 1;
+      }
     }
 
     const rows = Array.from(map.values())
@@ -3407,22 +3414,20 @@ const PhaseLoadTab: React.FC<{
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {hours > 24 && (
-            <input
-              type="date"
-              value={selectedLoadDate}
-              min={availableLoadDates[0] ?? ''}
-              max={availableLoadDates[availableLoadDates.length - 1] ?? ''}
-              onChange={e => setSelectedLoadDate(e.target.value)}
-              style={{
-                background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                borderRadius: 10, padding: '7px 10px', fontSize: '0.78rem',
-                color: isDark ? '#e2e8f0' : '#334155',
-                fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-              }}
-            />
-          )}
+          <input
+            type="date"
+            value={selectedLoadDate}
+            min={availableLoadDates[0] ?? ''}
+            max={availableLoadDates[availableLoadDates.length - 1] ?? ''}
+            onChange={e => setSelectedLoadDate(e.target.value)}
+            style={{
+              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              borderRadius: 10, padding: '7px 10px', fontSize: '0.78rem',
+              color: isDark ? '#e2e8f0' : '#334155',
+              fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+            }}
+          />
           <select
             value={hours}
             onChange={e => onHoursChange(Number(e.target.value))}

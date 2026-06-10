@@ -32,8 +32,8 @@
   --success-bg: rgba(52, 211, 153, 0.12);
   --warning-color: #f59e0b;
   --warning-bg: rgba(245, 158, 11, 0.12);
-  --danger-color: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-color: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.12);
   --info-color: #3b82f6;
   --info-bg: rgba(59, 130, 246, 0.12);
   
@@ -304,7 +304,7 @@ p {
   border-radius: var(--radius-full);
   font-size: var(--font-xs);
   font-weight: 600;
-  color: white;
+  color: var(--primary-foreground);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
 }
@@ -543,7 +543,7 @@ p {
 
 .auth-link:hover {
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .auth-link svg {
@@ -964,7 +964,7 @@ p {
   gap: var(--space-2);
   background: var(--primary-gradient);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   padding: var(--space-3) var(--space-6);
   font-size: 0.95rem;
   font-weight: 700;
@@ -1414,7 +1414,7 @@ p {
 
 .btn-primary {
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   border: none;
 }
 
@@ -1447,7 +1447,7 @@ p {
   align-items: center;
   padding: var(--space-6) var(--space-8);
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .modal-header h2 {
@@ -1460,7 +1460,7 @@ p {
 .close-button {
   background: rgba(255, 255, 255, 0.15);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   font-size: var(--font-xl);
   width: 44px;
   height: 44px;
@@ -1486,7 +1486,7 @@ p {
 
 .user-info-card {
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   padding: var(--space-8);
   border-radius: var(--radius-xl);
   margin-bottom: var(--space-6);
@@ -1894,7 +1894,7 @@ p {
 .auth-button {
   width: 100%;
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   border: none;
   padding: 12px 18px;
   border-radius: 10px;
@@ -2816,7 +2816,7 @@ input[type="checkbox"]:disabled {
   justify-content: center;
   margin: 0 auto var(--space-5);
   font-size: var(--font-4xl);
-  color: white;
+  color: var(--primary-foreground);
   font-weight: 700;
   box-shadow: 0 8px 24px rgba(47, 191, 113, 0.3);
 }
@@ -3295,7 +3295,7 @@ body::before {
   gap: 8px;
   background: var(--primary-gradient);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   padding: 12px 24px;
   font-size: 14px;
   font-weight: 600;
@@ -3526,7 +3526,7 @@ body::before {
   align-items: center;
   padding: 24px 32px;
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .modal-header h2 {
@@ -3538,7 +3538,7 @@ body::before {
 .close-button {
   background: rgba(255, 255, 255, 0.15);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   font-size: 24px;
   width: 44px;
   height: 44px;
@@ -3564,7 +3564,7 @@ body::before {
 
 .user-info-card {
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   padding: 28px;
   border-radius: var(--radius-lg);
   margin-bottom: 24px;
@@ -3938,7 +3938,7 @@ body::before {
 .auth-button {
   width: 100%;
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   border: none;
   padding: 16px;
   border-radius: var(--radius-sm);
@@ -4302,7 +4302,7 @@ body::before {
   justify-content: center;
   margin: 0 auto 20px;
   font-size: 2.5rem;
-  color: white;
+  color: var(--primary-foreground);
   font-weight: 700;
 }
 
@@ -5217,7 +5217,7 @@ select.full-width {
   font-size: var(--font-xs);
   font-weight: 600;
   background: var(--primary-color);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .version-badge.inactive {
@@ -5659,10 +5659,10 @@ body::before {
 .auth-button {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #2FBF71, #8b5cf6, #a78bfa, #2FBF71);
+  background: var(--primary-gradient);
   background-size: 300% 100%;
   animation: btnGradient 5s ease infinite;
-  color: white;
+  color: var(--primary-foreground);
   border: none;
   border-radius: var(--radius-lg);
   font-size: 1rem;
@@ -5865,7 +5865,7 @@ button:hover svg { transform: scale(1.12); }
 /* ---- Selection highlight ---- */
 ::selection {
   background: rgba(47, 191, 113, 0.4);
-  color: #fff;
+  color: var(--primary-foreground);
 }
 
 /* ====================================================================
@@ -6175,7 +6175,7 @@ body.dark-mode .empty-state-icon { color: rgba(240,244,255,0.32); }
   background: linear-gradient(90deg, #00D95F, #00A63E);
   border: none;
   border-radius: 14px;
-  color: #fff;
+  color: var(--primary-foreground);
   font-size: 0.9375rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -6876,7 +6876,7 @@ body.dark-mode .mute-duration-pill--selected {
 }
 .btn-primary {
   background: var(--primary-gradient);
-  color: white;
+  color: var(--primary-foreground);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
@@ -8383,7 +8383,7 @@ body.dark-mode .config-arrow {
 
 .portal-modal-btn-primary {
   background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  color: var(--primary-foreground);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
 }
 
@@ -8442,7 +8442,7 @@ body.dark-mode .portal-modal-btn-cancel {
   justify-content: center;
   border-radius: 50%;
   font-weight: 700;
-  color: #fff;
+  color: var(--primary-foreground);
   flex-shrink: 0;
   line-height: 1;
   user-select: none;
@@ -8817,7 +8817,7 @@ html.dark-mode .quotation-step-btn:hover .quotation-step-circle {
 .quotation-step-btn.done .quotation-step-circle {
   background: #22c55e;
   border-color: #4ade80;
-  color: #fff;
+  color: var(--primary-foreground);
   box-shadow: 0 0 12px rgba(34,197,94,0.35);
 }
 
@@ -9058,32 +9058,6 @@ body.dark-mode textarea {
 body.dark-mode input::placeholder,
 body.dark-mode textarea::placeholder { color: rgba(240,244,255,0.32) !important; }
 
-/* Inline bg overrides that used #1a1a1a or #0f172a or #1e293b */
-body.dark-mode [style*="background: #1a1a1a"],
-body.dark-mode [style*="background: #0f172a"],
-body.dark-mode [style*="background: #1e293b"],
-body.dark-mode [style*="background:#1a1a1a"],
-body.dark-mode [style*="background:#0f172a"],
-body.dark-mode [style*="background:#1e293b"],
-body.dark-mode [style*="background-color: #1a1a1a"],
-body.dark-mode [style*="background-color: #0f172a"],
-body.dark-mode [style*="background-color: #1e293b"] {
-  background: #0F1623 !important;
-}
-
-/* Text that used slate grey when it should be navy-tinted white */
-body.dark-mode [style*="color: #e2e8f0"],
-body.dark-mode [style*="color: #f1f5f9"],
-body.dark-mode [style*="color: #f8fafc"] {
-  color: #F0F4FF !important;
-}
-body.dark-mode [style*="color: #94a3b8"],
-body.dark-mode [style*="color: #64748b"] {
-  color: rgba(240,244,255,0.52) !important;
-}
-
-/* Border overrides — slate-700 → AppTheme border */
-body.dark-mode [style*="border-color: rgba(148,163,184"],
-body.dark-mode [style*="border: 1px solid rgba(148,163,184"] {
-  border-color: rgba(255,255,255,0.07) !important;
-}
+/* Inline-style string overrides were removed during token migration.
+   Components should consume src/shared/theme tokens instead of relying on
+   global [style*=...] selectors that can mask intended surfaces. */

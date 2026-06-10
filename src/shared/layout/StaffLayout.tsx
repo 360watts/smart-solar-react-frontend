@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import finalLogo from '../../assets/finalLogo.png';
+import { getDesignTokens } from '../theme';
 
 // ─── Nav groups ───────────────────────────────────────────────────────────────
 
@@ -51,9 +52,9 @@ const STAFF_STYLES = `
     border-radius: 9px;
     text-decoration: none;
     font-size: 13px;
-    font-family: 'Inter', 'DM Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
-    color: #667085;
+    color: var(--muted-foreground);
     background: transparent;
     transition: all 0.15s ease;
     cursor: pointer;
@@ -65,8 +66,8 @@ const STAFF_STYLES = `
   }
   .staff-nav-link:hover { color: inherit; }
   .staff-nav-link.active {
-    color: #2FBF71;
-    background: rgba(47,191,113,0.12);
+    color: var(--primary);
+    background: var(--green-soft);
     font-weight: 600;
   }
   .staff-nav-dot {
@@ -78,30 +79,30 @@ const STAFF_STYLES = `
     transition: all 0.15s ease;
   }
   .staff-nav-link.active .staff-nav-dot {
-    background: #2FBF71;
-    box-shadow: 0 0 8px rgba(47,191,113,0.6);
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--green-soft);
   }
 
   /* Light mode overrides */
-  body:not(.dark-mode) .staff-nav-link { color: #667085; }
+  body:not(.dark-mode) .staff-nav-link { color: var(--muted-foreground); }
   body:not(.dark-mode) .staff-nav-link:hover { color: inherit; }
-  body:not(.dark-mode) .staff-nav-link.active { color: #2FBF71; background: rgba(47,191,113,0.1); }
-  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: #2FBF71; box-shadow: 0 0 6px rgba(47,191,113,0.4); }
+  body:not(.dark-mode) .staff-nav-link.active { color: var(--primary); background: var(--green-soft); }
+  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: var(--primary); box-shadow: 0 0 6px var(--green-soft); }
 
   .staff-btn {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 12px; border-radius: 9px; border: none;
     background: transparent; cursor: pointer; font-size: 13px;
-    font-family: 'Inter', 'DM Sans', sans-serif; font-weight: 500;
+    font-family: var(--font-body); font-weight: 500;
     transition: all 0.15s ease; width: 100%; text-align: left;
-    color: #8892A4;
+    color: var(--muted-foreground);
   }
-  .staff-btn:hover { background: rgba(47,191,113,0.08); color: #12151A; }
-  .staff-btn.danger { color: #DC2626; }
-  .staff-btn.danger:hover { background: rgba(220,38,38,0.08); color: #B91C1C; }
+  .staff-btn:hover { background: var(--green-soft); color: var(--foreground); }
+  .staff-btn.danger { color: var(--destructive); }
+  .staff-btn.danger:hover { background: rgba(239,68,68,0.10); color: var(--destructive); }
 
-  body:not(.dark-mode) .staff-btn { color: #667085; }
-  body:not(.dark-mode) .staff-btn:hover { background: rgba(47,191,113,0.08); color: #12151A; }
+  body:not(.dark-mode) .staff-btn { color: var(--muted-foreground); }
+  body:not(.dark-mode) .staff-btn:hover { background: var(--green-soft); color: var(--foreground); }
 
   @media (max-width: 1023px) {
     .staff-desktop-sidebar { display: none !important; }
@@ -144,6 +145,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const expandedActionsRef = React.useRef<HTMLDivElement>(null);
+  const tokens = getDesignTokens(isDark);
 
   React.useEffect(() => {
     if (profileOpen && expandedActionsRef.current) {
@@ -163,12 +165,14 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const displayName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user?.username : '';
   const roleName = user?.is_superuser ? 'Admin' : user?.is_staff ? 'Staff' : 'User';
 
-  const sideBg     = isDark ? 'linear-gradient(180deg, #0F1623 0%, #080C14 100%)' : 'linear-gradient(180deg, #FFFFFF 0%, #F4F6F8 100%)';
-  const sideBorder = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
-  const sideText   = isDark ? '#F0F4FF' : '#12151A';
-  const sideMuted  = isDark ? '#8892A4' : '#667085';
-  const userBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(47,191,113,0.04)';
-  const userBorder = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(47,191,113,0.12)';
+  const sideBg = isDark
+    ? `linear-gradient(180deg, ${tokens.surface} 0%, ${tokens.pageBg} 100%)`
+    : `linear-gradient(180deg, ${tokens.surface} 0%, ${tokens.pageBg} 100%)`;
+  const sideBorder = tokens.border;
+  const sideText   = tokens.text;
+  const sideMuted  = tokens.textMuted;
+  const userBg     = tokens.primarySoft;
+  const userBorder = tokens.border;
 
   const isActivePath = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -185,13 +189,13 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
       {/* Brand */}
       <div style={{
         padding: '20px 16px 16px',
-        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
+        borderBottom: `1px solid ${tokens.border}`,
         display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
       }}>
         <div style={{
           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 2px 10px rgba(34,197,94,0.3)',
+          boxShadow: tokens.shadow,
           overflow: 'visible',
         }}>
           <img src={finalLogo} alt="360watts" style={{ width: 56, height: 56, objectFit: 'contain' }} />
@@ -301,10 +305,10 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         >
           <div style={{
             width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, #22C55E 0%, #6366F1 100%)',
+            background: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.secondary} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 700, color: '#fff',
-            boxShadow: '0 2px 6px rgba(34,197,94,0.25)',
+            fontSize: 11, fontWeight: 700, color: tokens.textInverse,
+            boxShadow: tokens.shadow,
           }}>
             {initials}
           </div>
@@ -312,7 +316,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
             <div style={{ fontSize: 12, fontWeight: 600, color: sideText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {displayName}
             </div>
-            <div style={{ fontSize: 10, color: '#22C55E', fontWeight: 500 }}>{roleName}</div>
+            <div style={{ fontSize: 10, color: tokens.primary, fontWeight: 500 }}>{roleName}</div>
           </div>
           <ChevronDown
             size={12}
@@ -323,8 +327,8 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         {/* Expanded actions */}
         {profileOpen && (
           <div ref={expandedActionsRef} style={{
-            marginTop: 6, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-            borderRadius: 10, border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            marginTop: 6, background: tokens.surfaceMuted,
+            borderRadius: 10, border: `1px solid ${tokens.border}`,
             padding: '4px 4px',
           }}>
             <NavLink
@@ -355,6 +359,7 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
 const StaffLayout: React.FC = () => {
   const { isDark } = useTheme();
+  const tokens = getDesignTokens(isDark);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -370,10 +375,8 @@ const StaffLayout: React.FC = () => {
     return () => window.removeEventListener('open-mobile-menu', handler);
   }, []);
 
-  const bg = isDark ? '#080C14' : '#F0F5FF';
-
   return (
-    <div style={{ background: bg, minHeight: '100vh', width: '100%', fontFamily: "'Fira Sans', 'DM Sans', sans-serif" }}>
+    <div style={{ background: tokens.pageBg, minHeight: '100vh', width: '100%', fontFamily: "var(--font-body)" }}>
 
       {/* Mobile topbar — suppressed on all pages since each page has its own branded header */}
       {false && (
@@ -384,21 +387,21 @@ const StaffLayout: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '12px 16px',
-            background: isDark ? '#0D1422' : '#fff',
-            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
+            background: tokens.surface,
+            borderBottom: `1px solid ${tokens.border}`,
             position: 'sticky', top: 0, zIndex: 40,
-            boxShadow: isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.06)',
+            boxShadow: isDark ? 'none' : tokens.shadow,
           }}
         >
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 15, color: isDark ? '#F0F4FF' : '#0A0E1A' }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: tokens.text }}>
             360Watts
           </div>
           <button
             onClick={() => setMobileOpen(true)}
             style={{
               padding: 8, borderRadius: 8, border: 'none',
-              background: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.08)',
-              color: '#22C55E', cursor: 'pointer',
+              background: tokens.primarySoft,
+              color: tokens.primary, cursor: 'pointer',
             }}
           >
             <Menu size={18} />
@@ -410,7 +413,7 @@ const StaffLayout: React.FC = () => {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 45, backdropFilter: 'blur(4px)' }}
+          style={{ position: 'fixed', inset: 0, background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(18,21,26,0.46)', zIndex: 45, backdropFilter: 'blur(4px)' }}
         />
       )}
 
@@ -438,8 +441,8 @@ const StaffLayout: React.FC = () => {
           minHeight: '100vh',
           boxSizing: 'border-box',
           overflowX: 'clip',
-          color: isDark ? '#F0F4FF' : '#0A0E1A',
-          fontFamily: "'Fira Sans', 'DM Sans', sans-serif",
+          color: tokens.text,
+          fontFamily: "var(--font-body)",
         }}
       >
         <Outlet />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { PackageOpen, Plus } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getDesignTokens } from '../theme';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -14,12 +15,13 @@ interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => {
   const { isDark } = useTheme();
+  const tokens = getDesignTokens(isDark);
 
-  const surface  = isDark ? '#0F1623' : '#FFFFFF';
-  const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
-  const text     = isDark ? '#F0F4FF' : '#12151A';
-  const textMute = isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)';
-  const iconFg   = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
+  const surface  = tokens.surface;
+  const border   = tokens.border;
+  const text     = tokens.text;
+  const textMute = tokens.textMuted;
+  const iconFg   = tokens.textDim;
 
   return (
     <div style={{
@@ -54,8 +56,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '10px 20px', borderRadius: 14, border: 'none',
-            background: 'linear-gradient(90deg, #00D95F, #00A63E)',
-            color: '#fff', fontSize: '0.9375rem', fontWeight: 700,
+            background: `linear-gradient(90deg, ${tokens.primary}, ${tokens.primaryHover})`,
+            color: tokens.textInverse, fontSize: '0.9375rem', fontWeight: 700,
             cursor: 'pointer', letterSpacing: '0.01em',
             boxShadow: '0 4px 14px rgba(47,191,113,0.35)',
             transition: 'opacity 0.15s, box-shadow 0.15s',

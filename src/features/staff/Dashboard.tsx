@@ -10,6 +10,7 @@ import SiteDataPanel from '../../shared/components/SiteDataPanel';
 import PageHeader from '../../shared/layout/PageHeader';
 import MobileDashboard from '../mobile/MobileDashboard';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { getDesignTokens } from '../../shared/theme';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -134,29 +135,27 @@ const Dashboard: React.FC = () => {
   }, [allAlerts, selectedSite]);
 
   // ── Design tokens ────────────────────────────────────────────────────────
-
-  // ── Design tokens — matches mobile AppTheme ─────────────────────────────
-  const bg       = isDark ? '#080C14' : '#F4F6F8';
-  const surface  = isDark ? '#0F1623' : '#FFFFFF';
-  const cardEl   = isDark ? '#111927' : '#EDF0F4';
-  const border   = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
-  const borderMuted = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
-  const textMain = isDark ? '#F0F4FF' : '#12151A';
-  const textMute = isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)';
-  const textSub  = isDark ? '#8892A4' : '#717182';
-  const textDim  = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
-  const accent   = '#2FBF71';
+  const tokens = getDesignTokens(isDark);
+  const bg       = tokens.pageBg;
+  const surface  = tokens.surface;
+  const cardEl   = tokens.surfaceMuted;
+  const border   = tokens.border;
+  const textMain = tokens.text;
+  const textMute = tokens.textMuted;
+  const textSub  = tokens.textMuted;
+  const textDim  = tokens.textDim;
+  const accent   = tokens.primary;
 
   const onlineDot = (online: boolean): React.CSSProperties => ({
     width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-    background: online ? accent : '#EF4444',
+    background: online ? tokens.success : tokens.danger,
     boxShadow: online ? `0 0 5px ${accent}88` : 'none',
   });
 
   const statusPalette = {
-    ok:   { bg: 'rgba(47,191,113,0.10)',  color: accent,    border: 'rgba(47,191,113,0.25)' },
-    warn: { bg: 'rgba(233,185,73,0.10)',  color: '#E9B949', border: 'rgba(233,185,73,0.25)' },
-    err:  { bg: 'rgba(239,68,68,0.10)',   color: '#EF4444', border: 'rgba(239,68,68,0.25)'  },
+    ok:   { bg: tokens.successSoft, color: tokens.success, border: tokens.successSoft },
+    warn: { bg: tokens.warningSoft, color: tokens.warning, border: tokens.warningSoft },
+    err:  { bg: tokens.dangerSoft,  color: tokens.danger,  border: tokens.dangerSoft  },
   };
 
   // ── Mobile handoff ───────────────────────────────────────────────────────
@@ -179,7 +178,7 @@ const Dashboard: React.FC = () => {
     return (
       <div className="admin-container responsive-page">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: cardEl, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <LayoutDashboard size={24} color={textMute} />
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -192,7 +191,7 @@ const Dashboard: React.FC = () => {
           </div>
           {sitesError && (
             <button onClick={() => { setSitesLoading(true); fetchSites(); }}
-              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#00a63e', color: '#fff', fontSize: '0.8125rem', fontWeight: 600 }}>
+              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: tokens.primary, color: tokens.textInverse, fontSize: '0.8125rem', fontWeight: 600 }}>
               Retry
             </button>
           )}
@@ -268,7 +267,7 @@ const Dashboard: React.FC = () => {
             <div key={label} style={{
               background: surface, border: `1px solid ${border}`, borderRadius: 18,
               padding: 14, position: 'relative', overflow: 'hidden', minHeight: 100,
-              boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 1px 6px rgba(0,0,0,0.04)',
+              boxShadow: tokens.shadow,
             }}>
               {/* Corner glow */}
               <span style={{ position: 'absolute', top: -18, right: -18, width: 56, height: 56, borderRadius: '50%', background: `${s.color}0A`, pointerEvents: 'none' }} />
@@ -333,11 +332,11 @@ const Dashboard: React.FC = () => {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '4px 10px', borderRadius: 999,
-          background: isActive ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-          border: `1px solid ${isActive ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-          fontSize: '0.72rem', color: isActive ? '#10b981' : '#ef4444', fontWeight: 600,
+          background: isActive ? tokens.successSoft : tokens.dangerSoft,
+          border: `1px solid ${isActive ? tokens.successSoft : tokens.dangerSoft}`,
+          fontSize: '0.72rem', color: isActive ? tokens.success : tokens.danger, fontWeight: 600,
         }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? '#10b981' : '#ef4444', display: 'inline-block' }} />
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? tokens.success : tokens.danger, display: 'inline-block' }} />
           {isActive ? 'Active' : 'Inactive'}
         </span>
       </div>
@@ -348,9 +347,9 @@ const Dashboard: React.FC = () => {
 
   const renderAlertsStrip = () => {
     const severityPalette: Record<string, { bg: string; color: string; border: string }> = {
-      critical: { bg: 'rgba(239,68,68,0.1)',  color: '#ef4444', border: 'rgba(239,68,68,0.25)'  },
-      warning:  { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
-      info:     { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: 'rgba(59,130,246,0.25)' },
+      critical: { bg: tokens.dangerSoft,  color: tokens.danger,  border: tokens.dangerSoft  },
+      warning:  { bg: tokens.warningSoft, color: tokens.warning, border: tokens.warningSoft },
+      info:     { bg: tokens.infoSoft,    color: tokens.info,    border: tokens.infoSoft    },
     };
 
     return (
@@ -362,11 +361,11 @@ const Dashboard: React.FC = () => {
           gap: 12,
           padding: '10px 14px',
           borderRadius: 12,
-          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(47,191,113,0.18)'}`,
-          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(47,191,113,0.05)',
+          border: `1px solid ${tokens.border}`,
+          background: tokens.primarySoft,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <Bell size={14} color={activeAlerts.length > 0 ? '#2FBF71' : textMute} />
+            <Bell size={14} color={activeAlerts.length > 0 ? tokens.primary : textMute} />
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: textMain }}>
               Active alerts
             </span>
@@ -376,7 +375,7 @@ const Dashboard: React.FC = () => {
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            color: activeAlerts.length > 0 ? '#2FBF71' : textMute,
+            color: activeAlerts.length > 0 ? tokens.primary : textMute,
           }}>
             {activeAlerts.length > 0 ? `${activeAlerts.length} open` : 'None'}
           </span>
@@ -386,10 +385,10 @@ const Dashboard: React.FC = () => {
           <div style={{
             padding: '12px 14px',
             borderRadius: 12,
-            border: `1px dashed ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(148,163,184,0.28)'}`,
+            border: `1px dashed ${tokens.borderStrong}`,
             color: textMute,
             fontSize: '0.78rem',
-            background: isDark ? 'rgba(255,255,255,0.02)' : '#fff',
+            background: tokens.surface,
           }}>
             No active alerts for the selected site.
           </div>
@@ -449,7 +448,7 @@ const Dashboard: React.FC = () => {
               cursor: 'pointer', color: textMain,
               fontSize: '0.8125rem', fontWeight: 600,
               userSelect: 'none', transition: 'background 150ms',
-              boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: isDark ? 'none' : tokens.shadow,
             }}
           >
             {selectedSite && <span style={onlineDot(siteIsOnline(selectedSite))} />}
@@ -471,21 +470,21 @@ const Dashboard: React.FC = () => {
                 position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 9999,
                 minWidth: 'min(280px, calc(100vw - 32px))', maxHeight: 360,
                 background: surface,
-                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                border: `1px solid ${tokens.border}`,
                 borderRadius: 14,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.6)' : '0 8px 24px rgba(0,0,0,0.12)',
+                boxShadow: tokens.shadow,
                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
               }}>
                 {/* Search */}
-                <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '5px 10px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
+                <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${tokens.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: tokens.surfaceMuted, borderRadius: 8, padding: '5px 10px', border: `1px solid ${tokens.border}` }}>
                     <Search size={13} color={textMute} style={{ flexShrink: 0 }} />
                     <input
                       ref={searchRef}
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       placeholder="Search sites or devices…"
-                      style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: textMain, caretColor: '#00a63e' }}
+                      style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: textMain, caretColor: tokens.primary }}
                     />
                     {search && (
                       <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
@@ -512,11 +511,11 @@ const Dashboard: React.FC = () => {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10,
                             padding: '10px 14px', cursor: 'pointer',
-                            background: active ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.08)') : 'transparent',
-                            borderLeft: `3px solid ${active ? '#00a63e' : 'transparent'}`,
+                            background: active ? tokens.primarySoft : 'transparent',
+                            borderLeft: `3px solid ${active ? tokens.primary : 'transparent'}`,
                             transition: 'background 120ms',
                           }}
-                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'; }}
+                          onMouseEnter={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = tokens.surfaceMuted; }}
                           onMouseLeave={e => { if (!active) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                         >
                           <span style={onlineDot(online)} />
@@ -530,11 +529,11 @@ const Dashboard: React.FC = () => {
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
                             {site.devices.length > 1 && (
-                              <span style={{ fontSize: '0.65rem', fontWeight: 600, color: textSub, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: 999 }}>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 600, color: textSub, background: tokens.surfaceMuted, padding: '1px 6px', borderRadius: 999 }}>
                                 {site.devices.length} devices
                               </span>
                             )}
-                            {online ? <Wifi size={12} color="#22c55e" /> : <WifiOff size={12} color="#64748b" />}
+                            {online ? <Wifi size={12} color={tokens.success} /> : <WifiOff size={12} color={tokens.textMuted} />}
                           </div>
                         </div>
                       );
@@ -543,7 +542,7 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '7px 14px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, fontSize: '0.7rem', color: textMute }}>
+                <div style={{ padding: '7px 14px', borderTop: `1px solid ${tokens.border}`, fontSize: '0.7rem', color: textMute }}>
                   {filteredSites.length} of {sites.length} site{sites.length !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -565,14 +564,14 @@ const Dashboard: React.FC = () => {
             marginTop: 16,
             padding: '12px 14px',
             borderRadius: 10,
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
+            background: tokens.dangerSoft,
+            border: `1px solid ${tokens.dangerSoft}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#ef4444', fontSize: '0.875rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: tokens.danger, fontSize: '0.875rem' }}>
               <AlertTriangle size={16} />
               <span>{alertsError}</span>
             </div>
@@ -582,8 +581,8 @@ const Dashboard: React.FC = () => {
                 padding: '4px 12px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#ef4444',
-                color: '#fff',
+                background: tokens.danger,
+                color: '#FFFFFF',
                 cursor: 'pointer',
                 fontSize: '0.8125rem',
                 fontWeight: 600,

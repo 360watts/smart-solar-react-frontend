@@ -136,7 +136,7 @@ export function NodeCard({
       {status && (
         <div style={{
           fontSize: 7, fontWeight: 700,
-          color: '#fff', background: STATUS_BG[status],
+          color: status === 'online' ? '#0A0E1A' : '#FFFFFF', background: STATUS_BG[status],
           borderRadius: 3, padding: '1.5px 5px',
           textTransform: 'uppercase', letterSpacing: '0.05em',
           marginTop: -3,

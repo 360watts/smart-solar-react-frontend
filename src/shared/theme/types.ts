@@ -1,0 +1,42 @@
+export type ChartTokens = {
+  pv: string;
+  load: string;
+  battery: string;
+  grid: string;
+  import: string;
+  export: string;
+  warning: string;
+  danger: string;
+  neutral: string;
+};
+
+export type DesignTokens = {
+  pageBg: string;
+  surface: string;
+  surfaceRaised: string;
+  surfaceMuted: string;
+  text: string;
+  textMuted: string;
+  textDim: string;
+  textInverse: string;
+  border: string;
+  borderStrong: string;
+  focus: string;
+  primary: string;
+  primaryHover: string;
+  primarySoft: string;
+  secondary: string;
+  secondarySoft: string;
+  success: string;
+  successSoft: string;
+  warning: string;
+  warningSoft: string;
+  danger: string;
+  dangerSoft: string;
+  info: string;
+  infoSoft: string;
+  shadow: string;
+  charts: ChartTokens;
+};
+
+export type ThemeCssVars = Record<`--${string}`, string>;

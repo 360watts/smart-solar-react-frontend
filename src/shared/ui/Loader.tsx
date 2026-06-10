@@ -9,7 +9,7 @@ interface LoaderProps {
   
   /**
    * Color of the spinner (CSS color value)
-   * @default 'white'
+   * @default 'currentColor'
    */
   color?: string;
   
@@ -53,7 +53,7 @@ interface LoaderProps {
  */
 export const Loader: React.FC<LoaderProps> = ({
   size = 16,
-  color = 'white',
+  color = 'currentColor',
   duration = 0.6,
   label,
   fullScreen = false,
@@ -91,11 +91,12 @@ export const Loader: React.FC<LoaderProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 9999,
+            color: '#FFFFFF',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             <div style={spinnerStyle} />
-            {label && <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: 500 }}>{label}</span>}
+            {label && <span style={{ color: 'currentColor', fontSize: '0.875rem', fontWeight: 500 }}>{label}</span>}
           </div>
         </div>
       </>
