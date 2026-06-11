@@ -1392,7 +1392,9 @@ const Devices: React.FC = () => {
               label: 'Firmware',
               value: selectedDevice.firmware_version || 'Not reported',
               sub: selectedDevice.rollback_target_version
-                ? `Rollback pending — awaiting v${selectedDevice.rollback_target_version}`
+                ? selectedDevice.rollback_target_version.startsWith('~')
+                  ? `Rollback pending — awaiting version change from v${selectedDevice.rollback_target_version.slice(1)}`
+                  : `Rollback pending — awaiting v${selectedDevice.rollback_target_version}`
                 : selectedDevice.firmware_version
                   ? 'Reported via MQTT'
                   : selectedDevice.last_heartbeat
