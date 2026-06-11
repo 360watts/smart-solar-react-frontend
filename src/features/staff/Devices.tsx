@@ -62,7 +62,6 @@ interface Device {
   wifi_ssid?: string | null;
   wifi_password?: string | null;
   firmware_version?: string | null;
-  rollback_target_version?: string | null;
 }
 
 interface Preset {
@@ -1391,17 +1390,13 @@ const Devices: React.FC = () => {
             {
               label: 'Firmware',
               value: selectedDevice.firmware_version || 'Not reported',
-              sub: selectedDevice.rollback_target_version
-                ? selectedDevice.rollback_target_version.startsWith('~')
-                  ? `Rollback pending — awaiting version change from v${selectedDevice.rollback_target_version.slice(1)}`
-                  : `Rollback pending — awaiting v${selectedDevice.rollback_target_version}`
-                : selectedDevice.firmware_version
+              sub: selectedDevice.firmware_version
                   ? 'Reported via MQTT'
                   : selectedDevice.last_heartbeat
                     ? 'Device online — not in status payload'
                     : 'No heartbeat received yet',
               icon: <Shield size={22} />,
-              status: (selectedDevice.rollback_target_version ? 'warn' : selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
+              status: (selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
             },
             {
               label: 'Linked Site',
