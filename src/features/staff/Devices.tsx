@@ -1390,7 +1390,7 @@ const Devices: React.FC = () => {
             {
               label: 'Firmware',
               value: selectedDevice.firmware_version || 'Not reported',
-              sub: selectedDevice.firmware_version ? 'Reported via MQTT' : 'No heartbeat received yet',
+              sub: selectedDevice.firmware_version ? 'Reported via MQTT' : selectedDevice.last_heartbeat ? 'Device online — not in status payload' : 'No heartbeat received yet',
               icon: <Shield size={22} />,
               status: (selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
             },
