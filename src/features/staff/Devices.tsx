@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import MobileDevices from '../mobile/MobileDevices';
+import MobileDevices from '../mobile/staff/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -62,6 +62,7 @@ interface Device {
   wifi_ssid?: string | null;
   wifi_password?: string | null;
   firmware_version?: string | null;
+  rollback_target_version?: string | null;
 }
 
 interface Preset {
@@ -1390,9 +1391,15 @@ const Devices: React.FC = () => {
             {
               label: 'Firmware',
               value: selectedDevice.firmware_version || 'Not reported',
-              sub: selectedDevice.firmware_version ? 'Reported via MQTT' : selectedDevice.last_heartbeat ? 'Device online — not in status payload' : 'No heartbeat received yet',
+              sub: selectedDevice.rollback_target_version
+                ? `Rollback pending — awaiting v${selectedDevice.rollback_target_version}`
+                : selectedDevice.firmware_version
+                  ? 'Reported via MQTT'
+                  : selectedDevice.last_heartbeat
+                    ? 'Device online — not in status payload'
+                    : 'No heartbeat received yet',
               icon: <Shield size={22} />,
-              status: (selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
+              status: (selectedDevice.rollback_target_version ? 'warn' : selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
             },
             {
               label: 'Linked Site',
