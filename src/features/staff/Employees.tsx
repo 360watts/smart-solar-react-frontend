@@ -69,6 +69,7 @@ const Employees: React.FC = () => {
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; employee: Employee | null }>({ show: false, employee: null });
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [creatingEmployee, setCreatingEmployee] = useState(false);
@@ -169,6 +170,7 @@ const Employees: React.FC = () => {
   };
 
   const handleEdit = (employee: Employee) => {
+    setFormError(null);
     setEditingEmployee(employee);
     setEditForm({
       first_name: employee.first_name,
@@ -186,11 +188,12 @@ const Employees: React.FC = () => {
   const handleSave = async () => {
     if (!editingEmployee) return;
     try {
+      setFormError(null);
       setSavingLoading(true);
       await apiService.updateEmployee(editingEmployee.id, {
-        first_name: editForm.first_name,
-        last_name: editForm.last_name,
-        email: editForm.email,
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        email: editForm.email.trim(),
         mobile_number: editForm.mobile_number,
         address: editForm.address,
         is_active: editForm.is_active,
@@ -201,37 +204,56 @@ const Employees: React.FC = () => {
       setEditingEmployee(null);
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update employee');
+      setFormError(err instanceof Error ? err.message : 'Failed to update employee');
     } finally {
       setSavingLoading(false);
     }
   };
 
+  const stopPoll = () => {
+    if (emailPollRef.current) {
+      clearInterval(emailPollRef.current);
+      emailPollRef.current = null;
+    }
+  };
+
+  const resetCreateFlow = () => {
+    setCreateForm({
+      email: '',
+      first_name: '',
+      last_name: '',
+      mobile_number: '',
+      address: '',
+      is_staff: true,
+      department_id: undefined,
+    });
+    setFormError(null);
+  };
+
   const handleCreate = async () => {
+    const payload = {
+      email: createForm.email.trim().toLowerCase(),
+      first_name: createForm.first_name.trim(),
+      last_name: createForm.last_name.trim(),
+      mobile_number: createForm.mobile_number,
+      address: createForm.address,
+      is_staff: createForm.is_staff,
+      department_id: createForm.department_id,
+    };
+
+    if (!payload.email || !payload.first_name || !payload.last_name) {
+      setFormError('Email, first name, and last name are required.');
+      return;
+    }
     try {
+      setFormError(null);
       setCreatingLoading(true);
-      await apiService.createEmployee({
-        email: createForm.email,
-        first_name: createForm.first_name,
-        last_name: createForm.last_name,
-        mobile_number: createForm.mobile_number,
-        address: createForm.address,
-        is_staff: createForm.is_staff,
-        department_id: createForm.department_id,
-      });
+      await apiService.createEmployee(payload);
       setCreatingEmployee(false);
-      setCreateForm({
-        email: '',
-        first_name: '',
-        last_name: '',
-        mobile_number: '',
-        address: '',
-        is_staff: true,
-        department_id: undefined,
-      });
+      resetCreateFlow();
       await fetchEmployees(searchTerm, currentPage, pageSize);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create employee');
+      setFormError(err instanceof Error ? err.message : 'Failed to create employee');
     } finally {
       setCreatingLoading(false);
     }
@@ -260,6 +282,10 @@ const Employees: React.FC = () => {
   const handleCancel = () => {
     setEditingEmployee(null);
     setCreatingEmployee(false);
+    setFormError(null);
+    if (!editingEmployee) {
+      resetCreateFlow();
+    }
   };
 
   if (loading) {
@@ -490,6 +516,20 @@ const Employees: React.FC = () => {
 
             <form onSubmit={(e) => { e.preventDefault(); editingEmployee ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+                {formError && (
+                  <div style={{
+                    marginBottom: 16,
+                    background: isDark ? 'rgba(239,68,68,0.12)' : '#fef2f2',
+                    border: isDark ? '1px solid rgba(239,68,68,0.28)' : '1px solid #fecaca',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    color: isDark ? '#fca5a5' : '#b91c1c',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                  }}>
+                    {formError}
+                  </div>
+                )}
 
                 {/* Account Information */}
                 <div style={{
@@ -513,7 +553,13 @@ const Employees: React.FC = () => {
                       <input
                         type="email"
                         value={editingEmployee ? editForm.email : createForm.email}
-                        onChange={(e) => editingEmployee ? setEditForm({...editForm, email: e.target.value}) : setCreateForm({...createForm, email: e.target.value})}
+                        onChange={(e) => {
+                          if (editingEmployee) {
+                            setEditForm({...editForm, email: e.target.value});
+                            return;
+                          }
+                          setCreateForm({...createForm, email: e.target.value});
+                        }}
                         required autoComplete="off" placeholder="john.doe@example.com"
                         style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       />
@@ -568,10 +614,13 @@ const Employees: React.FC = () => {
                         }}
                       >
                         <option value="">No Department</option>
-                        {departments.map(dept => (
+                        {departments.filter(dept => dept.is_active).map(dept => (
                           <option key={dept.id} value={dept.id}>{dept.name}</option>
                         ))}
                       </select>
+                      {loadingDepartments && (
+                        <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Loading departments…</span>
+                      )}
                     </div>
                   </div>
                 </div>

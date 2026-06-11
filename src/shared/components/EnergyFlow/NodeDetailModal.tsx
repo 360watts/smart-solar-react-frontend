@@ -54,16 +54,16 @@ const DS = {
   colors: {
     solarGreen: '#2FBF71',
     amber: '#E9B949',
-    error: '#EF4444',
+    error: '#DC2626',
     success: '#34D399',
     warning: '#F59E0B',
     info: '#3B82F6',
-    bgDark: '#0A0E1A',
-    surfaceDark: 'rgba(255,255,255,0.04)',
-    borderDark: 'rgba(255,255,255,0.09)',
-    textPrimary: '#F1F5F9',
-    textMuted: 'rgba(241,245,249,0.52)',
-    textDim: 'rgba(241,245,249,0.32)',
+    bgDark: 'var(--background)',
+    surfaceDark: 'var(--card)',
+    borderDark: 'var(--border)',
+    textPrimary: 'var(--foreground)',
+    textMuted: 'var(--muted-foreground)',
+    textDim: 'var(--text-dim)',
   },
   radius: { sm: 10, md: 14, lg: 18, pill: 999 },
   spacing: { xs: 8, sm: 12, md: 16, lg: 24 },
@@ -162,7 +162,7 @@ function StatusPill({ status }: { status?: string }) {
   );
 }
 
-function MetricTile({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
+function MetricTile({ label, value, sub, accent, isDark }: { label: string; value: string; sub?: string; accent?: string; isDark: boolean }) {
   return (
     <div style={{
       background: DS.colors.surfaceDark,
@@ -173,7 +173,7 @@ function MetricTile({ label, value, sub, accent }: { label: string; value: strin
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim, marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 17, fontWeight: 800, color: accent ?? DS.colors.textPrimary, letterSpacing: '-0.02em', lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ fontSize: 17, fontWeight: 800, color: accent && isDark ? accent : DS.colors.textPrimary, letterSpacing: '-0.02em', lineHeight: 1, fontFamily: "var(--font-mono)", fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </div>
       {sub && (
@@ -317,113 +317,6 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark }: {
 
 const PC = { L1: '#3b82f6', L2: '#f59e0b', L3: '#8b5cf6' };
 
-// ─── Single metric bar group: 3 animated bars for L1 / L2 / L3 ───────────────
-
-interface PhaseMetricBarProps {
-  label: string;
-  unit: string;
-  vals: [number | null, number | null, number | null];
-  total?: number | null;
-  isDark: boolean;
-  delay?: number;
-}
-
-function PhaseMetricBar({ label, unit, vals, total, isDark, delay = 0 }: PhaseMetricBarProps) {
-  const abs = vals.map(v => (v != null ? Math.abs(v) : null));
-  const max = Math.max(...abs.filter((v): v is number => v != null), 0.001);
-  const fmt = (v: number | null, decimals: number) =>
-    v != null ? `${Math.abs(v).toFixed(decimals)}${unit}` : '—';
-  const decimals = unit === '' ? 3 : unit === 'Hz' ? 2 : 1;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.28, ease: 'easeOut' }}
-      style={{
-        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-        border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
-        borderRadius: DS.radius.sm,
-        padding: '10px 12px',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: DS.colors.textDim }}>
-          {label}
-        </span>
-        {total != null && (
-          <span style={{ fontSize: 10, fontWeight: 800, color: isDark ? DS.colors.textPrimary : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(total, decimals)} <span style={{ fontSize: 8, opacity: 0.55 }}>total</span>
-          </span>
-        )}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {(['L1', 'L2', 'L3'] as const).map((phase, i) => {
-          const val = abs[i];
-          const pct = val != null ? (val / max) * 100 : 0;
-          const color = PC[phase];
-          return (
-            <div key={phase} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontSize: 9, fontWeight: 800, color, width: 16, flexShrink: 0 }}>{phase}</span>
-              <div style={{ flex: 1, height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.55, delay: delay + i * 0.07, ease: 'easeOut' }}
-                  style={{ height: '100%', background: color, borderRadius: 3, opacity: val != null ? 1 : 0 }}
-                />
-              </div>
-              <span style={{ fontSize: 10, fontWeight: 700, color: isDark ? DS.colors.textPrimary : '#1e293b', fontVariantNumeric: 'tabular-nums', minWidth: 52, textAlign: 'right' }}>
-                {val != null ? fmt(val, decimals) : '—'}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Energy Meter 3-phase bar panel ───────────────────────────────────────────────
-
-function CtPhasePanel({ r, isDark }: { r: CtMeterReading; isDark: boolean }) {
-  const metrics: PhaseMetricBarProps[] = [
-    { label: 'Active Power', unit: 'W',  vals: [r.active_power_l1,  r.active_power_l2,  r.active_power_l3],  total: r.active_power_total,  isDark, delay: 0 },
-    { label: 'Voltage',      unit: 'V',  vals: [r.voltage_l1,       r.voltage_l2,       r.voltage_l3],       total: null,                  isDark, delay: 0.06 },
-    { label: 'Current',      unit: 'A',  vals: [r.current_l1,       r.current_l2,       r.current_l3],       total: null,                  isDark, delay: 0.12 },
-    { label: 'Power Factor', unit: '',   vals: [r.power_factor_l1,  r.power_factor_l2,  r.power_factor_l3],  total: r.power_factor_total,  isDark, delay: 0.18 },
-    { label: 'Frequency',    unit: 'Hz', vals: [r.frequency_l1,     r.frequency_l2,     r.frequency_l3],     total: null,                  isDark, delay: 0.24 },
-  ];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {metrics.map(m => <PhaseMetricBar key={m.label} {...m} />)}
-    </div>
-  );
-}
-
-// ─── Inverter 3-phase bar panel ───────────────────────────────────────────────
-
-function InverterPhasePanel({ p, isDark }: { p: InverterPhases; isDark: boolean }) {
-  // Frequency and PF: single aggregate — broadcast to all 3 phase slots
-  const f = p.grid_frequency_hz;
-  const pf = p.grid_power_factor;
-  const metrics: PhaseMetricBarProps[] = [
-    { label: 'Load Power',   unit: 'W',  vals: [p.l1.power_w,        p.l2.power_w,        p.l3.power_w],        total: (p.l1.power_w ?? 0) + (p.l2.power_w ?? 0) + (p.l3.power_w ?? 0), isDark, delay: 0 },
-    { label: 'Voltage',      unit: 'V',  vals: [p.grid_l1.voltage_v, p.grid_l2.voltage_v, p.grid_l3.voltage_v], total: null,                isDark, delay: 0.06 },
-    { label: 'Current',      unit: 'A',  vals: [p.grid_l1.current_a, p.grid_l2.current_a, p.grid_l3.current_a], total: null,                isDark, delay: 0.12 },
-    { label: 'Power Factor', unit: '',   vals: [pf, pf, pf],                                                     total: null,                isDark, delay: 0.18 },
-    { label: 'Frequency',    unit: 'Hz', vals: [f, f, f],                                                        total: null,                isDark, delay: 0.24 },
-  ];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {metrics.map(m => <PhaseMetricBar key={m.label} {...m} />)}
-      <div style={{ fontSize: 8.5, color: DS.colors.textDim, paddingLeft: 2 }}>
-        Power factor and frequency are aggregate — inverter reports no per-phase breakdown
-      </div>
-    </div>
-  );
-}
-
 // ─── Side-by-side comparison: Inverter vs Energy Meter per metric ────────────────
 
 interface ComparisonMetricRowProps {
@@ -524,10 +417,9 @@ function ComparisonMetricRow({ label, unit, invVals, ctVals, invTotal, ctTotal, 
   );
 }
 
-function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases; ct: CtMeterReading; isDark: boolean }) {
-  const invPowerTotal = (inv.l1.power_w ?? 0) + (inv.l2.power_w ?? 0) + (inv.l3.power_w ?? 0);
-  // Inverter reports a single aggregate frequency — broadcast to all 3 phase slots
-  const f = inv.grid_frequency_hz;
+function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases | null; ct: CtMeterReading | null; isDark: boolean }) {
+  const invPowerTotal = inv ? (inv.l1.power_w ?? 0) + (inv.l2.power_w ?? 0) + (inv.l3.power_w ?? 0) : null;
+  const f = inv?.grid_frequency_hz ?? null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -544,34 +436,34 @@ function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases; ct: Ct
 
       <ComparisonMetricRow
         label="Active Power" unit="W"
-        invVals={[inv.l1.power_w, inv.l2.power_w, inv.l3.power_w]}
-        ctVals={[ct.active_power_l1, ct.active_power_l2, ct.active_power_l3]}
-        invTotal={invPowerTotal} ctTotal={ct.active_power_total}
+        invVals={[inv?.l1.power_w ?? null, inv?.l2.power_w ?? null, inv?.l3.power_w ?? null]}
+        ctVals={[ct?.active_power_l1 ?? null, ct?.active_power_l2 ?? null, ct?.active_power_l3 ?? null]}
+        invTotal={invPowerTotal} ctTotal={ct?.active_power_total ?? null}
         isDark={isDark} delay={0}
       />
       <ComparisonMetricRow
         label="Voltage" unit="V"
-        invVals={[inv.grid_l1.voltage_v, inv.grid_l2.voltage_v, inv.grid_l3.voltage_v]}
-        ctVals={[ct.voltage_l1, ct.voltage_l2, ct.voltage_l3]}
+        invVals={[inv?.grid_l1.voltage_v ?? null, inv?.grid_l2.voltage_v ?? null, inv?.grid_l3.voltage_v ?? null]}
+        ctVals={[ct?.voltage_l1 ?? null, ct?.voltage_l2 ?? null, ct?.voltage_l3 ?? null]}
         isDark={isDark} delay={0.06}
       />
       <ComparisonMetricRow
         label="Current" unit="A"
-        invVals={[inv.grid_l1.current_a, inv.grid_l2.current_a, inv.grid_l3.current_a]}
-        ctVals={[ct.current_l1, ct.current_l2, ct.current_l3]}
+        invVals={[inv?.grid_l1.current_a ?? null, inv?.grid_l2.current_a ?? null, inv?.grid_l3.current_a ?? null]}
+        ctVals={[ct?.current_l1 ?? null, ct?.current_l2 ?? null, ct?.current_l3 ?? null]}
         isDark={isDark} delay={0.12}
       />
       <ComparisonMetricRow
         label="Power Factor" unit=""
-        invVals={[inv.grid_power_factor, inv.grid_power_factor, inv.grid_power_factor]}
-        ctVals={[ct.power_factor_l1, ct.power_factor_l2, ct.power_factor_l3]}
-        ctTotal={ct.power_factor_total}
+        invVals={[inv?.grid_power_factor ?? null, inv?.grid_power_factor ?? null, inv?.grid_power_factor ?? null]}
+        ctVals={[ct?.power_factor_l1 ?? null, ct?.power_factor_l2 ?? null, ct?.power_factor_l3 ?? null]}
+        ctTotal={ct?.power_factor_total ?? null}
         isDark={isDark} delay={0.18}
       />
       <ComparisonMetricRow
         label="Frequency" unit="Hz"
         invVals={[f, f, f]}
-        ctVals={[ct.frequency_l1, ct.frequency_l2, ct.frequency_l3]}
+        ctVals={[ct?.frequency_l1 ?? null, ct?.frequency_l2 ?? null, ct?.frequency_l3 ?? null]}
         isDark={isDark} delay={0.24}
       />
       <div style={{ fontSize: 8.5, color: DS.colors.textDim, paddingLeft: 2 }}>
@@ -590,7 +482,6 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
   const [sparkLoading, setSparkLoading] = useState(false);
   const [chartFullscreen, setChartFullscreen] = useState(false);
   const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({ v: true, grid: true, ev: true });
-  const [isCompact, setIsCompact] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // Chart.js zoom state (inline — matches SiteDataPanel pattern)
@@ -607,14 +498,6 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
       if (Object.values(next).every(v => !v)) return prev;
       return next;
     });
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 480px)');
-    const sync = () => setIsCompact(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
   }, []);
 
   // ESC to close
@@ -701,6 +584,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
   const pwr = node ? fmtPower(node.power_kw) : { value: '0.00', unit: 'kW' };
   const active = isActive(node?.status);
   const accentColor = node?.color ?? DS.colors.solarGreen;
+  const hasTrend = !!node && (HISTORY_EXTRACT[node.type] != null || node.type === 'device');
 
   // Build details entries for the grid
   const detailEntries = node?.details ? Object.entries(node.details) : [];
@@ -769,55 +653,60 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     return { labels, datasets };
   };
 
-  const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: false as const,
-    interaction: { mode: 'index' as const, intersect: false },
-    scales: {
-      x: {
-        ticks: {
-          color: DS.colors.textDim, font: { size: 9, weight: 600 as const },
-          maxTicksLimit: 7, maxRotation: 0,
+  const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => {
+    const chartText = isDark ? '#AAB4C2' : 'rgba(18,21,26,0.62)';
+    const chartTitle = isDark ? '#F0F4FF' : '#12151A';
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false as const,
+      interaction: { mode: 'index' as const, intersect: false },
+      scales: {
+        x: {
+          ticks: {
+            color: chartText, font: { size: 9, weight: 600 as const },
+            maxTicksLimit: 7, maxRotation: 0,
+          },
+          grid: { display: false },
+          border: { display: false },
         },
-        grid: { display: false },
-        border: { display: false },
-      },
-      y: {
-        display: fullscreen,
-        ticks: { color: DS.colors.textDim, font: { size: 9 }, callback: (v: unknown) => `${Number(v).toFixed(1)}` },
-        grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-        border: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: isDark ? '#0d1117' : '#ffffff',
-        borderColor: `${accentColor}40`,
-        borderWidth: 1,
-        titleColor: isDark ? DS.colors.textPrimary : '#0F172A',
-        bodyColor: isDark ? DS.colors.textPrimary : '#0F172A',
-        padding: 8,
-        callbacks: {
-          label: (item: any) => `${item.dataset.label}: ${item.parsed.y != null ? item.parsed.y.toFixed(2) : '—'} kW`,
+        y: {
+          display: fullscreen,
+          ticks: { color: chartText, font: { size: 9 }, callback: (v: unknown) => `${Number(v).toFixed(1)}` },
+          grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+          border: { display: false },
         },
       },
-      zoom: {
-        wheel: { enabled: true, speed: 0.08 },
-        drag: {
-          enabled: true,
-          backgroundColor: 'rgba(0,166,62,0.14)',
-          borderColor: 'rgba(0,166,62,0.7)',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isDark ? '#0d1117' : '#ffffff',
+          borderColor: `${accentColor}40`,
           borderWidth: 1,
+          titleColor: chartTitle,
+          bodyColor: chartTitle,
+          padding: 8,
+          callbacks: {
+            label: (item: any) => `${item.dataset.label}: ${item.parsed.y != null ? item.parsed.y.toFixed(2) : '—'} kW`,
+          },
         },
-        pinch: { enabled: true },
-        mode: 'x' as const,
-        onZoomComplete: onZoom,
+        zoom: {
+          wheel: { enabled: true, speed: 0.08 },
+          drag: {
+            enabled: true,
+            backgroundColor: 'rgba(0,166,62,0.14)',
+            borderColor: 'rgba(0,166,62,0.7)',
+            borderWidth: 1,
+          },
+          pinch: { enabled: true },
+          mode: 'x' as const,
+          onZoomComplete: onZoom,
+        },
+        pan: { enabled: false, mode: 'x' as const },
       },
-      pan: { enabled: false, mode: 'x' as const },
-    },
-  });
+    };
+  };
 
   const renderChart = (isLoad: boolean, fullscreen: boolean) => {
     const ref = fullscreen ? fsChartRef : chartRef;
@@ -923,9 +812,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     document.body,
   );
 
-  return (
-    <>
-    {fullscreenPortal}
+  const modalContent = (
     <AnimatePresence>
       {node && (
         <>
@@ -945,25 +832,26 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               WebkitBackdropFilter: 'blur(6px)',
               zIndex: 998,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: isCompact ? 0 : 12,
+              padding: 12,
             }}
           >
             {/* ── Modal card ── */}
             <motion.div
               key="modal"
-              variants={isCompact ? { hidden: { opacity: 0, y: 80 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 34 } }, exit: { opacity: 0, y: 60, transition: { duration: 0.2 } } } : modalVariants}
+              variants={modalVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
               onClick={e => e.stopPropagation()}
               style={{
                 position: 'relative',
-                width: isCompact ? '100vw' : 'min(94vw, 460px)',
-                maxWidth: isCompact ? '100vw' : '460px',
-                maxHeight: isCompact ? '88dvh' : '88dvh',
+                width: 'min(94vw, 460px)',
+                maxWidth: '460px',
+                height: 'auto',
+                maxHeight: '88dvh',
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                borderRadius: isCompact ? '22px 22px 0 0' : DS.radius.lg,
+                borderRadius: DS.radius.lg,
                 background: isDark ? 'rgba(7,10,20,0.96)' : 'rgba(255,255,255,0.97)',
                 backdropFilter: 'blur(32px)',
                 WebkitBackdropFilter: 'blur(32px)',
@@ -974,16 +862,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 borderTop: `3px solid ${accentColor}`,
                 zIndex: 999,
                 scrollbarWidth: 'none',
-                paddingBottom: isCompact ? 'max(16px, env(safe-area-inset-bottom))' : 0,
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
               }}
             >
-              {/* Drag handle — mobile only */}
-              {isCompact && (
-                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 2 }}>
-                  <div style={{ width: 36, height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)' }} />
-                </div>
-              )}
-              {/* Glow halo behind modal */}
+              <div style={{ position: 'static', top: 0, zIndex: 20, background: 'transparent', borderBottom: 'none' }}>
               {active && (
                 <div style={{
                   position: 'absolute', inset: -2, borderRadius: DS.radius.lg,
@@ -992,19 +875,18 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 }} />
               )}
 
-              {/* ── Header ── */}
               <motion.div
                 custom={0} variants={rowVariants} initial="hidden" animate="visible"
                 style={{
                   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-                  padding: isCompact ? '14px 14px 12px' : '18px 18px 14px',
+                  padding: '18px 18px 14px',
                   borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                 }}
               >
                 {/* Icon + title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 10 : 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
-                    width: isCompact ? 34 : 40, height: isCompact ? 34 : 40, borderRadius: DS.radius.sm,
+                    width: 40, height: 40, borderRadius: DS.radius.sm,
                     background: `${accentColor}18`,
                     border: `1.5px solid ${accentColor}38`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -1014,13 +896,13 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   </div>
                   <div>
                     <div style={{
-                      fontSize: isCompact ? 13 : 15, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2,
+                      fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.15,
                       color: isDark ? DS.colors.textPrimary : '#0F172A',
                     }}>
                       {node.title}
                     </div>
                     {node.subtitle && (
-                      <div style={{ fontSize: isCompact ? 9 : 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: DS.colors.textDim, marginTop: 2 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: DS.colors.textDim, marginTop: 3 }}>
                         {node.subtitle}
                       </div>
                     )}
@@ -1032,7 +914,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   onClick={onClose}
                   aria-label="Close"
                   style={{
-                    width: isCompact ? 28 : 30, height: isCompact ? 28 : 30, borderRadius: DS.radius.sm,
+                    width: 30, height: 30, borderRadius: DS.radius.sm,
                     background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
                     border: isDark ? '1px solid rgba(255,255,255,0.09)' : '1px solid rgba(0,0,0,0.09)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1043,11 +925,12 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; }}
                 >
-                  <X size={isCompact ? 13 : 14} />
+                  <X size={14} />
                 </button>
               </motion.div>
+              </div>
 
-              <div style={{ padding: isCompact ? '12px 14px 14px' : '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: isCompact ? 12 : 14 }}>
+              <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
                 {/* ── Power hero ── */}
                 <motion.div
@@ -1056,8 +939,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
                     border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                     borderRadius: DS.radius.md,
-                    padding: isCompact ? '12px 13px' : '14px 16px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     position: 'relative', overflow: 'hidden',
                   }}
                 >
@@ -1070,7 +956,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
                   <div style={{ paddingLeft: 8 }}>
                     <div style={{
-                      fontSize: isCompact ? 8 : 9, fontWeight: 700, letterSpacing: '0.1em',
+                      fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       color: isDark ? DS.colors.textDim : 'rgba(15,23,42,0.38)',
                       marginBottom: 6,
@@ -1079,7 +965,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                       <span style={{
-                        fontSize: isCompact ? 36 : 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
+                        fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                         color: isDark ? DS.colors.textPrimary : '#0F172A',
                         fontVariantNumeric: 'tabular-nums',
                         fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
@@ -1087,20 +973,28 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                         {pwr.value}
                       </span>
                       <span style={{
-                        fontSize: isCompact ? 14 : 13, fontWeight: 700,
+                        fontSize: 13, fontWeight: 700,
                         color: isDark ? DS.colors.textMuted : 'rgba(15,23,42,0.52)',
                       }}>
                         {pwr.unit}
                       </span>
                     </div>
                     {node.timestamp && (
-                      <div style={{ fontSize: isCompact ? 9 : 10, color: DS.colors.textDim, marginTop: 5 }}>
+                      <div style={{ fontSize: 10, color: DS.colors.textDim, marginTop: 5 }}>
                         Updated {fmtRelTime(node.timestamp)}
                       </div>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    justifyContent: 'flex-start',
+                    width: 'auto',
+                    gap: 8,
+                    marginTop: 0,
+                  }}>
                     <StatusPill status={node.status} />
                     <TrendIcon kw={node.power_kw} />
                   </div>
@@ -1120,7 +1014,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     <SectionLabel>Details</SectionLabel>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: isCompact ? '1fr 1fr' : 'repeat(auto-fill, minmax(160px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
                       gap: 8,
                     }}>
                       {allDetails.slice(0, 6).map(([k, v], i) => (
@@ -1129,6 +1023,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                           label={k}
                           value={v}
                           accent={k.toLowerCase().includes('power') ? accentColor : undefined}
+                          isDark={isDark}
                         />
                       ))}
                     </div>
@@ -1139,25 +1034,16 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
                 {/* Inverter standalone card: phase measurements removed — shown only in Total Load comparison */}
 
-                {/* ── Total Load: side-by-side Inverter vs CT comparison ── */}
-                {node.type === 'load' && node.inverterPhases && node.ctReading && (
+                {/* ── Total Load: phase comparison — shows both sources; dashes where one is absent ── */}
+                {node.type === 'load' && (node.inverterPhases || node.ctReading) && (
                   <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
                     <SectionLabel>Phase Comparison · Inverter vs Energy Meter</SectionLabel>
-                    <ComparisonPhasePanel inv={node.inverterPhases} ct={node.ctReading} isDark={isDark} />
-                  </motion.div>
-                )}
-
-                {/* ── Total Load: single source fallback if only one available ── */}
-                {node.type === 'load' && !(node.inverterPhases && node.ctReading) && (node.inverterPhases || node.ctReading) && (
-                  <motion.div custom={3} variants={rowVariants} initial="hidden" animate="visible">
-                    <SectionLabel>Phase Measurements</SectionLabel>
-                    {node.inverterPhases && <InverterPhasePanel p={node.inverterPhases} isDark={isDark} />}
-                    {node.ctReading && <CtPhasePanel r={node.ctReading} isDark={isDark} />}
+                    <ComparisonPhasePanel inv={node.inverterPhases ?? null} ct={node.ctReading ?? null} isDark={isDark} />
                   </motion.div>
                 )}
 
                 {/* ── Sparkline chart ── */}
-                {(HISTORY_EXTRACT[node.type] != null || node.type === 'device') && (
+                {hasTrend && (
                 <motion.div custom={4} variants={rowVariants} initial="hidden" animate="visible">
                   {/* Header row: label + fullscreen toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -1216,8 +1102,8 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)',
                     border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                     borderRadius: DS.radius.sm,
-                    padding: isCompact ? '6px 2px 2px' : '8px 4px 4px',
-                    height: isCompact ? 130 : 140,
+                    padding: '8px 4px 4px',
+                    height: 140,
                   }}>
                     {sparkLoading ? (
                       <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1240,24 +1126,28 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 <motion.div
                   custom={4} variants={rowVariants} initial="hidden" animate="visible"
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     paddingTop: 10,
                     borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
                     gap: 10,
                   }}
                 >
-                  <span style={{ fontSize: isCompact ? 8 : 9, fontWeight: 600, letterSpacing: '0.04em', color: DS.colors.textDim, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.04em', color: DS.colors.textDim, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     NODE · {node.type.toUpperCase()} · {node.id.toUpperCase()}
                   </span>
                   <button
                     onClick={onClose}
                     style={{
-                      fontSize: isCompact ? 9 : 10, fontWeight: 700, color: accentColor,
+                      fontSize: 10, fontWeight: 700, color: accentColor,
                       background: `${accentColor}14`, border: `1px solid ${accentColor}28`,
-                      borderRadius: DS.radius.sm, padding: isCompact ? '4px 10px' : '4px 12px',
+                      borderRadius: DS.radius.sm, padding: '4px 12px',
                       cursor: 'pointer', letterSpacing: '0.04em',
                       transition: 'all 0.18s ease',
                       flexShrink: 0,
+                      width: 'auto',
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}28`; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accentColor}14`; }}
@@ -1272,6 +1162,12 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         </>
       )}
     </AnimatePresence>
+  );
+
+  return (
+    <>
+      {fullscreenPortal}
+      {ReactDOM.createPortal(modalContent, document.body)}
     </>
   );
 }

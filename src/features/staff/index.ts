@@ -7,6 +7,7 @@ export { default as Configuration } from './Configuration';
 export { default as DevicePresets } from './DevicePresets';
 export { default as Devices } from './Devices';
 export { default as Employees } from './Employees';
+export { default as Departments } from './Departments';
 export { default as Equipment } from './Equipment';
 export { OTA } from './OTA';
 export { default as Profile } from './Profile';

@@ -35,6 +35,14 @@ interface TelemetryRow {
   grid_sell_today_kwh?: number; grid_buy_today_kwh?: number;
   batt_charge_today_kwh?: number; batt_discharge_today_kwh?: number;
   battery_voltage_v?: number;
+  // Phase measurements
+  load_l1_power_w?: number; load_l2_power_w?: number; load_l3_power_w?: number;
+  load_l1_voltage_v?: number; load_l2_voltage_v?: number; load_l3_voltage_v?: number;
+  load_l1_current_a?: number; load_l2_current_a?: number; load_l3_current_a?: number;
+  grid_voltage_v?: number;
+  grid_l1_voltage_v?: number; grid_l2_voltage_v?: number; grid_l3_voltage_v?: number;
+  grid_l1_current_a?: number; grid_l2_current_a?: number; grid_l3_current_a?: number;
+  grid_frequency_hz?: number; grid_power_factor?: number;
 }
 interface WeatherData {
   current?: {
@@ -122,6 +130,17 @@ const MobileDashboard: React.FC = () => {
   const isExporting = gridW != null && gridW < -50;
   const isImporting = gridW != null && gridW > 50;
   const isBatCharging = batW != null && batW > 50;
+  // Use lastTelemetry (not lat) so phase data persists even when live reading is stale
+  const inverterPhasesForFlow = lastTelemetry ? {
+    l1: { power_w: lastTelemetry.load_l1_power_w ?? null, voltage_v: lastTelemetry.load_l1_voltage_v ?? null, current_a: lastTelemetry.load_l1_current_a ?? null },
+    l2: { power_w: lastTelemetry.load_l2_power_w ?? null, voltage_v: lastTelemetry.load_l2_voltage_v ?? null, current_a: lastTelemetry.load_l2_current_a ?? null },
+    l3: { power_w: lastTelemetry.load_l3_power_w ?? null, voltage_v: lastTelemetry.load_l3_voltage_v ?? null, current_a: lastTelemetry.load_l3_current_a ?? null },
+    grid_l1: { voltage_v: lastTelemetry.grid_l1_voltage_v ?? lastTelemetry.grid_voltage_v ?? null, current_a: lastTelemetry.grid_l1_current_a ?? null },
+    grid_l2: { voltage_v: lastTelemetry.grid_l2_voltage_v ?? null, current_a: lastTelemetry.grid_l2_current_a ?? null },
+    grid_l3: { voltage_v: lastTelemetry.grid_l3_voltage_v ?? null, current_a: lastTelemetry.grid_l3_current_a ?? null },
+    grid_frequency_hz: lastTelemetry.grid_frequency_hz ?? null,
+    grid_power_factor: lastTelemetry.grid_power_factor ?? null,
+  } : undefined;
   const isBatDischarging = batW != null && batW < -50;
   const online = site ? siteIsOnline(site) : false;
   const liveStatusText = !lastTelemetry ? 'No live data' : dataIsStale ? `Stale · ${lastTelemetryLabel}` : `Live · ${lastTelemetryLabel}`;
@@ -655,6 +674,7 @@ const MobileDashboard: React.FC = () => {
             battSoc={soc}
             smartDevices={smartDevices}
             siteId={selectedId ?? undefined}
+            inverterPhases={inverterPhasesForFlow}
           />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>

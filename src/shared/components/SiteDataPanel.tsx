@@ -2777,10 +2777,13 @@ const PhaseLoadTab: React.FC<{
   onHoursChange: (h: number) => void;
   forecastAccuracy?: any;
   onRefreshVsActual?: () => void;
-}> = ({ siteId, phaseLoad, loadForecast, smartDevices, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual }) => {
+  ctLatest?: any;
+}> = ({ siteId, phaseLoad, loadForecast, smartDevices, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual, ctLatest }) => {
   // Allow switching between forecast chart and accuracy view
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
   const [loadSourceView, setLoadSourceView] = useState<LoadSourceKey | 'total'>('inverter');
+  const [loadChartCumulative, setLoadChartCumulative] = useState(true);
+  const [loadTotalCombined, setLoadTotalCombined] = useState(false);
   const [selectedLoadDate, setSelectedLoadDate] = useState('');
   const phaseLoadChartZoom = useChartZoomState();
   const loadForecastChartZoom = useChartZoomState();
@@ -2789,7 +2792,6 @@ const PhaseLoadTab: React.FC<{
   const [vsActual7d, setVsActual7d] = useState(false);
   const vsActualFetchedRef = useRef(false);
   const [evHistory, setEvHistory] = useState<any[]>([]);
-  const [ctLatest, setCtLatest] = useState<any | null>(null);
   const [ctHistoryRows, setCtHistoryRows] = useState<any[]>([]);
   const [siteHistoryRows, setSiteHistoryRows] = useState<any[]>([]);
   const loadBucketMinutes = 15;
@@ -2801,19 +2803,6 @@ const PhaseLoadTab: React.FC<{
       onRefreshVsActual?.();
     }
   }, [showVsActual, onRefreshVsActual]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!siteId) return;
-    apiService.getLatestEnergyMeter(siteId)
-      .then(data => {
-        if (!cancelled) setCtLatest(data ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setCtLatest(null);
-      });
-    return () => { cancelled = true; };
-  }, [siteId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3179,20 +3168,15 @@ const PhaseLoadTab: React.FC<{
   const loadChartHasMultipleDays = new Set(resolvedLoadChartData.map((row: any) => row.rawDate)).size > 1;
   const loadChartLabels = resolvedLoadChartData.map((row: any) => (loadChartHasMultipleDays ? [row.dateLabel, row.time] : row.time));
 
-  // Cumulative kWh series — trapezoidal integration, resets at each new IST date boundary
+  // Cumulative kWh series — trapezoidal integration over the full window, no day resets.
+  // The line climbs continuously from the start of the selected period to the end.
   const cumulativeLoadChartData = useMemo(() => {
     const rows = resolvedLoadChartData;
     if (rows.length === 0) return [];
-    type CumRow = { inverter: number; grid: number; ev: number; inverterL1: number; inverterL2: number; inverterL3: number; gridL1: number; gridL2: number; gridL3: number; rawDate: string };
     const keys = ['inverter', 'grid', 'ev', 'inverterL1', 'inverterL2', 'inverterL3', 'gridL1', 'gridL2', 'gridL3'] as const;
-    const acc: CumRow = { inverter: 0, grid: 0, ev: 0, inverterL1: 0, inverterL2: 0, inverterL3: 0, gridL1: 0, gridL2: 0, gridL3: 0, rawDate: rows[0].rawDate };
+    const acc: Record<string, number> = { inverter: 0, grid: 0, ev: 0, inverterL1: 0, inverterL2: 0, inverterL3: 0, gridL1: 0, gridL2: 0, gridL3: 0 };
     return rows.map((row: any, i: number) => {
       if (i === 0) return { ...acc, rawDate: row.rawDate };
-      // Reset accumulators at each new day boundary
-      if (row.rawDate !== acc.rawDate) {
-        for (const k of keys) acc[k] = 0;
-        acc.rawDate = row.rawDate;
-      }
       const prev = rows[i - 1];
       const dt = (row.rawTs - prev.rawTs) / 3_600_000;
       for (const k of keys) {
@@ -3202,15 +3186,26 @@ const PhaseLoadTab: React.FC<{
     });
   }, [resolvedLoadChartData]);
 
-  const loadChartValues = useMemo(() => {
-    const cum = cumulativeLoadChartData;
-    if (loadSourceView === 'total') return cum.flatMap((r: any) => [r.inverter, r.grid, r.ev]).filter((v: any) => Number.isFinite(v));
-    if (loadSourceView === 'inverter') return cum.flatMap((r: any) => hasInverterPhaseBreakdown ? [r.inverterL1, r.inverterL2, r.inverterL3] : [r.inverter]).filter((v: any) => Number.isFinite(v));
-    if (loadSourceView === 'grid') return cum.flatMap((r: any) => hasGridPhaseBreakdown ? [r.gridL1, r.gridL2, r.gridL3] : [r.grid]).filter((v: any) => Number.isFinite(v));
-    return cum.map((r: any) => r[loadSourceView]).filter((v: any) => Number.isFinite(v));
-  }, [cumulativeLoadChartData, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
+  const activeLoadChartData = loadChartCumulative ? cumulativeLoadChartData : resolvedLoadChartData;
 
-  const formatLoadChartValue = (value: number) => `${value.toFixed(2)} kWh`;
+  const loadChartValues = useMemo(() => {
+    const src = loadChartCumulative ? cumulativeLoadChartData : resolvedLoadChartData;
+    if (loadSourceView === 'total') return src.flatMap((r: any) => [r.inverter, r.grid, r.ev]).filter((v: any) => Number.isFinite(v));
+    if (loadSourceView === 'inverter') return src.flatMap((r: any) => hasInverterPhaseBreakdown ? [r.inverterL1, r.inverterL2, r.inverterL3] : [r.inverter]).filter((v: any) => Number.isFinite(v));
+    if (loadSourceView === 'grid') return src.flatMap((r: any) => hasGridPhaseBreakdown ? [r.gridL1, r.gridL2, r.gridL3] : [r.grid]).filter((v: any) => Number.isFinite(v));
+    return src.map((r: any) => r[loadSourceView]).filter((v: any) => Number.isFinite(v));
+  }, [cumulativeLoadChartData, resolvedLoadChartData, loadChartCumulative, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
+
+  const loadChartUseWatts = useMemo(
+    () => !loadChartCumulative && loadChartValues.length > 0 && loadChartValues.every((v: number) => Math.abs(v) < 1),
+    [loadChartCumulative, loadChartValues]
+  );
+
+  const formatLoadChartValue = (value: number) => {
+    if (loadChartCumulative) return `${value.toFixed(2)} kWh`;
+    if (loadChartUseWatts) return `${(value * 1000).toFixed(0)} W`;
+    return `${value.toFixed(2)} kW`;
+  };
 
   const loadForecastChartData = useMemo(() => {
     return loadForecast.map((r: any) => {
@@ -3323,7 +3318,7 @@ const PhaseLoadTab: React.FC<{
       y: {
         title: {
           display: true,
-          text: 'Energy (kWh)',
+          text: loadChartCumulative ? 'Energy (kWh)' : (loadChartUseWatts ? 'Load (W)' : 'Load (kW)'),
           color: isDark ? '#cbd5e1' : '#475569',
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { bottom: 6 },
@@ -3331,13 +3326,13 @@ const PhaseLoadTab: React.FC<{
         ticks: {
           color: isDark ? '#94a3b8' : '#64748b',
           font: { family: 'JetBrains Mono, monospace', size: 11 },
-          callback: (v: any) => Number(v).toFixed(1),
+          callback: (v: any) => loadChartCumulative ? Number(v).toFixed(1) : (loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1)),
         },
         grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData]);
+  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData, loadChartCumulative, loadChartUseWatts]);
 
   const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
@@ -3542,6 +3537,57 @@ const PhaseLoadTab: React.FC<{
                   {view === 'total' ? 'Total Load' : LOAD_SOURCE_META[view].label.replace(' Load', '')}
                 </button>
               ))}
+              {loadSourceView === 'total' && (
+                <button
+                  onClick={() => setLoadTotalCombined(v => !v)}
+                  title={loadTotalCombined ? 'Show inverter / grid / EV separately' : 'Combine all sources into one line'}
+                  style={{
+                    border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.45)' : (isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)')}`,
+                    background: loadTotalCombined
+                      ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)')
+                      : 'transparent',
+                    color: loadTotalCombined ? '#38bdf8' : 'var(--text-muted)',
+                    borderRadius: 999,
+                    padding: '7px 12px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Poppins, sans-serif',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    boxShadow: loadTotalCombined ? '0 0 0 3px rgba(56,189,248,0.14)' : 'none',
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  <span style={{ fontSize: '0.82rem', lineHeight: 1 }}>{loadTotalCombined ? '━' : '≡'}</span>
+                  {loadTotalCombined ? 'Combined' : 'Split'}
+                </button>
+              )}
+              <button
+                onClick={() => setLoadChartCumulative(v => !v)}
+                title={loadChartCumulative ? 'Switch to instantaneous power (kW)' : 'Switch to cumulative energy (kWh)'}
+                style={{
+                  border: `1px solid ${isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)'}`,
+                  background: loadChartCumulative
+                    ? (isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.1)')
+                    : 'transparent',
+                  color: loadChartCumulative ? '#2FBF71' : 'var(--text-muted)',
+                  borderRadius: 999,
+                  padding: '7px 12px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'Poppins, sans-serif',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  boxShadow: loadChartCumulative ? '0 0 0 3px rgba(47,191,113,0.15)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: '0.8rem' }}>{loadChartCumulative ? '∑' : '⚡'}</span>
+                {loadChartCumulative ? 'kWh' : 'kW'}
+              </button>
               <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
@@ -3610,15 +3656,32 @@ const PhaseLoadTab: React.FC<{
               data={{
                 labels: loadChartLabels,
                 datasets: loadSourceView === 'total'
-                  ? (['inverter', 'grid', 'ev'] as const).map(key => ({
-                      label: LOAD_SOURCE_META[key].label,
-                      data: cumulativeLoadChartData.map((d: any) => d[key] as number),
-                      borderColor: LOAD_SOURCE_META[key].color,
-                      borderWidth: key === 'inverter' ? 2.4 : 2,
-                      tension: 0.35,
-                      pointRadius: 0,
-                      fill: false,
-                    }))
+                  ? (loadTotalCombined
+                      ? [{
+                          label: 'Total Load',
+                          data: activeLoadChartData.map((d: any) =>
+                            (Number(d.inverter ?? 0) + Number(d.grid ?? 0) + Number(d.ev ?? 0))
+                          ),
+                          borderColor: '#38bdf8',
+                          borderWidth: 2.5,
+                          tension: 0.35,
+                          pointRadius: 0,
+                          fill: 'origin',
+                          backgroundColor: (ctx: any) => {
+                            const { chart } = ctx;
+                            if (!chart.chartArea) return 'rgba(56,189,248,0.15)';
+                            return makeGradient(chart.ctx, chart.chartArea, '#38bdf8', 0.32, 0.03);
+                          },
+                        }]
+                      : (['inverter', 'grid', 'ev'] as const).map(key => ({
+                          label: LOAD_SOURCE_META[key].label,
+                          data: activeLoadChartData.map((d: any) => d[key] as number),
+                          borderColor: LOAD_SOURCE_META[key].color,
+                          borderWidth: key === 'inverter' ? 2.4 : 2,
+                          tension: 0.35,
+                          pointRadius: 0,
+                          fill: false,
+                        })))
                   : loadSourceView === 'inverter'
                   ? (hasInverterPhaseBreakdown ? ([
                       { key: 'inverterL1', label: 'L1', color: PHASE_COLORS.L1 },
@@ -3626,7 +3689,7 @@ const PhaseLoadTab: React.FC<{
                       { key: 'inverterL3', label: 'L3', color: PHASE_COLORS.L3 },
                     ] as const).map(series => ({
                       label: series.label,
-                      data: cumulativeLoadChartData.map((d: any) => d[series.key] as number),
+                      data: activeLoadChartData.map((d: any) => d[series.key] as number),
                       borderColor: series.color,
                       borderWidth: 2.2,
                       tension: 0.35,
@@ -3634,7 +3697,7 @@ const PhaseLoadTab: React.FC<{
                       fill: false,
                     })) : [{
                       label: LOAD_SOURCE_META.inverter.label,
-                      data: cumulativeLoadChartData.map((d: any) => d.inverter as number),
+                      data: activeLoadChartData.map((d: any) => d.inverter as number),
                       borderColor: LOAD_SOURCE_META.inverter.color,
                       borderWidth: 2.4,
                       tension: 0.35,
@@ -3648,7 +3711,7 @@ const PhaseLoadTab: React.FC<{
                       { key: 'gridL3', label: 'L3', color: PHASE_COLORS.L3 },
                     ] as const).map(series => ({
                       label: series.label,
-                      data: cumulativeLoadChartData.map((d: any) => d[series.key] as number),
+                      data: activeLoadChartData.map((d: any) => d[series.key] as number),
                       borderColor: series.color,
                       borderWidth: 2.2,
                       tension: 0.35,
@@ -3656,7 +3719,7 @@ const PhaseLoadTab: React.FC<{
                       fill: false,
                     })) : [{
                       label: LOAD_SOURCE_META.grid.label,
-                      data: cumulativeLoadChartData.map((d: any) => d.grid as number),
+                      data: activeLoadChartData.map((d: any) => d.grid as number),
                       borderColor: LOAD_SOURCE_META.grid.color,
                       borderWidth: 2.4,
                       tension: 0.35,
@@ -3665,7 +3728,7 @@ const PhaseLoadTab: React.FC<{
                     }])
                   : [{
                       label: LOAD_SOURCE_META[loadSourceView].label,
-                      data: cumulativeLoadChartData.map((d: any) => d[loadSourceView] as number),
+                      data: activeLoadChartData.map((d: any) => d[loadSourceView] as number),
                       borderColor: LOAD_SOURCE_META[loadSourceView].color,
                       borderWidth: 2.4,
                       tension: 0.35,
@@ -4009,6 +4072,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [forecastSubTab, setForecastSubTab] = useState<'chart' | 'accuracy' | 'satellite'>('chart');
   const [weatherSubTab, setWeatherSubTab] = useState<'current' | 'accuracy'>('current');
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
+  const [ctLatest, setCtLatest] = useState<any | null>(null);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
   const [gatewayOnline, setGatewayOnline] = useState<boolean | null>(null); // null = not yet fetched
 
@@ -4024,6 +4088,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     poll();
     const iv = setInterval(poll, 30_000);
     return () => { cancelled = true; clearInterval(iv); };
+  }, [siteId]);
+
+  // Fetch latest CT energy meter reading (used for staleness detection in the Deye Cloud banner)
+  useEffect(() => {
+    let cancelled = false;
+    if (!siteId) return;
+    apiService.getLatestEnergyMeter(siteId)
+      .then(data => { if (!cancelled) setCtLatest(data ?? null); })
+      .catch(() => { if (!cancelled) setCtLatest(null); });
+    return () => { cancelled = true; };
   }, [siteId]);
 
   // Force-refresh vs-actual data, bypassing the in-memory cache, when the chart is first opened
@@ -4301,11 +4375,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // Gateway (ESP32) = our RS-485 Modbus monitoring device.
   // Logger (SolarmanV5 WiFi stick) = Deye's own cloud reporting path.
   const latestAgeMs = latest?.timestamp ? Date.now() - new Date(latest.timestamp).getTime() : Infinity;
-  const gatewayOffline = !isDeyeCloud && latestAgeMs > 10 * 60 * 1000;  // no RS-485 data > 10 min
+  const gatewayIsOnline = gatewayOnline === null ? null : gatewayOnline === true;
+  // In Deye Cloud mode use real heartbeat state; in RS-485 mode fall back to timestamp age.
+  const gatewayOffline = isDeyeCloud
+    ? gatewayIsOnline === false
+    : latestAgeMs > 10 * 60 * 1000;
   const deyeCloudAgeMs = isDeyeCloud ? latestAgeMs : null;
   // Logger considered offline/standby if Deye Cloud data is older than 20 min
   const loggerOffline = isDeyeCloud && deyeCloudAgeMs != null && deyeCloudAgeMs > 20 * 60 * 1000;
-  const gatewayIsOnline = gatewayOnline === null ? null : gatewayOnline === true;
+  // CT meter staleness: gateway must be online to send new readings; flag if last reading > 15 min old
+  const ctAgeMs = ctLatest?.timestamp ? Date.now() - new Date(ctLatest.timestamp).getTime() : null;
+  const ctStale = gatewayOffline && ctAgeMs != null && ctAgeMs > 15 * 60 * 1000;
 
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
@@ -5053,12 +5133,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       <span style={{ opacity: 0.85 }}>
                         {loggerOffline
                           ? <>RS-485 monitoring unavailable. Deye Cloud data is <strong>{Math.round((deyeCloudAgeMs ?? 0) / 60000)} min old</strong> — logger may be in nighttime standby.</>
-                          : <>
-                              Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick).
-                              {gatewayIsOnline === true ? ' RS-485 gateway is online.' : gatewayIsOnline === false ? ' RS-485 gateway is offline.' : ''}
-                            </>
+                          : gatewayOffline
+                            ? <>Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick). RS-485 gateway is offline — CT meter phase data is frozen.</>
+                            : <>Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick). RS-485 gateway is online.</>
                         }
                       </span>
+                      {ctStale && (
+                        <span style={{ display: 'block', marginTop: 4, opacity: 0.85, color: '#f59e0b' }}>
+                          ⚠ CT meter data is stale ({Math.round((ctAgeMs ?? 0) / 60000)} min old) — phase breakdown may be inaccurate.
+                        </span>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -6002,6 +6086,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   onHoursChange={setPhaseLoadHours}
                   forecastAccuracy={loadForecastAccuracy}
                   onRefreshVsActual={refreshVsActualData}
+                  ctLatest={ctLatest}
                 />
               </motion.div>
             )}

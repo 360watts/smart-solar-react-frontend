@@ -261,21 +261,45 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
   };
 }
 
-function EmptyPlaceholder({ isDark }: { isDark: boolean }) {
+function EmptyPlaceholder({ isDark, branchLabel }: { isDark: boolean; branchLabel?: string }) {
+  const label = branchLabel ? `No devices on ${branchLabel}` : 'No devices reporting on this branch';
   return (
     <div
       style={{
         borderRadius: 8,
-        border: `1px dashed ${isDark ? 'rgba(148,163,184,0.22)' : 'rgba(148,163,184,0.35)'}`,
-        padding: '10px 12px',
-        color: isDark ? '#94a3b8' : '#64748b',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        textAlign: 'center',
-        background: isDark ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.85)',
+        border: `1px dashed ${isDark ? 'rgba(148,163,184,0.18)' : 'rgba(148,163,184,0.30)'}`,
+        padding: '9px 14px',
+        background: isDark ? 'rgba(15,23,42,0.15)' : 'rgba(248,250,252,0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
       }}
     >
-      No live devices on this branch.
+      <span style={{ position: 'relative', flexShrink: 0, width: 8, height: 8 }}>
+        <span style={{
+          position: 'absolute', inset: 0, borderRadius: '50%',
+          background: isDark ? 'rgba(148,163,184,0.25)' : 'rgba(148,163,184,0.4)',
+          animation: 'emptyPulse 2.4s ease-in-out infinite',
+        }} />
+        <span style={{
+          position: 'absolute', inset: 2, borderRadius: '50%',
+          background: isDark ? 'rgba(148,163,184,0.45)' : 'rgba(148,163,184,0.6)',
+        }} />
+      </span>
+      <span style={{
+        fontSize: '0.72rem',
+        fontWeight: 500,
+        color: isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.8)',
+        letterSpacing: '0.01em',
+      }}>
+        {label}
+      </span>
+      <style>{`
+        @keyframes emptyPulse {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50% { transform: scale(2.2); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -430,7 +454,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
           </div>
         )}
 
-        {!hasContent && <EmptyPlaceholder isDark={isDark} />}
+        {!hasContent && <EmptyPlaceholder isDark={isDark} branchLabel={title} />}
       </div>
     </div>
   );

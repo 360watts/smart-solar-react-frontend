@@ -3,7 +3,7 @@ import MobileDevices from '../mobile/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell, Shield } from 'lucide-react';
 import { apiService, AlertItem } from '../../services/api';
 import { useDebouncedCallback } from '../../shared/hooks/useDebounce';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -61,6 +61,7 @@ interface Device {
   alerts_muted_until?: string | null;
   wifi_ssid?: string | null;
   wifi_password?: string | null;
+  firmware_version?: string | null;
 }
 
 interface Preset {
@@ -1385,6 +1386,13 @@ const Devices: React.FC = () => {
               sub: configStatus.sub,
               icon: <Settings size={22} />,
               status: configStatus.status,
+            },
+            {
+              label: 'Firmware',
+              value: selectedDevice.firmware_version || 'Not reported',
+              sub: selectedDevice.firmware_version ? 'Reported via MQTT' : 'No heartbeat received yet',
+              icon: <Shield size={22} />,
+              status: (selectedDevice.firmware_version ? 'ok' : 'warn') as keyof typeof statusPalette,
             },
             {
               label: 'Linked Site',
