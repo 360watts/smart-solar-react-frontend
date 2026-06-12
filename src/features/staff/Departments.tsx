@@ -300,6 +300,7 @@ const Departments: React.FC = () => {
       setDeleteTarget(null);
       await fetchPageData();
     } catch (err) {
+      setDeleteTarget(null);
       setError(err instanceof Error ? err.message : 'Failed to delete department');
     } finally {
       setSaving(false);
