@@ -45,17 +45,17 @@ const lastSeenText = (dateStr?: string): string => {
 };
 
 /* ─── Signal ring SVG ─────────────────────────────────────────────────── */
-const SignalRing: React.FC<{ dbm: number | null; isOnline: boolean; isDark: boolean }> = ({ dbm, isOnline, isDark }) => {
-  const green = '#2FBF71';
-  const amber = '#E9B949';
-  const danger = '#EF4444';
-  const color = !isOnline ? (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')
-    : dbm == null ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')
-    : dbm >= -70 ? green
-    : dbm >= -85 ? amber
-    : danger;
+/* signal_strength_dbm field stores RSSI % (0–100) from firmware — NOT dBm despite field name */
+const rssiPctToColor = (pct: number, isDark: boolean): string =>
+  pct >= 50 ? '#2FBF71' : pct >= 25 ? '#E9B949' : '#EF4444';
 
-  const strength = dbm == null ? 0 : Math.max(0, Math.min(1, (dbm + 100) / 30));
+const SignalRing: React.FC<{ rssiPct: number | null; isOnline: boolean; isDark: boolean }> = ({ rssiPct, isOnline, isDark }) => {
+  const green = '#2FBF71';
+  const color = !isOnline ? (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)')
+    : rssiPct == null ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')
+    : rssiPctToColor(rssiPct, isDark);
+
+  const strength = rssiPct == null ? 0 : Math.max(0, Math.min(1, rssiPct / 100));
   const R = 38;
   const circ = 2 * Math.PI * R;
 
@@ -121,15 +121,18 @@ const DeviceCard: React.FC<{
     {
       icon: <Signal size={13} />,
       label: 'Signal',
-      value: device.signal_strength_dbm != null ? `${device.signal_strength_dbm} dBm` : '—',
+      /* signal_strength_dbm stores RSSI % (0–100) from firmware */
+      value: device.signal_strength_dbm != null ? `${device.signal_strength_dbm}%` : '—',
       color: device.signal_strength_dbm != null
-        ? device.signal_strength_dbm >= -70 ? green : device.signal_strength_dbm >= -85 ? amber : danger
+        ? rssiPctToColor(device.signal_strength_dbm, isDark)
         : undefined,
     },
     {
       icon: <Thermometer size={13} />,
       label: 'Temperature',
-      value: device.device_temp_c != null ? `${device.device_temp_c.toFixed(1)}°C` : '—',
+      /* 0.0 is firmware default — treat as unknown */
+      value: device.device_temp_c != null && device.device_temp_c > 0
+        ? `${device.device_temp_c.toFixed(1)}°C` : '—',
       color: device.device_temp_c != null && device.device_temp_c > 55 ? danger : undefined,
     },
     {
@@ -149,7 +152,7 @@ const DeviceCard: React.FC<{
     }}>
       {/* Top row: ring + identity */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <SignalRing dbm={device.signal_strength_dbm ?? null} isOnline={device.is_online} isDark={isDark} />
+        <SignalRing rssiPct={device.signal_strength_dbm ?? null} isOnline={device.is_online} isDark={isDark} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: 18, color: textPrimary, lineHeight: 1.2 }}>
@@ -186,7 +189,13 @@ const DeviceCard: React.FC<{
         }}>
           <Activity size={14} color={healthColor} />
           <span style={{ fontSize: 13, fontWeight: 600, color: healthColor }}>
-            {health === 'warn' ? 'Heartbeat delayed — check device connectivity' : 'Critical heartbeat failure detected'}
+            {health === 'warn'
+              ? (device.signal_strength_dbm != null && device.signal_strength_dbm < 25
+                  ? `Weak signal (${device.signal_strength_dbm}%) — consider repositioning`
+                  : device.signal_strength_dbm != null && device.signal_strength_dbm < 50
+                  ? `Low signal (${device.signal_strength_dbm}%) — may affect reliability`
+                  : 'Device health warning — check connectivity')
+              : 'Critical device issue — check immediately'}
           </span>
         </div>
       )}
