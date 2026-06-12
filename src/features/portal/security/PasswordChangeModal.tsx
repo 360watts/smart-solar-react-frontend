@@ -157,21 +157,23 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
     }
   };
 
-  // Styles
-  const modalBg = isDark ? '#0D1422' : '#FFFFFF';
-  const modalBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
-  const inputBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)';
-  const inputBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-  const inputText = isDark ? '#F0F4FF' : '#0A0E1A';
-  const labelText = isDark ? '#8892A4' : '#64748B';
-  const buttonBg = '#F59E0B';
-  const buttonHover = '#D97706';
+  // Styles — Solar Noir portal palette
+  const modalBg     = isDark ? 'rgba(10,20,14,0.99)' : 'rgba(252,255,253,0.99)';
+  const modalBorder = isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.2)';
+  const inputBg     = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const inputBorder = isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.22)';
+  const inputText   = isDark ? '#F0F7F2' : '#0D2318';
+  const labelText   = isDark ? 'rgba(240,247,242,0.5)' : 'rgba(13,35,24,0.5)';
+  const buttonBg    = '#2FBF71';
+  const buttonHover = '#1A9955';
 
   const modal = (
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.5)',
+      background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(13,35,24,0.46)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -401,7 +403,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                     width: '100%',
                     padding: '10px',
                     background: buttonBg,
-                    color: '#0A0E1A',
+                    color: '#fff',
                     border: 'none',
                     borderRadius: 8,
                     fontWeight: 600,
@@ -471,7 +473,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                         width: '100%',
                         padding: '10px',
                         background: buttonBg,
-                        color: '#0A0E1A',
+                        color: '#fff',
                         border: 'none',
                         borderRadius: 8,
                         fontWeight: 600,
@@ -533,7 +535,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                         width: '100%',
                         padding: '10px',
                         background: buttonBg,
-                        color: '#0A0E1A',
+                        color: '#fff',
                         border: 'none',
                         borderRadius: 8,
                         fontWeight: 600,
@@ -668,7 +670,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                         width: '100%',
                         padding: '10px',
                         background: buttonBg,
-                        color: '#0A0E1A',
+                        color: '#fff',
                         border: 'none',
                         borderRadius: 8,
                         fontWeight: 600,

@@ -380,7 +380,7 @@ const MobilePortalProfile: React.FC = () => {
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: textMuted, marginBottom: 10, paddingLeft: 4 }}>
             Security
           </div>
-          <SecurityCard />
+          <SecurityCard customerMode />
         </section>
 
       </div>
