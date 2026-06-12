@@ -589,9 +589,9 @@ class ApiService {
   }
 
   async createEmployee(employeeData: any): Promise<any> {
-    const result = await this.request('/users/create/', {
+    const result = await this.request('/employees/create/', {
       method: 'POST',
-      body: JSON.stringify({ ...employeeData, is_staff: true }),
+      body: JSON.stringify(employeeData),
     });
     cacheService.clearPattern(/^users_/);
     cacheService.clearPattern(/^employees_/);
