@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import {
   ArrowUpDown,
@@ -16,7 +16,7 @@ import {
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileDepartments from '../mobile/MobileDepartments';
+import MobileDepartments from '../mobile/staff/MobileDepartments';
 import PageHeader from '../../shared/layout/PageHeader';
 import { getDesignTokens } from '../../shared/theme';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../shared/ui/sheet';
@@ -204,11 +204,16 @@ const Departments: React.FC = () => {
     return sorted;
   }, [rows, search, statusFilter, sortDirection, sortKey]);
 
+  const selectedIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!selectedDepartment) return;
-    const next = rows.find((row) => row.id === selectedDepartment.id) ?? null;
+    selectedIdRef.current = selectedDepartment?.id ?? null;
+  }, [selectedDepartment]);
+
+  useEffect(() => {
+    if (selectedIdRef.current === null) return;
+    const next = rows.find((row) => row.id === selectedIdRef.current) ?? null;
     setSelectedDepartment(next);
-  }, [rows, selectedDepartment]);
+  }, [rows]);
 
   const openCreate = () => {
     setEditingDepartment(null);

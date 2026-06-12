@@ -1573,7 +1573,7 @@ class ApiService {
   }
 
   async updateDepartment(id: number, data: { name?: string; slug?: string; description?: string; is_active?: boolean }): Promise<any> {
-    return this.request(`/departments/${id}/update/`, {
+    return this.request(`/departments/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
