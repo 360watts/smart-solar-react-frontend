@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowRight, Battery, ChevronDown, ChevronUp,
+  AlertTriangle, ArrowDown, ArrowRight, ArrowUp, Battery, ChevronDown, ChevronUp,
   Moon, Sun, Thermometer, Wifi, WifiOff, Zap,
 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -23,6 +23,8 @@ interface CombinedSummary {
     today?: {
       pv_gen_kwh?: number;
       load_kwh?: number;
+      grid_export_kwh?: number;
+      grid_import_kwh?: number;
       power_to_grid_kwh?: number;
       avg_soc?: number | null;
     };
@@ -180,7 +182,8 @@ const MobilePortalOverview: React.FC = () => {
   const live        = energy?.live;
   const generated = todaySummary?.pv_gen_kwh ?? 0;
   const consumed  = todaySummary?.load_kwh ?? 0;
-  const toGrid    = todaySummary?.power_to_grid_kwh ?? 0;
+  const toGrid    = todaySummary?.grid_export_kwh ?? 0;
+  const fromGrid  = todaySummary?.grid_import_kwh ?? 0;
   const battery   = live?.battery_pct;
   const tempC     = live?.weather?.temperature_c ?? null;
   const onlineDevices = selectedSite?.devices.filter(d => d.is_online).length ?? 0;
@@ -422,7 +425,8 @@ const MobilePortalOverview: React.FC = () => {
           {[
             { label: 'Generated', value: `${generated.toFixed(1)} kWh`, color: green, icon: <Sun size={14} /> },
             { label: 'Consumed', value: `${consumed.toFixed(1)} kWh`, color: '#3B82F6', icon: <Zap size={14} /> },
-            { label: 'Sent to grid', value: `${toGrid.toFixed(1)} kWh`, color: textMuted, icon: <ArrowRight size={14} /> },
+            { label: 'Exported to grid', value: `${toGrid.toFixed(1)} kWh`, color: green, icon: <ArrowUp size={14} /> },
+            { label: 'Imported from grid', value: `${fromGrid.toFixed(1)} kWh`, color: amber, icon: <ArrowDown size={14} /> },
             { label: 'Temperature', value: tempC != null ? `${tempC.toFixed(1)}°C` : '—', color: amber, icon: <Thermometer size={14} /> },
           ].map((row, i) => (
             <div key={row.label} style={{
