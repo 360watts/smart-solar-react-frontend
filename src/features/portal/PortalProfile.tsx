@@ -6,6 +6,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import SiteMembersCard from './members/SiteMembersCard';
 import SecurityCard from './security/SecurityCard';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobilePortalProfile from '../mobile/portal/MobilePortalProfile';
 
 const PRIMARY='#2FBF71', PRIMARY_D='#1A9955', AMBER='#E9B949', NAVY='#2B4A6B', WARN='#F59E0B';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
@@ -121,6 +123,7 @@ const EditModal:React.FC<EMProps>=({profile,dark,onSave,onClose})=>{
 };
 
 const PortalProfile:React.FC=()=>{
+  const isMobile = useIsMobile();
   const {user,updateUser}=useAuth();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=PRIMARY;
   const fileRef=useRef<HTMLInputElement>(null);
   const [profile,setProfile]=useState<any>(null);const [portalSites,setPortalSites]=useState<any[]>([]);
@@ -130,6 +133,8 @@ const PortalProfile:React.FC=()=>{
   const [upAv,setUpAv]=useState(false);
 
   useEffect(()=>{(async()=>{try{const [data,summary]=await Promise.all([apiService.getProfile(),apiService.getPortalSummary()]);setProfile(data);setAvUrl(data.avatar_url||null);setPortalSites(summary.sites||[]);}catch(e:any){setError(e?.message||'Failed to load profile');}finally{setLoading(false);}})();},[]);
+
+  if (isMobile) return <MobilePortalProfile />;
 
   const handleSave=async(form:any)=>{const u=await apiService.updateProfile(form);setProfile((p:any)=>({...p,...u}));if(user)updateUser({first_name:form.first_name,last_name:form.last_name});setSuccess('Profile updated successfully');setTimeout(()=>setSuccess(null),3000);};
   const handleAv=async(e:React.ChangeEvent<HTMLInputElement>)=>{

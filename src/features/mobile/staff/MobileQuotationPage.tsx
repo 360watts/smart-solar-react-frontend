@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, FileText, Search, MoreVertical, ChevronLeft, Send, CheckCircle, XCircle, Trash2, Menu } from 'lucide-react';
-import { apiService, QuotationListItem } from '../../services/api';
-import QuotationWizard from '../quotation/QuotationWizard';
-import finalLogo from '../../assets/finalLogo.png';
-import { useTheme } from '../../contexts/ThemeContext';
+import { apiService, QuotationListItem } from '../../../services/api';
+import QuotationWizard from '../../quotation/QuotationWizard';
+import finalLogo from '../../../assets/finalLogo.png';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
 type StatusFilter = (typeof STATUS_OPTIONS)[number];

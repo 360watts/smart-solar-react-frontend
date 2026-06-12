@@ -286,8 +286,8 @@ const PortalChat: React.FC = () => {
         .pchat-markdown li        { margin-bottom: 3px; }
         .pchat-chip:hover         { border-color: rgba(47,191,113,0.45) !important; }
         @media (max-width: 600px) {
-          .pchat-panel { right: 12px; bottom: 84px; width: calc(100vw - 24px) !important; height: 72dvh !important; border-radius: 16px; }
-          .pchat-fab   { bottom: 20px; right: 16px; }
+          .pchat-panel { right: 12px; bottom: 172px; width: calc(100vw - 24px) !important; height: 65dvh !important; border-radius: 16px; }
+          .pchat-fab   { bottom: 100px; right: 16px; }
         }
       `}</style>
 

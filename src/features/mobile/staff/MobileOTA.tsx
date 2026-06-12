@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { apiService } from '../../services/api';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { apiService } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 import {
   RefreshCw, Upload, ChevronDown, ChevronUp,
   CheckCircle, XCircle, AlertTriangle, Clock, Zap,

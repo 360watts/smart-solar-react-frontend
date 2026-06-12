@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { apiService } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { apiService } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 import {
   User, Mail, Phone, MapPin, Calendar, Shield, Lock,
   Edit2, Save, X, Check, Eye, EyeOff, RefreshCw,

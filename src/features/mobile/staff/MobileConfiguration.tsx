@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { apiService } from '../../services/api';
+import { apiService } from '../../../services/api';
 import {
   RefreshCw, Search, X, Settings, CheckCircle, XCircle,
   Clock, Hash, ChevronDown, ChevronUp, Database,
   AlertTriangle, Cpu, Radio,
   Menu,
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 
 interface Register {
   id?: number; name?: string; address?: number;

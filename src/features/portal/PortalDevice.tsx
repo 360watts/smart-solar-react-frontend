@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Cpu, Wifi, WifiOff, Thermometer, Signal, RefreshCw, Radio, Clock, MapPin } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobilePortalDevice from '../mobile/portal/MobilePortalDevice';
 
 interface DeviceItem {
   id: number;
@@ -210,6 +212,7 @@ const DeviceCard: React.FC<{ device: DeviceItem; isDark: boolean; delay: number 
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
 const PortalDevice: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
   const [devices, setDevices] = useState<DeviceItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,6 +236,8 @@ const PortalDevice: React.FC = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  if (isMobile) return <MobilePortalDevice />;
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>

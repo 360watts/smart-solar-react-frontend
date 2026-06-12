@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiService } from '../../services/api';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
-import { useAuth } from '../../contexts/AuthContext';
+import { apiService } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   ArrowLeft, RefreshCw, Wifi, WifiOff, Server, Activity,
   Settings, Save, X, MapPin, Zap, Clock, Link as LinkIcon,

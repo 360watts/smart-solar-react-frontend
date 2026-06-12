@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileSiteDetail from '../mobile/MobileSiteDetail';
+import MobileSiteDetail from '../mobile/staff/MobileSiteDetail';
 import {
   ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
   Settings, Save, AlertTriangle, Link as LinkIcon,

@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { apiService } from '../../services/api';
+import { apiService } from '../../../services/api';
 import {
   Wifi, WifiOff, RefreshCw, Thermometer, Signal, AlertTriangle,
   Search, X, FileText, ChevronDown, ChevronUp, Loader2, Eye,
   Activity, Cpu, Clock, Radio, Settings, Shield, MoreVertical,
   RotateCcw, Trash2, Pencil, Download, BellOff, Bell, Menu
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 
 interface Device {
   id: number;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import MobileConfiguration from '../mobile/MobileConfiguration';
+import MobileConfiguration from '../mobile/staff/MobileConfiguration';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { Pencil, Trash2, AlertTriangle, X, CheckCircle2, Cpu } from 'lucide-react';

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Edit2, Menu, Plus, Search, Trash2 } from 'lucide-react';
-import finalLogo from '../../assets/finalLogo.png';
-import { apiService } from '../../services/api';
-import { useTheme } from '../../contexts/ThemeContext';
-import { getDesignTokens } from '../../shared/theme';
+import finalLogo from '../../../assets/finalLogo.png';
+import { apiService } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getDesignTokens } from '../../../shared/theme';
 
 interface Department {
   id: number;

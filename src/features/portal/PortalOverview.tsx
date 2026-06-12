@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { AlertTriangle, Zap, Sun, RefreshCw, Battery, Activity } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobilePortalOverview from '../mobile/portal/MobilePortalOverview';
 const SiteDataPanel = lazy(() => import('../../shared/components/SiteDataPanel'));
 
 interface PortalSummary {
@@ -90,6 +92,7 @@ const KpiCard: React.FC<KpiProps> = ({ icon, label, value, sub, accentColor, del
 );
 
 const PortalOverview: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
   const [summary, setSummary] = useState<PortalSummary | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -118,6 +121,8 @@ const PortalOverview: React.FC = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  if (isMobile) return <MobilePortalOverview />;
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>

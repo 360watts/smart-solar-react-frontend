@@ -1,21 +1,21 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { apiService, AlertItem } from '../../services/api';
+import { apiService, AlertItem } from '../../../services/api';
 import {
   Sun, Battery, Zap, TrendingUp, TrendingDown, AlertTriangle,
   ChevronDown, ChevronUp, MapPin, Clock, RefreshCw, Wifi, WifiOff,
   Compass, Globe, CloudSun, Droplets, Wind,
   Activity, BarChart3, Search, Menu,
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import { IST_TIMEZONE } from '../../app/constants';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { IST_TIMEZONE } from '../../../app/constants';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
   LineElement, Filler, Tooltip,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import EnergyFlowBlock from '../../shared/components/EnergyFlow';
-import { SmartDeviceNode } from '../../shared/components/EnergyFlow/types';
-import finalLogo from '../../assets/finalLogo.png';
+import EnergyFlowBlock from '../../../shared/components/EnergyFlow';
+import { SmartDeviceNode } from '../../../shared/components/EnergyFlow/types';
+import finalLogo from '../../../assets/finalLogo.png';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 

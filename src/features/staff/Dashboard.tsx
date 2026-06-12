@@ -8,7 +8,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService, AlertItem } from '../../services/api';
 import SiteDataPanel from '../../shared/components/SiteDataPanel';
 import PageHeader from '../../shared/layout/PageHeader';
-import MobileDashboard from '../mobile/MobileDashboard';
+import MobileDashboard from '../mobile/staff/MobileDashboard';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { getDesignTokens } from '../../shared/theme';
 

@@ -4,7 +4,7 @@ import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2, Layers }
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileDevicePresets from '../mobile/MobileDevicePresets';
+import MobileDevicePresets from '../mobile/staff/MobileDevicePresets';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
 import PageHeader from '../../shared/layout/PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../../app/constants';

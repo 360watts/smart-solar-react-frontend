@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { apiService } from '../../services/api';
+import { apiService } from '../../../services/api';
 import {
   Wifi, WifiOff, RefreshCw, MapPin, ChevronRight,
   AlertTriangle, Search, X, Zap, Clock, Globe, Cpu,
   Activity, ChevronDown, ChevronUp, Menu,
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 import { useNavigate } from 'react-router-dom';
 
 interface SiteDevice { device_id: number; device_serial: string; is_online: boolean; }

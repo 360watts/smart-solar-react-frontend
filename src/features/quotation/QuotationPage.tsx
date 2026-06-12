@@ -8,7 +8,7 @@ import type { QuotationData } from './types/quotation';
 import QuotationWizard from './QuotationWizard';
 import PageHeader from '../../shared/layout/PageHeader';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileQuotationPage from '../mobile/MobileQuotationPage';
+import MobileQuotationPage from '../mobile/staff/MobileQuotationPage';
 import './quotation.css';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;

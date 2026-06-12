@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
+import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import MobilePortalAlerts from '../mobile/portal/MobilePortalAlerts';
 
 interface AlertItem {
   id: string | number;
@@ -51,6 +53,7 @@ function timeAgo(dateStr?: string): string {
 }
 
 const PortalAlerts: React.FC = () => {
+  const isMobile = useIsMobile();
   const { isDark } = useTheme();
   const [alerts, setAlerts]       = useState<AlertItem[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -108,6 +111,8 @@ const PortalAlerts: React.FC = () => {
   const criticalCount = alerts.filter(a => a.severity === 'critical' && !a.resolved && a.status !== 'resolved').length;
 
   const hasFilters = statusFilter !== 'all' || severityFilter !== 'all' || search.trim() !== '';
+
+  if (isMobile) return <MobilePortalAlerts />;
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>

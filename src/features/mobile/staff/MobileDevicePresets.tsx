@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Layers, Menu, Plus, Search, Settings, Eye, Pencil, Trash2, X, PlugZap, RefreshCw } from 'lucide-react';
-import finalLogo from '../../assets/finalLogo.png';
-import { apiService } from '../../services/api';
-import { useTheme } from '../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
+import { apiService } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface Preset {
   id: number;

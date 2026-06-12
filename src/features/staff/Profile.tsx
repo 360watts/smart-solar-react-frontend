@@ -4,7 +4,7 @@ import { Upload, Mail, Phone, MapPin, Calendar, Edit2, Save, X, AlertCircle, Che
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileProfile from '../mobile/MobileProfile';
+import MobileProfile from '../mobile/staff/MobileProfile';
 import SecurityCard from '../portal/security/SecurityCard';
 
 const GREEN='#4CAF82',GREEN_D='#3d8a68',NAVY='#2B4A6B',ORANGE='#F07522';

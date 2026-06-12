@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { apiService, AlertItem } from '../../services/api';
+import { apiService, AlertItem } from '../../../services/api';
 import { RefreshCw, XCircle, AlertTriangle, Info, CheckCircle, Search, Clock, Menu } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 
 type FilterStatus   = 'all' | 'active' | 'acknowledged' | 'resolved';
 type FilterSeverity = 'all' | 'critical' | 'warning' | 'info';

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiService } from '../../services/api';
-import { useTheme } from '../../contexts/ThemeContext';
-import finalLogo from '../../assets/finalLogo.png';
+import { apiService } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
+import finalLogo from '../../../assets/finalLogo.png';
 import {
   RefreshCw, Zap, Battery, Sun, ChevronDown, ChevronUp,
   Plus, Edit2, Trash2, X, Check, AlertCircle,

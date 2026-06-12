@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, Menu, X, Zap } from 'lucide-react';
+import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import PortalChat from '../../features/portal/PortalChat';
 import { getDesignTokens } from '../theme';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const NAV_ITEMS = [
   { path: '/portal',        label: 'Overview',  icon: LayoutDashboard, end: true  },
   { path: '/portal/alerts', label: 'Alerts',    icon: Bell,             end: false },
   { path: '/portal/device', label: 'My Device', icon: Cpu,              end: false },
+  { path: '/portal/profile', label: 'Profile',  icon: User,             end: false },
 ];
 
 /* ─── Shared portal CSS (injected once) ─────────────────────────────────── */
@@ -282,34 +284,65 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 
 /* ─── Main layout ─────────────────────────────────────────────────────────── */
 const PortalLayout: React.FC = () => {
-  const { isDark } = useTheme();
+  const { logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const tokens = getDesignTokens(isDark);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreTrayOpen, setMoreTrayOpen] = useState(false);
 
   useEffect(() => { injectPortalStyles(); }, []);
 
+  useEffect(() => {
+    setMobileOpen(false);
+    setMoreTrayOpen(false);
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div style={{ background: tokens.pageBg, minHeight: '100vh', width: '100%', color: tokens.text, fontFamily: "var(--font-body)" }}>
-      {/* Mobile topbar */}
-      <header style={{
-        display: 'none',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 16px',
-        background: tokens.surface,
-        borderBottom: `1px solid ${tokens.border}`,
-        position: 'sticky', top: 0, zIndex: 40,
-      }}
-        className="portal-mobile-topbar"
-      >
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: tokens.text }}>360Watts</div>
-        <button
-          onClick={() => setMobileOpen(true)}
-          style={{ padding: 8, borderRadius: 8, border: 'none', background: tokens.primarySoft, color: tokens.primary, cursor: 'pointer' }}
-        >
-          <Menu size={18} />
-        </button>
-      </header>
+    <div style={{
+      background: isMobile
+        ? `radial-gradient(circle at top, ${tokens.primarySoft} 0%, ${tokens.pageBg} 28%), ${tokens.pageBg}`
+        : tokens.pageBg,
+      minHeight: '100vh',
+      width: '100%',
+      color: tokens.text,
+      fontFamily: "var(--font-body)",
+    }}>
+      {/* More tray — slides up from bottom nav on mobile */}
+      {moreTrayOpen && isMobile && (
+        <>
+          <div
+            onClick={() => setMoreTrayOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(18,21,26,0.25)', zIndex: 46, backdropFilter: 'blur(4px)' }}
+          />
+          <div style={{
+            position: 'fixed', left: 12, right: 12,
+            bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
+            zIndex: 47,
+            background: isDark ? 'rgba(13,22,16,0.97)' : 'rgba(255,255,255,0.97)',
+            backdropFilter: 'blur(24px)',
+            border: `1px solid ${tokens.border}`,
+            borderRadius: 22, boxShadow: tokens.shadow, padding: 8,
+            animation: 'portal-fade-in 0.2s ease both',
+          }}>
+            <button className="portal-btn" onClick={() => { toggleTheme(); setMoreTrayOpen(false); }} style={{ color: tokens.textMuted }}>
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+              {isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            </button>
+            <button className="portal-btn danger" onClick={handleLogout}>
+              <LogOut size={14} />
+              Sign out
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Mobile overlay */}
       {mobileOpen && (
@@ -348,11 +381,77 @@ const PortalLayout: React.FC = () => {
       {/* Floating AI chat widget — always available across all portal pages */}
       <PortalChat />
 
+      {isMobile && (
+        <nav
+          aria-label="Customer portal mobile navigation"
+          style={{
+            position: 'fixed', left: 12, right: 12, bottom: 12, zIndex: 48,
+            background: isDark ? 'rgba(10,18,13,0.96)' : 'rgba(255,255,255,0.94)',
+            backdropFilter: 'blur(28px)',
+            WebkitBackdropFilter: 'blur(28px)',
+            border: `1px solid ${tokens.border}`,
+            borderRadius: 26,
+            padding: `10px 8px calc(10px + env(safe-area-inset-bottom, 0px))`,
+            boxShadow: isDark ? '0 -4px 40px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.3)' : '0 20px 50px rgba(18,21,26,0.14)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+            gap: 4,
+          }}
+        >
+          {NAV_ITEMS.map(({ path, label, icon: Icon, end }) => {
+            const isActive = end ? location.pathname === path : location.pathname.startsWith(path);
+            return (
+              <NavLink
+                key={path}
+                to={path}
+                end={end}
+                style={{
+                  minWidth: 0,
+                  textDecoration: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '8px 4px',
+                  borderRadius: 18,
+                  background: isActive ? tokens.primarySoft : 'transparent',
+                  color: isActive ? tokens.primary : tokens.textMuted,
+                  fontSize: 10,
+                  fontWeight: isActive ? 700 : 600,
+                  letterSpacing: '-0.01em',
+                  transition: 'background 0.18s ease, color 0.18s ease',
+                }}
+              >
+                <Icon size={17} strokeWidth={isActive ? 2.2 : 1.9} />
+                <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+              </NavLink>
+            );
+          })}
+          {/* More — theme + sign out */}
+          <button
+            onClick={() => setMoreTrayOpen(v => !v)}
+            aria-label="More options"
+            style={{
+              minWidth: 0, border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+              padding: '8px 4px', borderRadius: 18,
+              background: moreTrayOpen ? tokens.primarySoft : 'transparent',
+              color: moreTrayOpen ? tokens.primary : tokens.textMuted,
+              fontSize: 10, fontWeight: 600,
+              transition: 'background 0.18s ease, color 0.18s ease',
+            }}
+          >
+            <MoreHorizontal size={17} strokeWidth={1.9} />
+            <span>More</span>
+          </button>
+        </nav>
+      )}
+
       <style>{`
         @media (max-width: 1023px) {
           .portal-desktop-sidebar { display: none !important; }
-          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 80px !important; }
-          .portal-mobile-topbar { display: flex !important; }
+          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 168px !important; overflow-x: hidden !important; }
         }
       `}</style>
     </div>
