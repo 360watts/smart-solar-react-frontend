@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, Sparkles } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import PortalChat from '../../features/portal/PortalChat';
@@ -292,6 +292,7 @@ const PortalLayout: React.FC = () => {
   const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreTrayOpen, setMoreTrayOpen] = useState(false);
+  const chatOpenRef = useRef<(() => void) | null>(null);
 
   useEffect(() => { injectPortalStyles(); }, []);
 
@@ -326,7 +327,7 @@ const PortalLayout: React.FC = () => {
             position: 'fixed', left: 12, right: 12,
             bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
             zIndex: 47,
-            background: isDark ? 'rgba(13,22,16,0.97)' : 'rgba(255,255,255,0.97)',
+            background: isDark ? 'rgba(10,20,14,0.98)' : 'rgba(252,255,253,0.98)',
             backdropFilter: 'blur(24px)',
             border: `1px solid ${tokens.border}`,
             borderRadius: 22, boxShadow: tokens.shadow, padding: 8,
@@ -379,14 +380,14 @@ const PortalLayout: React.FC = () => {
       </main>
 
       {/* Floating AI chat widget — always available across all portal pages */}
-      <PortalChat />
+      <PortalChat openRef={chatOpenRef} />
 
       {isMobile && (
         <nav
           aria-label="Customer portal mobile navigation"
           style={{
             position: 'fixed', left: 12, right: 12, bottom: 12, zIndex: 48,
-            background: isDark ? 'rgba(10,18,13,0.96)' : 'rgba(255,255,255,0.94)',
+            background: isDark ? 'rgba(10,20,14,0.97)' : 'rgba(252,255,253,0.96)',
             backdropFilter: 'blur(28px)',
             WebkitBackdropFilter: 'blur(28px)',
             border: `1px solid ${tokens.border}`,
@@ -394,57 +395,81 @@ const PortalLayout: React.FC = () => {
             padding: `10px 8px calc(10px + env(safe-area-inset-bottom, 0px))`,
             boxShadow: isDark ? '0 -4px 40px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.3)' : '0 20px 50px rgba(18,21,26,0.14)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 4,
+            gridTemplateColumns: '1fr 1fr 68px 1fr 1fr',
+            gap: 2,
+            alignItems: 'center',
           }}
         >
-          {NAV_ITEMS.map(({ path, label, icon: Icon, end }) => {
+          {/* Left two: Overview + Alerts */}
+          {NAV_ITEMS.slice(0, 2).map(({ path, label, icon: Icon, end }) => {
             const isActive = end ? location.pathname === path : location.pathname.startsWith(path);
             return (
-              <NavLink
-                key={path}
-                to={path}
-                end={end}
-                style={{
-                  minWidth: 0,
-                  textDecoration: 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  padding: '8px 4px',
-                  borderRadius: 18,
-                  background: isActive ? tokens.primarySoft : 'transparent',
-                  color: isActive ? tokens.primary : tokens.textMuted,
-                  fontSize: 10,
-                  fontWeight: isActive ? 700 : 600,
-                  letterSpacing: '-0.01em',
-                  transition: 'background 0.18s ease, color 0.18s ease',
-                }}
-              >
+              <NavLink key={path} to={path} end={end} style={{
+                minWidth: 0, textDecoration: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                padding: '8px 4px', borderRadius: 18,
+                background: isActive ? tokens.primarySoft : 'transparent',
+                color: isActive ? tokens.primary : tokens.textMuted,
+                fontSize: 10, fontWeight: isActive ? 700 : 600,
+                transition: 'background 0.18s ease, color 0.18s ease',
+              }}>
                 <Icon size={17} strokeWidth={isActive ? 2.2 : 1.9} />
                 <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
               </NavLink>
             );
           })}
-          {/* More — theme + sign out */}
-          <button
-            onClick={() => setMoreTrayOpen(v => !v)}
-            aria-label="More options"
-            style={{
-              minWidth: 0, border: 'none', cursor: 'pointer',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-              padding: '8px 4px', borderRadius: 18,
-              background: moreTrayOpen ? tokens.primarySoft : 'transparent',
-              color: moreTrayOpen ? tokens.primary : tokens.textMuted,
-              fontSize: 10, fontWeight: 600,
-              transition: 'background 0.18s ease, color 0.18s ease',
-            }}
-          >
-            <MoreHorizontal size={17} strokeWidth={1.9} />
-            <span>More</span>
-          </button>
+
+          {/* Center: AI orb — raised + glowing */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <button
+              onClick={() => chatOpenRef.current?.()}
+              aria-label="Open AI assistant"
+              style={{
+                width: 54, height: 54,
+                borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #2FBF71 0%, #1A9E58 100%)',
+                boxShadow: '0 0 0 3px rgba(47,191,113,0.18), 0 0 18px rgba(47,191,113,0.55), 0 6px 20px rgba(0,0,0,0.25)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transform: 'translateY(-10px)',
+                transition: 'transform 160ms ease, box-shadow 160ms ease',
+                position: 'relative',
+              }}
+              onMouseDown={e => (e.currentTarget.style.transform = 'translateY(-7px) scale(0.95)')}
+              onMouseUp={e => (e.currentTarget.style.transform = 'translateY(-10px)')}
+              onTouchStart={e => (e.currentTarget.style.transform = 'translateY(-7px) scale(0.95)')}
+              onTouchEnd={e => (e.currentTarget.style.transform = 'translateY(-10px)')}
+            >
+              {/* Pulse ring */}
+              <span style={{
+                position: 'absolute', inset: -4, borderRadius: '50%',
+                border: '2px solid rgba(47,191,113,0.35)',
+                animation: 'portal-pulse-ring 2.4s ease-out infinite',
+                pointerEvents: 'none',
+              }} />
+              <Sparkles size={22} color="#fff" strokeWidth={2} />
+            </button>
+          </div>
+
+          {/* Right two: My Device + Profile */}
+          {NAV_ITEMS.slice(2).map(({ path, label, icon: Icon, end }) => {
+            const isActive = end ? location.pathname === path : location.pathname.startsWith(path);
+            return (
+              <NavLink key={path} to={path} end={end} style={{
+                minWidth: 0, textDecoration: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                padding: '8px 4px', borderRadius: 18,
+                background: isActive ? tokens.primarySoft : 'transparent',
+                color: isActive ? tokens.primary : tokens.textMuted,
+                fontSize: 10, fontWeight: isActive ? 700 : 600,
+                transition: 'background 0.18s ease, color 0.18s ease',
+              }}>
+                <Icon size={17} strokeWidth={isActive ? 2.2 : 1.9} />
+                <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
       )}
 

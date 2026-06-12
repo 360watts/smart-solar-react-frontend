@@ -36,7 +36,7 @@ const FieldRow: React.FC<{
 }> = ({ icon, label, value, editing, field, draft, onDraftChange, isDark }) => {
   const textPrimary = isDark ? '#F0F7F2' : '#0D2318';
   const textMuted   = isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)';
-  const cardBorder  = isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.2)';
+  const cardBorder  = isDark ? 'rgba(47,191,113,0.13)' : 'rgba(47,191,113,0.18)';
   const divider     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const green       = '#2FBF71';
 
@@ -84,8 +84,8 @@ const MobilePortalProfile: React.FC = () => {
   const [mounted, setMounted]               = useState(false);
   const [draft, setDraft] = useState({ first_name: '', last_name: '', mobile_number: '', address: '' });
 
-  const cardBg      = isDark ? 'rgba(12,22,16,0.95)' : 'rgba(255,255,255,0.95)';
-  const cardBorder  = isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.2)';
+  const cardBg      = isDark ? 'rgba(10,20,14,0.96)' : 'rgba(252,255,253,0.97)';
+  const cardBorder  = isDark ? 'rgba(47,191,113,0.13)' : 'rgba(47,191,113,0.18)';
   const textPrimary = isDark ? '#F0F7F2' : '#0D2318';
   const textMuted   = isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)';
   const green       = '#2FBF71';

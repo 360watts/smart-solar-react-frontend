@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowRight, Battery, ChevronDown, ChevronUp,
-  RefreshCw, Sun, Thermometer, Wifi, WifiOff, Zap,
+  Moon, Sun, Thermometer, Wifi, WifiOff, Zap,
 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { apiService } from '../../../services/api';
@@ -127,7 +127,7 @@ const SolarOrb: React.FC<{
 
 /* ─── Main component ─────────────────────────────────────────────────── */
 const MobilePortalOverview: React.FC = () => {
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const T = getDesignTokens(isDark);
   const [summary, setSummary] = useState<PortalSummary | null>(null);
   const [energy, setEnergy] = useState<CombinedSummary | null>(null);
@@ -187,12 +187,12 @@ const MobilePortalOverview: React.FC = () => {
   const totalDevices = selectedSite?.devices.length ?? 0;
   const allOnline = totalDevices > 0 && onlineDevices === totalDevices;
 
-  /* ─── Design tokens (Solar Noir overlay) ─── */
-  const bg = isDark ? '#07100B' : '#F2F8F4';
-  const cardBg = isDark ? 'rgba(15,26,18,0.92)' : 'rgba(255,255,255,0.92)';
-  const cardBorder = isDark ? 'rgba(47,191,113,0.14)' : 'rgba(47,191,113,0.22)';
+  /* ─── Design tokens (Solar Noir — unified) ─── */
+  const bg         = isDark ? '#080C14' : '#F0F7F3';
+  const cardBg     = isDark ? 'rgba(10,20,14,0.96)' : 'rgba(252,255,253,0.97)';
+  const cardBorder = isDark ? 'rgba(47,191,113,0.13)' : 'rgba(47,191,113,0.18)';
   const textPrimary = isDark ? '#F0F7F2' : '#0D2318';
-  const textMuted = isDark ? 'rgba(240,247,242,0.48)' : 'rgba(13,35,24,0.48)';
+  const textMuted   = isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)';
   const green = '#2FBF71';
   const amber = '#E9B949';
 
@@ -286,10 +286,10 @@ const MobilePortalOverview: React.FC = () => {
                   : 'Your solar system at a glance.'}
               </div>
             </div>
-            <button className="snov-btn" onClick={() => { setRefreshing(true); void load(true); }}
-              aria-label="Refresh"
-              style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${cardBorder}`, background: 'transparent', color: textMuted, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-              <RefreshCw size={15} style={{ animation: refreshing ? 'portal-spin 1s linear infinite' : undefined }} />
+            <button className="snov-btn" onClick={toggleTheme}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${cardBorder}`, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: isDark ? amber : '#6B7A99', display: 'grid', placeItems: 'center', flexShrink: 0, transition: 'background 0.2s ease, color 0.2s ease' }}>
+              {isDark ? <Sun size={15} strokeWidth={2} /> : <Moon size={15} strokeWidth={2} />}
             </button>
           </div>
 

@@ -64,11 +64,20 @@ function timeAgo(ts: number): string {
 }
 
 /* ─── Floating widget ────────────────────────────────────────────────────── */
-const PortalChat: React.FC = () => {
+interface PortalChatProps {
+  openRef?: React.MutableRefObject<(() => void) | null>;
+}
+
+const PortalChat: React.FC<PortalChatProps> = ({ openRef }) => {
   const { isDark } = useTheme();
   const { user } = useAuth();
 
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (openRef) openRef.current = () => setOpen(true);
+    return () => { if (openRef) openRef.current = null; };
+  }, [openRef]);
   const [expanded, setExpanded] = useState(false);
   const [canAccessAI, setCanAccessAI] = useState<boolean | null>(null);
   const { confirm: portalConfirm, PortalFeedbackUI } = usePortalFeedback(isDark);
@@ -286,8 +295,8 @@ const PortalChat: React.FC = () => {
         .pchat-markdown li        { margin-bottom: 3px; }
         .pchat-chip:hover         { border-color: rgba(47,191,113,0.45) !important; }
         @media (max-width: 600px) {
-          .pchat-panel { right: 12px; bottom: 172px; width: calc(100vw - 24px) !important; height: 65dvh !important; border-radius: 16px; }
-          .pchat-fab   { bottom: 100px; right: 16px; }
+          .pchat-panel { right: 12px; left: 12px; bottom: 88px; width: auto !important; height: 65dvh !important; border-radius: 20px; }
+          .pchat-fab   { display: none; }
         }
       `}</style>
 

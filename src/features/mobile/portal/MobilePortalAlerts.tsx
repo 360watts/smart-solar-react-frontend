@@ -29,8 +29,8 @@ const MobilePortalAlerts: React.FC = () => {
   const [filtersOpen, setFiltersOpen]     = useState(false);
   const [mounted, setMounted]             = useState(false);
 
-  const cardBg     = isDark ? 'rgba(12,22,16,0.95)' : 'rgba(255,255,255,0.95)';
-  const cardBorder = isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.2)';
+  const cardBg     = isDark ? 'rgba(10,20,14,0.96)' : 'rgba(252,255,253,0.97)';
+  const cardBorder = isDark ? 'rgba(47,191,113,0.13)' : 'rgba(47,191,113,0.18)';
   const textPrimary = isDark ? '#F0F7F2' : '#0D2318';
   const textMuted   = isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)';
   const green  = '#2FBF71';
