@@ -17,12 +17,25 @@ interface PortalSummary {
   }>;
   active_alert_count: number;
 }
+/* Real shape from /sites/:id/energy-summary/?combined=true */
 interface CombinedSummary {
-  today?: {
-    generated_today_kwh?: number; consumed_today_kwh?: number;
-    power_to_eb_kwh?: number; battery_percentage?: number | null;
-    temperature_c?: number | null;
-    weather?: { current?: { description?: string } };
+  summary?: {
+    today?: {
+      pv_gen_kwh?: number;
+      load_kwh?: number;
+      power_to_grid_kwh?: number;
+      avg_soc?: number | null;
+    };
+  };
+  live?: {
+    battery_pct?: number | null;
+    production_kw?: number | null;
+    weather?: {
+      temperature_c?: number | null;
+      ghi_wm2?: number | null;
+      humidity_pct?: number | null;
+      cloud_cover_pct?: number | null;
+    } | null;
   };
 }
 
@@ -163,12 +176,13 @@ const MobilePortalOverview: React.FC = () => {
     return () => { cancelled = true; };
   }, [selectedSiteId]);
 
-  const today = energy?.today;
-  const generated = today?.generated_today_kwh ?? 0;
-  const consumed = today?.consumed_today_kwh ?? 0;
-  const toGrid = today?.power_to_eb_kwh ?? 0;
-  const battery = today?.battery_percentage;
-  const tempC = today?.temperature_c;
+  const todaySummary = energy?.summary?.today;
+  const live        = energy?.live;
+  const generated = todaySummary?.pv_gen_kwh ?? 0;
+  const consumed  = todaySummary?.load_kwh ?? 0;
+  const toGrid    = todaySummary?.power_to_grid_kwh ?? 0;
+  const battery   = live?.battery_pct;
+  const tempC     = live?.weather?.temperature_c ?? null;
   const onlineDevices = selectedSite?.devices.filter(d => d.is_online).length ?? 0;
   const totalDevices = selectedSite?.devices.length ?? 0;
   const allOnline = totalDevices > 0 && onlineDevices === totalDevices;
@@ -363,7 +377,7 @@ const MobilePortalOverview: React.FC = () => {
                 <span style={{ fontFamily: '"DM Serif Display", Georgia, serif', fontSize: 42, lineHeight: 1, color: green, fontVariantNumeric: 'tabular-nums' }}>{generated.toFixed(1)}</span>
                 <span style={{ color: textMuted, fontWeight: 600, fontSize: 14 }}>kWh</span>
               </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: textMuted }}>{selectedSite.capacity_kw} kWp capacity · {today?.weather?.current?.description ?? 'Live reading'}</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: textMuted }}>{selectedSite.capacity_kw} kWp capacity{tempC != null ? ` · ${tempC.toFixed(1)}°C` : ''}{live?.weather?.humidity_pct != null ? ` · ${live.weather.humidity_pct}% humidity` : ''}</div>
             </div>
             <div style={{ width: 48, height: 48, borderRadius: 16, background: 'rgba(47,191,113,0.12)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <Sun size={22} color={green} />
