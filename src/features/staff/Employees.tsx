@@ -4,7 +4,7 @@ import PhoneInput from '../../shared/components/PhoneInput';
 import { Pencil, Trash2, X, UserPlus, AlertTriangle, Users as UsersIcon, ShieldCheck, ShieldOff } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileEmployees from '../mobile/MobileEmployees';
+import MobileEmployees from '../mobile/staff/MobileEmployees';
 import { cacheService } from '../../services/cacheService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -243,6 +243,14 @@ const Employees: React.FC = () => {
 
     if (!payload.email || !payload.first_name || !payload.last_name) {
       setFormError('Email, first name, and last name are required.');
+      return;
+    }
+    if (!payload.mobile_number) {
+      setFormError('Mobile number is required.');
+      return;
+    }
+    if (!payload.department_id) {
+      setFormError('Department is required.');
       return;
     }
     try {
