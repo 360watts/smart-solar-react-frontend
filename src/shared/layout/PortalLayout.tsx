@@ -451,7 +451,7 @@ const PortalLayout: React.FC = () => {
       <style>{`
         @media (max-width: 1023px) {
           .portal-desktop-sidebar { display: none !important; }
-          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 168px !important; overflow-x: hidden !important; }
+          .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 96px !important; overflow-x: hidden !important; }
         }
       `}</style>
     </div>
