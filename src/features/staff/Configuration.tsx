@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MobileConfiguration from '../mobile/staff/MobileConfiguration';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
@@ -117,7 +117,7 @@ const Configuration: React.FC = () => {
 
   // ── Modal initialForm (for edit mode) ──────────────────────────────────────
 
-  const editInitialForm: SlaveFormData | undefined = editingSlave
+  const editInitialForm: SlaveFormData | undefined = useMemo(() => editingSlave
     ? {
         slave_id: editingSlave.slaveId.toString(),
         device_name: editingSlave.deviceName,
@@ -127,7 +127,11 @@ const Configuration: React.FC = () => {
         enabled: editingSlave.enabled,
         registers: [...editingSlave.registers],
       }
-    : undefined;
+    : undefined,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [editingSlave?.slaveId, editingSlave?.deviceName, editingSlave?.pollingIntervalMs,
+   editingSlave?.timeoutMs, editingSlave?.priority, editingSlave?.enabled,
+   editingSlave?.registers]);
 
   // ── Save handler (called by SlaveConfigModal) ───────────────────────────────
 

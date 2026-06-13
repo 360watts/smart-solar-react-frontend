@@ -148,15 +148,22 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const bulkFileRef = useRef<HTMLInputElement>(null);
 
-  // Keep form in sync when parent opens modal with new initialForm
+  // Reset all transient state when modal opens/closes
   React.useEffect(() => {
     if (open) {
-      setSlaveForm(initialForm ?? BLANK_SLAVE_FORM);
       setRegisterForm({ ...BLANK_REG_FORM });
       setRegisterSearch('');
       setEditingRegisterIndex(null);
       setBulkResult(null);
       setSelectedRegisters(new Set());
+      setSkipDuplicates(true);
+    }
+  }, [open]);
+
+  // Sync form data when the slave being edited changes (but don't wipe bulk upload state)
+  React.useEffect(() => {
+    if (open) {
+      setSlaveForm(initialForm ?? BLANK_SLAVE_FORM);
     }
   }, [open, initialForm]);
 
