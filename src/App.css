@@ -7742,7 +7742,7 @@ body.dark-mode .config-arrow {
   text-overflow: ellipsis;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .main-content {
     padding: 1.1rem 1rem !important;
   }

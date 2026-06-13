@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Cpu, Wifi, WifiOff, Thermometer, Signal, RefreshCw, Radio, Clock, MapPin } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
-import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { useIsMobile, useAutoRefresh } from '../../shared/hooks';
 import MobilePortalDevice from '../mobile/portal/MobilePortalDevice';
 
 interface DeviceItem {
@@ -235,6 +235,16 @@ const PortalDevice: React.FC = () => {
     }
   };
 
+  const silentLoad = useCallback(async () => {
+    setError(null);
+    try {
+      const data = await apiService.getDevices();
+      setDevices(data.results ?? data);
+    } catch {}
+  }, []);
+
+  const { triggerNow } = useAutoRefresh(silentLoad, 60);
+
   useEffect(() => { load(); }, []);
 
   if (isMobile) return <MobilePortalDevice />;
@@ -264,7 +274,7 @@ const PortalDevice: React.FC = () => {
             {devices.length} gateway{devices.length !== 1 ? 's' : ''} · {devices.filter(d => d.is_online).length} online
           </p>
         </div>
-        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${border}`, background: surface, color: muted, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+        <button onClick={triggerNow} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${border}`, background: surface, color: muted, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
           <RefreshCw size={13} />
           Refresh
         </button>

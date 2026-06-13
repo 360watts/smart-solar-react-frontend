@@ -553,7 +553,7 @@ const Dashboard: React.FC = () => {
       />
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 24px 0' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: 'clamp(16px, 2vw, 28px) clamp(12px, 2vw, 24px) 0' }}>
 
         {/* Site KPIs */}
         {renderSiteKPIs()}

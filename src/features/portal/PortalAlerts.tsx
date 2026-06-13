@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   AlertTriangle, CheckCircle, Clock, RefreshCw, Bell,
   ShieldCheck, Zap, Search, X, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
-import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { useIsMobile, useAutoRefresh } from '../../shared/hooks';
 import MobilePortalAlerts from '../mobile/portal/MobilePortalAlerts';
 
 interface AlertItem {
@@ -82,6 +82,16 @@ const PortalAlerts: React.FC = () => {
     }
   };
 
+  const silentLoad = useCallback(async () => {
+    setError(null);
+    try {
+      const data: AlertItem[] = await apiService.getAlerts();
+      setAlerts(data);
+    } catch {}
+  }, []);
+
+  const { triggerNow } = useAutoRefresh(silentLoad, 120);
+
   useEffect(() => { load(); }, []);
 
   // Reset page whenever filters change
@@ -142,10 +152,11 @@ const PortalAlerts: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={load}
+          onClick={triggerNow}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${border}`, background: surface, color: muted, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}
         >
-          <RefreshCw size={13} /> Refresh
+          <RefreshCw size={13} />
+          Refresh
         </button>
       </div>
 

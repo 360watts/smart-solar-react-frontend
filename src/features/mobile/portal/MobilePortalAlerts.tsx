@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, CheckCircle2, ChevronDown, ChevronUp,
   Info, RefreshCw, Search, ShieldAlert, X,
@@ -6,6 +6,7 @@ import {
 import { useTheme } from '../../../contexts/ThemeContext';
 import { AlertItem, apiService } from '../../../services/api';
 import { getDesignTokens } from '../../../shared/theme';
+import { useAutoRefresh } from '../../../shared/hooks';
 
 type StatusFilter = 'all' | 'active' | 'resolved';
 type SeverityFilter = 'all' | 'critical' | 'warning' | 'info';
@@ -50,6 +51,9 @@ const MobilePortalAlerts: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  const silentLoad = useCallback(() => load(true), []);
+  useAutoRefresh(silentLoad, 120);
 
   useEffect(() => { void load(); setTimeout(() => setMounted(true), 60); }, []);
 

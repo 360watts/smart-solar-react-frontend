@@ -105,7 +105,8 @@ const STAFF_STYLES = `
   body:not(.dark-mode) .staff-btn { color: var(--muted-foreground); }
   body:not(.dark-mode) .staff-btn:hover { background: var(--green-soft); color: var(--foreground); }
 
-  @media (max-width: 1023px) {
+  /* 900px keeps sidebar visible up to ~125% zoom on 1280px screens */
+  @media (max-width: 900px) {
     .staff-desktop-sidebar { display: none !important; }
     .staff-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 80px !important; }
     .staff-mobile-topbar { display: flex !important; }
@@ -113,6 +114,10 @@ const STAFF_STYLES = `
   /* Mobile pages manage all their own padding — zero out layout padding so it doesn't stack */
   @media (max-width: 768px) {
     .staff-main { padding: 0 !important; }
+  }
+  /* Responsive horizontal padding scales with viewport so content never feels cramped or clipped */
+  @media (min-width: 901px) {
+    .staff-main { padding: clamp(16px, 2.5vw, 36px) clamp(16px, 2.8vw, 40px) !important; }
   }
 `;
 
@@ -438,10 +443,9 @@ const StaffLayout: React.FC = () => {
         style={{
           marginLeft: 232,
           width: 'calc(100% - 232px)',
-          padding: '32px 32px',
           minHeight: '100vh',
           boxSizing: 'border-box',
-          overflowX: 'clip',
+          overflowX: 'auto',
           color: tokens.text,
           fontFamily: "var(--font-body)",
         }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, Clock, Cpu, MapPin, Radio, RefreshCw,
   Signal, Thermometer, Wifi, WifiOff, Zap,
@@ -6,6 +6,7 @@ import {
 import { useTheme } from '../../../contexts/ThemeContext';
 import { apiService } from '../../../services/api';
 import { getDesignTokens } from '../../../shared/theme';
+import { useAutoRefresh } from '../../../shared/hooks';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 interface DeviceItem {
@@ -281,6 +282,9 @@ const MobilePortalDevice: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  const silentLoad = useCallback(() => load(true), []);
+  useAutoRefresh(silentLoad, 60);
 
   useEffect(() => { void load(); setTimeout(() => setMounted(true), 60); }, []);
 

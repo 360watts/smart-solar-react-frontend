@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowDown, ArrowRight, ArrowUp, Battery, ChevronDown, ChevronUp,
   Moon, Sun, Thermometer, Wifi, WifiOff, Zap,
@@ -6,6 +6,7 @@ import {
 import { useTheme } from '../../../contexts/ThemeContext';
 import { apiService } from '../../../services/api';
 import { getDesignTokens } from '../../../shared/theme';
+import { useAutoRefresh } from '../../../shared/hooks';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 interface PortalSummary {
@@ -164,6 +165,9 @@ const MobilePortalOverview: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  const silentLoad = useCallback(() => load(true), []);
+  useAutoRefresh(silentLoad, 60);
 
   useEffect(() => { void load(); setTimeout(() => setMounted(true), 80); }, []);
 

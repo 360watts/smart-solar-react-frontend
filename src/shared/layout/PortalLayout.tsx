@@ -371,7 +371,6 @@ const PortalLayout: React.FC = () => {
       <main style={{
         marginLeft: 232,
         width: 'calc(100% - 232px)',
-        padding: '36px 32px',
         minHeight: '100vh',
         boxSizing: 'border-box',
         overflowX: 'auto',
@@ -474,9 +473,13 @@ const PortalLayout: React.FC = () => {
       )}
 
       <style>{`
-        @media (max-width: 1023px) {
+        /* 900px keeps sidebar visible up to ~125% zoom on 1280px screens */
+        @media (max-width: 900px) {
           .portal-desktop-sidebar { display: none !important; }
           .portal-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 96px !important; overflow-x: hidden !important; }
+        }
+        @media (min-width: 901px) {
+          .portal-main { padding: clamp(16px, 2.5vw, 36px) clamp(16px, 2.8vw, 40px) !important; }
         }
       `}</style>
     </div>

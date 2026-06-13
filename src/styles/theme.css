@@ -179,3 +179,31 @@
     line-height: 1.5;
   }
 }
+
+/* ── Zoom-resilient layout utilities ─────────────────────────────────────── */
+
+/* Sidebar width token — both sidebar and main content reference this */
+:root {
+  --sidebar-w: 232px;
+}
+
+/* All tables scroll horizontally rather than breaking layout at any zoom */
+.table-scroll-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive page container: fixed-px padding degrades at non-100% zoom;
+   clamp() keeps breathing room across 67%-150% browser zoom */
+.responsive-page-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(14px, 2vw, 28px) clamp(12px, 2.4vw, 32px);
+}
+
+/* Ensure chart/table containers never clip overflow silently */
+.chart-host,
+.data-grid-host {
+  overflow-x: auto;
+  min-width: 0;
+}

@@ -139,9 +139,10 @@ const Configuration: React.FC = () => {
     const slaveId = parseInt(formData.slave_id);
 
     if (!editingSlave) {
-      const existingSlave = slaves.find((s) => s.slaveId === slaveId);
+      // Scope duplicate check to the same config — slave IDs are only unique per RS-485 bus (per config)
+      const existingSlave = slaves.find((s) => s.slaveId === slaveId && s.configId === null);
       if (existingSlave) {
-        setModalError(`Slave ID ${slaveId} already exists. Please choose a different ID.`);
+        setModalError(`Slave ID ${slaveId} already exists in this configuration. Please choose a different ID.`);
         return;
       }
     }
@@ -188,7 +189,7 @@ const Configuration: React.FC = () => {
       setCreatingSlave(false);
       setEditingSlave(null);
       setModalError(null);
-      setCurrentPage(1);
+      if (!editingSlave) setCurrentPage(1);
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'Failed to save slave');
     }
@@ -345,7 +346,7 @@ const Configuration: React.FC = () => {
       <SlaveConfigModal
         open={creatingSlave || !!editingSlave}
         editingSlave={editingSlave}
-        existingSlaveIds={slaves.map((s) => s.slaveId)}
+        existingSlaveIds={slaves.filter((s) => s.configId === null).map((s) => s.slaveId)}
         initialForm={editInitialForm}
         onSave={handleSaveSlave}
         onCancel={handleCancel}
