@@ -137,7 +137,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   );
   const [registerForm, setRegisterForm] = useState({ ...BLANK_REG_FORM });
   const [registerSearch, setRegisterSearch] = useState('');
-  const [editingRegisterIndex, setEditingRegisterIndex] = useState<number | null>(null);
+  const [editingRegisterAddress, setEditingRegisterAddress] = useState<number | null>(null);
   const [selectedRegisters, setSelectedRegisters] = useState<Set<number>>(new Set());
 
   // Bulk upload
@@ -153,7 +153,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     if (open) {
       setRegisterForm({ ...BLANK_REG_FORM });
       setRegisterSearch('');
-      setEditingRegisterIndex(null);
+      setEditingRegisterAddress(null);
       setBulkResult(null);
       setSelectedRegisters(new Set());
       setSkipDuplicates(true);
@@ -171,7 +171,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
 
   const resetRegisterForm = () => {
     setRegisterForm({ ...BLANK_REG_FORM });
-    setEditingRegisterIndex(null);
+    setEditingRegisterAddress(null);
   };
 
   const buildRegister = (existingId?: number): RegisterMapping => ({
@@ -197,10 +197,10 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   });
 
   const addOrUpdateRegister = () => {
-    if (editingRegisterIndex !== null) {
-      const updated = slaveForm.registers.map((r, i) =>
-        i === editingRegisterIndex
-          ? buildRegister(slaveForm.registers[editingRegisterIndex].id)
+    if (editingRegisterAddress !== null) {
+      const updated = slaveForm.registers.map((r) =>
+        r.address === editingRegisterAddress
+          ? buildRegister(r.id)
           : r
       );
       setSlaveForm({ ...slaveForm, registers: updated });
@@ -232,14 +232,14 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
       description: reg.description ?? '',
       enabled: reg.enabled,
     });
-    setEditingRegisterIndex(index);
+    setEditingRegisterAddress(reg.address);
     document
       .querySelector('.register-form-section')
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   const removeRegister = (index: number) => {
-    if (editingRegisterIndex === index) resetRegisterForm();
+    if (editingRegisterAddress === slaveForm.registers[index]?.address) resetRegisterForm();
     setSlaveForm({
       ...slaveForm,
       registers: slaveForm.registers.filter((_, i) => i !== index),
@@ -255,10 +255,10 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     });
   };
 
-  const toggleSelectRegister = (index: number) => {
+  const toggleSelectRegister = (address: number) => {
     setSelectedRegisters(prev => {
       const next = new Set(prev);
-      next.has(index) ? next.delete(index) : next.add(index);
+      next.has(address) ? next.delete(address) : next.add(address);
       return next;
     });
   };
@@ -267,25 +267,25 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     if (allVisibleSelected) {
       setSelectedRegisters(prev => {
         const next = new Set(prev);
-        visibleIndices.forEach(i => next.delete(i));
+        visibleAddresses.forEach(a => next.delete(a));
         return next;
       });
     } else {
       setSelectedRegisters(prev => {
         const next = new Set(prev);
-        visibleIndices.forEach(i => next.add(i));
+        visibleAddresses.forEach(a => next.add(a));
         return next;
       });
     }
   };
 
   const deleteSelected = () => {
-    if (editingRegisterIndex !== null && selectedRegisters.has(editingRegisterIndex)) {
+    if (editingRegisterAddress !== null && selectedRegisters.has(editingRegisterAddress)) {
       resetRegisterForm();
     }
     setSlaveForm(prev => ({
       ...prev,
-      registers: prev.registers.filter((_, i) => !selectedRegisters.has(i)),
+      registers: prev.registers.filter((r) => !selectedRegisters.has(r.address)),
     }));
     setSelectedRegisters(new Set());
   };
@@ -299,8 +299,8 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   const setSelectedEnabled = (enabled: boolean) => {
     setSlaveForm(prev => ({
       ...prev,
-      registers: prev.registers.map((r, i) =>
-        selectedRegisters.has(i) ? { ...r, enabled } : r
+      registers: prev.registers.map((r) =>
+        selectedRegisters.has(r.address) ? { ...r, enabled } : r
       ),
     }));
   };
@@ -442,11 +442,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   // ── Filtered registers ──────────────────────────────────────────────────────
 
   const q = registerSearch.toLowerCase();
-  const visibleIndices = slaveForm.registers
-    .map((_, i) => i)
-    .filter(i => !q || slaveForm.registers[i].label.toLowerCase().includes(q) || String(slaveForm.registers[i].address).includes(q));
-  const allVisibleSelected = visibleIndices.length > 0 && visibleIndices.every(i => selectedRegisters.has(i));
-  const visibleCount = visibleIndices.length;
+  const visibleAddresses = slaveForm.registers
+    .filter(r => !q || r.label.toLowerCase().includes(q) || String(r.address).includes(q))
+    .map(r => r.address);
+  const allVisibleSelected = visibleAddresses.length > 0 && visibleAddresses.every(a => selectedRegisters.has(a));
+  const visibleCount = visibleAddresses.length;
 
   if (!open) return null;
 
@@ -879,17 +879,17 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                   borderRadius: 10,
                   padding: '18px 20px',
                   marginBottom: 16,
-                  border: editingRegisterIndex !== null
+                  border: editingRegisterAddress !== null
                     ? '2px solid rgba(245, 158, 11, 0.6)'
                     : (isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)'),
-                  borderLeft: editingRegisterIndex !== null ? '4px solid #f59e0b' : undefined,
+                  borderLeft: editingRegisterAddress !== null ? '4px solid #f59e0b' : undefined,
                 }}
               >
                 <div style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: 14, color: isDark ? '#f3f4f6' : '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {editingRegisterIndex !== null ? (
+                  {editingRegisterAddress !== null ? (
                     <>
                       <Edit2 size={16} color="#f59e0b" />
-                      Edit Register: {slaveForm.registers[editingRegisterIndex]?.label}
+                      Edit Register: {slaveForm.registers.find(r => r.address === editingRegisterAddress)?.label}
                     </>
                   ) : (
                     <>
@@ -1393,7 +1393,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.3)';
                       }}
                     >
-                      {editingRegisterIndex !== null ? (
+                      {editingRegisterAddress !== null ? (
                         <>
                           <CheckCircle2 size={16} />
                           Update Register
@@ -1405,7 +1405,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         </>
                       )}
                     </button>
-                    {editingRegisterIndex !== null && (
+                    {editingRegisterAddress !== null && (
                       <button
                         type="button"
                         onClick={resetRegisterForm}
@@ -1737,21 +1737,21 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                             return null;
                           return (
                             <tr
-                              key={index}
+                              key={reg.address}
                               style={{
                                 borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)',
-                                background: editingRegisterIndex === index
+                                background: editingRegisterAddress === reg.address
                                   ? (isDark ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.08)')
                                   : 'transparent',
                                 transition: 'background 0.15s ease',
                               }}
                               onMouseEnter={(e) => {
-                                if (editingRegisterIndex !== index) {
+                                if (editingRegisterAddress !== reg.address) {
                                   e.currentTarget.style.background = isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)';
                                 }
                               }}
                               onMouseLeave={(e) => {
-                                if (editingRegisterIndex !== index) {
+                                if (editingRegisterAddress !== reg.address) {
                                   e.currentTarget.style.background = 'transparent';
                                 }
                               }}
@@ -1759,8 +1759,8 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                               <td style={{ padding: '12px 12px 12px 16px' }}>
                                 <input
                                   type="checkbox"
-                                  checked={selectedRegisters.has(index)}
-                                  onChange={() => toggleSelectRegister(index)}
+                                  checked={selectedRegisters.has(reg.address)}
+                                  onChange={() => toggleSelectRegister(reg.address)}
                                   style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#6366f1' }}
                                 />
                               </td>

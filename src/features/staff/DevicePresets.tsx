@@ -310,6 +310,7 @@ const DevicePresets: React.FC = () => {
     setCreatePresetSlaveMode('none');
     setSelectedGlobalSlaveIds([]);
     setSlaveSearch('');
+    setSlaveForm({ slave_id: '', device_name: '', polling_interval_ms: 5000, timeout_ms: 1000, enabled: true, registers: [] });
   };
 
   const handleConfigureSlaves = async (preset: Preset) => {
@@ -317,7 +318,7 @@ const DevicePresets: React.FC = () => {
     await fetchSlavesForPreset(preset.config_id);
   };
 
-  const fetchSlavesForPreset = async (configId: string) => {
+  const fetchSlavesForPreset = async (configId: string): Promise<number> => {
     try {
       // Fetch both preset-attached slaves and global (unattached) slaves
       const [attachedData, globalData] = await Promise.all([
@@ -365,9 +366,11 @@ const DevicePresets: React.FC = () => {
 
       // Show attached slaves first, then available global slaves
       setSlaves([...mappedAttached, ...mappedGlobals]);
+      return mappedAttached.length;
     } catch (err) {
       console.error('Failed to fetch slaves:', err);
       setError('Failed to load slaves for this preset');
+      return 0;
     }
   };
 
@@ -417,9 +420,8 @@ const DevicePresets: React.FC = () => {
     if (!configuringSlaves) return;
     try {
       await apiService.addSlavesToPreset(configuringSlaves.config_id, [slave.id]);
-      // refresh list for this preset
-      await fetchSlavesForPreset(configuringSlaves.config_id);
-      updatePresetSlaveCount(configuringSlaves.config_id, slaves.filter(s => s.attached).length + 1);
+      const attachedCount = await fetchSlavesForPreset(configuringSlaves.config_id);
+      updatePresetSlaveCount(configuringSlaves.config_id, attachedCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to attach slave to preset');
     }
@@ -429,9 +431,8 @@ const DevicePresets: React.FC = () => {
     if (!configuringSlaves) return;
     try {
       await apiService.detachSlaveFromPreset(configuringSlaves.config_id, slave.slaveId);
-      // refresh list for this preset
-      await fetchSlavesForPreset(configuringSlaves.config_id);
-      updatePresetSlaveCount(configuringSlaves.config_id, slaves.filter(s => s.attached).length - 1);
+      const attachedCount = await fetchSlavesForPreset(configuringSlaves.config_id);
+      updatePresetSlaveCount(configuringSlaves.config_id, attachedCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to detach slave from preset');
     }

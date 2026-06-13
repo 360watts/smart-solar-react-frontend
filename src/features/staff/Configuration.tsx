@@ -188,6 +188,7 @@ const Configuration: React.FC = () => {
       setCreatingSlave(false);
       setEditingSlave(null);
       setModalError(null);
+      setCurrentPage(1);
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'Failed to save slave');
     }
@@ -247,7 +248,7 @@ const Configuration: React.FC = () => {
               className="search-input"
             />
           </div>
-          <button onClick={() => setCreatingSlave(true)} className="btn">Configure New Slave</button>
+          <button onClick={() => { setCreatingSlave(true); setModalError(null); }} className="btn">Configure New Slave</button>
         </div>
 
         {slaves.length === 0 ? (
