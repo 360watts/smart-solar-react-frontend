@@ -57,14 +57,14 @@ export function calcDcAndInverter(
   const safePf   = pf  > 0 ? pf  : 1.0;
   const safeDcAc = dcAcRatio > 0 ? dcAcRatio : 1.1;
   const avgDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
-  // Step 1: required DC from consumption (PF = performance ratio, accounts for system losses)
-  const requiredDcKw = avgDailyKwh / (safePsh * safePf);
-  // Step 2: snap up to nearest standard system size
-  const dcKw = snapToSystemSize(requiredDcKw);
-  // Step 3: inverter derived from standard DC size and DC/AC ratio
-  const inverterKw = snapToInverterSize(dcKw / safeDcAc);
-  // rawDcKw = pre-snap exact requirement, responsive to PSH and PF
-  const rawDcKw = parseFloat(requiredDcKw.toFixed(2));
+  // Step 1: AC output required from inverter (consumption ÷ PSH × PF)
+  const requiredAcKw = avgDailyKwh / (safePsh * safePf);
+  // Step 2: snap to nearest standard inverter size
+  const inverterKw = snapToInverterSize(requiredAcKw);
+  // Step 3: DC array = inverter × DC/AC ratio (DC is always larger than inverter)
+  const rawDcKw = parseFloat((inverterKw * safeDcAc).toFixed(2));
+  // Step 4: snap DC up to nearest standard system size
+  const dcKw = snapToSystemSize(rawDcKw);
   return { inverterKw, dcKw, rawDcKw };
 }
 
