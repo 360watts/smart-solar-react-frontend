@@ -1,4 +1,4 @@
-import { useFieldArray, UseFormReturn } from 'react-hook-form';
+import { useFieldArray, useWatch, UseFormReturn } from 'react-hook-form';
 import { Plus, Trash2, Activity, TrendingUp, Zap, Sun } from 'lucide-react';
 import { calcEbBill, formatINR } from '../../utils/roiCalculator';
 import type { QuotationData } from '../../types/quotation';
@@ -8,14 +8,19 @@ interface Props { form: UseFormReturn<QuotationData> }
 export function Step2EbBill({ form }: Props) {
   const { register, watch, control } = form;
   const { fields, append, remove } = useFieldArray({ control, name: 'ebBill.readings' });
-  const ebBillData = watch('ebBill');
+  const psh       = useWatch({ control, name: 'ebBill.peakSunHours' });
+  const pf        = useWatch({ control, name: 'ebBill.powerFactor' });
+  const dcAcRatio = useWatch({ control, name: 'ebBill.dcAcRatio' });
+  const phase     = useWatch({ control, name: 'ebBill.phase' });
+  const readings  = useWatch({ control, name: 'ebBill.readings' });
+  const ebBillData = { peakSunHours: psh, powerFactor: pf, dcAcRatio, phase, readings: readings ?? [] };
   const calc = calcEbBill(ebBillData);
 
   const METRICS = [
     { key: 'avgBimonthlyKwh',       label: 'Avg Bi-monthly', sub: `${calc.avgDailyKwh.toFixed(1)} kWh/day`, unit: 'kWh', val: Math.round(calc.avgBimonthlyKwh), Icon: Activity,  color: 'var(--blue, #3b82f6)'    },
     { key: 'tangedcoBill',           label: 'TANGEDCO Bill',  sub: 'bi-monthly avg',                          unit: '',    val: formatINR(calc.tangedcoBill),       Icon: TrendingUp, color: 'var(--amber, #f59e0b)'  },
     { key: 'annualSaving',           label: 'Annual Saving',  sub: 'estimated / year',                        unit: '',    val: formatINR(calc.annualSaving),        Icon: Zap,        color: 'var(--green, #00a63e)'   },
-    { key: 'recommendedSystemKw',    label: 'System Size',    sub: `${isNaN(calc.recommendedSystemKw) ? 0 : calc.recommendedSystemKw} kWp DC`,  unit: 'kW', val: isNaN(calc.inverterKw) ? 0 : calc.inverterKw, Icon: Sun, color: 'var(--green, #00a63e)' },
+    { key: 'recommendedSystemKw',    label: 'System Size',    sub: `${isNaN(calc.exactDcKw) ? 0 : calc.exactDcKw} kWp DC · ${isNaN(calc.inverterKw) ? 0 : calc.inverterKw} kW inverter`,  unit: 'kWp', val: isNaN(calc.recommendedSystemKw) ? 0 : calc.recommendedSystemKw, Icon: Sun, color: 'var(--green, #00a63e)' },
   ] as const;
 
   return (

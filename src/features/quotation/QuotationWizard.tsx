@@ -143,6 +143,7 @@ function getDefaults(): QuotationData {
     optionA: {
       rows: newRows(),
       subsidy: 78000,
+      discount: 0,
       isRecommended: true,
       expansionPossible: false,
       notIncluded: DEFAULT_NOT_INCLUDED,

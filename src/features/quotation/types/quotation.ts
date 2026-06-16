@@ -18,6 +18,7 @@ export interface BomRow {
 export interface QuoteOption {
   rows: BomRow[];
   subsidy: number;
+  discount: number;
   isRecommended: boolean;
   expansionPossible: boolean;
   notIncluded: string;
@@ -73,7 +74,8 @@ export interface EbCalcResult {
   tangedcoBill: number;
   annualSaving: number;
   inverterKw: number;          // snapped to nearest standard inverter size (AC kW)
-  recommendedSystemKw: number; // DC sizing rounded up to whole-panel boundary (kWp)
+  recommendedSystemKw: number; // snapped to nearest standard system size (kWp)
+  exactDcKw: number;           // exact panel-count DC output before snapping (kWp)
   avgRatePerKwh: number;
 }
 

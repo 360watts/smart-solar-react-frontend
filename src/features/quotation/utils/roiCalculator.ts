@@ -34,8 +34,14 @@ export function calcTangedcoBill(kWh: number): number {
 // 365.25 days/year ÷ 6 bi-monthly periods = 60.875 days per period
 const DAYS_PER_BIMONTHLY = 365.25 / 6;
 
-// Standard inverter sizes available in the market (kW AC)
+// Standard system sizes (kWp DC) and inverter sizes (kW AC) available in the market
+const STANDARD_SYSTEM_KW  = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50];
 const STANDARD_INVERTER_KW = [3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50];
+
+// Round required DC kWp up to the next standard system size
+export function snapToSystemSize(requiredDcKw: number): number {
+  return STANDARD_SYSTEM_KW.find(s => s >= requiredDcKw) ?? STANDARD_SYSTEM_KW[STANDARD_SYSTEM_KW.length - 1];
+}
 
 // Round required AC kW up to the next standard inverter size
 export function snapToInverterSize(requiredAcKw: number): number {
@@ -43,23 +49,23 @@ export function snapToInverterSize(requiredAcKw: number): number {
 }
 
 // DC sizing: size array from consumption first, then derive inverter from DC.
-// perfRatio=0.96 accounts for wiring + temperature derating (4% system losses).
 // DC/AC ratio > 1 ensures DC array is always larger than inverter.
 export function calcDcAndInverter(
   avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1, panelWp = 615,
-): { inverterKw: number; dcKw: number } {
+): { inverterKw: number; dcKw: number; rawDcKw: number } {
   const safePsh  = psh > 0 ? psh : 4.5;
   const safePf   = pf  > 0 ? pf  : 1.0;
   const safeDcAc = dcAcRatio > 0 ? dcAcRatio : 1.1;
   const avgDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
-  // Step 1: DC array sized to meet consumption (PF adjusts for reactive load)
+  // Step 1: required DC from consumption (PF = performance ratio, accounts for system losses)
   const requiredDcKw = avgDailyKwh / (safePsh * safePf);
-  // Step 2: round up to whole-panel boundary
-  const panels  = Math.ceil((requiredDcKw * 1000) / panelWp);
-  const dcKw    = parseFloat((panels * panelWp / 1000).toFixed(3));
-  // Step 3: inverter = DC ÷ DC/AC ratio, snapped UP to standard size (inverter < DC ✓)
+  // Step 2: snap up to nearest standard system size
+  const dcKw = snapToSystemSize(requiredDcKw);
+  // Step 3: inverter derived from standard DC size and DC/AC ratio
   const inverterKw = snapToInverterSize(dcKw / safeDcAc);
-  return { inverterKw, dcKw };
+  // rawDcKw = pre-snap exact requirement, responsive to PSH and PF
+  const rawDcKw = parseFloat(requiredDcKw.toFixed(2));
+  return { inverterKw, dcKw, rawDcKw };
 }
 
 export function calcSystemSize(avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1): number {
@@ -73,7 +79,7 @@ export function calcInverterKw(avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcA
 export function calcEbBill(data: EbBillData): EbCalcResult {
   const validReadings = data.readings.filter(r => r.units > 0);
   if (validReadings.length === 0) {
-    return { avgBimonthlyKwh: 0, avgDailyKwh: 0, tangedcoBill: 0, annualSaving: 0, inverterKw: 0, recommendedSystemKw: 0, avgRatePerKwh: 0 };
+    return { avgBimonthlyKwh: 0, avgDailyKwh: 0, tangedcoBill: 0, annualSaving: 0, inverterKw: 0, recommendedSystemKw: 0, exactDcKw: 0, avgRatePerKwh: 0 };
   }
   const avgBimonthlyKwh = validReadings.reduce((s, r) => s + r.units, 0) / validReadings.length;
   const avgDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
@@ -89,11 +95,11 @@ export function calcEbBill(data: EbBillData): EbCalcResult {
   const psh  = data.peakSunHours || 4.5;
   const pf   = data.powerFactor  || 1.0;
   const dcAc = data.dcAcRatio    || 1.1;
-  const { inverterKw, dcKw: recommendedSystemKw } = calcDcAndInverter(avgBimonthlyKwh, psh, pf, dcAc);
+  const { inverterKw, dcKw: recommendedSystemKw, rawDcKw: exactDcKw } = calcDcAndInverter(avgBimonthlyKwh, psh, pf, dcAc);
   // Step 2 preview estimate: tangedcoBill × 6 periods (actual saving computed in Step 4 from BoM system kW)
   const annualSaving = tangedcoBill * 6;
 
-  return { avgBimonthlyKwh, avgDailyKwh, tangedcoBill, annualSaving, inverterKw, recommendedSystemKw, avgRatePerKwh };
+  return { avgBimonthlyKwh, avgDailyKwh, tangedcoBill, annualSaving, inverterKw, recommendedSystemKw, exactDcKw, avgRatePerKwh };
 }
 
 export function calcBomRow(row: BomRow): number {
@@ -102,9 +108,9 @@ export function calcBomRow(row: BomRow): number {
   return basicCost * (1 + row.gstPct / 100);
 }
 
-export function calcBomTotals(rows: BomRow[], subsidy: number): BomTotals {
+export function calcBomTotals(rows: BomRow[], subsidy: number, discount = 0): BomTotals {
   const grossTotal = rows.reduce((s, r) => s + calcBomRow(r), 0);
-  const netInvestment = grossTotal - subsidy;
+  const netInvestment = grossTotal - (subsidy || 0) - (discount || 0);
   return { grossTotal, netInvestment };
 }
 
@@ -165,12 +171,15 @@ export function formatINR(value: number): string {
  *   ≤ 2 kW  → ₹60,000
  *   > 2 kW  → ₹78,000 (capped)
  */
+// PM Surya Ghar subsidy: residential only, DCR panels only, both single and three phase eligible.
 export function calcSubsidy(
   systemKw: number,
   customerType: 'residential' | 'commercial',
   phase: 'single' | 'three',
+  isDcr = false,
 ): number {
-  if (customerType !== 'residential' || phase !== 'single') return 0;
+  if (customerType !== 'residential') return 0;
+  if (!isDcr) return 0;
   if (systemKw <= 0) return 0;
   if (systemKw <= 1) return 30_000;
   if (systemKw <= 2) return 60_000;

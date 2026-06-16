@@ -152,21 +152,30 @@ function CatalogSelector({ category, onSelect, autoPickFn }: CatalogSelectorProp
 
 function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFormReturn<QuotationData> }) {
   const { register, watch, control, setValue } = form;
-  const ebBill = form.getValues('ebBill');
+  const ebBill = watch('ebBill');
   const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
   const { fields, append, remove } = useFieldArray({ control, name: `${prefix}.rows` as any });
   const liveRows: BomRow[] = watch(`${prefix}.rows`) ?? [];
   const subsidy: number    = watch(`${prefix}.subsidy`) ?? 78000;
+  const discount: number   = watch(`${prefix}.discount`) ?? 0;
 
-  // Auto-populate subsidy when system size, customer type, or phase changes
+  // Auto-populate subsidy when system size, customer type, phase, or panel DCR status changes
   const customerType = watch('customer.customerType') ?? 'residential';
   const phase        = watch('ebBill.phase') ?? 'single';
+  const panelRow     = liveRows.find(r => r.item.toLowerCase() === 'panels');
+  const isDcr        = panelRow ? /\bDCR\b/i.test(panelRow.description) && !/non-DCR/i.test(panelRow.description) : false;
   useEffect(() => {
     if (prefix !== 'optionA') return;
-    const computed = calcSubsidy(recommendedSystemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three');
+    const computed = calcSubsidy(recommendedSystemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three', isDcr);
     setValue(`${prefix}.subsidy`, computed);
-  }, [recommendedSystemKw, customerType, phase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy);
+  }, [recommendedSystemKw, customerType, phase, isDcr]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy, discount);
+  const totalBaseRs   = liveRows.reduce((s, r) => s + r.qty * r.unitPrice, 0);
+  const totalMarginRs = liveRows.reduce((s, r) => s + (r.qty * r.unitPrice * r.marginPct / 100), 0);
+  const totalGstRs    = liveRows.reduce((s, r) => {
+    const withMargin = r.qty * r.unitPrice * (1 + r.marginPct / 100);
+    return s + withMargin * r.gstPct / 100;
+  }, 0);
   const isRecommended: boolean    = watch(`${prefix}.isRecommended`);
   const expansionPossible: boolean = watch(`${prefix}.expansionPossible`);
 
@@ -342,11 +351,22 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             })}
           </tbody>
           <tfoot>
-            <tr>
-              <td colSpan={7} style={{ textAlign: 'right', color: 'var(--fg-muted, #64748b)', fontSize: '0.65rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Gross Total
+            {/* Column-aligned totals row */}
+            <tr style={{ borderTop: '1px solid var(--line-2, rgba(0,0,0,0.1))' }}>
+              <td colSpan={3} style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', paddingLeft: 4 }}>Totals</td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
+                {liveRows.reduce((s, r) => s + (r.qty || 0), 0)}
               </td>
-              <td style={{ textAlign: 'right', color: 'var(--fg, #0f172a)', fontWeight: 600, paddingRight: 8 }}>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
+                {formatINR(totalBaseRs)}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 4 }}>
+                {formatINR(totalMarginRs)}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
+                {formatINR(totalGstRs)}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--fg)', fontWeight: 600, paddingRight: 8 }}>
                 {formatINR(grossTotal)}
               </td>
               <td />
@@ -358,6 +378,15 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               </td>
               <td />
             </tr>
+            {discount > 0 && (
+              <tr>
+                <td colSpan={6} style={{ color: 'var(--fg-muted, #64748b)', fontSize: '0.65rem' }}>Discount</td>
+                <td colSpan={2} style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
+                  − {formatINR(discount)}
+                </td>
+                <td />
+              </tr>
+            )}
             <tr>
               <td colSpan={7} style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
                 Net Investment
@@ -389,6 +418,16 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             className="sq-input sq-input-mono"
             style={{ width: 130 }}
             {...register(`${prefix}.subsidy`, { valueAsNumber: true })}
+          />
+        </div>
+        <div className="sq-field">
+          <label className="sq-label">Discount (₹)</label>
+          <input
+            type="number" min={0}
+            className="sq-input sq-input-mono"
+            style={{ width: 130 }}
+            placeholder="0"
+            {...register(`${prefix}.discount`, { valueAsNumber: true })}
           />
         </div>
 
@@ -452,6 +491,7 @@ export function Step3Bom({ form }: Props) {
       setValue('optionB', {
         rows: newRows(),
         subsidy: 78000,
+        discount: 0,
         isRecommended: false,
         expansionPossible: false,
         notIncluded: 'Civil works\nTANGEDCO payment for sanctioned load extension + solar net meter\nReflective paints',
