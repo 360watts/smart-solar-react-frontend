@@ -74,8 +74,9 @@ export interface EbCalcResult {
   tangedcoBill: number;
   annualSaving: number;
   inverterKw: number;          // snapped to nearest standard inverter size (AC kW)
+  exactAcKw: number;           // raw AC requirement before snapping (kW)
   recommendedSystemKw: number; // snapped to nearest standard system size (kWp)
-  exactDcKw: number;           // exact panel-count DC output before snapping (kWp)
+  exactDcKw: number;           // raw DC = inverterKw × dcAcRatio, before snapping (kWp)
   avgRatePerKwh: number;
 }
 

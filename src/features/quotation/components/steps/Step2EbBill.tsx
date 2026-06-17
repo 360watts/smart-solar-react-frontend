@@ -20,7 +20,7 @@ export function Step2EbBill({ form }: Props) {
     { key: 'avgBimonthlyKwh',       label: 'Avg Bi-monthly', sub: `${calc.avgDailyKwh.toFixed(1)} kWh/day`, unit: 'kWh', val: Math.round(calc.avgBimonthlyKwh), Icon: Activity,  color: 'var(--blue, #3b82f6)'    },
     { key: 'tangedcoBill',           label: 'TANGEDCO Bill',  sub: 'bi-monthly avg',                          unit: '',    val: formatINR(calc.tangedcoBill),       Icon: TrendingUp, color: 'var(--amber, #f59e0b)'  },
     { key: 'annualSaving',           label: 'Annual Saving',  sub: 'estimated / year',                        unit: '',    val: formatINR(calc.annualSaving),        Icon: Zap,        color: 'var(--green, #00a63e)'   },
-    { key: 'recommendedSystemKw',    label: 'System Size',    sub: `${isNaN(calc.exactDcKw) ? 0 : calc.exactDcKw} kWp DC · ${isNaN(calc.inverterKw) ? 0 : calc.inverterKw} kW inverter`,  unit: 'kWp', val: isNaN(calc.recommendedSystemKw) ? 0 : calc.recommendedSystemKw, Icon: Sun, color: 'var(--green, #00a63e)' },
+    { key: 'recommendedSystemKw',    label: 'System Size',    sub: `${isNaN(calc.exactDcKw) ? 0 : calc.exactDcKw} kWp DC · ${isNaN(calc.exactAcKw) ? 0 : calc.exactAcKw} kW AC`,  unit: 'kWp', val: isNaN(calc.recommendedSystemKw) ? 0 : calc.recommendedSystemKw, Icon: Sun, color: 'var(--green, #00a63e)' },
   ] as const;
 
   return (

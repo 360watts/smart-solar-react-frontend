@@ -52,7 +52,7 @@ export function snapToInverterSize(requiredAcKw: number): number {
 // DC/AC ratio > 1 ensures DC array is always larger than inverter.
 export function calcDcAndInverter(
   avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1, panelWp = 615,
-): { inverterKw: number; dcKw: number; rawDcKw: number } {
+): { inverterKw: number; dcKw: number; rawDcKw: number; rawAcKw: number } {
   const safePsh  = psh > 0 ? psh : 4.5;
   const safePf   = pf  > 0 ? pf  : 1.0;
   const safeDcAc = dcAcRatio > 0 ? dcAcRatio : 1.1;
@@ -62,10 +62,11 @@ export function calcDcAndInverter(
   // Step 2: snap to nearest standard inverter size
   const inverterKw = snapToInverterSize(requiredAcKw);
   // Step 3: DC array = inverter × DC/AC ratio (DC is always larger than inverter)
+  const rawAcKw = parseFloat(requiredAcKw.toFixed(2));
   const rawDcKw = parseFloat((inverterKw * safeDcAc).toFixed(2));
   // Step 4: snap DC up to nearest standard system size
   const dcKw = snapToSystemSize(rawDcKw);
-  return { inverterKw, dcKw, rawDcKw };
+  return { inverterKw, dcKw, rawDcKw, rawAcKw };
 }
 
 export function calcSystemSize(avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1): number {
@@ -79,7 +80,7 @@ export function calcInverterKw(avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcA
 export function calcEbBill(data: EbBillData): EbCalcResult {
   const validReadings = data.readings.filter(r => r.units > 0);
   if (validReadings.length === 0) {
-    return { avgBimonthlyKwh: 0, avgDailyKwh: 0, tangedcoBill: 0, annualSaving: 0, inverterKw: 0, recommendedSystemKw: 0, exactDcKw: 0, avgRatePerKwh: 0 };
+    return { avgBimonthlyKwh: 0, avgDailyKwh: 0, tangedcoBill: 0, annualSaving: 0, inverterKw: 0, exactAcKw: 0, recommendedSystemKw: 0, exactDcKw: 0, avgRatePerKwh: 0 };
   }
   const avgBimonthlyKwh = validReadings.reduce((s, r) => s + r.units, 0) / validReadings.length;
   const avgDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
@@ -95,11 +96,11 @@ export function calcEbBill(data: EbBillData): EbCalcResult {
   const psh  = data.peakSunHours || 4.5;
   const pf   = data.powerFactor  || 1.0;
   const dcAc = data.dcAcRatio    || 1.1;
-  const { inverterKw, dcKw: recommendedSystemKw, rawDcKw: exactDcKw } = calcDcAndInverter(avgBimonthlyKwh, psh, pf, dcAc);
+  const { inverterKw, rawAcKw: exactAcKw, dcKw: recommendedSystemKw, rawDcKw: exactDcKw } = calcDcAndInverter(avgBimonthlyKwh, psh, pf, dcAc);
   // Step 2 preview estimate: tangedcoBill × 6 periods (actual saving computed in Step 4 from BoM system kW)
   const annualSaving = tangedcoBill * 6;
 
-  return { avgBimonthlyKwh, avgDailyKwh, tangedcoBill, annualSaving, inverterKw, recommendedSystemKw, exactDcKw, avgRatePerKwh };
+  return { avgBimonthlyKwh, avgDailyKwh, tangedcoBill, annualSaving, inverterKw, exactAcKw, recommendedSystemKw, exactDcKw, avgRatePerKwh };
 }
 
 export function calcBomRow(row: BomRow): number {
