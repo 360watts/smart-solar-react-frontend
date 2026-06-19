@@ -45,3 +45,4 @@ build/
 .env.development.local.example
 .env.test.local.example
 .env.production.local.example
+.worktrees/
