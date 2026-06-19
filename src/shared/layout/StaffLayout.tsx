@@ -3,12 +3,12 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
-  LogOut, Sun, Moon, Menu, X, ChevronDown, ChevronRight,
+  LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import finalLogo from '../../assets/finalLogo.png';
-import { getDesignTokens } from '../theme';
 
 // ─── Nav groups ───────────────────────────────────────────────────────────────
 
@@ -17,105 +17,212 @@ const NAV_MAIN = [
 ];
 
 const NAV_CONFIG = [
-  { path: '/devices',        label: 'Devices',       icon: Monitor  },
-  { path: '/alerts',         label: 'Alerts',         icon: Bell     },
-  { path: '/configuration',  label: 'Configuration',  icon: Settings },
-  { path: '/users',          label: 'Users',          icon: Users    },
-  { path: '/device-presets', label: 'Device Presets', icon: Star     },
+  { path: '/devices',        label: 'Devices',       icon: Monitor   },
+  { path: '/alerts',         label: 'Alerts',         icon: Bell      },
+  { path: '/configuration',  label: 'Configuration',  icon: Settings  },
+  { path: '/users',          label: 'Users',          icon: Users     },
+  { path: '/device-presets', label: 'Device Presets', icon: Star      },
 ];
 
 const NAV_STAFF = [
-  { path: '/sites',      label: 'Sites',      icon: Building2 },
-  { path: '/equipment',  label: 'Equipment',  icon: Server    },
-  { path: '/quotation',  label: 'Quotation',  icon: FileText  },
-  { path: '/ota',        label: 'OTA Updates', icon: Download },
+  { path: '/sites',      label: 'Sites',       icon: Building2 },
+  { path: '/equipment',  label: 'Equipment',   icon: Server    },
+  { path: '/quotation',  label: 'Quotation',   icon: FileText  },
+  { path: '/ota',        label: 'OTA Updates', icon: Download  },
 ];
 
 const NAV_ADMIN = [
-  { path: '/employees', label: 'Employees', icon: Briefcase },
-  { path: '/departments', label: 'Departments', icon: Users },
+  { path: '/employees',   label: 'Employees',   icon: Briefcase },
+  { path: '/departments', label: 'Departments', icon: Users     },
 ];
 
-// ─── Staff layout styles (injected once) ─────────────────────────────────────
+const STAFF_SIDEBAR_EXPANDED  = 236;
+const STAFF_SIDEBAR_COLLAPSED = 56;   // just wide enough for the logo
+
+// ─── Grain texture (Control Deck aesthetic) ───────────────────────────────────
+
+const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`;
+
+// ─── Injected styles ──────────────────────────────────────────────────────────
 
 const STAFF_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
+
   @keyframes staff-fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0);   }
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0);    }
   }
+  @keyframes staff-slide-down {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+
   .staff-fade-in { animation: staff-fade-in 0.3s ease both; }
 
+  /* ── Nav links ─── */
   .staff-nav-link {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
+    padding: 8px 11px;
     border-radius: 9px;
     text-decoration: none;
     font-size: 13px;
-    font-family: var(--font-body);
+    font-family: 'DM Sans', sans-serif;
     font-weight: 500;
-    color: var(--muted-foreground);
+    color: #a8c4e0;
     background: transparent;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease;
     cursor: pointer;
     border: none;
     width: 100%;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
+    letter-spacing: 0.01em;
+    outline: none;
   }
-  .staff-nav-link:hover { color: inherit; }
+  .staff-nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 2.5px;
+    border-radius: 2px;
+    background: #2FBF71;
+    opacity: 0;
+    transform: scaleY(0.4);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .staff-nav-link:hover {
+    color: #dbeeff;
+    background: rgba(47, 191, 113, 0.10);
+  }
   .staff-nav-link.active {
-    color: var(--primary);
-    background: var(--green-soft);
+    color: #2FBF71;
+    background: rgba(47, 191, 113, 0.11);
     font-weight: 600;
   }
+  .staff-nav-link.active::before {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  /* Light mode */
+  body:not(.dark-mode) .staff-nav-link { color: rgba(51,65,85,0.75); }
+  body:not(.dark-mode) .staff-nav-link:hover { color: #0f172a; background: rgba(47,191,113,0.08); }
+  body:not(.dark-mode) .staff-nav-link.active { color: #2FBF71; background: rgba(47,191,113,0.10); }
+  body:not(.dark-mode) .staff-nav-link.active::before { background: #2FBF71; }
+
+  /* Icon accent */
+  .staff-nav-link.active .staff-nav-icon { color: #2FBF71; }
+  body:not(.dark-mode) .staff-nav-link.active .staff-nav-icon { color: #2FBF71; }
+
+  /* Nav dot */
   .staff-nav-dot {
-    width: 5px; height: 5px;
+    width: 4px; height: 4px;
     border-radius: 50%;
     background: transparent;
     margin-left: auto;
     flex-shrink: 0;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
   }
   .staff-nav-link.active .staff-nav-dot {
-    background: var(--primary);
-    box-shadow: 0 0 8px var(--green-soft);
+    background: #2FBF71;
+    box-shadow: 0 0 6px rgba(47,191,113,0.75);
+  }
+  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot {
+    background: #2FBF71;
+    box-shadow: 0 0 6px rgba(47,191,113,0.7);
   }
 
-  /* Light mode overrides */
-  body:not(.dark-mode) .staff-nav-link { color: var(--muted-foreground); }
-  body:not(.dark-mode) .staff-nav-link:hover { color: inherit; }
-  body:not(.dark-mode) .staff-nav-link.active { color: var(--primary); background: var(--green-soft); }
-  body:not(.dark-mode) .staff-nav-link.active .staff-nav-dot { background: var(--primary); box-shadow: 0 0 6px var(--green-soft); }
-
+  /* ── Staff btn ─── */
   .staff-btn {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 9px; border: none;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 11px; border-radius: 9px; border: none;
     background: transparent; cursor: pointer; font-size: 13px;
-    font-family: var(--font-body); font-weight: 500;
-    transition: all 0.15s ease; width: 100%; text-align: left;
-    color: var(--muted-foreground);
+    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    transition: color 0.15s ease, background 0.15s ease;
+    width: 100%; text-align: left;
+    color: #a8c4e0;
+    outline: none;
+    letter-spacing: 0.01em;
   }
-  .staff-btn:hover { background: var(--green-soft); color: var(--foreground); }
-  .staff-btn.danger { color: var(--destructive); }
-  .staff-btn.danger:hover { background: rgba(239,68,68,0.10); color: var(--destructive); }
+  .staff-btn:hover {
+    color: #dbeeff;
+    background: rgba(47, 191, 113, 0.10);
+  }
+  .staff-btn.danger { color: #fc8fa0; }
+  .staff-btn.danger:hover {
+    background: rgba(239,68,68,0.12);
+    color: #ff9dac;
+  }
+  body:not(.dark-mode) .staff-btn { color: rgba(51,65,85,0.75); }
+  body:not(.dark-mode) .staff-btn:hover { background: rgba(47,191,113,0.08); color: #0f172a; }
+  body:not(.dark-mode) .staff-btn.danger { color: #dc2626; }
+  body:not(.dark-mode) .staff-btn.danger:hover { background: rgba(239,68,68,0.08); color: #b91c1c; }
 
-  body:not(.dark-mode) .staff-btn { color: var(--muted-foreground); }
-  body:not(.dark-mode) .staff-btn:hover { background: var(--green-soft); color: var(--foreground); }
+  /* ── Group label ─── */
+  .staff-group-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(47,191,113,0.85);
+    padding: 10px 11px 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .staff-group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(47,191,113,0.25);
+    min-width: 8px;
+  }
+  body:not(.dark-mode) .staff-group-label { color: rgba(47,191,113,0.70); }
+  body:not(.dark-mode) .staff-group-label::after { background: rgba(47,191,113,0.18); }
 
-  /* 900px keeps sidebar visible up to ~125% zoom on 1280px screens */
+  /* ── Action panel ─── */
+  .staff-action-panel {
+    margin-top: 6px;
+    border-radius: 10px;
+    padding: 4px;
+    animation: staff-slide-down 0.18s ease both;
+  }
+
+  /* ── Icon-only (collapsed) nav link ─── */
+  .staff-nav-icon-only {
+    justify-content: center;
+    padding: 9px 0;
+  }
+  .staff-nav-icon-only::before {
+    top: 15%; bottom: 15%;
+  }
+
+  /* ── Logo toggle button ─── */
+  .staff-logo-btn {
+    display: flex; align-items: center;
+    background: none; border: none;
+    cursor: pointer; padding: 0; outline: none;
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 10px;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+  }
+  .staff-logo-btn:hover { opacity: 0.8; }
+
+  /* ── Responsive ─── */
   @media (max-width: 900px) {
     .staff-desktop-sidebar { display: none !important; }
-    .staff-main { margin-left: 0 !important; width: 100% !important; padding: 20px 16px 80px !important; }
-    .staff-mobile-topbar { display: flex !important; }
+    .staff-main { margin-left: 0 !important; width: 100% !important; }
   }
-  /* Mobile pages manage all their own padding — zero out layout padding so it doesn't stack */
   @media (max-width: 768px) {
     .staff-main { padding: 0 !important; }
   }
-  /* Responsive horizontal padding scales with viewport so content never feels cramped or clipped */
   @media (min-width: 901px) {
     .staff-main { padding: clamp(16px, 2.5vw, 36px) clamp(16px, 2.8vw, 40px) !important; }
   }
@@ -129,29 +236,25 @@ function injectStaffStyles() {
   document.head.appendChild(el);
 }
 
-// ─── Nav group label ──────────────────────────────────────────────────────────
-
-const GroupLabel: React.FC<{ label: string; muted: string }> = ({ label, muted }) => (
-  <div style={{
-    fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-    textTransform: 'uppercase', color: muted,
-    padding: '8px 12px 4px',
-  }}>
-    {label}
-  </div>
-);
-
 // ─── Sidebar content ──────────────────────────────────────────────────────────
 
-const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+interface SidebarContentProps {
+  onClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+const SidebarContent: React.FC<SidebarContentProps> = ({
+  onClose,
+  collapsed = false,
+  onToggleCollapse,
+}) => {
   const { user, logout, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-
   const [profileOpen, setProfileOpen] = useState(false);
   const expandedActionsRef = React.useRef<HTMLDivElement>(null);
-  const tokens = getDesignTokens(isDark);
 
   React.useEffect(() => {
     if (profileOpen && expandedActionsRef.current) {
@@ -166,197 +269,337 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   };
 
   const isStaff = !!(user?.is_staff);
-  const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase()
-    || user?.username?.[0]?.toUpperCase() || '?';
-  const displayName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user?.username : '';
+  const initials = [user?.first_name?.[0], user?.last_name?.[0]]
+    .filter(Boolean).join('').toUpperCase() || user?.username?.[0]?.toUpperCase() || '?';
+  const displayName = user
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user?.username
+    : '';
   const roleName = user?.is_superuser ? 'Admin' : user?.is_staff ? 'Staff' : 'User';
 
-  const sideBg = isDark
-    ? `linear-gradient(180deg, ${tokens.surface} 0%, ${tokens.pageBg} 100%)`
-    : `linear-gradient(180deg, ${tokens.surface} 0%, ${tokens.pageBg} 100%)`;
-  const sideBorder = tokens.border;
-  const sideText   = tokens.text;
-  const sideMuted  = tokens.textMuted;
-  const userBg     = tokens.primarySoft;
-  const userBorder = tokens.border;
+  const isDrawer = !!onClose;
+  const showCollapsed = collapsed && !isDrawer;
 
-  const isActivePath = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+  // Colours
+  const sideBg     = isDark ? 'rgba(7,11,26,0.97)' : 'rgba(250,251,253,0.97)';
+  const sideBorder  = isDark ? 'rgba(47,191,113,0.15)' : 'rgba(18,21,26,0.09)';
+  const accent      = '#2FBF71';
+  const avatarGrad  = isDark
+    ? 'linear-gradient(135deg, #2FBF71 0%, #06b6d4 100%)'
+    : 'linear-gradient(135deg, #2FBF71 0%, #059669 100%)';
 
-  return (
+  const isActivePath = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
+
+  // ── Brand / header ──
+  const brandSection = (
     <div style={{
-      width: 'min(232px, 90vw)', height: '100%',
-      background: sideBg,
-      borderRight: `1px solid ${sideBorder}`,
-      display: 'flex', flexDirection: 'column',
-      fontFamily: "'Fira Sans', 'DM Sans', sans-serif",
-      overflowY: 'auto',
-      overflowX: 'hidden',
+      padding: showCollapsed ? '14px 0' : '16px 14px 14px',
+      borderBottom: `1px solid ${sideBorder}`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      flexShrink: 0,
+      justifyContent: showCollapsed ? 'center' : undefined,
+      minHeight: 68,
     }}>
-      {/* Brand */}
-      <div style={{
-        padding: '20px 16px 16px',
-        borderBottom: `1px solid ${tokens.border}`,
-        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-      }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: tokens.shadow,
-          overflow: 'visible',
-        }}>
-          <img src={finalLogo} alt="360watts" style={{ width: 56, height: 56, objectFit: 'contain' }} />
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: 14, color: sideText, letterSpacing: '-0.01em' }}>
+      {/* Logo — doubles as collapse/expand toggle on desktop */}
+      <button
+        className="staff-logo-btn"
+        onClick={onToggleCollapse ?? onClose}
+        title={showCollapsed ? 'Expand menu' : 'Collapse menu'}
+        aria-label={showCollapsed ? 'Expand menu' : 'Collapse menu'}
+      >
+        <img
+          src={finalLogo}
+          alt="360watts"
+          style={{ width: 44, height: 44, objectFit: 'contain', display: 'block' }}
+        />
+      </button>
+
+      {/* Brand text (hidden when collapsed) */}
+      {!showCollapsed && (
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontWeight: 700, fontSize: 14,
+            color: isDark ? '#e2e8f0' : '#0f172a',
+            letterSpacing: '-0.01em',
+          }}>
             360Watts
           </div>
-          <div style={{ fontSize: 10, color: sideMuted, marginTop: 1, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <div style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 9, color: accent, marginTop: 1,
+            letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600,
+          }}>
             IoT Platform
           </div>
         </div>
-        {onClose && (
-          <button onClick={onClose} style={{ marginLeft: 'auto', padding: 4, borderRadius: 6, border: 'none', background: 'transparent', color: sideMuted, cursor: 'pointer', flexShrink: 0 }}>
-            <X size={15} />
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {/* Collapse arrow (expanded state only, not in drawer) */}
+      {!showCollapsed && !isDrawer && (
+        <button
+          onClick={onToggleCollapse}
+          title="Collapse sidebar"
+          aria-label="Collapse sidebar"
+          style={{
+            marginLeft: 'auto',
+            padding: '5px 6px', borderRadius: 8,
+            border: `1px solid ${sideBorder}`,
+            background: isDark ? 'rgba(47,191,113,0.07)' : 'rgba(47,191,113,0.06)',
+            color: isDark ? '#5de8a4' : '#2FBF71',
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            transition: 'all 0.15s ease', flexShrink: 0, outline: 'none',
+          }}
+        >
+          <ChevronsLeft size={13} strokeWidth={2} />
+        </button>
+      )}
 
-        {/* Main */}
-        {NAV_MAIN.map(({ path, label, icon: Icon }) => (
-          <NavLink
-            key={path}
-            to={path}
-            end
-            onClick={onClose}
-            className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
-          >
-            <Icon size={14} strokeWidth={isActivePath(path) ? 2.2 : 1.8} />
-            {label}
-            <span className="staff-nav-dot" />
-          </NavLink>
-        ))}
+      {/* Close (drawer only) */}
+      {isDrawer && (
+        <button
+          onClick={onClose}
+          style={{
+            marginLeft: 'auto', padding: 5, borderRadius: 7, border: 'none',
+            background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(0,0,0,0.05)',
+            color: isDark ? '#5de8a4' : '#2FBF71',
+            cursor: 'pointer', flexShrink: 0, display: 'flex', outline: 'none',
+          }}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
 
-        {/* Config */}
+  // ── Nav link factory ──
+  const navLink = ({ path, label, icon: Icon }: { path: string; label: string; icon: React.ElementType }) => (
+    <NavLink
+      key={path}
+      to={path}
+      onClick={onClose}
+      title={label}
+      className={({ isActive }) =>
+        `staff-nav-link${isActive ? ' active' : ''}${showCollapsed ? ' staff-nav-icon-only' : ''}`
+      }
+    >
+      <Icon
+        size={showCollapsed ? 16 : 14}
+        strokeWidth={isActivePath(path) ? 2.3 : 1.8}
+        className="staff-nav-icon"
+        style={{ flexShrink: 0, transition: 'color 0.15s ease' }}
+      />
+      {!showCollapsed && (
+        <>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+          <span className="staff-nav-dot" />
+        </>
+      )}
+    </NavLink>
+  );
+
+  return (
+    <div style={{
+      width: isDrawer ? 'min(236px, 90vw)' : (showCollapsed ? STAFF_SIDEBAR_COLLAPSED : STAFF_SIDEBAR_EXPANDED),
+      height: '100%',
+      background: sideBg,
+      backgroundImage: GRAIN_SVG,
+      borderRight: `1px solid ${sideBorder}`,
+      display: 'flex',
+      flexDirection: 'column',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      transition: 'width 0.28s cubic-bezier(0.4,0,0.2,1)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+    }}>
+
+      {brandSection}
+
+      {/* Nav — always rendered; collapsed = icons only */}
+      <nav style={{
+        flex: 1,
+        padding: showCollapsed ? '10px 6px' : '10px 8px',
+        display: 'flex', flexDirection: 'column', gap: 1,
+        overflowY: 'auto', overflowX: 'hidden',
+      }}>
+        {NAV_MAIN.map(item => navLink(item))}
+
         {(isAdmin || isStaff) && (
           <>
-            <GroupLabel label="Configuration" muted={sideMuted} />
-            {NAV_CONFIG.map(({ path, label, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={onClose}
-                className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
-              >
-                <Icon size={14} strokeWidth={isActivePath(path) ? 2.2 : 1.8} />
-                {label}
-                <span className="staff-nav-dot" />
-              </NavLink>
-            ))}
+            {showCollapsed
+              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
+              : <div className="staff-group-label">Config</div>
+            }
+            {NAV_CONFIG.map(item => navLink(item))}
           </>
         )}
 
-        {/* Staff operations */}
         {(isAdmin || isStaff) && (
           <>
-            <GroupLabel label="Operations" muted={sideMuted} />
-            {NAV_STAFF.map(({ path, label, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={onClose}
-                className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
-              >
-                <Icon size={14} strokeWidth={isActivePath(path) ? 2.2 : 1.8} />
-                {label}
-                <span className="staff-nav-dot" />
-              </NavLink>
-            ))}
+            {showCollapsed
+              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
+              : <div className="staff-group-label">Operations</div>
+            }
+            {NAV_STAFF.map(item => navLink(item))}
           </>
         )}
 
-        {/* Admin */}
         {isAdmin && (
           <>
-            <GroupLabel label="Admin" muted={sideMuted} />
-            {NAV_ADMIN.map(({ path, label, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={onClose}
-                className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
-              >
-                <Icon size={14} strokeWidth={isActivePath(path) ? 2.2 : 1.8} />
-                {label}
-                <span className="staff-nav-dot" />
-              </NavLink>
-            ))}
+            {showCollapsed
+              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
+              : <div className="staff-group-label">Admin</div>
+            }
+            {NAV_ADMIN.map(item => navLink(item))}
           </>
         )}
       </nav>
 
-
-      {/* User block — sticky bottom so it stays visible when nav scrolls */}
-      <div style={{ padding: '12px 10px 16px', flexShrink: 0, position: 'sticky', bottom: 0, background: sideBg, borderTop: `1px solid ${sideBorder}` }}>
-        <button
-          onClick={() => setProfileOpen(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 9,
-            padding: '8px 10px', borderRadius: 10, border: `1px solid ${userBorder}`,
-            background: userBg, cursor: 'pointer', width: '100%', textAlign: 'left',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <div style={{
-            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-            background: `linear-gradient(135deg, ${tokens.primary} 0%, ${tokens.secondary} 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 700, color: tokens.textInverse,
-            boxShadow: tokens.shadow,
+      {/* Status badge */}
+      {!showCollapsed && (
+        <div style={{
+          padding: '7px 14px',
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <Zap size={9} style={{ color: accent, flexShrink: 0 }} />
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 9, letterSpacing: '0.1em',
+            textTransform: 'uppercase', fontWeight: 500,
+            color: isDark ? 'rgba(130,190,200,0.70)' : 'rgba(51,65,85,0.45)',
           }}>
-            {initials}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: sideText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayName}
+            System Online
+          </span>
+          <span style={{
+            width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+            background: '#2FBF71',
+            boxShadow: '0 0 6px rgba(47,191,113,0.75)',
+            marginLeft: 'auto',
+          }} />
+        </div>
+      )}
+
+      {/* User block — avatar icon when collapsed, full card when expanded */}
+      {showCollapsed && (
+        <div style={{
+          padding: '8px 6px 14px', flexShrink: 0,
+          position: 'sticky', bottom: 0,
+          background: sideBg, backgroundImage: GRAIN_SVG,
+          borderTop: `1px solid ${sideBorder}`,
+          display: 'flex', justifyContent: 'center',
+        }}>
+          <NavLink
+            to="/profile"
+            title="My Profile"
+            className={({ isActive }) =>
+              `staff-nav-link staff-nav-icon-only${isActive ? ' active' : ''}`
+            }
+          >
+            <div style={{
+              width: 26, height: 26, borderRadius: 8,
+              background: avatarGrad,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, fontWeight: 700, color: '#fff',
+              boxShadow: '0 2px 6px rgba(47,191,113,0.35)',
+              flexShrink: 0,
+            }}>
+              {initials}
             </div>
-            <div style={{ fontSize: 10, color: tokens.primary, fontWeight: 500 }}>{roleName}</div>
-          </div>
-          <ChevronDown
-            size={12}
-            style={{ color: sideMuted, transform: profileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', flexShrink: 0 }}
-          />
-        </button>
+          </NavLink>
+        </div>
+      )}
 
-        {/* Expanded actions */}
-        {profileOpen && (
-          <div ref={expandedActionsRef} style={{
-            marginTop: 6, background: tokens.surfaceMuted,
-            borderRadius: 10, border: `1px solid ${tokens.border}`,
-            padding: '4px 4px',
-          }}>
-            <NavLink
-              to="/profile"
-              onClick={onClose}
-              className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
-              style={{ fontSize: 12 }}
+      {!showCollapsed && (
+        <div style={{
+          padding: '8px 8px 14px',
+          flexShrink: 0,
+          position: 'sticky', bottom: 0,
+          background: sideBg,
+          backgroundImage: GRAIN_SVG,
+          borderTop: `1px solid ${sideBorder}`,
+        }}>
+          <button
+            onClick={() => setProfileOpen(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 9,
+              padding: '9px 10px', borderRadius: 11,
+              border: `1px solid ${isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.20)'}`,
+              background: isDark ? 'rgba(47,191,113,0.06)' : 'rgba(47,191,113,0.05)',
+              cursor: 'pointer', width: '100%', textAlign: 'left',
+              transition: 'all 0.15s ease',
+              outline: 'none',
+            }}
+          >
+            <div style={{
+              width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+              background: avatarGrad,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, color: '#fff',
+              boxShadow: '0 2px 8px rgba(47,191,113,0.32)',
+            }}>
+              {initials}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: 12, fontWeight: 600,
+                color: isDark ? '#e2e8f0' : '#0f172a',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                fontFamily: "'DM Sans', sans-serif",
+              }}>
+                {displayName}
+              </div>
+              <div style={{
+                fontSize: 10, color: accent, fontWeight: 600,
+                fontFamily: "'IBM Plex Mono', monospace",
+                letterSpacing: '0.05em',
+              }}>
+                {roleName}
+              </div>
+            </div>
+            <ChevronDown
+              size={12}
+              style={{
+                color: isDark ? '#5de8a4' : '#2FBF71',
+                transform: profileOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s ease',
+                flexShrink: 0,
+              }}
+            />
+          </button>
+
+          {profileOpen && (
+            <div
+              ref={expandedActionsRef}
+              className="staff-action-panel"
+              style={{
+                background: isDark ? 'rgba(47,191,113,0.06)' : 'rgba(0,0,0,0.03)',
+                border: `1px solid ${sideBorder}`,
+              }}
             >
-              <User size={13} />
-              My Profile
-            </NavLink>
-            <button className="staff-btn" onClick={toggleTheme} style={{ fontSize: 12 }}>
-              {isDark ? <Sun size={13} /> : <Moon size={13} />}
-              {isDark ? 'Light mode' : 'Dark mode'}
-            </button>
-            <button className="staff-btn danger" onClick={handleLogout} style={{ fontSize: 12 }}>
-              <LogOut size={13} />
-              Sign out
-            </button>
-          </div>
-        )}
-      </div>
+              <NavLink
+                to="/profile"
+                onClick={onClose}
+                className={({ isActive }) => `staff-nav-link${isActive ? ' active' : ''}`}
+                style={{ fontSize: 12 }}
+              >
+                <User size={12} className="staff-nav-icon" style={{ flexShrink: 0 }} />
+                My Profile
+              </NavLink>
+              <button className="staff-btn" onClick={toggleTheme} style={{ fontSize: 12 }}>
+                {isDark ? <Sun size={12} /> : <Moon size={12} />}
+                {isDark ? 'Light mode' : 'Dark mode'}
+              </button>
+              <button className="staff-btn danger" onClick={handleLogout} style={{ fontSize: 12 }}>
+                <LogOut size={12} />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -365,61 +608,41 @@ const SidebarContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
 
 const StaffLayout: React.FC = () => {
   const { isDark } = useTheme();
-  const tokens = getDesignTokens(isDark);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(
+    () => localStorage.getItem('staff-sidebar-collapsed') === 'true'
+  );
   const location = useLocation();
 
   useEffect(() => { injectStaffStyles(); }, []);
 
-  // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
-  // Allow child pages (e.g. MobileDashboard) to open the sidebar via custom event
   useEffect(() => {
     const handler = () => setMobileOpen(true);
     window.addEventListener('open-mobile-menu', handler);
     return () => window.removeEventListener('open-mobile-menu', handler);
   }, []);
 
-  return (
-    <div style={{ background: tokens.pageBg, minHeight: '100vh', width: '100%', fontFamily: "var(--font-body)" }}>
+  useEffect(() => {
+    localStorage.setItem('staff-sidebar-collapsed', desktopCollapsed ? 'true' : 'false');
+  }, [desktopCollapsed]);
 
-      {/* Mobile topbar — suppressed on all pages since each page has its own branded header */}
-      {false && (
-        <header
-          className="staff-mobile-topbar"
-          style={{
-            display: 'none',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 16px',
-            background: tokens.surface,
-            borderBottom: `1px solid ${tokens.border}`,
-            position: 'sticky', top: 0, zIndex: 40,
-            boxShadow: isDark ? 'none' : tokens.shadow,
-          }}
-        >
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: tokens.text }}>
-            360Watts
-          </div>
-          <button
-            onClick={() => setMobileOpen(true)}
-            style={{
-              padding: 8, borderRadius: 8, border: 'none',
-              background: tokens.primarySoft,
-              color: tokens.primary, cursor: 'pointer',
-            }}
-          >
-            <Menu size={18} />
-          </button>
-        </header>
-      )}
+  const desktopSidebarWidth = desktopCollapsed ? STAFF_SIDEBAR_COLLAPSED : STAFF_SIDEBAR_EXPANDED;
+  const pageBg   = isDark ? '#070B1A' : '#F4F6F8';
+  const overlayBg = isDark ? 'rgba(0,0,0,0.72)' : 'rgba(7,11,26,0.46)';
+
+  return (
+    <div style={{ background: pageBg, minHeight: '100vh', width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: isDark ? 'rgba(0,0,0,0.72)' : 'rgba(18,21,26,0.46)', zIndex: 45, backdropFilter: 'blur(4px)' }}
+          style={{
+            position: 'fixed', inset: 0, background: overlayBg, zIndex: 45,
+            backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          }}
         />
       )}
 
@@ -428,26 +651,36 @@ const StaffLayout: React.FC = () => {
         position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 50,
         transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
         transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: mobileOpen
+          ? (isDark ? '4px 0 32px rgba(0,0,0,0.6)' : '4px 0 24px rgba(7,11,26,0.18)')
+          : 'none',
       }}>
         <SidebarContent onClose={() => setMobileOpen(false)} />
       </div>
 
       {/* Desktop sidebar */}
-      <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 30 }} className="staff-desktop-sidebar">
-        <SidebarContent />
+      <div
+        style={{ position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 30 }}
+        className="staff-desktop-sidebar"
+      >
+        <SidebarContent
+          collapsed={desktopCollapsed}
+          onToggleCollapse={() => setDesktopCollapsed(v => !v)}
+        />
       </div>
 
       {/* Main content */}
       <main
         className="staff-main"
         style={{
-          marginLeft: 232,
-          width: 'calc(100% - 232px)',
+          marginLeft: desktopSidebarWidth,
+          width: `calc(100% - ${desktopSidebarWidth}px)`,
           minHeight: '100vh',
           boxSizing: 'border-box',
           overflowX: 'auto',
-          color: tokens.text,
-          fontFamily: "var(--font-body)",
+          color: isDark ? '#e2e8f0' : '#0f172a',
+          fontFamily: "'DM Sans', sans-serif",
+          transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1), width 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
         <Outlet />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, Sparkles, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import PortalChat from '../../features/portal/PortalChat';
@@ -13,6 +13,9 @@ const NAV_ITEMS = [
   { path: '/portal/device', label: 'My Device', icon: Cpu,              end: false },
   { path: '/portal/profile', label: 'Profile',  icon: User,             end: false },
 ];
+
+const PORTAL_SIDEBAR_EXPANDED = 232;
+const PORTAL_SIDEBAR_COLLAPSED = 76;
 
 /* ─── Shared portal CSS (injected once) ─────────────────────────────────── */
 const PORTAL_STYLES = `
@@ -152,7 +155,12 @@ const SunMark: React.FC = () => (
 );
 
 /* ─── Sidebar content ─────────────────────────────────────────────────────── */
-const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ onClose, isDark: isDarkProp }) => {
+const SidebarContent: React.FC<{
+  onClose?: () => void;
+  isDark?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}> = ({ onClose, isDark: isDarkProp, collapsed = false, onToggleCollapse }) => {
   const { user, logout } = useAuth();
   const { isDark: isDarkCtx, toggleTheme } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : isDarkCtx;
@@ -175,10 +183,13 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
   const userBg     = tokens.surfaceMuted;
   const userBorder = tokens.border;
   const userText   = tokens.text;
+  const isDrawer = !!onClose;
+  const showCollapsed = collapsed && !isDrawer;
+  const sidebarWidth = showCollapsed ? PORTAL_SIDEBAR_COLLAPSED : PORTAL_SIDEBAR_EXPANDED;
 
   return (
     <div style={{
-      width: 'min(232px, 90vw)', height: '100%',
+      width: isDrawer ? 'min(232px, 90vw)' : sidebarWidth, height: '100%',
       background: sideBg,
       borderRight: `1px solid ${sideBorder}`,
       display: 'flex', flexDirection: 'column',
@@ -192,7 +203,7 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <SunMark />
-        <div>
+        <div style={{ display: showCollapsed ? 'none' : 'block' }}>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: sideText, letterSpacing: '-0.01em' }}>
             360Watts
           </div>
@@ -203,6 +214,25 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
         {onClose && (
           <button onClick={onClose} style={{ marginLeft: 'auto', padding: 4, borderRadius: 6, border: 'none', background: 'transparent', color: sideMuted, cursor: 'pointer' }}>
             <X size={16} />
+          </button>
+        )}
+        {!onClose && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              marginLeft: showCollapsed ? 'auto' : 0,
+              padding: 6,
+              borderRadius: 8,
+              border: `1px solid ${tokens.border}`,
+              background: tokens.surfaceMuted,
+              color: sideMuted,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            {showCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
           </button>
         )}
       </div>
@@ -217,12 +247,16 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
               to={path}
               end={end}
               onClick={onClose}
+              title={showCollapsed ? label : undefined}
               className={`portal-nav-link portal-fade-in-${i + 1} ${isActive ? 'active' : ''}`}
-              style={!isDark && !isActive ? { color: tokens.textMuted } : undefined}
+              style={{
+                ...(!isDark && !isActive ? { color: tokens.textMuted } : {}),
+                ...(showCollapsed ? { justifyContent: 'center', padding: '10px 0' } : {}),
+              }}
             >
               <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
-              {label}
-              <span className="portal-nav-dot" />
+              {!showCollapsed && label}
+              {!showCollapsed && <span className="portal-nav-dot" />}
             </NavLink>
           );
         })}
@@ -233,49 +267,81 @@ const SidebarContent: React.FC<{ onClose?: () => void; isDark?: boolean }> = ({ 
 
       {/* User block — clicks through to profile */}
       <div style={{ padding: '16px 12px 8px' }}>
-        <NavLink
-          to="/portal/profile"
-          onClick={onClose}
-          style={({ isActive }) => ({
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 10px', borderRadius: 10,
-            background: isActive ? tokens.primarySoft : userBg,
-            border: isActive ? `1px solid ${tokens.primary}` : `1px solid ${userBorder}`,
-            marginBottom: 4,
-            textDecoration: 'none',
-            cursor: 'pointer',
-            transition: 'all 0.18s ease',
-          })}
-        >
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-            background: `linear-gradient(135deg, ${tokens.primary}, ${tokens.primaryHover})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, color: tokens.textInverse,
-          }}>
-            {initials}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: userText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username}
+        {showCollapsed ? (
+          <NavLink
+            to="/portal/profile"
+            onClick={onClose}
+            title="Profile"
+            className="portal-nav-link"
+            style={{ justifyContent: 'center', padding: '10px 0', background: userBg, border: `1px solid ${userBorder}` }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+              background: `linear-gradient(135deg, ${tokens.primary}, ${tokens.primaryHover})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, color: tokens.textInverse,
+            }}>
+              {initials}
             </div>
-            <div style={{ fontSize: 11, color: sideMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.email}
+          </NavLink>
+        ) : (
+          <NavLink
+            to="/portal/profile"
+            onClick={onClose}
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: isActive ? tokens.primarySoft : userBg,
+              border: isActive ? `1px solid ${tokens.primary}` : `1px solid ${userBorder}`,
+              marginBottom: 4,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+            })}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+              background: `linear-gradient(135deg, ${tokens.primary}, ${tokens.primaryHover})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, color: tokens.textInverse,
+            }}>
+              {initials}
             </div>
-          </div>
-          <User size={13} color={sideMuted} style={{ flexShrink: 0 }} />
-        </NavLink>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: userText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username}
+              </div>
+              <div style={{ fontSize: 11, color: sideMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.email}
+              </div>
+            </div>
+            <User size={13} color={sideMuted} style={{ flexShrink: 0 }} />
+          </NavLink>
+        )}
       </div>
 
       {/* Footer actions */}
       <div style={{ padding: '0 12px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <button className="portal-btn" onClick={toggleTheme} style={!isDark ? { color: tokens.textMuted } : undefined}>
+        <button
+          className="portal-btn"
+          onClick={toggleTheme}
+          title={isDark ? 'Light mode' : 'Dark mode'}
+          style={{
+            ...(!isDark ? { color: tokens.textMuted } : {}),
+            ...(showCollapsed ? { justifyContent: 'center', padding: '10px 0' } : {}),
+          }}
+        >
           {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          {isDark ? 'Light mode' : 'Dark mode'}
+          {!showCollapsed && (isDark ? 'Light mode' : 'Dark mode')}
         </button>
-        <button className="portal-btn danger" onClick={handleLogout}>
+        <button
+          className="portal-btn danger"
+          onClick={handleLogout}
+          title="Sign out"
+          style={showCollapsed ? { justifyContent: 'center', padding: '10px 0' } : undefined}
+        >
           <LogOut size={14} />
-          Sign out
+          {!showCollapsed && 'Sign out'}
         </button>
       </div>
     </div>
@@ -292,6 +358,7 @@ const PortalLayout: React.FC = () => {
   const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreTrayOpen, setMoreTrayOpen] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(() => localStorage.getItem('portal-sidebar-collapsed') === 'true');
   const chatOpenRef = useRef<(() => void) | null>(null);
 
   useEffect(() => { injectPortalStyles(); }, []);
@@ -300,6 +367,12 @@ const PortalLayout: React.FC = () => {
     setMobileOpen(false);
     setMoreTrayOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    localStorage.setItem('portal-sidebar-collapsed', desktopCollapsed ? 'true' : 'false');
+  }, [desktopCollapsed]);
+
+  const desktopSidebarWidth = desktopCollapsed ? PORTAL_SIDEBAR_COLLAPSED : PORTAL_SIDEBAR_EXPANDED;
 
   const handleLogout = () => {
     logout();
@@ -364,13 +437,13 @@ const PortalLayout: React.FC = () => {
 
       {/* Desktop sidebar — always visible */}
       <div style={{ position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 30 }} className="portal-desktop-sidebar">
-        <SidebarContent isDark={isDark} />
+        <SidebarContent isDark={isDark} collapsed={desktopCollapsed} onToggleCollapse={() => setDesktopCollapsed(v => !v)} />
       </div>
 
       {/* Main content */}
       <main style={{
-        marginLeft: 232,
-        width: 'calc(100% - 232px)',
+        marginLeft: desktopSidebarWidth,
+        width: `calc(100% - ${desktopSidebarWidth}px)`,
         minHeight: '100vh',
         boxSizing: 'border-box',
         overflowX: 'auto',

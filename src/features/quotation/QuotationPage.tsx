@@ -269,6 +269,10 @@ export default function QuotationPage() {
   const [deleting, setDeleting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
+  const visibleDrafts = items.filter(item => item.status === 'draft').length;
+  const visibleSent = items.filter(item => item.status === 'sent').length;
+  const visibleAccepted = items.filter(item => item.status === 'accepted').length;
+  const visiblePipelineValue = items.reduce((sum, item) => sum + Number(item.net_investment || 0), 0);
 
   const fetchPage = useCallback(async (p: number, q: string, s: StatusFilter) => {
     const reqId = ++requestIdRef.current;
@@ -368,10 +372,53 @@ export default function QuotationPage() {
           )}
         />
 
+        <section className="sq-quotation-hero">
+          <div className="sq-quotation-hero__copy">
+            <p className="sq-quotation-hero__eyebrow">Solar Sales Desk</p>
+            <h2 className="sq-quotation-hero__title">Quotes in motion, from first draft to signed deal.</h2>
+            <p className="sq-quotation-hero__body">
+              Keep proposals moving without digging through stale spreadsheets. This view is tuned for fast follow-up,
+              quick edits, and a clean handoff from design to customer approval.
+            </p>
+          </div>
+          <div className="sq-quotation-hero__glance">
+            <span>Visible pipeline</span>
+            <strong>{INR.format(visiblePipelineValue)}</strong>
+            <small>{loading ? 'Refreshing current view…' : `${items.length} quotes in the current result set`}</small>
+          </div>
+        </section>
+
+        <section className="sq-quotation-kpis" aria-label="Quotation summary">
+          <article className="sq-quotation-kpi">
+            <span className="sq-quotation-kpi__label">Total Quotations</span>
+            <strong className="sq-quotation-kpi__value">{loading ? '...' : total}</strong>
+            <span className="sq-quotation-kpi__meta">All results matching the current filters</span>
+          </article>
+          <article className="sq-quotation-kpi">
+            <span className="sq-quotation-kpi__label">Drafts</span>
+            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleDrafts}</strong>
+            <span className="sq-quotation-kpi__meta">Ready for revision or customer-specific tuning</span>
+          </article>
+          <article className="sq-quotation-kpi">
+            <span className="sq-quotation-kpi__label">Sent</span>
+            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleSent}</strong>
+            <span className="sq-quotation-kpi__meta">Follow up before momentum drops</span>
+          </article>
+          <article className="sq-quotation-kpi">
+            <span className="sq-quotation-kpi__label">Accepted</span>
+            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleAccepted}</strong>
+            <span className="sq-quotation-kpi__meta">Quotes converted in the current view</span>
+          </article>
+        </section>
+
         <div className="card sq-history-card">
-          <div className="card-header">
-            <h2>Quotations{!loading && total > 0 ? ` (${total})` : ''}</h2>
-            <div className="card-actions sq-history-filters">
+          <div className="sq-history-toolbar">
+            <div className="sq-history-toolbar__copy">
+              <p className="sq-history-toolbar__eyebrow">Pipeline</p>
+              <h2>Quotations{!loading && total > 0 ? ` (${total})` : ''}</h2>
+              <p className="sq-history-toolbar__text">Filter by status, search by customer or quote number, then jump straight back into the wizard.</p>
+            </div>
+            <div className="sq-history-filters">
               <input
                 type="text"
                 className="search-input sq-history-search"

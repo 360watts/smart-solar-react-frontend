@@ -73,9 +73,39 @@ interface CatalogSelectorProps {
   category: CatalogCategory;
   onSelect: (item: ProductCatalogItem) => void;
   autoPickFn?: (items: ProductCatalogItem[]) => ProductCatalogItem | undefined;
+  currentRow?: BomRow | null;
 }
 
-function CatalogSelector({ category, onSelect, autoPickFn }: CatalogSelectorProps) {
+function isRowUntouched(row?: BomRow | null) {
+  if (!row) return true;
+  return !row.brand.trim() && Number(row.unitPrice || 0) <= 0;
+}
+
+function matchesCatalogItem(category: CatalogCategory, row: BomRow | null | undefined, item: ProductCatalogItem) {
+  if (!row) return false;
+  const rowBrand = row.brand.trim().toLowerCase();
+  const itemBrand = item.brand.trim().toLowerCase();
+  if (rowBrand && rowBrand !== itemBrand) return false;
+
+  const rowDescription = row.description.trim().toLowerCase();
+  const modelName = (item.model_name ?? '').trim().toLowerCase();
+
+  if (category === 'panels') {
+    const rowWp = rowDescription.match(/(\d+)\s*[Ww]p/)?.[1];
+    const itemWp = String((item.specs.wp as number) ?? '');
+    return (!rowWp || rowWp === itemWp) && (!!rowBrand || rowDescription.includes(modelName));
+  }
+
+  if (category === 'inverters') {
+    const rowKw = rowDescription.match(/(\d+(?:\.\d+)?)\s*[Kk][Ww]/)?.[1];
+    const itemKw = String((item.specs.kw as number) ?? '');
+    return (!rowKw || rowKw === itemKw) && (!!rowBrand || rowDescription.includes(modelName));
+  }
+
+  return rowDescription ? rowDescription.includes(modelName) || modelName.includes(rowDescription) : rowBrand === itemBrand;
+}
+
+function CatalogSelector({ category, onSelect, autoPickFn, currentRow }: CatalogSelectorProps) {
   const [items, setItems] = useState<ProductCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string>('');
@@ -86,15 +116,30 @@ function CatalogSelector({ category, onSelect, autoPickFn }: CatalogSelectorProp
     apiService.getProductCatalog(category)
       .then(fetched => {
         setItems(fetched);
-        if (!autoSelected.current && fetched.length > 0 && autoPickFn) {
-          autoSelected.current = true;
-          const best = autoPickFn(fetched);
-          if (best) { setSelectedId(String(best.id)); onSelect(best); }
-        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [category]);
+
+  useEffect(() => {
+    if (!items.length) return;
+    const matched = items.find(item => matchesCatalogItem(category, currentRow, item));
+    if (matched) {
+      autoSelected.current = true;
+      setSelectedId(String(matched.id));
+      return;
+    }
+    if (!autoSelected.current && autoPickFn && isRowUntouched(currentRow)) {
+      autoSelected.current = true;
+      const best = autoPickFn(items);
+      if (best) {
+        setSelectedId(String(best.id));
+        onSelect(best);
+      }
+      return;
+    }
+    if (!currentRow || isRowUntouched(currentRow)) setSelectedId('');
+  }, [items, category, currentRow, autoPickFn, onSelect]);
 
   const label = CATEGORY_LABEL[category];
   const filtered = query.trim()
@@ -299,6 +344,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             key={cat}
             category={cat}
             onSelect={item => applyFromCatalog(cat, item)}
+            currentRow={liveRows.find(row => ITEM_TO_CATEGORY[row.item.toLowerCase()] === cat) ?? null}
             autoPickFn={
               cat === 'panels'    ? pickBestPanel    :
               cat === 'inverters' ? pickBestInverter  :

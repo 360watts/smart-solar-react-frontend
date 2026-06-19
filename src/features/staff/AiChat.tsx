@@ -4,8 +4,9 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
-  BotMessageSquare, Sparkles, X, Send, Zap, AlertTriangle, Battery, MapPin,
-  Maximize2, Minimize2, ShieldCheck, Activity, Clock3,
+  Cpu, X, CornerDownLeft, ShieldAlert, WifiOff, BatteryWarning,
+  BarChart3, Network, ArrowUpCircle, Expand, Shrink,
+  ClipboardCopy, ClipboardCheck, Bot, Signal,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
@@ -33,31 +34,27 @@ function getAuthHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json' };
 }
 
-const SUGGESTED = [
-  { icon: Activity, label: 'Summarize fleet health' },
-  { icon: AlertTriangle, label: 'Show active alerts' },
-  { icon: Zap, label: 'Which devices are offline?' },
-  { icon: Battery, label: 'Battery status at coim_001' },
+const COMMANDS = [
+  { icon: BarChart3,    label: 'Summarize fleet health',     cmd: 'Summarize fleet health' },
+  { icon: ShieldAlert,  label: 'Active alerts',               cmd: 'Show active alerts' },
+  { icon: WifiOff,      label: 'Offline devices',             cmd: 'Which devices are offline?' },
+  { icon: BatteryWarning, label: 'Battery status coim_001',  cmd: 'Battery status at coim_001' },
+  { icon: Network,      label: 'Top sites by output',         cmd: 'Top 3 sites by generation today' },
+  { icon: Signal,       label: 'Connectivity issues',         cmd: 'Connectivity issues today' },
 ];
-
-const ASSISTANT_LABEL = '360Watts Buddy';
-const ASSISTANT_TAGLINE = 'Smarter Energy Smarter Living';
-
-
 
 function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 10) return 'just now';
-  if (s < 60) return `${s}s ago`;
+  if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ago`;
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h`;
 }
 
 function normalizeStreamFragment(fragment: string): string | null {
-  const cleaned = fragment.replace(/\u00a0/g, ' ');
-  const trimmed = cleaned.trim();
-  if (!trimmed || trimmed === '[KEEPALIVE]') return null;
+  const cleaned = fragment.replace(/ /g, ' ');
+  if (cleaned === '' || cleaned.trim() === '[KEEPALIVE]') return null;
   return cleaned;
 }
 
@@ -76,11 +73,8 @@ function extractStreamText(payload: string): string | null {
   try {
     const parsed = JSON.parse(payload);
     const text =
-      parsed?.content ??
-      parsed?.delta ??
-      parsed?.text ??
-      parsed?.message?.content ??
-      parsed?.choices?.[0]?.delta?.content ??
+      parsed?.content ?? parsed?.delta ?? parsed?.text ??
+      parsed?.message?.content ?? parsed?.choices?.[0]?.delta?.content ??
       parsed?.choices?.[0]?.text;
     return typeof text === 'string' ? text : null;
   } catch {
@@ -101,122 +95,93 @@ const AiChat: React.FC = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isStreamingRef = useRef(false);
   const [ticks, setTicks] = useState(0);
-  const compactChat = isMobile && panelSize === 'compact';
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Tick timestamps every 30s for relative time display
   useEffect(() => {
     const id = setInterval(() => setTicks(t => t + 1), 30000);
     return () => clearInterval(id);
   }, []);
-
   useEffect(() => { messagesRef.current = messages; }, [messages]);
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: isStreamingRef.current ? 'instant' : 'smooth' } as any);
   }, [messages]);
+  useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
+  // Auto-resize textarea
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  // Ctrl+/ global shortcut
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 112) + 'px';
+    }
+  }, [input]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
-        e.preventDefault();
-        setOpen(o => !o);
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') { e.preventDefault(); setOpen(o => !o); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const cycleSize = () => {
-    setPanelSize(s => s === 'compact' ? 'fullscreen' : 'compact');
+  const copyCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1800);
+    });
   };
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
-
     const userMsg: Message = { role: 'user', content: trimmed, ts: Date.now() };
-    const updatedMessages = [...messagesRef.current, userMsg];
-    const assistantMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
-
-    setMessages([...updatedMessages, assistantMsg]);
+    const updated = [...messagesRef.current, userMsg];
+    const asstMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
+    setMessages([...updated, asstMsg]);
     setInput('');
     setStreaming(true);
     isStreamingRef.current = true;
-
     try {
-      const response = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
+      const res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-        }),
+        body: JSON.stringify({ messages: updated.map(m => ({ role: m.role, content: m.content })) }),
       });
-
-      if (!response.ok) {
-        const err = await response.text();
-        setMessages(prev => {
-          const next = [...prev];
-          next[next.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true };
-          return next;
-        });
+      if (!res.ok) {
+        const err = await res.text();
+        setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });
         return;
       }
-
-      const reader = response.body?.getReader();
+      const reader = res.body?.getReader();
       if (!reader) return;
-      const decoder = new TextDecoder();
-      let buffer = '';
-
+      const dec = new TextDecoder();
+      let buf = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const token = line.slice(6);
           if (token === '[DONE]') break;
           if (token === '[KEEPALIVE]') continue;
           if (token.startsWith('[ERROR]')) {
-            setMessages(prev => {
-              const next = [...prev];
-              next[next.length - 1] = { role: 'assistant', content: token.slice(8), ts: Date.now(), isError: true };
-              return next;
-            });
+            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: token.slice(8), ts: Date.now(), isError: true }; return n; });
             break;
           }
-          const text = normalizeStreamFragment(extractStreamText(token)?.replace(/\\n/g, '\n') ?? '');
+          const text = normalizeStreamFragment(token.replace(/\\n/g, '\n'));
           if (!text) continue;
-          setMessages(prev => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            next[next.length - 1] = { ...last, content: last.content + text };
-            return next;
-          });
+          setMessages(prev => { const n = [...prev]; const last = n[n.length - 1]; n[n.length - 1] = { ...last, content: last.content + text }; return n; });
         }
       }
-
       setMessages(prev => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last?.role === 'assistant' && !last.isError && !normalizeAssistantContent(last.content)) {
-          next[next.length - 1] = { ...last, content: 'No response was generated. Please try again.' };
-        }
-        return next;
+        const n = [...prev]; const last = n[n.length - 1];
+        if (last?.role === 'assistant' && !last.isError && !normalizeAssistantContent(last.content))
+          n[n.length - 1] = { ...last, content: 'No response generated. Please try again.' };
+        return n;
       });
     } catch {
-      setMessages(prev => {
-        const next = [...prev];
-        next[next.length - 1] = { role: 'assistant', content: 'Failed to connect to AI service.', ts: Date.now(), isError: true };
-        return next;
-      });
+      setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: 'Connection failed.', ts: Date.now(), isError: true }; return n; });
     } finally {
       setStreaming(false);
       isStreamingRef.current = false;
@@ -224,106 +189,83 @@ const AiChat: React.FC = () => {
   }, [streaming]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(input);
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
-  // Panel dimensions
-  const isFullscreen = panelSize === 'fullscreen';
-  const panelW = isFullscreen ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 372;
-  const panelH = isFullscreen ? '100dvh' : isMobile ? 'min(500px, 62dvh)' : 548;
-  const panelBottom = isFullscreen ? 0 : isMobile ? 76 : 88;
-  const panelRight = isFullscreen ? 0 : isMobile ? 8 : 24;
-  const panelRadius = isFullscreen ? 0 : compactChat ? 16 : 18;
-  const visibleSuggestions = compactChat ? SUGGESTED.slice(0, 2) : SUGGESTED;
-
-  const SizeIcon = panelSize === 'fullscreen' ? Minimize2 : Maximize2;
+  const isFS = panelSize === 'fullscreen';
+  const panelW = isFS ? '100vw' : isMobile ? 'calc(100vw - 16px)' : 'min(420px, calc(100vw - 48px))';
+  const panelH = isFS ? '100dvh' : isMobile ? 'min(540px, 66dvh)' : 'min(580px, calc(100dvh - 132px))';
+  const panelBottom = isFS ? 0 : isMobile ? 76 : 88;
+  const panelRight  = isFS ? 0 : isMobile ? 8 : 24;
+  const panelRadius = isFS ? 0 : 16;
 
   return (
     <>
-      {/* Floating button */}
+      {/* FAB — pill shape */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
-        style={{ bottom: isMobile ? 18 : 24, right: isMobile ? 14 : 24 }}
-        title={`${ASSISTANT_LABEL} (Ctrl+/)`}
-        aria-label={open ? 'Close AI assistant' : 'Open AI assistant'}
+        className={`aif-fab ${open ? 'aif-fab--open' : ''}`}
+        style={{
+          bottom: isMobile ? 18 : 24,
+          right: isMobile ? 14 : 24,
+          width: isMobile ? 40 : 54,
+          height: isMobile ? 40 : 54,
+        }}
+        title="Fleet AI (Ctrl+/)"
+        aria-label={open ? 'Close Fleet AI' : 'Open Fleet AI'}
       >
-        <span className="ai-fab__ring" />
         {open
-          ? <X size={20} color="white" />
-          : <Sparkles size={20} color="white" />
-        }
+          ? <X size={isMobile ? 16 : 20} strokeWidth={2.5} />
+          : <Cpu size={isMobile ? 15 : 24} strokeWidth={2} />}
       </button>
 
-      {/* Fullscreen backdrop */}
-      {open && panelSize === 'fullscreen' && (
-        <div className="ai-backdrop" onClick={() => setPanelSize('compact')} />
-      )}
+      {open && isFS && <div className="aif-backdrop" onClick={() => setPanelSize('compact')} />}
 
-      {/* Chat panel */}
       {open && (
         <div
-          className={`ai-panel ai-panel--${isDark ? 'dark' : 'light'}`}
-          style={{
-            bottom: panelBottom,
-            right: panelRight,
-            width: panelW,
-            height: panelH,
-            borderRadius: panelRadius,
-          }}
+          className={`aif-panel aif-panel--${isDark ? 'dark' : 'light'}`}
+          style={{ bottom: panelBottom, right: panelRight, width: panelW, height: panelH, borderRadius: panelRadius }}
         >
           {/* Header */}
-          <div className={`ai-header ${compactChat ? 'ai-header--compact' : ''}`}>
-            <div className="ai-header__identity">
-              <div className="ai-avatar">
-                <BotMessageSquare size={16} color="white" />
-                <span className="ai-avatar__pulse" />
-              </div>
-              <div>
-                <div className="ai-header__name">{ASSISTANT_LABEL}</div>
-                <div className="ai-header__status">
-                  <span className="ai-status-dot" />
-                  {ASSISTANT_TAGLINE}
-                </div>
-              </div>
+          <div className="aif-hdr">
+            <div className="aif-hdr__left">
+              <div className="aif-hdr__icon"><Bot size={13} strokeWidth={2} /></div>
+              <span className="aif-hdr__name">360Watts Buddy</span>
+              <span className="aif-hdr__divider" />
+              <span className="aif-hdr__live"><span className="aif-live-dot" />LIVE</span>
             </div>
-            <div className="ai-header__actions">
+            <div className="aif-hdr__right">
               {messages.length > 0 && (
-                <button className="ai-hdr-btn" onClick={() => setMessages([])} title="Clear">
-                  Clear
-                </button>
+                <button className="aif-hdr-btn" onClick={() => setMessages([])}>CLR</button>
               )}
-              <button className="ai-hdr-btn ai-hdr-btn--icon" onClick={cycleSize} title="Resize">
-                <SizeIcon size={14} />
+              <button className="aif-hdr-btn aif-hdr-btn--icon" onClick={() => setPanelSize(s => s === 'compact' ? 'fullscreen' : 'compact')}>
+                {isFS ? <Shrink size={12} /> : <Expand size={12} />}
               </button>
-              <button className="ai-hdr-btn ai-hdr-btn--icon" onClick={() => setOpen(false)} title="Close">
-                <X size={14} />
-              </button>
+              <button className="aif-hdr-btn aif-hdr-btn--icon" onClick={() => setOpen(false)}><X size={12} /></button>
             </div>
           </div>
 
-          {!compactChat && (
-            <div className="ai-hero">
-              <div className="ai-hero__eyebrow">Internal operations console</div>
-            </div>
-          )}
+          {/* Status strip */}
+          <div className="aif-strip">
+            <span className="aif-strip__tag">INTERNAL OPS</span>
+            <span className="aif-strip__sep">·</span>
+            <span className="aif-strip__hint">Ctrl+/ to toggle</span>
+            <span className="aif-strip__spacer" />
+            <span className="aif-strip__hint">Enter to send</span>
+          </div>
 
           {/* Messages */}
-          <div className="ai-messages">
+          <div className="aif-msgs">
             {messages.length === 0 && (
-              <div className="ai-empty">
-                <div className="ai-empty__icon">
-                  <Sparkles size={26} color="white" />
-                </div>
-                <div className="ai-empty__title">Start with a device question</div>
-                <div className="ai-suggestions">
-                  {visibleSuggestions.map(({ icon: Icon, label }) => (
-                    <button key={label} className="ai-chip" onClick={() => sendMessage(label)}>
-                      <Icon size={13} />
-                      {label}
+              <div className="aif-empty">
+                <p className="aif-empty__prompt">$ <span className="aif-cursor" /></p>
+                <p className="aif-empty__sub">Query fleet, devices, and telemetry in plain language.</p>
+                <div className="aif-cmds">
+                  {COMMANDS.map(({ icon: Icon, label, cmd }) => (
+                    <button key={cmd} className="aif-cmd" onClick={() => sendMessage(cmd)}>
+                      <Icon size={13} className="aif-cmd__icon" strokeWidth={1.75} />
+                      <span>{label}</span>
+                      <CornerDownLeft size={11} className="aif-cmd__enter" strokeWidth={2} />
                     </button>
                   ))}
                 </div>
@@ -331,475 +273,669 @@ const AiChat: React.FC = () => {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} className={`ai-msg ai-msg--${msg.role} ${msg.isError ? 'ai-msg--error' : ''}`}>
-                {msg.role === 'assistant' && (
-                  <div className="ai-msg__avatar">
-                    <BotMessageSquare size={12} color="white" />
+              <div key={i} className={`aif-msg aif-msg--${msg.role}`}>
+                {msg.role === 'user' ? (
+                  <div className="aif-msg__user">
+                    <span className="aif-msg__prompt">you</span>
+                    <span className="aif-msg__user-text">{msg.content}</span>
+                    <span className="aif-msg__ts" key={ticks}>{timeAgo(msg.ts)}</span>
                   </div>
-                )}
-                <div className="ai-msg__bubble">
-                  {msg.content === '' && msg.role === 'assistant' ? (
-                    <div className="ai-typing">
-                      <span /><span /><span />
+                ) : (
+                  <div className="aif-msg__asst">
+                    <div className="aif-msg__asst-header">
+                      <span className="aif-msg__prompt aif-msg__prompt--ai">buddy</span>
+                      <span className="aif-msg__ts" key={ticks}>{timeAgo(msg.ts)}</span>
                     </div>
-                  ) : msg.role === 'assistant' ? (
-                    <div className="ai-markdown">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ node, className, children, ...props }: any) {
-                            const match = /language-(\w+)/.exec(className || '');
-                            const codeStr = String(children).replace(/\n$/, '');
-                            if (match) {
-                              return (
-                                <div className="ai-code-block">
-                                  <div className="ai-code-block__header">
-                                    <span>{match[1]}</span>
+                    {msg.content === '' ? (
+                      <div className="aif-typing"><span /><span /><span /></div>
+                    ) : (
+                      <div className={`aif-md ${msg.isError ? 'aif-md--err' : ''}`}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ node, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const codeStr = String(children).replace(/\n$/, '');
+                              const cid = `c${i}-${codeStr.slice(0, 12)}`;
+                              if (match) return (
+                                <div className="aif-code">
+                                  <div className="aif-code__bar">
+                                    <span className="aif-code__lang">{match[1]}</span>
+                                    <button className="aif-code__copy" onClick={() => copyCode(codeStr, cid)}>
+                                      {copiedId === cid ? <><ClipboardCheck size={11} /> copied</> : <><ClipboardCopy size={11} /> copy</>}
+                                    </button>
                                   </div>
-                                  <SyntaxHighlighter
-                                    style={isDark ? oneDark : oneLight}
-                                    language={match[1]}
-                                    PreTag="div"
-                                    wrapLongLines
-                                    customStyle={{ margin: 0, borderRadius: '0 0 8px 8px', fontSize: '0.78rem', maxWidth: '100%' }}
-                                  >
-                                    {codeStr}
-                                  </SyntaxHighlighter>
+                                  <SyntaxHighlighter style={isDark ? oneDark : oneLight} language={match[1]} PreTag="div" wrapLongLines customStyle={{ margin: 0, borderRadius: '0 0 6px 6px', fontSize: '0.74rem' }}>{codeStr}</SyntaxHighlighter>
                                 </div>
                               );
-                            }
-                            return <code className={className} {...props}>{children}</code>;
-                          },
-                          table({ children, ...props }: any) {
-                            return (
-                              <div className="ai-table-container">
-                                <table {...props}>{children}</table>
-                              </div>
-                            );
-                          },
-                        }}
-                      >
-                        {normalizeAssistantContent(msg.content)}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</span>
-                  )}
-                </div>
-                {/* Timestamp on hover */}
-                <div className="ai-msg__ts" key={ticks}>{timeAgo(msg.ts)}</div>
+                              return <code className={`aif-inline-code ${className || ''}`} {...props}>{children}</code>;
+                            },
+                            table:      ({ children, ...p }: any) => <div className="aif-tbl-wrap"><table {...p}>{children}</table></div>,
+                            h1: ({ children }: any) => <h1 className="aif-md-h">{children}</h1>,
+                            h2: ({ children }: any) => <h2 className="aif-md-h">{children}</h2>,
+                            h3: ({ children }: any) => <h3 className="aif-md-h">{children}</h3>,
+                            hr: () => <hr className="aif-md-hr" />,
+                          }}
+                        >
+                          {normalizeAssistantContent(msg.content)}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <div className="ai-input-area">
-            <div className="ai-input-box">
+          <div className="aif-input-area">
+            <div className="aif-composer">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about fleet health, alerts, sites, or telemetry…"
-                className="ai-textarea"
+                placeholder="ask about fleet, devices, alerts, telemetry…"
+                className="aif-textarea"
+                disabled={streaming}
+                rows={1}
               />
-              <button
-                onClick={() => sendMessage(input)}
-                disabled={!input.trim() || streaming}
-                className="ai-send-btn"
-                title="Send"
-              >
-                <Send size={14} />
-              </button>
+              <div className="aif-composer-bar">
+                <span className="aif-composer-mode">
+                  <span className="aif-composer-dollar">$</span>
+                  <span className="aif-composer-ctx">ops</span>
+                </span>
+                <span className="aif-composer-keys">
+                  <kbd>↑</kbd> send · <kbd>⇧↵</kbd> newline
+                </span>
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || streaming}
+                  className={`aif-send-btn ${input.trim() && !streaming ? 'aif-send-btn--active' : 'aif-send-btn--idle'}`}
+                  title="Send (Enter)"
+                >
+                  {streaming
+                    ? <span className="aif-spinner" />
+                    : <ArrowUpCircle size={17} strokeWidth={2} />
+                  }
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       <style>{`
-        /* ── FAB ── */
-        .ai-fab {
-          position: fixed; z-index: 9000;
-          width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
-          background: linear-gradient(135deg, #00a63e 0%, #00ca4a 100%);
-          box-shadow: 0 8px 32px rgba(0,166,62,0.4), inset 0 2px 4px rgba(255,255,255,0.3);
-          display: flex; align-items: center; justify-content: center;
-          transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.25s, background 0.25s;
-          outline: none;
-        }
-        .ai-fab:active { transform: scale(0.92); }
-        .ai-fab:hover { transform: scale(1.08) translateY(-4px); box-shadow: 0 12px 40px rgba(0,166,62,0.6), inset 0 2px 4px rgba(255,255,255,0.4); }
-        .ai-fab--open { background: linear-gradient(135deg, #334155, #0f172a); box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1); }
-        .ai-fab--open:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
-        .ai-fab__ring {
-          position: absolute; inset: -4px; border-radius: 50%;
-          border: 2px solid #00a63e;
-          animation: aiFabRing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes aiFabRing {
-          0% { transform: scale(1); opacity: 0.6; }
-          100% { transform: scale(1.25); opacity: 0; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
-        /* ── Backdrop ── */
-        .ai-backdrop {
-          position: fixed; inset: 0; z-index: 8999;
-          background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
-          animation: aiFadeIn 0.2s ease;
+        /* ── FAB ── */
+        .aif-fab {
+          position: fixed; z-index: 9000;
+          height: 40px; border: none; cursor: pointer;
+          border-radius: 20px;
+          display: flex; align-items: center; gap: 7px;
+          padding: 0 16px 0 12px;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+          transition: all 0.22s cubic-bezier(.34,1.4,.64,1);
+          outline: none;
+          overflow: hidden;
         }
+        .aif-fab:not(.aif-fab--open) {
+          background:
+            radial-gradient(circle at 30% 25%, rgba(103,232,249,0.34), transparent 48%),
+            linear-gradient(145deg, rgba(8,18,28,0.96) 0%, rgba(7,28,44,0.96) 52%, rgba(6,8,16,0.98) 100%);
+          color: #67e8f9;
+          border: 1px solid rgba(103,232,249,0.42);
+          backdrop-filter: blur(12px);
+          box-shadow:
+            0 10px 32px rgba(2,8,23,0.62),
+            0 0 0 1px rgba(103,232,249,0.14),
+            0 0 28px rgba(34,211,238,0.22),
+            inset 0 1px 0 rgba(255,255,255,0.1);
+          padding: 0; justify-content: center;
+          border-radius: 50%;
+        }
+        .aif-fab:not(.aif-fab--open):hover {
+          background:
+            radial-gradient(circle at 30% 25%, rgba(125,211,252,0.46), transparent 52%),
+            linear-gradient(145deg, rgba(10,24,38,0.98) 0%, rgba(8,38,58,0.98) 52%, rgba(6,10,18,1) 100%);
+          border-color: rgba(125,211,252,0.62);
+          box-shadow:
+            0 14px 36px rgba(2,8,23,0.68),
+            0 0 34px rgba(34,211,238,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.16);
+          transform: translateY(-2px);
+        }
+        .aif-fab--open {
+          background:
+            linear-gradient(145deg, rgba(15,23,42,0.94) 0%, rgba(12,34,52,0.94) 100%);
+          color: #f8fafc;
+          border: 1px solid rgba(125,211,252,0.26);
+          backdrop-filter: blur(12px);
+          box-shadow:
+            0 8px 24px rgba(2,8,23,0.5),
+            0 0 22px rgba(56,189,248,0.14);
+          padding: 0; justify-content: center;
+          border-radius: 50%;
+        }
+        .aif-fab--open:hover {
+          background:
+            linear-gradient(145deg, rgba(18,30,50,0.98) 0%, rgba(14,44,68,0.98) 100%);
+          color: #ffffff;
+        }
+        /* ── Backdrop ── */
+        .aif-backdrop {
+          position: fixed; inset: 0; z-index: 8999;
+          background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+          animation: aifFadeIn 0.18s ease;
+        }
+        @keyframes aifFadeIn { from{opacity:0} to{opacity:1} }
 
         /* ── Panel ── */
-        .ai-panel {
+        .aif-panel {
           position: fixed; z-index: 9000;
           display: flex; flex-direction: column; overflow: hidden;
-          animation: aiPanelIn 0.28s cubic-bezier(.34,1.56,.64,1);
+          animation: aifIn 0.26s cubic-bezier(.34,1.3,.64,1);
           transform-origin: bottom right;
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          font-family: 'IBM Plex Sans', sans-serif;
+          max-width: calc(100vw - 16px);
+          max-height: calc(100dvh - 16px);
         }
-        .ai-panel--light {
+        @keyframes aifIn {
+          0%   { opacity:0; transform:scale(0.91) translateY(16px); filter:blur(3px); }
+          55%  { opacity:1; filter:blur(0); }
+          100% { opacity:1; transform:scale(1) translateY(0); filter:blur(0); }
+        }
+
+        /* Glass panel variants — liquid glass 2026 */
+        .aif-panel--dark {
           background:
-            radial-gradient(circle at top left, rgba(0,166,62,0.12), transparent 28%),
-            radial-gradient(circle at 85% 10%, rgba(15,23,42,0.08), transparent 22%),
-            rgba(255, 255, 255, 0.86);
-          border: 1px solid rgba(255,255,255,0.4);
-          box-shadow: 0 24px 64px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,166,62,0.08);
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E"),
+            linear-gradient(150deg, rgba(14,20,40,0.92) 0%, rgba(6,8,16,0.96) 100%);
+          border: 1px solid rgba(56,189,248,0.1);
+          backdrop-filter: blur(20px) saturate(1.4);
+          -webkit-backdrop-filter: blur(20px) saturate(1.4);
+          box-shadow:
+            0 40px 100px rgba(0,0,0,0.85),
+            0 0 0 1px rgba(255,255,255,0.04),
+            inset 0 1px 0 rgba(255,255,255,0.05),
+            inset 0 -1px 0 rgba(0,0,0,0.3);
         }
-        .ai-panel--dark {
+        .aif-panel--light {
           background:
-            radial-gradient(circle at top left, rgba(0,166,62,0.16), transparent 26%),
-            radial-gradient(circle at 92% 0%, rgba(59,130,246,0.12), transparent 20%),
-            linear-gradient(180deg, rgba(12,18,28,0.96), rgba(12,18,28,0.88));
-          border: 1px solid rgba(255,255,255,0.08);
-          box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,166,62,0.15);
-        }
-        @keyframes aiPanelIn {
-          from { opacity: 0; transform: scale(0.95) translateY(12px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes aiFadeIn {
-          from { opacity: 0; } to { opacity: 1; }
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E"),
+            linear-gradient(150deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.96) 100%);
+          border: 1px solid rgba(56,189,248,0.18);
+          backdrop-filter: blur(20px) saturate(1.6);
+          -webkit-backdrop-filter: blur(20px) saturate(1.6);
+          box-shadow:
+            0 28px 72px rgba(0,0,0,0.16),
+            0 0 0 1px rgba(56,189,248,0.06),
+            inset 0 1px 0 rgba(255,255,255,0.9);
         }
 
         /* ── Header ── */
-        .ai-header {
+        .aif-hdr {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 18px; flex-shrink: 0;
-          background: linear-gradient(135deg, rgba(0, 166, 62, 0.96), rgba(0, 122, 46, 0.96));
-          border-bottom: 1px solid rgba(0,0,0,0.15);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          padding: 0 14px; height: 44px; flex-shrink: 0;
+          border-bottom: 1px solid;
+          gap: 8px;
         }
-        .ai-header--compact { padding: 12px 13px; }
-        .ai-header__identity { display: flex; align-items: center; gap: 12px; }
-        .ai-avatar {
-          position: relative;
-          width: 38px; height: 38px; border-radius: 12px;
-          background: rgba(255,255,255,0.2);
+        .aif-panel--dark .aif-hdr {
+          border-color: rgba(56,189,248,0.08);
+          background: rgba(255,255,255,0.025);
+          backdrop-filter: blur(8px);
+        }
+        .aif-panel--light .aif-hdr {
+          border-color: rgba(56,189,248,0.12);
+          background: rgba(255,255,255,0.65);
+          backdrop-filter: blur(8px);
+        }
+        .aif-hdr__left {
+          display: flex; align-items: center; gap: 8px;
+          min-width: 0;
+          flex: 1;
+        }
+        .aif-hdr__icon {
+          width: 26px; height: 26px; border-radius: 7px;
           display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-          box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
+          background: rgba(56,189,248,0.12); color: #38bdf8;
+          border: 1px solid rgba(56,189,248,0.2);
         }
-        .ai-avatar__pulse {
-          position: absolute; inset: -4px; border-radius: 16px;
-          border: 2px solid rgba(255,255,255,0.5);
-          opacity: 0;
-          animation: aiAvatarPulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        .aif-hdr__name {
+          font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.8rem;
+          letter-spacing: 0.02em;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
-        .ai-header__name { font-weight: 800; font-size: 0.95rem; color: #fff; letter-spacing: -0.01em; }
-        .ai-header__status { font-size: 0.72rem; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-        .ai-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #6ee7b7; display: inline-block; animation: aiPulse 2.5s ease-in-out infinite; box-shadow: 0 0 8px #6ee7b7; }
-        @keyframes aiPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes aiAvatarPulse { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.4); opacity: 0; } }
-        .ai-header__actions { display: flex; align-items: center; gap: 6px; }
-        .ai-hero {
-          padding: 16px 18px 12px;
-          border-bottom: 1px solid rgba(148,163,184,0.14);
+        .aif-panel--dark .aif-hdr__name { color: #e2e8f0; }
+        .aif-panel--light .aif-hdr__name { color: #0f172a; }
+        .aif-hdr__divider { width: 1px; height: 14px; background: currentColor; opacity: 0.15; }
+        .aif-hdr__live {
+          display: flex; align-items: center; gap: 5px;
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem;
+          font-weight: 600; letter-spacing: 0.1em; color: #34d399;
         }
-        .ai-panel--light .ai-hero {
-          background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(248,250,252,0.88));
+        .aif-live-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #34d399;
+          box-shadow: 0 0 6px #34d399; animation: aifPulse 2.5s ease-in-out infinite;
         }
-        .ai-panel--dark .ai-hero {
-          background: linear-gradient(180deg, rgba(15,23,42,0.18), rgba(15,23,42,0.05));
-        }
-        .ai-hero__eyebrow {
-          display: inline-flex; align-items: center;
-          padding: 4px 10px; border-radius: 999px;
-          font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-          background: rgba(0,166,62,0.12); color: #00a63e;
-          margin-bottom: 8px;
-        }
-        .ai-hero__title {
-          font-size: 1rem; line-height: 1.4; font-weight: 800; letter-spacing: -0.02em;
-          margin-bottom: 6px;
-        }
-        .ai-panel--light .ai-hero__title { color: #0f172a; }
-        .ai-panel--dark .ai-hero__title { color: #f8fafc; }
-        .ai-hero__sub {
-          font-size: 0.82rem; line-height: 1.5; margin-bottom: 12px;
-        }
-        .ai-panel--light .ai-hero__sub { color: #94a3b8; }
-        .ai-panel--dark .ai-hero__sub { color: #94a3b8; }
-        .ai-hero__metrics {
-          display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
-        }
-        .ai-metric {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px 11px; border-radius: 14px;
-          border: 1px solid rgba(148,163,184,0.16);
-          background: rgba(255,255,255,0.58);
-        }
-        .ai-panel--dark .ai-metric { background: rgba(15,23,42,0.4); }
-        .ai-metric__icon {
-          width: 26px; height: 26px; border-radius: 9px;
+        @keyframes aifPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .aif-hdr__right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .aif-hdr-btn {
+          height: 26px; border: none; cursor: pointer; border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
-          background: rgba(0,166,62,0.12); color: #00a63e; flex-shrink: 0;
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 600;
+          letter-spacing: 0.06em; padding: 0 8px;
+          transition: background 0.15s, color 0.15s;
         }
-        .ai-metric__copy { display: flex; flex-direction: column; min-width: 0; }
-        .ai-metric__copy span { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; }
-        .ai-panel--dark .ai-metric__copy span { color: #94a3b8; }
-        .ai-metric__copy strong { font-size: 0.78rem; font-weight: 700; color: #0f172a; }
-        .ai-panel--dark .ai-metric__copy strong { color: #f8fafc; }
-        .ai-hdr-btn {
-          background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-          color: rgba(255,255,255,0.95); border-radius: 8px; cursor: pointer;
-          font-size: 0.75rem; padding: 6px 12px; font-weight: 600;
-          transition: background 0.2s, transform 0.1s;
+        .aif-hdr-btn--icon { width: 26px; padding: 0; }
+        .aif-panel--dark .aif-hdr-btn { background: rgba(255,255,255,0.05); color: #cbd5e1; }
+        .aif-panel--dark .aif-hdr-btn:hover { background: rgba(255,255,255,0.09); color: #f8fafc; }
+        .aif-panel--light .aif-hdr-btn { background: rgba(0,0,0,0.04); color: #94a3b8; }
+        .aif-panel--light .aif-hdr-btn:hover { background: rgba(0,0,0,0.08); color: #475569; }
+
+        /* ── Status strip ── */
+        .aif-strip {
+          display: flex; align-items: center; gap: 8px;
+          padding: 5px 14px; flex-shrink: 0;
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem;
+          letter-spacing: 0.06em;
+          border-bottom: 1px solid;
+          flex-wrap: wrap;
         }
-        .ai-hdr-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
-        .ai-hdr-btn:active { transform: scale(0.95); }
-        .ai-hdr-btn--icon { padding: 6px; display: flex; align-items: center; justify-content: center; }
+        .aif-panel--dark .aif-strip { border-color: rgba(255,255,255,0.04); background: rgba(56,189,248,0.03); }
+        .aif-panel--light .aif-strip { border-color: rgba(0,0,0,0.05); background: rgba(56,189,248,0.04); }
+        .aif-strip__tag {
+          font-weight: 600; color: #38bdf8; letter-spacing: 0.1em; font-size: 0.6rem;
+        }
+        .aif-strip__sep { opacity: 0.3; }
+        .aif-strip__spacer { flex: 1; }
+        .aif-panel--dark .aif-strip__hint { color: #cbd5e1; }
+        .aif-panel--light .aif-strip__hint { color: #94a3b8; }
 
         /* ── Messages ── */
-        .ai-messages {
-          flex: 1; overflow-y: auto; padding: 12px 10px;
-          display: flex; flex-direction: column; gap: 12px;
-          scroll-behavior: smooth;
+        .aif-msgs {
+          flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px;
+          display: flex; flex-direction: column; gap: 4px;
+          min-height: 0;
         }
-        .ai-panel--light .ai-messages { scrollbar-color: rgba(0,0,0,0.15) transparent; }
-        .ai-panel--dark  .ai-messages { scrollbar-color: rgba(255,255,255,0.1) transparent; }
+        .aif-panel--dark .aif-msgs::-webkit-scrollbar { width: 3px; }
+        .aif-panel--dark .aif-msgs::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.15); border-radius: 2px; }
+        .aif-panel--light .aif-msgs::-webkit-scrollbar { width: 3px; }
+        .aif-panel--light .aif-msgs::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
 
         /* ── Empty state ── */
-        .ai-empty {
-          flex: 1; display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 12px; padding: 24px 10px 16px; text-align: center;
+        .aif-empty { display: flex; flex-direction: column; gap: 12px; animation: aifFadeIn 0.3s ease; }
+        .aif-empty__prompt {
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 500;
+          display: flex; align-items: center; gap: 4px; margin: 0;
         }
-        .ai-empty__icon {
-          width: 56px; height: 56px; border-radius: 18px;
-          background: linear-gradient(135deg, #00a63e, #00c94a);
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 12px 32px rgba(0,166,62,0.4), inset 0 2px 4px rgba(255,255,255,0.4);
-          animation: aiFloat 4s ease-in-out infinite;
+        .aif-panel--dark .aif-empty__prompt { color: #38bdf8; }
+        .aif-panel--light .aif-empty__prompt { color: #0284c7; }
+        .aif-cursor {
+          display: inline-block; width: 8px; height: 15px;
+          background: currentColor; opacity: 0.7;
+          animation: aifBlink 1.1s step-end infinite;
         }
-        @keyframes aiFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
+        @keyframes aifBlink { 0%,100%{opacity:0.7} 50%{opacity:0} }
+        .aif-empty__sub {
+          font-size: 0.78rem; margin: 0; line-height: 1.5;
         }
-        .ai-panel--light .ai-empty__title { font-weight: 800; font-size: 1.1rem; color: #0f172a; letter-spacing: -0.02em; }
-        .ai-panel--dark  .ai-empty__title { font-weight: 800; font-size: 1.1rem; color: #f1f5f9; letter-spacing: -0.02em; }
-        .ai-panel--light .ai-empty__sub { font-size: 0.85rem; color: #64748b; max-width: 86%; line-height: 1.45; }
-        .ai-panel--dark  .ai-empty__sub { font-size: 0.85rem; color: #94a3b8; max-width: 86%; line-height: 1.45; }
-        .ai-suggestions {
-          display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 12px;
+        .aif-panel--dark .aif-empty__sub { color: #e2e8f0; }
+        .aif-panel--light .aif-empty__sub { color: #94a3b8; }
+        .aif-cmds { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+        .aif-cmd {
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px 10px; border-radius: 8px; cursor: pointer; border: none;
+          font-family: 'IBM Plex Sans', sans-serif; font-size: 0.8rem; font-weight: 500;
+          transition: all 0.15s; text-align: left;
         }
-        .ai-chip {
-          display: flex; align-items: center; gap: 8px;
-          padding: 9px 11px; border-radius: 12px;
-          font-size: 0.78rem; cursor: pointer; text-align: left;
-          transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s, border-color 0.2s;
+        .aif-panel--dark .aif-cmd {
+          background: linear-gradient(145deg, rgba(255,255,255,0.045), rgba(56,189,248,0.035)); color: #f8fafc;
+          border: 1px solid rgba(125,211,252,0.12);
         }
-        .ai-panel--light .ai-chip {
-          background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.08); color: #1e293b;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        .aif-panel--dark .aif-cmd:hover {
+          background: linear-gradient(145deg, rgba(56,189,248,0.11), rgba(34,211,238,0.08));
+          color: #ffffff;
+          border-color: rgba(103,232,249,0.3);
+          transform: translateX(2px);
         }
-        .ai-panel--dark .ai-chip {
-          background: rgba(30,41,59,0.5); border: 1px solid rgba(255,255,255,0.06); color: #e2e8f0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .aif-panel--light .aif-cmd {
+          background: rgba(255,255,255,0.7); color: #64748b;
+          border: 1px solid rgba(0,0,0,0.06);
         }
-        .ai-chip:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 16px rgba(0,166,62,0.15); border-color: rgba(0,166,62,0.5) !important; }
-        .ai-chip svg { color: #00a63e; flex-shrink: 0; }
+        .aif-panel--light .aif-cmd:hover { background: rgba(56,189,248,0.06); color: #0f172a; border-color: rgba(56,189,248,0.25); }
+        .aif-cmd__icon { flex-shrink: 0; }
+        .aif-panel--dark .aif-cmd__icon { color: #38bdf8; }
+        .aif-panel--light .aif-cmd__icon { color: #0284c7; }
+        .aif-cmd__enter { margin-left: auto; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+        .aif-cmd:hover .aif-cmd__enter { opacity: 0.5; }
 
         /* ── Message rows ── */
-        .ai-msg {
-          display: flex; align-items: flex-end; gap: 7px;
-          animation: aiMsgIn 0.18s cubic-bezier(.34,1.2,.64,1);
-          position: relative;
+        .aif-msg { animation: aifMsgIn 0.18s ease; }
+        @keyframes aifMsgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+        .aif-msg__user {
+          display: flex; align-items: baseline; gap: 8px;
+          padding: 6px 0; border-bottom: 1px dashed;
+          margin-bottom: 2px;
+          flex-wrap: wrap;
         }
-        .ai-msg:hover .ai-msg__ts { opacity: 1; }
-        @keyframes aiMsgIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
+        .aif-panel--dark  .aif-msg__user { border-color: rgba(255,255,255,0.05); }
+        .aif-panel--light .aif-msg__user { border-color: rgba(0,0,0,0.06); }
+        .aif-msg__prompt {
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+          font-weight: 600; letter-spacing: 0.06em; flex-shrink: 0;
         }
-        .ai-msg--user { flex-direction: row-reverse; }
-        .ai-msg__avatar {
-          width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
-          background: linear-gradient(135deg, #00a63e, #00c94a);
-          display: flex; align-items: center; justify-content: center;
+        .aif-panel--dark  .aif-msg__prompt { color: #bae6fd; }
+        .aif-panel--light .aif-msg__prompt { color: #cbd5e1; }
+        .aif-msg__prompt--ai { color: #38bdf8 !important; }
+        .aif-msg__user-text {
+          font-size: 0.84rem; line-height: 1.5; flex: 1;
+          white-space: pre-wrap; word-break: break-word;
         }
-        .ai-msg__bubble {
-          max-width: 84%; position: relative; min-width: 0;
+        .aif-panel--dark  .aif-msg__user-text { color: #f8fafc; }
+        .aif-panel--light .aif-msg__user-text { color: #334155; }
+        .aif-msg__ts {
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem;
+          flex-shrink: 0; opacity: 0.35; letter-spacing: 0.04em;
+        }
+        .aif-panel--dark  .aif-msg__ts { color: #e2e8f0; }
+        .aif-panel--light .aif-msg__ts { color: #94a3b8; }
+
+        .aif-msg__asst { padding: 8px 0 10px; border-left: 2px solid; padding-left: 12px; margin: 2px 0 6px; }
+        .aif-panel--dark  .aif-msg__asst { border-color: rgba(56,189,248,0.35); }
+        .aif-panel--light .aif-msg__asst { border-color: rgba(2,132,199,0.35); }
+        .aif-msg__asst-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+
+        /* ── Markdown ── frosted AI output area (liquid glass 2026) */
+        .aif-msg__asst .aif-md:not(.aif-md--err) {
+          padding: 10px 12px;
+          border-radius: 8px;
+          font-size: 0.83rem; line-height: 1.68; overflow-wrap: anywhere;
+          max-width: 100%;
+        }
+        .aif-panel--dark .aif-msg__asst .aif-md:not(.aif-md--err) {
+          background: rgba(56,189,248,0.04);
+          border: 1px solid rgba(56,189,248,0.08);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+        .aif-panel--light .aif-msg__asst .aif-md:not(.aif-md--err) {
+          background: rgba(255,255,255,0.7);
+          border: 1px solid rgba(56,189,248,0.1);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+        .aif-md--err { padding: 8px 10px; border-radius: 7px; }
+        .aif-md {
+          font-size: clamp(0.77rem, 0.72rem + 0.16vw, 0.83rem);
+          line-height: 1.68;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .aif-panel--dark  .aif-md { color: #f8fafc; }
+        .aif-panel--light .aif-md { color: #1e293b; }
+        .aif-md--err { }
+        .aif-panel--dark  .aif-md--err { color: #f87171 !important; }
+        .aif-panel--light .aif-md--err { color: #b91c1c !important; }
+        .aif-md p  { margin: 0 0 0.5em; }
+        .aif-md p:last-child { margin: 0; }
+        .aif-md ul,.aif-md ol { padding-left: 1.2em; margin: 0.3em 0; }
+        .aif-md li { margin: 0.18em 0; }
+        .aif-md strong { font-weight: 700; color: #38bdf8; }
+        .aif-panel--light .aif-md strong { color: #0284c7; }
+        .aif-md a { color: #38bdf8; }
+        .aif-panel--light .aif-md a { color: #0284c7; }
+        .aif-md blockquote { border-left: 2px solid #38bdf8; padding-left: 10px; margin: 0.4em 0; opacity: 0.8; }
+        .aif-md hr { border: none; border-top: 1px solid; margin: 0.6em 0; opacity: 0.15; }
+        /* Headings — scaled down to fit panel, monospace for ops feel */
+        .aif-md h1,.aif-md h2,.aif-md h3 {
+          font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+          margin: 0.6em 0 0.3em; line-height: 1.3; letter-spacing: -0.01em;
           overflow-wrap: anywhere;
         }
-        .ai-msg--user .ai-msg__bubble > span {
-          display: block;
-          padding: 9px 12px;
-          border-radius: 16px 16px 4px 16px;
-          background: linear-gradient(135deg, #00a63e 0%, #00c94a 100%);
-          color: #fff; font-size: 0.85rem; line-height: 1.55;
-          box-shadow: 0 4px 12px rgba(0, 166, 62, 0.2);
+        .aif-md h1 { font-size: 1em; }
+        .aif-md h2 { font-size: 0.92em; }
+        .aif-md h3 { font-size: 0.86em; }
+        .aif-panel--dark  .aif-md h1,.aif-panel--dark  .aif-md h2,.aif-panel--dark  .aif-md h3 { color: #7dd3fc; }
+        .aif-panel--light .aif-md h1,.aif-panel--light .aif-md h2,.aif-panel--light .aif-md h3 { color: #0284c7; }
+        .aif-inline-code {
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.78em;
+          padding: 1px 5px; border-radius: 4px;
         }
-        .ai-msg--assistant .ai-msg__bubble {
-          display: flex; flex-direction: column; gap: 4px;
+        .aif-panel--dark  .aif-inline-code { background: rgba(56,189,248,0.1); color: #7dd3fc; }
+        .aif-panel--light .aif-inline-code { background: rgba(2,132,199,0.08); color: #0284c7; }
+        .aif-tbl-wrap {
+          overflow-x: auto;
+          margin: 0.65em 0 0.4em;
+          max-width: 100%;
+          border-radius: 10px;
         }
-        .ai-msg__ts {
-          position: absolute; bottom: -18px;
-          font-size: 0.63rem; white-space: nowrap;
-          opacity: 0; transition: opacity 0.15s;
-          pointer-events: none;
+        .aif-tbl-wrap::-webkit-scrollbar { height: 4px; }
+        .aif-tbl-wrap::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.2); border-radius: 2px; }
+        .aif-panel--dark .aif-tbl-wrap {
+          background: linear-gradient(180deg, rgba(10,20,32,0.92), rgba(7,14,24,0.92));
+          border: 1px solid rgba(125,211,252,0.14);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
         }
-        .ai-msg--user .ai-msg__ts  { right: 0; }
-        .ai-msg--assistant .ai-msg__ts { left: 33px; }
-        .ai-panel--light .ai-msg__ts { color: #94a3b8; }
-        .ai-panel--dark  .ai-msg__ts { color: #94a3b8; }
-
-        /* ── Markdown ── */
-        .ai-markdown {
-          padding: 10px 13px;
-          border-radius: 4px 16px 16px 16px;
-          font-size: 0.83rem; line-height: 1.58;
-          max-width: 100%; overflow-x: auto; box-sizing: border-box;
+        .aif-panel--light .aif-tbl-wrap {
+          background: rgba(255,255,255,0.8);
+          border: 1px solid rgba(2,132,199,0.12);
+        }
+        .aif-md table {
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 0.82em;
+          width: 100%;
+          min-width: min(440px, 100%);
+          table-layout: auto;
+        }
+        .aif-md th,.aif-md td {
+          padding: 8px 10px;
+          border: 1px solid;
+          text-align: left;
+          vertical-align: top;
+          white-space: normal;
+          word-break: break-word;
           overflow-wrap: anywhere;
-          word-break: normal;
-          transform: translateZ(0); /* For crisp subpixel rendering */
         }
-        .ai-panel--light .ai-markdown { background: rgba(241, 245, 249, 0.8); color: #0f172a; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .ai-panel--dark  .ai-markdown { background: rgba(26, 37, 53, 0.8); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .ai-markdown p { margin: 0 0 0.5em 0; }
-        .ai-markdown p:last-child { margin-bottom: 0; }
-        .ai-markdown ul, .ai-markdown ol { padding-left: 1.2em; margin: 0.4em 0; }
-        .ai-markdown li { margin: 0.2em 0; overflow-wrap: anywhere; }
-        .ai-markdown a { color: #008c3a; overflow-wrap: anywhere; }
-        .ai-panel--dark .ai-markdown a { color: #6ee7b7; }
-        .ai-markdown pre { max-width: 100%; overflow-x: auto; }
-        .ai-markdown strong { font-weight: 700; }
-        .ai-markdown em { font-style: italic; }
-        .ai-panel--light .ai-markdown code { background: rgba(0,0,0,0.07); padding: 1px 4px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.78em; }
-        .ai-panel--dark  .ai-markdown code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.78em; }
-        .ai-table-container { width: 100%; overflow-x: auto; margin: 0.5em 0; padding-bottom: 2px; }
-        .ai-table-container::-webkit-scrollbar { height: 6px; }
-        .ai-table-container::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 3px; }
-        .ai-markdown table { width: 100%; border-collapse: collapse; font-size: 0.9em; min-width: 400px; }
-        .ai-panel--light .ai-markdown th { background: rgba(0,166,62,0.1); }
-        .ai-panel--dark  .ai-markdown th { background: rgba(0,166,62,0.18); }
-        .ai-markdown th, .ai-markdown td { padding: 6px 10px; border: 1px solid rgba(0,0,0,0.1); text-align: left; }
-        .ai-panel--dark .ai-markdown td, .ai-panel--dark .ai-markdown th { border-color: rgba(255,255,255,0.08); }
-        .ai-markdown blockquote { border-left: 3px solid #00a63e; padding-left: 10px; margin: 0.4em 0; opacity: 0.8; }
-
-        /* ── Error bubble ── */
-        .ai-msg--error .ai-markdown,
-        .ai-msg--error .ai-msg__bubble > span {
-          border-color: rgba(239,68,68,0.4) !important;
-          background: rgba(239,68,68,0.08) !important;
-          color: #ef4444 !important;
+        .aif-panel--dark  .aif-md th,.aif-panel--dark  .aif-md td { border-color: rgba(56,189,248,0.12); }
+        .aif-panel--dark  .aif-md th {
+          background: linear-gradient(180deg, rgba(56,189,248,0.14), rgba(56,189,248,0.08));
+          color: #bae6fd;
+          font-weight: 700;
         }
+        .aif-panel--dark .aif-md td { color: #f8fafc; }
+        .aif-panel--dark .aif-md tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.015); }
+        .aif-panel--dark .aif-md tbody tr:nth-child(even) td { background: rgba(56,189,248,0.03); }
+        .aif-panel--light .aif-md th,.aif-panel--light .aif-md td { border-color: rgba(0,0,0,0.08); }
+        .aif-panel--light .aif-md th {
+          background: rgba(2,132,199,0.07);
+          color: #0284c7;
+          font-weight: 700;
+        }
+        .aif-panel--light .aif-md tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.72); }
+        .aif-panel--light .aif-md tbody tr:nth-child(even) td { background: rgba(248,250,252,0.92); }
 
         /* ── Code block ── */
-        .ai-code-block { border-radius: 8px; overflow: hidden; margin: 4px 0; }
-        .ai-panel--light .ai-code-block { border: 1px solid rgba(0,0,0,0.1); }
-        .ai-panel--dark  .ai-code-block { border: 1px solid rgba(255,255,255,0.08); }
-        .ai-code-block__header {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 4px 10px; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;
+        .aif-code { border-radius: 7px; overflow: hidden; margin: 6px 0; }
+        .aif-panel--dark  .aif-code { border: 1px solid rgba(56,189,248,0.12); }
+        .aif-panel--light .aif-code { border: 1px solid rgba(0,0,0,0.09); }
+        .aif-code__bar {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 4px 10px; font-family: 'IBM Plex Mono', monospace;
         }
-        .ai-panel--light .ai-code-block__header { background: #e2e8f0; color: #64748b; }
-        .ai-panel--dark  .ai-code-block__header { background: #0d1117; color: #64748b; }
+        .aif-panel--dark  .aif-code__bar { background: rgba(56,189,248,0.07); }
+        .aif-panel--light .aif-code__bar { background: rgba(2,132,199,0.07); }
+        .aif-code__lang { font-size: 0.66rem; font-weight: 600; color: #38bdf8; letter-spacing: 0.06em; }
+        .aif-panel--light .aif-code__lang { color: #0284c7; }
+        .aif-code__copy {
+          display: flex; align-items: center; gap: 4px;
+          background: none; border: 1px solid rgba(100,116,139,0.2); border-radius: 4px;
+          padding: 2px 7px; cursor: pointer; font-size: 0.64rem; font-weight: 500;
+          font-family: 'IBM Plex Mono', monospace; color: #94a3b8;
+          transition: all 0.15s;
+        }
+        .aif-panel--dark .aif-code__copy { color: #f8fafc; }
+        .aif-code__copy:hover { color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.06); }
 
-        /* ── Typing indicator ── */
-        .ai-typing {
-          display: flex; gap: 4px; align-items: center;
-          padding: 10px 14px;
-          border-radius: 4px 16px 16px 16px;
-        }
-        .ai-panel--light .ai-typing { background: #f1f5f9; border: 1px solid rgba(0,0,0,0.07); }
-        .ai-panel--dark  .ai-typing { background: #1a2535; border: 1px solid rgba(255,255,255,0.07); }
-        .ai-typing span {
-          width: 7px; height: 7px; border-radius: 50%; background: #00a63e;
-          display: inline-block; animation: aiDotBounce 1.1s ease-in-out infinite;
-        }
-        .ai-typing span:nth-child(2) { animation-delay: 0.18s; }
-        .ai-typing span:nth-child(3) { animation-delay: 0.36s; }
-        @keyframes aiDotBounce {
-          0%,80%,100% { transform: translateY(0); opacity:0.35; }
-          40% { transform: translateY(-5px); opacity:1; }
-        }
+        /* ── Typing ── */
+        .aif-typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+        .aif-typing span { width: 5px; height: 5px; border-radius: 50%; background: #38bdf8; opacity: 0.4; animation: aifDot 1.2s ease-in-out infinite; }
+        .aif-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .aif-typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes aifDot { 0%,80%,100%{opacity:0.25;transform:translateY(0)} 40%{opacity:1;transform:translateY(-4px)} }
 
-        /* ── Input area ── */
-        .ai-input-area {
-          padding: 10px 12px 10px; flex-shrink: 0;
+        /* ── Input ── */
+        .aif-input-area {
+          flex-shrink: 0; padding: 10px 12px 12px;
+          border-top: 1px solid;
         }
-        .ai-panel--light .ai-input-area { border-top: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.7); }
-        .ai-panel--dark  .ai-input-area { border-top: 1px solid rgba(255,255,255,0.05); background: rgba(15,25,35,0.7); }
-        .ai-input-box {
-          display: flex; gap: 8px; align-items: flex-end;
-          border-radius: 14px; padding: 5px 7px;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        .aif-panel--dark .aif-input-area {
+          border-color: rgba(56,189,248,0.08);
+          background: rgba(6,8,16,0.65);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
-        .ai-panel--light .ai-input-box { background: rgba(248,250,252,0.8); border: 1px solid rgba(0,0,0,0.1); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
-        .ai-panel--dark  .ai-input-box { background: rgba(26,37,53,0.8); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-        .ai-input-box:focus-within { border-color: #00a63e !important; box-shadow: 0 0 0 4px rgba(0,166,62,0.15) !important; }
-        .ai-textarea {
-          flex: 1; resize: none; border: none; outline: none;
-          background: transparent; font-size: 0.88rem; line-height: 1.5;
-          font-family: inherit; max-height: 120px; overflow-y: auto;
-          transition: opacity 0.15s;
+        .aif-panel--light .aif-input-area {
+          border-color: rgba(0,0,0,0.05);
+          background: rgba(248,250,252,0.88);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
         }
-        .ai-panel--light .ai-textarea { color: #0f172a; }
-        .ai-panel--dark  .ai-textarea { color: #f1f5f9; }
-        .ai-textarea::placeholder { color: #94a3b8; }
-        .ai-textarea:disabled { opacity: 0.5; }
-        .ai-send-btn {
-          width: 32px; height: 32px; border-radius: 9px; border: none; flex-shrink: 0;
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
-          transition: background 0.15s, transform 0.12s;
+        /* Composer card */
+        .aif-composer {
+          border-radius: 14px; overflow: hidden;
+          transition: border-color 0.18s, box-shadow 0.18s;
         }
-        .ai-send-btn:not(:disabled) {
-          background: linear-gradient(135deg, #00a63e, #00c94a);
-          color: white;
+        .aif-panel--dark .aif-composer {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(56,189,248,0.16);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
         }
-        .ai-send-btn:not(:disabled):hover { transform: scale(1.08); }
-        .ai-send-btn:disabled { background: rgba(0,0,0,0.08); color: #94a3b8; cursor: not-allowed; }
-        .ai-panel--dark .ai-send-btn:disabled { background: rgba(255,255,255,0.08); }
-        .ai-input-hint { font-size: 0.64rem; text-align: center; margin-top: 5px; letter-spacing: 0.03em; text-transform: uppercase; }
-        .ai-panel--light .ai-input-hint { color: #94a3b8; }
-        .ai-panel--dark  .ai-input-hint { color: #94a3b8; }
+        .aif-panel--light .aif-composer {
+          background: rgba(255,255,255,0.9);
+          border: 1px solid rgba(56,189,248,0.2);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .aif-composer:focus-within {
+          border-color: #38bdf8 !important;
+          box-shadow: 0 0 0 3px rgba(56,189,248,0.13) !important;
+        }
+        .aif-textarea {
+          display: block; width: 100%; resize: none; border: none; outline: none;
+          background: transparent; font-size: 0.845rem; line-height: 1.55;
+          font-family: 'IBM Plex Sans', sans-serif; max-height: 112px;
+          overflow-y: auto; padding: 10px 12px 6px;
+          box-sizing: border-box;
+        }
+        .aif-panel--dark  .aif-textarea { color: #f8fafc; }
+        .aif-panel--light .aif-textarea { color: #0f172a; }
+        .aif-textarea::placeholder { color: #cfe8f7; }
+        .aif-panel--light .aif-textarea::placeholder { color: #94a3b8; }
+        .aif-textarea:disabled { opacity: 0.35; cursor: not-allowed; }
+        /* Composer action bar */
+        .aif-composer-bar {
+          display: flex; align-items: center; gap: 8px;
+          padding: 5px 8px 7px 10px;
+          border-top: 1px solid;
+          flex-wrap: wrap;
+        }
+        .aif-panel--dark .aif-composer-bar {
+          border-color: rgba(56,189,248,0.08);
+          background: rgba(0,0,0,0.18);
+        }
+        .aif-panel--light .aif-composer-bar {
+          border-color: rgba(0,0,0,0.05);
+          background: rgba(241,245,249,0.7);
+        }
+        .aif-composer-mode {
+          display: flex; align-items: center; gap: 4px;
+          font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+          user-select: none;
+          background: rgba(56,189,248,0.1); border-radius: 5px;
+          padding: 2px 7px;
+        }
+        .aif-composer-dollar { color: #38bdf8; font-weight: 700; }
+        .aif-panel--dark  .aif-composer-ctx { color: #67e8f9; }
+        .aif-panel--light .aif-composer-ctx { color: #0284c7; }
+        .aif-composer-keys {
+          flex: 1; font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.62rem; letter-spacing: 0.02em;
+          min-width: 0;
+        }
+        .aif-panel--dark  .aif-composer-keys { color: #e2e8f0; }
+        .aif-panel--light .aif-composer-keys { color: rgba(0,0,0,0.28); }
+        .aif-composer-keys kbd {
+          font-family: inherit; background: rgba(56,189,248,0.1);
+          border-radius: 3px; padding: 0 3px;
+        }
+        .aif-panel--dark  .aif-composer-keys kbd { color: #38bdf8; }
+        .aif-panel--light .aif-composer-keys kbd { color: #0284c7; }
+        /* Send button — new circle design */
+        .aif-send-btn {
+          width: 30px; height: 30px; border-radius: 50%; border: none;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; transition: all 0.17s; padding: 0; cursor: pointer;
+        }
+        .aif-send-btn--active {
+          background: #38bdf8;
+          color: #08121c;
+          box-shadow: 0 3px 12px rgba(56,189,248,0.45);
+        }
+        .aif-send-btn--active:hover {
+          background: #67d2fb;
+          box-shadow: 0 5px 18px rgba(56,189,248,0.6);
+          transform: scale(1.1) translateY(-1px);
+        }
+        .aif-send-btn--idle {
+          background: rgba(56,189,248,0.07);
+          color: rgba(56,189,248,0.25);
+          cursor: not-allowed;
+        }
+        .aif-panel--light .aif-send-btn--idle {
+          background: rgba(0,0,0,0.05);
+          color: #cbd5e1;
+        }
+        .aif-spinner {
+          width: 14px; height: 14px; border-radius: 50%;
+          border: 2px solid rgba(56,189,248,0.18); border-top-color: #38bdf8;
+          animation: aifSpin 0.7s linear infinite;
+        }
+        @keyframes aifSpin { to { transform: rotate(360deg); } }
+
         @media (max-width: 640px) {
-          .ai-fab { width: 42px; height: 42px; box-shadow: 0 6px 18px rgba(0,166,62,0.28), inset 0 2px 4px rgba(255,255,255,0.24); }
-          .ai-fab__ring { inset: -3px; }
-          .ai-header { padding: 12px 13px; }
-          .ai-header__identity { gap: 9px; min-width: 0; }
-          .ai-avatar { width: 32px; height: 32px; border-radius: 10px; }
-          .ai-header__name { font-size: 0.85rem; }
-          .ai-header__status { font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-          .ai-hdr-btn { padding: 5px 8px; font-size: 0.69rem; }
-          .ai-hdr-btn--icon { padding: 5px; }
-          .ai-hero { padding: 10px 12px 8px; }
-          .ai-suggestions { grid-template-columns: 1fr; }
-          .ai-messages { padding: 10px 9px; gap: 10px; }
-          .ai-input-area { padding: 9px 9px 8px; }
-          .ai-msg__bubble { max-width: 90%; }
-          .ai-msg__ts { opacity: 0.72; bottom: -16px; }
-          .ai-markdown { padding: 9px 11px; font-size: 0.79rem; line-height: 1.52; }
-          .ai-msg--user .ai-msg__bubble > span { padding: 8px 11px; font-size: 0.8rem; line-height: 1.5; }
-          .ai-empty { padding: 12px 6px 8px; gap: 10px; }
-          .ai-empty__icon { width: 44px; height: 44px; border-radius: 14px; }
-          .ai-empty__title { font-size: 0.95rem !important; }
-          .ai-chip { padding: 8px 10px; font-size: 0.75rem; border-radius: 10px; }
-          .ai-input-box { padding: 4px 6px; border-radius: 12px; }
-          .ai-textarea { font-size: 0.82rem; max-height: 88px; }
-          .ai-send-btn { width: 30px; height: 30px; border-radius: 8px; }
-          .ai-markdown table { min-width: 320px; font-size: 0.82em; }
-          .ai-markdown th, .ai-markdown td { padding: 5px 8px; }
-          .ai-code-block__header { padding: 4px 8px; }
+          .aif-cmds { gap: 2px; }
+          .aif-cmd { padding: 7px 9px; font-size: 0.76rem; }
+          .aif-msgs { padding: 11px; }
+          .aif-msg__user-text { font-size: 0.8rem; }
+          .aif-md { font-size: 0.79rem; }
+        }
+        @media (max-width: 980px), (max-height: 760px) {
+          .aif-hdr { padding: 0 12px; height: 42px; }
+          .aif-strip { padding: 6px 12px; }
+          .aif-msgs { padding: 12px; }
+          .aif-input-area { padding: 9px 10px 10px; }
+          .aif-hdr__name { font-size: 0.76rem; }
+          .aif-empty__sub,
+          .aif-msg__user-text,
+          .aif-textarea { font-size: 0.8rem; }
+        }
+        @media (max-width: 760px), (max-height: 640px) {
+          .aif-hdr__divider,
+          .aif-hdr__live,
+          .aif-strip__sep,
+          .aif-strip__spacer { display: none; }
+          .aif-strip { gap: 6px; justify-content: space-between; }
+          .aif-composer-keys { width: 100%; flex-basis: 100%; order: 3; }
+          .aif-send-btn { margin-left: auto; }
+          .aif-md table { min-width: 320px; }
         }
       `}</style>
     </>

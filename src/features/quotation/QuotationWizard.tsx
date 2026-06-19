@@ -256,21 +256,40 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
     if (optionB) form.setValue('optionB.rows', applyQtys(optionB.rows));
   }
 
-  function next() {
-    if (step === 2) autofillBomQuantities();
-    goTo(Math.min(step + 1, 4));
+  async function persistDraft({ silent = false, leaveWizard = false }: { silent?: boolean; leaveWizard?: boolean } = {}) {
+    try {
+      await saveDraft(form.getValues());
+      if (!silent) toast.success('Draft saved');
+      if (leaveWizard) onSaved?.();
+      return true;
+    } catch (err) {
+      console.error('Failed to save draft', err);
+      toast.error('Unable to save draft. Please try again.');
+      return false;
+    }
   }
-  function prev() { goTo(Math.max(step - 1, 1)); }
+
+  async function navigateTo(targetStep: number) {
+    const nextStep = Math.max(1, Math.min(targetStep, STEPS.length));
+    if (nextStep === step) return;
+    if (step === 2 && nextStep > step) autofillBomQuantities();
+    const saved = await persistDraft({ silent: true });
+    if (!saved) return;
+    goTo(nextStep);
+  }
+
+  async function next() {
+    await navigateTo(step + 1);
+  }
+
+  async function prev() {
+    await navigateTo(step - 1);
+  }
 
   async function handleGenerate() { await generate(form.getValues()); }
 
   async function handleSaveDraft() {
-    try {
-      await saveDraft(form.getValues());
-      onSaved?.();
-    } catch (err) {
-      console.error('Failed to save draft', err);
-    }
+    await persistDraft({ leaveWizard: true });
   }
 
   const pct = ((step - 1) / (STEPS.length - 1)) * 100;
@@ -304,7 +323,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             <button
               key={s.id}
               type="button"
-              onClick={() => goTo(s.id)}
+              onClick={() => void navigateTo(s.id)}
               className={`sq-step-item ${active ? 'active' : ''} ${done ? 'done' : ''}`}
             >
               <span className="sq-step-num">{s.num}</span>
@@ -353,7 +372,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => goTo(s.id)}
+                    onClick={() => void navigateTo(s.id)}
                     className={`sq-mobile-step-chip ${active ? 'active' : ''} ${done ? 'done' : ''}`}
                   >
                     <span className="sq-mobile-step-chip__num">{done ? 'OK' : s.num}</span>
@@ -433,7 +452,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
         <div className="sq-content-nav">
           <button
             type="button"
-            onClick={prev}
+            onClick={() => void prev()}
             disabled={step === 1}
             className="sq-btn-back"
           >
@@ -456,7 +475,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
           </button>
 
           {step < 4 ? (
-            <button type="button" onClick={next} className="sq-btn-primary">
+            <button type="button" onClick={() => void next()} className="sq-btn-primary">
               Continue
               <ChevronRight style={{ width: 15, height: 15 }} />
             </button>
