@@ -21,6 +21,7 @@ interface Employee {
   is_staff: boolean;
   is_superuser: boolean;
   is_active: boolean;
+  role?: 'admin' | 'employee';
   date_joined: string;
   created_by_username?: string;
   updated_by_username?: string;
@@ -122,10 +123,10 @@ const MobileEmployees: React.FC = () => {
     if (!form.username.trim() || !form.email.trim()) { setFormErr('Username and email required'); return; }
     setSaving(true); setFormErr('');
     try {
-      const payload: any = { ...form };
+      const payload: any = { ...form, role: form.is_superuser ? 'admin' : 'employee' };
       if (!payload.password) delete payload.password;
       if (modal === 'create') await apiService.createEmployee(payload);
-      else if (editTarget) await apiService.updateUser(editTarget.id, payload);
+      else if (editTarget) await apiService.updateEmployee(editTarget.id, payload);
       setModal('none'); fetchEmployees(true);
     } catch (e: any) {
       setFormErr(e?.message ?? 'Save failed');

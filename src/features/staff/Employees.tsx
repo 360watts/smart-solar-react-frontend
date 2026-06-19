@@ -179,8 +179,8 @@ const Employees: React.FC = () => {
       mobile_number: employee.mobile_number || '',
       address: employee.address || '',
       is_active: employee.is_active ?? true,
-      is_staff: employee.is_staff,
-      is_superuser: employee.is_superuser,
+      is_staff: true,
+      is_superuser: employee.role === 'admin' || employee.is_superuser,
       department_id: employee.department?.id, // NEW
     });
   };
@@ -197,8 +197,7 @@ const Employees: React.FC = () => {
         mobile_number: editForm.mobile_number,
         address: editForm.address,
         is_active: editForm.is_active,
-        is_staff: editForm.is_staff,
-        is_superuser: editForm.is_superuser,
+        role: editForm.is_superuser ? 'admin' : 'employee',
         department_id: editForm.department_id,
       });
       setEditingEmployee(null);
@@ -334,12 +333,12 @@ const Employees: React.FC = () => {
         <div className="stats-chips-row">
           <div className="stats-chip">
             <UsersIcon size={13} />
-            <span className="stats-chip-count">{filteredEmployees.filter(e => e.is_superuser).length}</span>
+            <span className="stats-chip-count">{filteredEmployees.filter(e => e.role === 'admin' || e.is_superuser).length}</span>
             <span>Admins</span>
           </div>
           <div className="stats-chip">
             <UsersIcon size={13} />
-            <span className="stats-chip-count">{filteredEmployees.filter(e => !e.is_superuser && e.is_staff).length}</span>
+            <span className="stats-chip-count">{filteredEmployees.filter(e => e.role !== 'admin' && !e.is_superuser).length}</span>
             <span>Staff</span>
           </div>
         </div>
@@ -375,8 +374,8 @@ const Employees: React.FC = () => {
                   </div>
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                  <span className={`role-badge ${employee.is_superuser ? 'role-badge-admin' : 'role-badge-staff'}`}>
-                    {employee.is_superuser ? 'Admin' : 'Staff'}
+                  <span className={`role-badge ${(employee.role === 'admin' || employee.is_superuser) ? 'role-badge-admin' : 'role-badge-staff'}`}>
+                    {(employee.role === 'admin' || employee.is_superuser) ? 'Admin' : 'Staff'}
                   </span>
                 </td>
                 <td style={{ textAlign: 'center' }}>
