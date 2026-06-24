@@ -80,11 +80,11 @@ const WIDE_LAYOUT = computeLayout(312, {
 });
 
 // Narrow layout — mobile (container < 480 px).
-const NARROW_LAYOUT = computeLayout(416, {
-  pv:   { x: 90,  y: 260 },
-  hub:  { x: 350, y: 260 },
-  batt: { x: 350, y: 59  },
-  grid: { x: 610, y: 260 },
+const NARROW_LAYOUT = computeLayout(300, {
+  pv:   { x: 90,  y: 188 },
+  hub:  { x: 350, y: 188 },
+  batt: { x: 350, y: 43  },
+  grid: { x: 610, y: 188 },
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
