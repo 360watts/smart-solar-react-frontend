@@ -25,6 +25,17 @@ function istDateOffset(n: number): string {
   return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS));
 }
 
+// Solar day starts at 6am IST. If current IST time < 6am, use yesterday's 6am.
+function startOfSolarDayIST(): string {
+  const now = new Date();
+  const todayStr = istDate(now);
+  const todaySolar = new Date(`${todayStr}T06:00:00+05:30`);
+  if (now < todaySolar) {
+    return new Date(todaySolar.getTime() - 24 * 3600 * 1000).toISOString();
+  }
+  return todaySolar.toISOString();
+}
+
 // ── ChartCard (local copy) ─────────────────────────────────────────────────────
 
 interface ChartCardProps {
@@ -507,7 +518,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     let cancelled = false;
     if (!siteId) return;
     const end = new Date();
-    const start = new Date(end.getTime() - hours * 3600 * 1000);
+    const start = hours === 24 ? new Date(startOfSolarDayIST()) : new Date(end.getTime() - hours * 3600 * 1000);
     apiService.getEnergyMeterHistory(siteId, {
       start_date: start.toISOString(),
       end_date: end.toISOString(),
@@ -1145,111 +1156,73 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         subtitle={loadViewSubtitle}
         isDark={isDark}
         isLive={true}
-        height={resolvedLoadChartData.length === 0 ? 100 : 320}
+        height={resolvedLoadChartData.length === 0 ? 100 : 360}
         accentColor="#3b82f6"
         delay={0.3}
         headerRight={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch', width: '100%' }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
-              {(['inverter', 'grid', 'ev', 'total'] as const).map(view => (
-                <button
-                  key={view}
-                  onClick={() => setLoadSourceView(view)}
-                  style={{
-                    border: `1px solid ${view === 'total' ? (isDark ? 'rgba(248,250,252,0.22)' : 'rgba(15,23,42,0.18)') : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}55`}`,
-                    background: loadSourceView === view
-                      ? (view === 'total' ? (isDark ? 'rgba(248,250,252,0.12)' : 'rgba(15,23,42,0.08)') : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}24`)
-                      : 'transparent',
-                    color: loadSourceView === view
-                      ? (view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6')
-                      : 'var(--text-muted)',
-                    borderRadius: 999, padding: '7px 12px', fontSize: '0.72rem', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    boxShadow: loadSourceView === view
-                      ? (view === 'total' ? 'none' : `0 0 0 3px ${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}18`)
-                      : 'none',
-                  }}
-                >
-                  <span style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6',
-                    opacity: loadSourceView === view ? 1 : 0.55,
-                  }} />
-                  {view === 'total' ? 'Total Load' : LOAD_SOURCE_META[view as LoadSourceKey].label.replace(' Load', '')}
-                </button>
-              ))}
-              {loadSourceView === 'total' && (
-                <button
-                  onClick={() => setLoadTotalCombined(v => !v)}
-                  title={loadTotalCombined ? 'Show inverter / grid / EV separately' : 'Combine all sources into one line'}
-                  style={{
-                    border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.45)' : (isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)')}`,
-                    background: loadTotalCombined ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)') : 'transparent',
-                    color: loadTotalCombined ? '#38bdf8' : 'var(--text-muted)',
-                    borderRadius: 999, padding: '7px 12px', fontSize: '0.72rem', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    boxShadow: loadTotalCombined ? '0 0 0 3px rgba(56,189,248,0.14)' : 'none',
-                    transition: 'all 0.18s ease',
-                  }}
-                >
-                  <span style={{ fontSize: '0.82rem', lineHeight: 1 }}>{loadTotalCombined ? '━' : '≡'}</span>
-                  {loadTotalCombined ? 'Combined' : 'Split'}
-                </button>
-              )}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {(['inverter', 'grid', 'ev', 'total'] as const).map(view => (
               <button
-                onClick={() => setLoadChartCumulative(v => !v)}
-                title={loadChartCumulative ? 'Switch to instantaneous power (kW)' : 'Switch to cumulative energy (kWh)'}
+                key={view}
+                onClick={() => setLoadSourceView(view)}
                 style={{
-                  border: `1px solid ${isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)'}`,
-                  background: loadChartCumulative ? (isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.1)') : 'transparent',
-                  color: loadChartCumulative ? '#2FBF71' : 'var(--text-muted)',
-                  borderRadius: 999, padding: '7px 12px', fontSize: '0.72rem', fontWeight: 700,
+                  border: `1px solid ${view === 'total' ? (isDark ? 'rgba(248,250,252,0.22)' : 'rgba(15,23,42,0.18)') : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}55`}`,
+                  background: loadSourceView === view
+                    ? (view === 'total' ? (isDark ? 'rgba(248,250,252,0.12)' : 'rgba(15,23,42,0.08)') : `${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}24`)
+                    : 'transparent',
+                  color: loadSourceView === view
+                    ? (view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6')
+                    : 'var(--text-muted)',
+                  borderRadius: 999, padding: '5px 10px', fontSize: '0.68rem', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  boxShadow: loadChartCumulative ? '0 0 0 3px rgba(47,191,113,0.15)' : 'none',
+                  boxShadow: loadSourceView === view
+                    ? (view === 'total' ? 'none' : `0 0 0 3px ${LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6'}18`)
+                    : 'none',
                 }}
               >
-                <span style={{ fontSize: '0.8rem' }}>{loadChartCumulative ? '∑' : '⚡'}</span>
-                {loadChartCumulative ? 'kWh' : 'kW'}
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: view === 'total' ? (isDark ? '#f8fafc' : '#0f172a') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6',
+                  opacity: loadSourceView === view ? 1 : 0.5,
+                }} />
+                {view === 'total' ? 'All' : LOAD_SOURCE_META[view as LoadSourceKey].label.replace(' Load', '')}
               </button>
-              <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', width: '100%' }}>
-              {loadInfoChips.map(chip => (
-                <span
-                  key={`${chip.label}-${chip.value}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 9px',
-                    borderRadius: 999,
-                    background: isDark ? 'rgba(15,23,42,0.42)' : 'rgba(255,255,255,0.78)',
-                    border: `1px solid ${chip.color}30`,
-                    color: isDark ? '#e2e8f0' : '#334155',
-                    fontSize: '0.68rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
-                  }}
-                >
-                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.6rem' }}>{chip.label}</span>
-                  <span>{chip.value}</span>
-                </span>
-              ))}
-              {loadSourceView === 'total' && (['inverter', 'grid', 'ev'] as const).map(key => (
-                <span
-                  key={key}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 9px',
-                    borderRadius: 999,
-                    background: isDark ? 'rgba(15,23,42,0.42)' : 'rgba(255,255,255,0.78)',
-                    border: `1px solid ${LOAD_SOURCE_META[key].color}35`,
-                    color: isDark ? '#e2e8f0' : '#334155',
-                    fontSize: '0.68rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
-                  }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: LOAD_SOURCE_META[key].color }} />
-                  {key === 'ev' ? 'EV' : LOAD_SOURCE_META[key].label.replace(' Load', '')} {loadRangeTotals[key].toFixed(1)} kWh
-                </span>
-              ))}
-            </div>
+            ))}
+            {loadSourceView === 'total' && (
+              <button
+                onClick={() => setLoadTotalCombined(v => !v)}
+                title={loadTotalCombined ? 'Show inverter / grid / EV separately' : 'Combine all sources into one line'}
+                style={{
+                  border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.45)' : (isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)')}`,
+                  background: loadTotalCombined ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)') : 'transparent',
+                  color: loadTotalCombined ? '#38bdf8' : 'var(--text-muted)',
+                  borderRadius: 999, padding: '5px 10px', fontSize: '0.68rem', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{loadTotalCombined ? '━' : '≡'}</span>
+                {loadTotalCombined ? 'Combined' : 'Split'}
+              </button>
+            )}
+            <button
+              onClick={() => setLoadChartCumulative(v => !v)}
+              title={loadChartCumulative ? 'Switch to instantaneous power (kW)' : 'Switch to cumulative energy (kWh)'}
+              style={{
+                border: `1px solid ${isDark ? 'rgba(248,250,252,0.18)' : 'rgba(15,23,42,0.14)'}`,
+                background: loadChartCumulative ? (isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.1)') : 'transparent',
+                color: loadChartCumulative ? '#2FBF71' : 'var(--text-muted)',
+                borderRadius: 999, padding: '5px 10px', fontSize: '0.68rem', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <span style={{ fontSize: '0.78rem' }}>{loadChartCumulative ? '∑' : '⚡'}</span>
+              {loadChartCumulative ? 'kWh' : 'kW'}
+            </button>
+            <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
           </div>
         }
       >
@@ -1260,7 +1233,43 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
             <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Inverter load, energy meter load, and EV smart-device history appear when those sources are mapped and reporting.</div>
           </div>
         ) : (
-          <div style={{ height: '100%', position: 'relative', padding: '4px 0 0' }}>
+          <div style={{ height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {/* Compact legend strip — info chips + source totals */}
+            <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 8, borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, marginBottom: 8 }}>
+              {loadInfoChips.map(chip => (
+                <span
+                  key={`${chip.label}-${chip.value}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px',
+                    borderRadius: 999,
+                    background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
+                    border: `1px solid ${chip.color}28`,
+                    fontSize: '0.65rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{chip.label}</span>
+                  <span style={{ color: isDark ? '#cbd5e1' : '#475569' }}>{chip.value}</span>
+                </span>
+              ))}
+              {loadSourceView === 'total' && (['inverter', 'grid', 'ev'] as const).map(key => (
+                <span
+                  key={key}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px',
+                    borderRadius: 999,
+                    background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
+                    border: `1px solid ${LOAD_SOURCE_META[key].color}28`,
+                    fontSize: '0.65rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: LOAD_SOURCE_META[key].color, flexShrink: 0 }} />
+                  <span style={{ color: isDark ? '#cbd5e1' : '#475569' }}>
+                    {key === 'ev' ? 'EV' : LOAD_SOURCE_META[key].label.replace(' Load', '')} {loadRangeTotals[key].toFixed(1)} kWh
+                  </span>
+                </span>
+              ))}
+            </div>
+            <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <CJLine
               ref={phaseLoadChartZoom.chartRef}
               data={{
@@ -1328,6 +1337,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               }}
               options={phaseLoadChartOptions}
             />
+            </div>
           </div>
         )}
       </ChartCard>

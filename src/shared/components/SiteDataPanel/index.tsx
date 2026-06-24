@@ -76,9 +76,16 @@ function istDate(d: Date): string {
   return d.toLocaleDateString('en-CA', { timeZone: IST });
 }
 
-function startOfTodayIST(): string {
-  const todayStr = istDate(new Date());
-  return new Date(`${todayStr}T00:00:00+05:30`).toISOString();
+// Solar day starts at 6am IST — if we're before 6am, use yesterday's 6am so the
+// chart always shows the most recent full solar day window.
+function startOfSolarDayIST(): string {
+  const now = new Date();
+  const todayStr = istDate(now);
+  const todaySolar = new Date(`${todayStr}T06:00:00+05:30`);
+  if (now < todaySolar) {
+    return new Date(todaySolar.getTime() - 24 * 3600 * 1000).toISOString();
+  }
+  return todaySolar.toISOString();
 }
 
 function getTelemetryAggregateForRange(range: string, start?: string, end?: string): '5min' | undefined {
@@ -345,7 +352,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
       let telemetryRows: any[] = [];
       if (dateRange === '24h') {
-        const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfTodayIST(), end_date: now.toISOString(), aggregate: '5min' });
+        const rows = await apiService.getSiteTelemetry(siteId, { start_date: startOfSolarDayIST(), end_date: now.toISOString(), aggregate: '5min' });
         telemetryRows = Array.isArray(rows) ? rows : [];
       } else {
         let rangeStart: Date;
