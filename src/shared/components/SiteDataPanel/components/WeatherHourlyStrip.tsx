@@ -2,8 +2,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Sun, Moon, CloudRain, Cloud, CloudSun } from 'lucide-react';
-import { useTheme } from '../../../contexts/ThemeContext';
-import { IST_TIMEZONE } from '../../../app/constants';
+import { useTheme } from '../../../../contexts/ThemeContext';
+import { IST_TIMEZONE } from '../../../../app/constants';
 
 const IST = IST_TIMEZONE;
 

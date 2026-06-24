@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Sun, Battery, Home, Activity, Thermometer } from 'lucide-react';
-import { useTheme } from '../../../contexts/ThemeContext';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 const iconSize = 16;
 export const IconSunKpi = () => <Sun size={iconSize} className="site-data-panel-icon-solar" />;

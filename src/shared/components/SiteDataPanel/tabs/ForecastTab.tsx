@@ -10,9 +10,9 @@ import { Sun, Target, Satellite, BarChart2, TrendingUp, Activity, ChevronLeft, C
 import { Line as CJLine, Bar as CJBar } from 'react-chartjs-2';
 import { type ChartOptions, type TooltipItem } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
-import { apiService } from '../../../services/api';
-import { cacheService } from '../../../services/cacheService';
-import { IST_TIMEZONE } from '../../../app/constants';
+import { apiService } from '../../../../services/api';
+import { cacheService } from '../../../../services/cacheService';
+import { IST_TIMEZONE } from '../../../../app/constants';
 
 const IST = IST_TIMEZONE;
 

@@ -10,7 +10,7 @@ import { type ChartOptions } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton } from '../chartUtils';
 import ChartCard from '../components/ChartCard';
 import { type HistorySeriesKey, type VsActualSeriesKey } from '../types';
-import { useTheme } from '../../../contexts/ThemeContext';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 // ── HISTORY_SERIES ─────────────────────────────────────────────────────────────
 

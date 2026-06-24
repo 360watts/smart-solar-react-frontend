@@ -1,7 +1,7 @@
 // src/shared/components/SiteDataPanel/components/EnergyBreakdownRow.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { IST_TIMEZONE } from '../../../app/constants';
+import { IST_TIMEZONE } from '../../../../app/constants';
 
 function formatEnergyForDisplay(kwh: number | null | undefined): { value: string; unit: string } {
   if (kwh == null || Number.isNaN(kwh)) return { value: '—', unit: 'kWh' };
