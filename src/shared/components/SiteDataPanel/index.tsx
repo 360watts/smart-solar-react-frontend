@@ -1265,28 +1265,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             )}
 
             {activeTab === 'phase-load' && (
-              <motion.div
+              <PhaseLoadTab
                 key="phase-load"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 20 } }}
-                transition={tabTransition}
-              >
-                <PhaseLoadTab
-                  siteId={siteId}
-                  phaseLoad={phaseLoad}
-                  loadForecast={loadForecast}
-                  smartDevices={smartDevices}
-                  latest={latest}
-                  isDark={isDark}
-                  hours={phaseLoadHours}
-                  onHoursChange={setPhaseLoadHours}
-                  forecastAccuracy={loadForecastAccuracy}
-                  onRefreshVsActual={refreshVsActualData}
-                  ctLatest={ctLatest}
-                />
-              </motion.div>
+                siteId={siteId}
+                phaseLoad={phaseLoad}
+                loadForecast={loadForecast}
+                smartDevices={smartDevices}
+                latest={latest}
+                isDark={isDark}
+                hours={phaseLoadHours}
+                onHoursChange={setPhaseLoadHours}
+                forecastAccuracy={loadForecastAccuracy}
+                onRefreshVsActual={refreshVsActualData}
+                ctLatest={ctLatest}
+              />
             )}
           </AnimatePresence>
         </>
