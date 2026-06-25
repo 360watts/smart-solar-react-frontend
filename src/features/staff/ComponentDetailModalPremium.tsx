@@ -12,6 +12,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { ComponentHealth } from '../../services/api';
 
 // ─── Utility Functions ──────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ const toTitleCase = (text: string): string => {
 
 // ─── Design Tokens ──────────────────────────────────────────────────────────
 
-const PALETTE = {
+const PALETTE_DARK = {
   // Base canvas
   canvas: '#0a0e18',
   backdrop: 'rgba(10, 14, 24, 0.92)',
@@ -52,6 +53,38 @@ const PALETTE = {
   gradientWarm: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
   gradientGreen: 'linear-gradient(135deg, #10ffcb 0%, #4ade80 100%)',
 };
+
+const PALETTE_LIGHT = {
+  // Base canvas
+  canvas: '#f9fafb',
+  backdrop: 'rgba(249, 250, 251, 0.80)',
+  glass: 'rgba(249, 250, 251, 0.75)',
+  border: 'rgba(0, 0, 0, 0.08)',
+  borderHeavy: 'rgba(0, 0, 0, 0.12)',
+
+  // Text hierarchy
+  textPrimary: '#0f172a',
+  textSecondary: '#374151',
+  textTertiary: '#64748b',
+
+  // Accent colors (component-specific)
+  inverterColor: '#2563eb',    // blue
+  batteryColor: '#d97706',      // amber
+  panelColor: '#059669',        // green
+
+  // State colors
+  success: '#16a34a',
+  warning: '#ca8a04',
+  critical: '#dc2626',
+
+  // Gradients
+  gradientPrimary: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)',
+  gradientWarm: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+  gradientGreen: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+};
+
+const mkPalette = (isDark: boolean) => isDark ? PALETTE_DARK : PALETTE_LIGHT;
+const PALETTE = PALETTE_DARK;
 
 const TYPOGRAPHY = {
   display: "'Outfit', 'Outfit', sans-serif",
@@ -305,6 +338,8 @@ export default function ComponentDetailModalPremium({
   data,
   onClose,
 }: ComponentDetailModalPremiumProps) {
+  const { isDark } = useTheme();
+  const PALETTE = mkPalette(isDark);
   const [activeTab, setActiveTab] = useState('overview');
 
   const statusColor =

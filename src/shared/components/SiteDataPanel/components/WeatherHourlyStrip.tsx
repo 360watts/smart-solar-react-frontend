@@ -44,7 +44,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
         background: isDark
           ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.75))'
           : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
-        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       }}
     >
@@ -88,7 +88,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   background: isNow
-                    ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.15), rgba(0, 166, 62, 0.08))'
+                    ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.25), rgba(0, 166, 62, 0.08))'
                     : isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.6)',
                   border: `1px solid ${isNow ? 'rgba(0, 166, 62, 0.4)' : isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
                   borderRadius: 12,

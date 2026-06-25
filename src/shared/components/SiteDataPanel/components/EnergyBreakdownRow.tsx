@@ -70,7 +70,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
             <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', fontWeight: 700 }}>
               {energyDisplay.value}
             </span>
-            <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#64748b', fontWeight: 600 }}>{energyDisplay.unit}</span>
+            <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#374151', fontWeight: 600 }}>{energyDisplay.unit}</span>
           </span>
         </motion.span>
           );

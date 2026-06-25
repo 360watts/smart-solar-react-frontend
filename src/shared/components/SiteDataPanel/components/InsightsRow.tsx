@@ -98,7 +98,7 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
               {item.value}
             </span>
             {item.sub && (
-              <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#64748b', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#374151', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
                 {item.sub}
               </span>
             )}

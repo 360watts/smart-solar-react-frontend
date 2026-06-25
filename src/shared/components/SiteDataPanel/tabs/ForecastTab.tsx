@@ -89,7 +89,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
               </span>
             )}
           </div>
-          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: isDark ? '#c4daf0' : '#64748b' }}>{subtitle}</p>}
+          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: isDark ? '#c4daf0' : '#374151' }}>{subtitle}</p>}
         </div>
         {headerRight && <div style={{ flexShrink: 0 }}>{headerRight}</div>}
       </div>
@@ -222,8 +222,8 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -279,8 +279,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -348,7 +348,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
     >
       <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
       {status && <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />}
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#64748b', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#374151', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem', background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           {value}
@@ -360,7 +360,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
           </motion.div>
         )}
       </div>
-      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#64748b' }}>{sub}</div>
+      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#374151' }}>{sub}</div>
     </motion.div>
   );
 };
@@ -383,7 +383,7 @@ export const PerformanceGauge: React.FC<{ label: string; value: number; max: num
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
-        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#b8d0ec' : '#64748b', marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#b8d0ec' : '#374151', marginTop: 2 }}>{label}</div>
       </div>
     </motion.div>
   );
@@ -422,17 +422,17 @@ export const SatelliteKtCalendarPicker: React.FC<{
   const navBtnStyle: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer', padding: 4,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 6, color: isDark ? '#64748b' : '#94a3b8', transition: 'all 0.15s',
+    borderRadius: 6, color: isDark ? '#cbd5e1' : '#475569', transition: 'all 0.15s',
   };
 
   return (
     <div style={containerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#64748b' : '#94a3b8'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#cbd5e1' : '#475569'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
           <ChevronLeft size={15} />
         </button>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>{_MONTH_NAMES[month]} {year}</span>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#64748b' : '#94a3b8'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#cbd5e1' : '#475569'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
           <ChevronRight size={15} />
         </button>
       </div>
@@ -507,8 +507,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark, causeFilter]);
@@ -827,8 +827,8 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   }), [isDark]);
 
@@ -840,8 +840,8 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   }), [isDark]);
 
@@ -852,7 +852,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#c4daf0' : '#64748b' }}>
+        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#c4daf0' : '#374151' }}>
           Performance Summary — Last {daysComputed} days
         </div>
       </div>
@@ -872,7 +872,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
             <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
               {[{ mode: 'mae' as const, label: 'MAE', icon: '📊' }, { mode: 'error' as const, label: 'Error %', icon: '📈' }].map(({ mode, label, icon }) => (
                 <button key={mode} onClick={() => setChartMode(mode)}
-                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#b8d0ec' : '#64748b'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#b8d0ec' : '#374151'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
                   {icon} {label}
                 </button>
               ))}
@@ -1065,7 +1065,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
     },
@@ -1088,7 +1088,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       pct: { type: 'linear', position: 'right', ticks: { color: isDark ? '#f87171' : '#dc2626', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
@@ -1216,7 +1216,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                 setVsActual7d(!vsActual7d);
               }}
               aria-pressed={vsActual7d}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#b8d0ec' : '#64748b'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#b8d0ec' : '#374151'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
               <Activity size={12} />Last 7 Days
             </button>
             {(['chart', 'table'] as const).map(mode => (
@@ -1235,7 +1235,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
           </div>
         </div>
 
-        <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}` }}>
+        <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}` }}>
           {activeVsActualData.length === 0 ? (
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>{vsActual7d ? 'No scored forecast slots for the last 7 days yet.' : 'No overlap points yet between forecast and telemetry for today.'}</p>
           ) : vsActualView === 'chart' ? (

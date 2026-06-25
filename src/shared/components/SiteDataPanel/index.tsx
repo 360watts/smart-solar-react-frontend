@@ -197,7 +197,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const forecastZoom = useChartZoomState();
   const vsActualZoom = useChartZoomState();
 
-  const tickColor   = isDark ? '#94a3b8' : '#64748b';
+  const tickColor   = isDark ? '#94a3b8' : '#374151';
   const gridColor   = isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb';
   const ttBg        = isDark ? 'rgba(15,23,42,0.97)'    : 'rgba(255,255,255,0.97)';
   const ttTitle     = isDark ? '#f1f5f9' : '#111827';
@@ -902,7 +902,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5))'
             : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
           backdropFilter: 'blur(10px)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
         }}
       >
@@ -1058,7 +1058,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             transition={{ delay: 0.2 }}
             style={{
               display: hideTabs ? 'none' : 'flex',
-              borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+              borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
               marginBottom: 20,
               gap: 0,
               background: isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(249, 250, 251, 0.5)',
@@ -1081,7 +1081,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                     border: 'none',
                     background: isActive
                       ? isDark
-                        ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.15), rgba(0, 166, 62, 0.08))'
+                        ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.25), rgba(0, 166, 62, 0.08))'
                         : 'linear-gradient(135deg, rgba(0, 166, 62, 0.1), rgba(0, 166, 62, 0.05))'
                       : 'transparent',
                     cursor: 'pointer',

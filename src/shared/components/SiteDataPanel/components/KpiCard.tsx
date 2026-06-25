@@ -57,7 +57,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
         background: isDark
           ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.8))'
           : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
-        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
         cursor: 'pointer',
         transformStyle: 'preserve-3d',

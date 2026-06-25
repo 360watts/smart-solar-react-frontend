@@ -19,7 +19,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   title, subtitle, isDark, isLive, isLoading, height, accentColor = '#00a63e',
   delay = 0, children, headerRight,
 }) => {
-  const cardBg = isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)';
+  const cardBg = isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.75)';
   const borderBase = isDark ? 'rgba(148,163,184,0.15)' : `${accentColor}22`;
 
   return (
@@ -75,7 +75,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           {subtitle && (
             <p style={{ margin: '2px 0 0', fontSize: '0.72rem',
               fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-              color: isDark ? '#b8cfe8' : '#64748b' }}>
+              color: isDark ? '#b8cfe8' : '#374151' }}>
               {subtitle}
             </p>
           )}

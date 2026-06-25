@@ -489,8 +489,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           position: 'sticky', bottom: 0,
           background: sideBg, backgroundImage: GRAIN_SVG,
           borderTop: `1px solid ${sideBorder}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
+          <button
+            onClick={toggleTheme}
+            title={isDark ? 'Light mode' : 'Dark mode'}
+            className="staff-nav-link staff-nav-icon-only"
+            style={{ padding: '6px', height: 28, width: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
           <NavLink
             to="/profile"
             title="My Profile"
@@ -509,14 +517,6 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               {initials}
             </div>
           </NavLink>
-          <button
-            onClick={toggleTheme}
-            title={isDark ? 'Light mode' : 'Dark mode'}
-            className="staff-nav-link staff-nav-icon-only"
-            style={{ padding: '6px', height: 28, width: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {isDark ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
         </div>
       )}
 

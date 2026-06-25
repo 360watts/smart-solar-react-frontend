@@ -13,7 +13,7 @@ import ComponentDetailModalPremium from './ComponentDetailModalPremium';
 
 // ─── Observatory design tokens ────────────────────────────────────────────────
 
-const B = {
+const B_DARK = {
   canvas:  '#060b14',
   glass:   'rgba(6,11,20,0.85)',
   tile:    '#071020',
@@ -37,11 +37,36 @@ const B = {
   pvColor:  '#10ffcb',  pvG:  'rgba(16,255,203,0.3)',
 };
 
+const B_LIGHT = {
+  canvas:  '#f9fafb',
+  glass:   'rgba(249,250,251,0.80)',
+  tile:    '#ffffff',
+  border:  'rgba(0,0,0,0.08)',
+  borderC: 'rgba(59,130,246,0.20)',
+
+  value:   '#0f172a',
+  label:   '#374151',
+  dim:     '#64748b',
+
+  cyan:    '#0284c7',
+  cyanG:   'rgba(2,132,199,0.15)',
+  cyanD:   'rgba(2,132,199,0.08)',
+
+  mint:    '#059669',  mintG:  'rgba(5,150,105,0.12)',
+  amber:   '#d97706',  amberG: 'rgba(217,119,6,0.12)',
+  red:     '#dc2626',  redG:   'rgba(220,38,38,0.12)',
+
+  invColor: '#2563eb',  invG: 'rgba(37,99,235,0.12)',
+  batColor: '#ca8a04',  batG: 'rgba(202,138,4,0.12)',
+  pvColor:  '#059669',  pvG:  'rgba(5,150,105,0.12)',
+};
+
+const mkB = (isDark: boolean) => isDark ? B_DARK : B_LIGHT;
+
 const SYNE = "'Outfit','Outfit',sans-serif";
 const BODY = "'DM Sans',sans-serif";
 const MONO = "'JetBrains Mono','Fira Code',monospace";
 
-function bColor(s: 0|1|2) { return s===0 ? B.mint : s===1 ? B.amber : B.red; }
 function bLabel(s: 0|1|2) { return ['EXCELLENT','NEEDS ATTN','CRITICAL'][s]; }
 
 // ─── Live telemetry hook ──────────────────────────────────────────────────────
@@ -114,7 +139,7 @@ function PulseDot({ color }: { color:string }) {
 
 // ─── Tick-mark bezel ring ─────────────────────────────────────────────────────
 
-function TickRing({ cx, cy, r, count=36 }: { cx:number; cy:number; r:number; count?:number }) {
+function TickRing({ cx, cy, r, count=36, B }: { cx:number; cy:number; r:number; count?:number; B:ReturnType<typeof mkB> }) {
   return (
     <g>
       {Array.from({ length:count }).map((_, i) => {
@@ -136,7 +161,7 @@ function TickRing({ cx, cy, r, count=36 }: { cx:number; cy:number; r:number; cou
 
 // ─── Observatory main ring ────────────────────────────────────────────────────
 
-function ObservatoryRing({ score, size }: { score:number; size:number }) {
+function ObservatoryRing({ score, size, B }: { score:number; size:number; B:ReturnType<typeof mkB> }) {
   const cx = size/2, cy = size/2;
   const tickR  = cx - 3;
   const bezelR = cx - 14;
@@ -169,7 +194,7 @@ function ObservatoryRing({ score, size }: { score:number; size:number }) {
         </radialGradient>
       </defs>
       <circle cx={cx} cy={cy} r={cx-2} fill={`url(#${uid}-ambient)`}/>
-      <TickRing cx={cx} cy={cy} r={tickR}/>
+      <TickRing cx={cx} cy={cy} r={tickR} B={B}/>
       <circle cx={cx} cy={cy} r={bezelR} fill="none" stroke={B.borderC} strokeWidth="1" opacity="0.5"/>
       <circle cx={cx} cy={cy} r={arcR+stroke/2+3} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.75"/>
       <path d={arcPath} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} strokeLinecap="round"/>
@@ -179,11 +204,11 @@ function ObservatoryRing({ score, size }: { score:number; size:number }) {
   );
 }
 
-function ObservatoryRingWithCount({ score, status, size }: { score:number; status:0|1|2; size:number }) {
-  const sc = bColor(status);
+function ObservatoryRingWithCount({ score, status, size, B }: { score:number; status:0|1|2; size:number; B:ReturnType<typeof mkB> }) {
+  const sc = status===0 ? B.mint : status===1 ? B.amber : B.red;
   return (
     <div style={{ position:'relative', width:size, height:size, flexShrink:0 }}>
-      <ObservatoryRing score={score} size={size}/>
+      <ObservatoryRing score={score} size={size} B={B}/>
       <div style={{
         position:'absolute', inset:0,
         display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
@@ -241,15 +266,17 @@ function MiniArc({ score, color, size }: { score:number; color:string; size:numb
 // ─── Instrument tile ──────────────────────────────────────────────────────────
 
 const COMP_META = [
-  { key:'inverter',    icon:'⚡', color:B.invColor, glow:B.invG, label:'Inverter'  },
-  { key:'battery',     icon:'▣',  color:B.batColor, glow:B.batG, label:'Battery'   },
-  { key:'solar_panel', icon:'☀',  color:B.pvColor,  glow:B.pvG,  label:'PV String' },
-] as const;
+  { key:'inverter' as const,    icon:'⚡', label:'Inverter'  },
+  { key:'battery' as const,     icon:'▣',  label:'Battery'   },
+  { key:'solar_panel' as const, icon:'☀',  label:'PV String' },
+];
 
-function InstrumentTile({ comp, data, delay }: {
-  comp: typeof COMP_META[number]; data: ComponentHealth; delay: number;
+function InstrumentTile({ comp, data, delay, B }: {
+  comp: typeof COMP_META[number]; data: ComponentHealth; delay: number; B:ReturnType<typeof mkB>;
 }) {
-  const sc = bColor(data.status);
+  const sc = data.status===0 ? B.mint : data.status===1 ? B.amber : B.red;
+  const color = comp.key==='inverter' ? B.invColor : comp.key==='battery' ? B.batColor : B.pvColor;
+  const glow = comp.key==='inverter' ? B.invG : comp.key==='battery' ? B.batG : B.pvG;
   const [open, setOpen] = useState(false);
   const detailEntries = Object.entries(data.details).slice(0, 2);
 
@@ -267,22 +294,22 @@ function InstrumentTile({ comp, data, delay }: {
           boxShadow:`inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.5)`,
         }}>
 
-        <div style={{ height:3, background:`linear-gradient(90deg,${comp.color}cc,${comp.color}44)`,
-          boxShadow:`0 2px 12px ${comp.glow}` }}/>
+        <div style={{ height:3, background:`linear-gradient(90deg,${color}cc,${color}44)`,
+          boxShadow:`0 2px 12px ${glow}` }}/>
 
         <div style={{ position:'absolute', top:12, right:12 }}><PulseDot color={sc}/></div>
 
         <div style={{
           position:'absolute', top:-20, left:'50%', transform:'translateX(-50%)',
           width:80, height:40, borderRadius:'50%',
-          background:comp.glow, filter:'blur(20px)', pointerEvents:'none', opacity:0.5,
+          background:glow, filter:'blur(20px)', pointerEvents:'none', opacity:0.5,
         }}/>
 
         <div style={{ padding:'12px 14px 14px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
             <div style={{
               width:28, height:28, borderRadius:8, flexShrink:0,
-              background:`${comp.color}14`, border:`1px solid ${comp.color}25`,
+              background:`${color}14`, border:`1px solid ${color}25`,
               display:'flex', alignItems:'center', justifyContent:'center', fontSize:13,
             }}>{comp.icon}</div>
             <div style={{ fontFamily:MONO, fontSize:9, fontWeight:700, color:B.label,
@@ -290,16 +317,16 @@ function InstrumentTile({ comp, data, delay }: {
           </div>
 
           <div style={{ position:'relative', width:88, height:88, margin:'6px auto 10px' }}>
-            <MiniArc score={data.health_score} color={comp.color} size={88}/>
+            <MiniArc score={data.health_score} color={color} size={88}/>
             <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center',
               justifyContent:'center', paddingBottom:8 }}>
               <CountUp to={data.health_score} delay={delay+0.1} style={{
-                fontFamily:MONO, fontSize:20, fontWeight:800, color:comp.color,
+                fontFamily:MONO, fontSize:20, fontWeight:800, color:color,
               }}/>
             </div>
           </div>
 
-          <div style={{ height:'1px', background:`${comp.color}15`, margin:'6px 0' }}/>
+          <div style={{ height:'1px', background:`${color}15`, margin:'6px 0' }}/>
 
           {detailEntries.map(([k, v]) => (
             <div key={k} style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginTop:5 }}>
@@ -326,7 +353,7 @@ function InstrumentTile({ comp, data, delay }: {
       </motion.div>
 
       <AnimatePresence>
-        {open && <ComponentDetailModalPremium component={comp} data={data} onClose={() => setOpen(false)}/>}
+        {open && <ComponentDetailModalPremium component={{...comp, color, glow}} data={data} onClose={() => setOpen(false)}/>}
       </AnimatePresence>
     </>
   );
@@ -358,7 +385,7 @@ function ScanLine() {
 
 // ─── Observatory health right panel ──────────────────────────────────────────
 
-function HealthPane({ healthData, healthLoading }: { healthData: HardwareHealthData|null; healthLoading: boolean }) {
+function HealthPane({ healthData, healthLoading, B }: { healthData: HardwareHealthData|null; healthLoading: boolean; B:ReturnType<typeof mkB> }) {
   if (healthLoading) return <Skeleton/>;
   if (!healthData) return (
     <div style={{ padding:32, fontFamily:BODY, fontSize:13, color:B.dim,
@@ -401,6 +428,7 @@ function HealthPane({ healthData, healthLoading }: { healthData: HardwareHealthD
             score={healthData.overall_score}
             status={healthData.overall_status}
             size={160}
+            B={B}
           />
         </motion.div>
       </div>
@@ -410,7 +438,7 @@ function HealthPane({ healthData, healthLoading }: { healthData: HardwareHealthD
           const data = c.key==='inverter' ? healthData.inverter
                      : c.key==='battery'  ? healthData.battery
                      : healthData.solar_panel;
-          return <InstrumentTile key={c.key} comp={c} data={data} delay={0.15 + i*0.1}/>;
+          return <InstrumentTile key={c.key} comp={c} data={data} delay={0.15 + i*0.1} B={B}/>;
         })}
       </div>
 
@@ -467,6 +495,8 @@ function Skeleton() {
 interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; }
 
 export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
+  const { isDark } = useTheme();
+  const B = mkB(isDark);
   const { values, age } = useLiveTelemetry(siteId);
   const [healthData, setHealthData] = useState<HardwareHealthData|null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -568,7 +598,7 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
           </div>
 
           {/* Right — observatory health */}
-          <HealthPane healthData={healthData} healthLoading={healthLoading}/>
+          <HealthPane healthData={healthData} healthLoading={healthLoading} B={B}/>
 
         </div> {/* end two-panel grid */}
       </div>
