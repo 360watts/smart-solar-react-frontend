@@ -49,7 +49,7 @@ const ADMIN_NAV = [
 
 const STAFF_NAV = [
   { path: '/sites', label: 'Sites', icon: <Building2 {...iconProps} /> },
-  { path: '/equipment', label: 'Equipment', icon: <Server {...iconProps} /> },
+  { path: '/equipment', label: 'Product Catalog', icon: <Server {...iconProps} /> },
   { path: '/quotation', label: 'Quotation', icon: <FileText {...iconProps} /> },
   { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
 ];

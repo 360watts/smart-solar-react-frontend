@@ -65,7 +65,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#b8d0ec' : '#475569', fontFamily: 'Poppins, sans-serif' }}>
           {label}
         </span>
         <motion.div
@@ -101,14 +101,14 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, unit, sub, accent, icon
         }}
       >
         {value}
-        {unit && <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: 4 }}>{unit}</span>}
+        {unit && <span style={{ fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#b8d0ec' : '#475569', marginLeft: 4 }}>{unit}</span>}
       </motion.p>
       {sub && (
         <motion.p
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 + index * 0.05 }}
-          style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
+          style={{ margin: '6px 0 0', fontSize: '0.75rem', fontWeight: 600, color: isDark ? '#b8d0ec' : '#475569', fontFamily: 'Poppins, sans-serif' }}
         >
           {sub}
         </motion.p>

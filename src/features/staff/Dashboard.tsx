@@ -596,6 +596,8 @@ const Dashboard: React.FC = () => {
         {/* Active alerts strip */}
         {renderAlertsStrip()}
 
+
+
         {/* Site info strip */}
         {renderSiteInfoStrip()}
 

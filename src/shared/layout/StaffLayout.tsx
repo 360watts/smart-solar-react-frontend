@@ -26,7 +26,7 @@ const NAV_CONFIG = [
 
 const NAV_STAFF = [
   { path: '/sites',      label: 'Sites',       icon: Building2 },
-  { path: '/equipment',  label: 'Equipment',   icon: Server    },
+  { path: '/equipment',  label: 'Product Catalog', icon: Server    },
   { path: '/quotation',  label: 'Quotation',   icon: FileText  },
   { path: '/ota',        label: 'OTA Updates', icon: Download  },
 ];
@@ -489,7 +489,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           position: 'sticky', bottom: 0,
           background: sideBg, backgroundImage: GRAIN_SVG,
           borderTop: `1px solid ${sideBorder}`,
-          display: 'flex', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
           <NavLink
             to="/profile"
@@ -509,6 +509,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               {initials}
             </div>
           </NavLink>
+          <button
+            onClick={toggleTheme}
+            title={isDark ? 'Light mode' : 'Dark mode'}
+            className="staff-nav-link staff-nav-icon-only"
+            style={{ padding: '6px', height: 28, width: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
         </div>
       )}
 

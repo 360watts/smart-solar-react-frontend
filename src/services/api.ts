@@ -221,9 +221,14 @@ export interface SiteProfile {
 export type ApplianceInventory = SiteProfile;
 
 // ── Product Catalog types ──────────────────────────────────────────────────
+export type ProductCatalogCategory =
+  | 'panels' | 'inverters' | 'batteries'
+  | 'dcdb' | 'acdb' | 'mounting' | 'earthing' | 'lightning'
+  | 'mc4' | 'wiring' | 'accessories' | 'installation' | 'iot';
+
 export interface ProductCatalogItem {
   id: number;
-  category: 'panels' | 'inverters' | 'batteries';
+  category: ProductCatalogCategory;
   brand: string;
   model_name: string;
   specs: Record<string, unknown>;          // {wp, dcr, technology} | {kw, phases, type} | {kwh, chemistry}
@@ -239,6 +244,7 @@ export interface ProductCatalogItem {
   price_updated_on: string | null;
   margin_pct: string;
   gst_pct: string;
+  sort_order: number;
   is_active: boolean;
   updated_at: string;
 }
@@ -1744,6 +1750,40 @@ class ApiService {
   async resendVerificationEmail(data: { email: string }): Promise<{ message: string }> {
     return this.request('/auth/resend-verification/', { method: 'POST', body: JSON.stringify(data) });
   }
+
+  async getSiteHardwareHealth(siteId: string, days = 7): Promise<HardwareHealthData> {
+    return this.request(`/sites/${siteId}/hardware-health/?days=${days}`);
+  }
 }
 
 export const apiService = new ApiService();
+
+// ─── Hardware Health ──────────────────────────────────────────────────────────
+
+export interface ComponentHealth {
+  type: string;
+  health_score: number;
+  status: 0 | 1 | 2;
+  age: string;
+  specs: string[];
+  details: Record<string, string>;
+  efficiency: number;
+  warranty: string;
+  alert: string | null;
+  catalog_specs?: Record<string, any>; // ProductCatalog specs (dimensions, features, etc)
+}
+
+export interface HardwareHealthData {
+  overall_score: number;
+  overall_status: 0 | 1 | 2;
+  inverter: ComponentHealth;
+  battery: ComponentHealth;
+  solar_panel: ComponentHealth;
+  installation: {
+    system_size: string;
+    installed_date: string;
+    installer_name: string;
+  };
+  maintenance_tips: Array<{ icon: string; description: string; frequency: string }>;
+  last_updated: string;
+}

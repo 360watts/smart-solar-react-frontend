@@ -7,8 +7,10 @@ import MobileSiteDetail from '../mobile/staff/MobileSiteDetail';
 import {
   ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
   Settings, Save, AlertTriangle, Link as LinkIcon,
-  Unlink, ArrowRightLeft, RefreshCw, Zap, X
+  Unlink, ArrowRightLeft, RefreshCw, Zap, X,
+  Plus, Pencil, Trash2, Sun,
 } from 'lucide-react';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,7 +18,7 @@ import PageHeader from '../../shared/layout/PageHeader';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'gateway' | 'lifecycle' | 'appliances';
+type Tab = 'overview' | 'gateway' | 'lifecycle' | 'appliances' | 'equipment';
 const LIFECYCLE_OPTIONS = ['draft', 'commissioning', 'active', 'inactive', 'archived'];
 interface OwnerUser {
   id: number;
@@ -31,6 +33,368 @@ const tabVariants = {
   enter: { opacity: 0, y: 10 },
   center: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -10 }
+};
+
+// ── Equipment section types & helpers (shared with Equipment.tsx CRUD) ────────
+
+interface EqInverter {
+  id: number; site: number;
+  make: string; model_name: string; serial_number: string; capacity_kva: string;
+  max_input_voltage_v: string | null; mppt_voltage_min_v: string | null; mppt_voltage_max_v: string | null;
+  operating_voltage_min_v: string | null; operating_voltage_max_v: string | null; max_input_current_a: string | null;
+  anti_islanding: boolean; teda_scheme: string;
+  installed_at: string | null; warranty_expires_at: string | null; is_active: boolean; notes: string;
+  logger_serial: string | null;
+}
+interface EqBattery {
+  id: number; site: number;
+  make: string; model_name: string; serial_number: string; capacity_kwh: string;
+  nominal_capacity_ah: string | null; nominal_energy_kwh: string | null; nominal_voltage_v: string | null;
+  max_charge_current_a: string | null; max_charge_current_peak_a: string | null;
+  operating_voltage_min_v: string | null; operating_voltage_max_v: string | null;
+  charge_temp_min_c: string | null; charge_temp_max_c: string | null;
+  discharge_temp_min_c: string | null; discharge_temp_max_c: string | null;
+  installed_at: string | null; warranty_expires_at: string | null; is_active: boolean; notes: string;
+}
+interface EqPanel {
+  id: number; site: number;
+  make: string; model_name: string; serial_number: string; capacity_wp: string;
+  technology: string; installed_at: string | null; warranty_expires_at: string | null;
+  is_active: boolean; notes: string;
+}
+interface EqBundle { inverters: EqInverter[]; batteries: EqBattery[]; panels: EqPanel[]; }
+
+const EQ_TEXT_FIELDS = new Set(['make','model_name','serial_number','teda_scheme','technology','notes','logger_serial']);
+const eqCleanNulls = (obj: Record<string, any>) =>
+  Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, v !== '' ? v : EQ_TEXT_FIELDS.has(k) ? '' : null]));
+const eqIsBlank = (v: unknown) => String(v ?? '').trim() === '';
+const eqParsePos = (v: string | null | undefined): number | null => {
+  if (v == null || String(v).trim() === '') return null;
+  const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null;
+};
+const eqNormKey = (v: string | null | undefined) => String(v ?? '').trim().toLowerCase();
+const eqToPanelWp = (raw: string | null | undefined) => { const n = Number(raw); if (!Number.isFinite(n)||n<=0) return 0; return n<=20?n*1000:n; };
+const eqHasDupSerial = <T extends {id:number;make:string;serial_number:string}>(items:T[],make:string,sn:string,curId?:number) =>
+  items.some(i => { if(curId!=null&&i.id===curId) return false; return eqNormKey(i.make)===eqNormKey(make)&&eqNormKey(i.serial_number)===eqNormKey(sn); });
+const eqValidateInverter = (f: Omit<EqInverter,'id'|'site'>): string | null => {
+  if (eqIsBlank(f.make)) return 'Make is required.';
+  if (eqIsBlank(f.serial_number)) return 'Serial Number is required.';
+  if (eqParsePos(f.capacity_kva)==null) return 'Capacity (kVA) must be a number > 0.';
+  const mn=eqParsePos(f.mppt_voltage_min_v),mx=eqParsePos(f.mppt_voltage_max_v);
+  if(mn!=null&&mx!=null&&mn>mx) return 'MPPT Min must be ≤ MPPT Max.';
+  if(f.installed_at&&f.warranty_expires_at&&f.warranty_expires_at<f.installed_at) return 'Warranty expiry cannot be before install date.';
+  return null;
+};
+const blankEqInverter = (): Omit<EqInverter,'id'|'site'> => ({
+  make:'',model_name:'',serial_number:'',capacity_kva:'',
+  max_input_voltage_v:'',mppt_voltage_min_v:'',mppt_voltage_max_v:'',
+  operating_voltage_min_v:'',operating_voltage_max_v:'',max_input_current_a:'',
+  anti_islanding:true,teda_scheme:'',installed_at:'',warranty_expires_at:'',is_active:true,notes:'',logger_serial:'',
+});
+const blankEqBattery = (): Omit<EqBattery,'id'|'site'> => ({
+  make:'',model_name:'',serial_number:'',capacity_kwh:'',
+  nominal_capacity_ah:'',nominal_energy_kwh:'',nominal_voltage_v:'',
+  max_charge_current_a:'',max_charge_current_peak_a:'',
+  operating_voltage_min_v:'',operating_voltage_max_v:'',
+  charge_temp_min_c:'',charge_temp_max_c:'',discharge_temp_min_c:'',discharge_temp_max_c:'',
+  installed_at:'',warranty_expires_at:'',is_active:true,notes:'',
+});
+const blankEqPanel = (): Omit<EqPanel,'id'|'site'> => ({
+  make:'',model_name:'',serial_number:'',capacity_wp:'',
+  technology:'',installed_at:'',warranty_expires_at:'',is_active:true,notes:'',
+});
+
+const eqMkT = (isDark: boolean) => ({
+  surface: isDark ? '#0F1623' : '#FFFFFF',
+  border:  isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
+  text:    isDark ? '#F0F4FF' : '#12151A',
+  textM:   isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)',
+});
+const eqInput = (isDark: boolean): React.CSSProperties => ({
+  padding:'8px 10px',borderRadius:7,width:'100%',boxSizing:'border-box',
+  border:isDark?'1px solid rgba(255,255,255,0.12)':'1px solid #d1d5db',
+  background:isDark?'#0F1623':'#FFFFFF',color:isDark?'#F0F4FF':'#12151A',fontSize:'0.875rem',
+});
+const eqLabel = (isDark: boolean): React.CSSProperties => ({
+  fontSize:'0.8rem',fontWeight:600,
+  color:isDark?'rgba(240,244,255,0.52)':'rgba(18,21,26,0.52)',display:'block',marginBottom:4,
+});
+
+const EqFormField: React.FC<{
+  label:string;value:string|boolean;onChange:(v:any)=>void;type?:string;isDark:boolean;required?:boolean;placeholder?:string;
+}> = ({label,value,onChange,type='text',isDark,required,placeholder}) => {
+  if (type==='checkbox') return (
+    <div style={{display:'flex',alignItems:'center',gap:8}}>
+      <input type="checkbox" checked={value as boolean} onChange={e=>onChange(e.target.checked)} style={{width:16,height:16,accentColor:'#22c55e',cursor:'pointer'}}/>
+      <span style={eqLabel(isDark)}>{label}</span>
+    </div>
+  );
+  return (
+    <div>
+      <label style={eqLabel(isDark)}>{label}{required&&<span style={{color:'#ef4444'}}> *</span>}</label>
+      <input type={type} value={value as string} onChange={e=>onChange(e.target.value)} style={eqInput(isDark)} required={required} placeholder={placeholder}/>
+    </div>
+  );
+};
+
+const EqSectionHeader: React.FC<{icon:React.ReactNode;title:string;count:number;onAdd:()=>void;isDark:boolean}> = ({icon,title,count,onAdd,isDark}) => (
+  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb'}}>
+    <div style={{display:'flex',alignItems:'center',gap:10}}>
+      <span style={{color:'#22c55e'}}>{icon}</span>
+      <h3 style={{margin:0,fontSize:'1rem',fontWeight:700,color:isDark?'#F0F4FF':'#12151A'}}>{title}</h3>
+      <span style={{background:isDark?'rgba(34,197,94,0.15)':'#dcfce7',color:'#16a34a',borderRadius:12,padding:'1px 10px',fontSize:'0.75rem',fontWeight:600}}>{count}</span>
+    </div>
+    <button onClick={onAdd} className="btn" style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.85rem'}}><Plus size={14}/> Add</button>
+  </div>
+);
+
+const EqDeleteModal: React.FC<{open:boolean;label:string;onConfirm:()=>void;onCancel:()=>void;isDark:boolean}> = ({open,label,onConfirm,onCancel,isDark}) => {
+  if (!open) return null;
+  return ReactDOM.createPortal(
+    <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:isDark?'#0F1623':'#FFFFFF',borderRadius:12,padding:28,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+        <h3 style={{margin:'0 0 10px',color:isDark?'#F0F4FF':'#12151A'}}>Delete {label}?</h3>
+        <p style={{margin:'0 0 22px',color:isDark?'rgba(240,244,255,0.52)':'rgba(18,21,26,0.52)',fontSize:'0.9rem'}}>This cannot be undone.</p>
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
+          <button onClick={onConfirm} className="btn" style={{background:'#ef4444',color:'#fff',border:'none'}}>Delete</button>
+        </div>
+      </div>
+    </div>, document.body,
+  );
+};
+
+const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const [err,setErr]=React.useState<string|null>(null);
+  const [modal,setModal]=React.useState<{open:boolean;item:EqInverter|null}>({open:false,item:null});
+  const [form,setForm]=React.useState(blankEqInverter());
+  const [saving,setSaving]=React.useState(false);
+  const [del,setDel]=React.useState<EqInverter|null>(null);
+  const T=eqMkT(isDark);
+  const open=(item?:EqInverter)=>{setForm(item?{...item}:blankEqInverter());setModal({open:true,item:item??null});};
+  const f=(k:keyof typeof form,v:any)=>setForm(p=>({...p,[k]:v}));
+  const save=async()=>{setErr(null);const ve=eqValidateInverter(form);if(ve){setErr(ve);return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateInverter(siteId,modal.item.id,p);else await apiService.createInverter(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
+  const doDelete=async()=>{if(!del)return;try{await apiService.deleteInverter(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
+  return (
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+      <EqSectionHeader icon={<Zap size={17}/>} title="Inverters" count={items.length} onAdd={()=>open()} isDark={isDark}/>
+      {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
+      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No inverters" description="Add the inverter from the contract."/></div>:(
+        <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
+          <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>MPPT Range</th><th>Installed</th><th>Warranty</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>{items.map(inv=>(
+            <tr key={inv.id}>
+              <td><div style={{fontWeight:600}}>{inv.make}</div>{inv.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{inv.model_name}</div>}</td>
+              <td><code style={{fontSize:'0.8rem'}}>{inv.serial_number}</code></td>
+              <td>{inv.capacity_kva} kVA</td>
+              <td style={{fontSize:'0.8rem'}}>{inv.mppt_voltage_min_v&&inv.mppt_voltage_max_v?`${inv.mppt_voltage_min_v}–${inv.mppt_voltage_max_v} V`:'—'}</td>
+              <td>{inv.installed_at||'—'}</td><td>{inv.warranty_expires_at||'—'}</td>
+              <td><span style={{color:inv.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{inv.is_active?'Yes':'No'}</span></td>
+              <td><div style={{display:'flex',gap:6}}>
+                <button onClick={()=>open(inv)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
+                <button onClick={()=>setDel(inv)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      )}
+      <EqDeleteModal open={!!del} label={del?.serial_number??'inverter'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {modal.open&&ReactDOM.createPortal(
+        <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:580,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',borderBottom:`1px solid ${T.border}`}}>
+              <h3 style={{margin:0,color:T.text}}>{modal.item?'Edit Inverter':'Add Inverter'}</h3>
+              <button onClick={()=>setModal({open:false,item:null})} style={{background:'none',border:'none',cursor:'pointer',color:T.textM}}><X size={20}/></button>
+            </div>
+            <div style={{overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Make" value={form.make} onChange={v=>f('make',v)} isDark={isDark} required placeholder="e.g., Sungrow"/>
+                <EqFormField label="Model Name" value={form.model_name} onChange={v=>f('model_name',v)} isDark={isDark} placeholder="e.g., SG33CX"/>
+                <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required placeholder="e.g., INV-2026-0001"/>
+                <EqFormField label="Capacity (kVA)" value={form.capacity_kva} onChange={v=>f('capacity_kva',v)} type="number" isDark={isDark} required placeholder="e.g., 10"/>
+              </div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>DC Input Specs</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Max Input Voltage (V)" value={form.max_input_voltage_v??''} onChange={v=>f('max_input_voltage_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Max Input Current (A)" value={form.max_input_current_a??''} onChange={v=>f('max_input_current_a',v)} type="number" isDark={isDark}/>
+                <EqFormField label="MPPT Min (V)" value={form.mppt_voltage_min_v??''} onChange={v=>f('mppt_voltage_min_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="MPPT Max (V)" value={form.mppt_voltage_max_v??''} onChange={v=>f('mppt_voltage_max_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Operating Min (V)" value={form.operating_voltage_min_v??''} onChange={v=>f('operating_voltage_min_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Operating Max (V)" value={form.operating_voltage_max_v??''} onChange={v=>f('operating_voltage_max_v',v)} type="number" isDark={isDark}/>
+              </div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>Installation</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="TEDA Scheme" value={form.teda_scheme} onChange={v=>f('teda_scheme',v)} isDark={isDark}/>
+                <EqFormField label="Logger Serial" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
+                <EqFormField label="Installed Date" value={form.installed_at??''} onChange={v=>f('installed_at',v)} type="date" isDark={isDark}/>
+                <EqFormField label="Warranty Expires" value={form.warranty_expires_at??''} onChange={v=>f('warranty_expires_at',v)} type="date" isDark={isDark}/>
+              </div>
+              <div style={{display:'flex',gap:20}}>
+                <EqFormField label="Anti-Islanding" value={form.anti_islanding} onChange={v=>f('anti_islanding',v)} type="checkbox" isDark={isDark}/>
+                <EqFormField label="Active" value={form.is_active} onChange={v=>f('is_active',v)} type="checkbox" isDark={isDark}/>
+              </div>
+              <div><label style={eqLabel(isDark)}>Notes</label><textarea value={form.notes} onChange={e=>f('notes',e.target.value)} rows={2} style={{...eqInput(isDark),resize:'vertical'}}/></div>
+            </div>
+            <div style={{padding:'14px 20px',borderTop:`1px solid ${T.border}`,display:'flex',gap:10,justifyContent:'flex-end'}}>
+              <button onClick={()=>setModal({open:false,item:null})} className="btn btn-secondary">Cancel</button>
+              <button onClick={save} className="btn" disabled={saving}>{saving?'Saving…':'Save'}</button>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
+    </div>
+  );
+};
+
+const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const [err,setErr]=React.useState<string|null>(null);
+  const [modal,setModal]=React.useState<{open:boolean;item:EqBattery|null}>({open:false,item:null});
+  const [form,setForm]=React.useState(blankEqBattery());
+  const [saving,setSaving]=React.useState(false);
+  const [del,setDel]=React.useState<EqBattery|null>(null);
+  const T=eqMkT(isDark);
+  const open=(item?:EqBattery)=>{setForm(item?{...item}:blankEqBattery());setModal({open:true,item:item??null});};
+  const f=(k:keyof typeof form,v:any)=>setForm(p=>({...p,[k]:v}));
+  const save=async()=>{setErr(null);if(eqIsBlank(form.make)){setErr('Make is required.');return;}if(eqIsBlank(form.serial_number)){setErr('Serial Number is required.');return;}if(eqParsePos(form.capacity_kwh)==null){setErr('Capacity (kWh) must be > 0.');return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateBattery(siteId,modal.item.id,p);else await apiService.createBattery(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
+  const doDelete=async()=>{if(!del)return;try{await apiService.deleteBattery(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
+  return (
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+      <EqSectionHeader icon={<Battery size={17}/>} title="Batteries" count={items.length} onAdd={()=>open()} isDark={isDark}/>
+      {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
+      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No batteries" description="Add the battery from the contract."/></div>:(
+        <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
+          <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>Nominal Voltage</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>{items.map(bat=>(
+            <tr key={bat.id}>
+              <td><div style={{fontWeight:600}}>{bat.make}</div>{bat.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{bat.model_name}</div>}</td>
+              <td><code style={{fontSize:'0.8rem'}}>{bat.serial_number}</code></td>
+              <td>{bat.capacity_kwh} kWh</td>
+              <td>{bat.nominal_voltage_v?`${bat.nominal_voltage_v} V`:'—'}</td>
+              <td>{bat.installed_at||'—'}</td>
+              <td><span style={{color:bat.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{bat.is_active?'Yes':'No'}</span></td>
+              <td><div style={{display:'flex',gap:6}}>
+                <button onClick={()=>open(bat)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
+                <button onClick={()=>setDel(bat)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      )}
+      <EqDeleteModal open={!!del} label={del?.serial_number??'battery'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {modal.open&&ReactDOM.createPortal(
+        <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:580,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',borderBottom:`1px solid ${T.border}`}}>
+              <h3 style={{margin:0,color:T.text}}>{modal.item?'Edit Battery':'Add Battery'}</h3>
+              <button onClick={()=>setModal({open:false,item:null})} style={{background:'none',border:'none',cursor:'pointer',color:T.textM}}><X size={20}/></button>
+            </div>
+            <div style={{overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Make" value={form.make} onChange={v=>f('make',v)} isDark={isDark} required placeholder="e.g., BYD"/>
+                <EqFormField label="Model Name" value={form.model_name} onChange={v=>f('model_name',v)} isDark={isDark}/>
+                <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required/>
+                <EqFormField label="Capacity (kWh)" value={form.capacity_kwh} onChange={v=>f('capacity_kwh',v)} type="number" isDark={isDark} required/>
+              </div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>Electrical Specs</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Nominal Capacity (Ah)" value={form.nominal_capacity_ah??''} onChange={v=>f('nominal_capacity_ah',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Nominal Voltage (V)" value={form.nominal_voltage_v??''} onChange={v=>f('nominal_voltage_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Max Charge (A)" value={form.max_charge_current_a??''} onChange={v=>f('max_charge_current_a',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Op. V Min (V)" value={form.operating_voltage_min_v??''} onChange={v=>f('operating_voltage_min_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Op. V Max (V)" value={form.operating_voltage_max_v??''} onChange={v=>f('operating_voltage_max_v',v)} type="number" isDark={isDark}/>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Installed Date" value={form.installed_at??''} onChange={v=>f('installed_at',v)} type="date" isDark={isDark}/>
+                <EqFormField label="Warranty Expires" value={form.warranty_expires_at??''} onChange={v=>f('warranty_expires_at',v)} type="date" isDark={isDark}/>
+              </div>
+              <EqFormField label="Active" value={form.is_active} onChange={v=>f('is_active',v)} type="checkbox" isDark={isDark}/>
+              <div><label style={eqLabel(isDark)}>Notes</label><textarea value={form.notes} onChange={e=>f('notes',e.target.value)} rows={2} style={{...eqInput(isDark),resize:'vertical'}}/></div>
+            </div>
+            <div style={{padding:'14px 20px',borderTop:`1px solid ${T.border}`,display:'flex',gap:10,justifyContent:'flex-end'}}>
+              <button onClick={()=>setModal({open:false,item:null})} className="btn btn-secondary">Cancel</button>
+              <button onClick={save} className="btn" disabled={saving}>{saving?'Saving…':'Save'}</button>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
+    </div>
+  );
+};
+
+const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const [err,setErr]=React.useState<string|null>(null);
+  const [modal,setModal]=React.useState<{open:boolean;item:EqPanel|null}>({open:false,item:null});
+  const [form,setForm]=React.useState(blankEqPanel());
+  const [saving,setSaving]=React.useState(false);
+  const [del,setDel]=React.useState<EqPanel|null>(null);
+  const T=eqMkT(isDark);
+  const open=(item?:EqPanel)=>{setForm(item?{...item}:blankEqPanel());setModal({open:true,item:item??null});};
+  const f=(k:keyof typeof form,v:any)=>setForm(p=>({...p,[k]:v}));
+  const save=async()=>{setErr(null);if(eqIsBlank(form.make)){setErr('Make is required.');return;}if(eqIsBlank(form.serial_number)){setErr('Serial Number is required.');return;}if(eqParsePos(form.capacity_wp)==null){setErr('Capacity (Wp) must be > 0.');return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updatePanel(siteId,modal.item.id,p);else await apiService.createPanel(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
+  const doDelete=async()=>{if(!del)return;try{await apiService.deletePanel(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
+  const activeWp=items.filter(p=>p.is_active).reduce((s,p)=>s+eqToPanelWp(p.capacity_wp),0);
+  return (
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+      <EqSectionHeader icon={<Sun size={17}/>} title="Solar Panels" count={items.length} onAdd={()=>open()} isDark={isDark}/>
+      {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:isDark?'#9ca3af':'#64748b',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
+      {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
+      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No panels" description="Add panels from the contract. One row per physical panel."/></div>:(
+        <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
+          <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity (Wp)</th><th>Technology</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
+          <tbody>{items.map(p=>(
+            <tr key={p.id}>
+              <td><div style={{fontWeight:600}}>{p.make}</div>{p.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{p.model_name}</div>}</td>
+              <td><code style={{fontSize:'0.8rem'}}>{p.serial_number}</code></td>
+              <td>{eqToPanelWp(p.capacity_wp).toFixed(0)}</td>
+              <td>{p.technology||'—'}</td>
+              <td>{p.installed_at||'—'}</td>
+              <td><span style={{color:p.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{p.is_active?'Yes':'No'}</span></td>
+              <td><div style={{display:'flex',gap:6}}>
+                <button onClick={()=>open(p)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
+                <button onClick={()=>setDel(p)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      )}
+      <EqDeleteModal open={!!del} label={del?.serial_number??'panel'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {modal.open&&ReactDOM.createPortal(
+        <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:480,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',borderBottom:`1px solid ${T.border}`}}>
+              <h3 style={{margin:0,color:T.text}}>{modal.item?'Edit Panel':'Add Panel'}</h3>
+              <button onClick={()=>setModal({open:false,item:null})} style={{background:'none',border:'none',cursor:'pointer',color:T.textM}}><X size={20}/></button>
+            </div>
+            <div style={{overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Make" value={form.make} onChange={v=>f('make',v)} isDark={isDark} required placeholder="e.g., Waaree"/>
+                <EqFormField label="Model Name" value={form.model_name} onChange={v=>f('model_name',v)} isDark={isDark}/>
+                <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required/>
+                <EqFormField label="Capacity (Wp)" value={form.capacity_wp} onChange={v=>f('capacity_wp',v)} type="number" isDark={isDark} required placeholder="e.g., 560"/>
+                <div>
+                  <label style={eqLabel(isDark)}>Technology</label>
+                  <select value={form.technology} onChange={e=>f('technology',e.target.value)} style={{...eqInput(isDark),cursor:'pointer'}}>
+                    <option value="">— Select —</option>
+                    {['Mono PERC','Mono PERC Half-Cut','TOPCon','Bifacial TOPCon','Bifacial PERC','HJT','Polycrystalline','CIGS','Amorphous'].map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Installed Date" value={form.installed_at??''} onChange={v=>f('installed_at',v)} type="date" isDark={isDark}/>
+                <EqFormField label="Warranty Expires" value={form.warranty_expires_at??''} onChange={v=>f('warranty_expires_at',v)} type="date" isDark={isDark}/>
+              </div>
+              <EqFormField label="Active" value={form.is_active} onChange={v=>f('is_active',v)} type="checkbox" isDark={isDark}/>
+              <div><label style={eqLabel(isDark)}>Notes</label><textarea value={form.notes} onChange={e=>f('notes',e.target.value)} rows={2} style={{...eqInput(isDark),resize:'vertical'}} placeholder="Per-panel capacity in Wp (not total array)"/></div>
+            </div>
+            <div style={{padding:'14px 20px',borderTop:`1px solid ${T.border}`,display:'flex',gap:10,justifyContent:'flex-end'}}>
+              <button onClick={()=>setModal({open:false,item:null})} className="btn btn-secondary">Cancel</button>
+              <button onClick={save} className="btn" disabled={saving}>{saving?'Saving…':'Save'}</button>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
+    </div>
+  );
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -53,6 +417,9 @@ export default function SiteDetail() {
   const [ownerUsers, setOwnerUsers] = useState<OwnerUser[]>([]);
   const [usersBusy, setUsersBusy] = useState(false);
   const [calcBusy, setCalcBusy] = useState(false);
+  const [eqBundle, setEqBundle] = useState<EqBundle | null>(null);
+  const [eqLoading, setEqLoading] = useState(false);
+  const [eqError, setEqError] = useState<string | null>(null);
   const [calcNote, setCalcNote] = useState<string | null>(null);
 
   // Form State
@@ -253,6 +620,29 @@ export default function SiteDetail() {
     loadDevices();
     loadSites();
   }, [tab]);
+
+  // Load equipment when equipment tab is opened
+  const refreshEquipment = useCallback(async () => {
+    if (!siteId) return;
+    setEqLoading(true); setEqError(null);
+    try {
+      const data = await apiService.getSiteEquipment(siteId);
+      setEqBundle({
+        inverters: Array.isArray(data.inverters) ? data.inverters : [],
+        batteries: Array.isArray(data.batteries) ? data.batteries : [],
+        panels: Array.isArray(data.panels) ? data.panels : [],
+      });
+    } catch (e) {
+      setEqError(e instanceof Error ? e.message : 'Failed to load equipment');
+    } finally {
+      setEqLoading(false);
+    }
+  }, [siteId]);
+
+  useEffect(() => {
+    if (tab !== 'equipment') return;
+    refreshEquipment();
+  }, [tab, refreshEquipment]);
 
   const handleAttach = async () => {
     const pk = parseInt(devicePk, 10);
@@ -493,6 +883,7 @@ export default function SiteDetail() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: 6, background: inputBg, borderRadius: 12, border: `1px solid ${inputBorder}`, marginBottom: 24 }}>
           {[
             { id: 'overview', label: 'Overview', icon: <Activity size={14} /> },
+            { id: 'equipment', label: 'Equipment', icon: <Server size={14} /> },
             { id: 'gateway', label: 'Gateway Settings', icon: <Wifi size={14} /> },
             { id: 'appliances', label: 'Appliances', icon: <Zap size={14} /> },
             { id: 'lifecycle', label: 'Lifecycle Operations', icon: <Settings size={14} /> }
@@ -653,15 +1044,15 @@ export default function SiteDetail() {
                   
                   <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Related Records</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    <Link to={`/equipment?site=${encodeURIComponent(siteId)}`} style={{ textDecoration: 'none' }}>
+                    <button type="button" onClick={() => setTab('equipment')} style={{ textDecoration: 'none', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
                       <div style={{ padding: 16, borderRadius: 10, background: inputBg, border: `1px solid ${inputBorder}`, color: textMain, display: 'flex', alignItems: 'center', gap: 12, transition: 'background 150ms' }} onMouseEnter={e => e.currentTarget.style.background = palette.mute.bg} onMouseLeave={e => e.currentTarget.style.background = inputBg}>
                         <div style={{ background: palette.info.bg, color: palette.info.color, padding: 8, borderRadius: 8 }}><Battery size={16} /></div>
                         <div>
                           <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Equipment Registry</div>
-                          <div style={{ fontSize: '0.7rem', color: textMute }}>Inverters & panels</div>
+                          <div style={{ fontSize: '0.7rem', color: textMute }}>Inverters, batteries & panels</div>
                         </div>
                       </div>
-                    </Link>
+                    </button>
                     <Link to="/devices" style={{ textDecoration: 'none' }}>
                        <div style={{ padding: 16, borderRadius: 10, background: inputBg, border: `1px solid ${inputBorder}`, color: textMain, display: 'flex', alignItems: 'center', gap: 12, transition: 'background 150ms' }} onMouseEnter={e => e.currentTarget.style.background = palette.mute.bg} onMouseLeave={e => e.currentTarget.style.background = inputBg}>
                         <div style={{ background: palette.warn.bg, color: palette.warn.color, padding: 8, borderRadius: 8 }}><Cpu size={16} /></div>
@@ -1437,6 +1828,21 @@ export default function SiteDetail() {
                     </button>
                   </div>
                 </div>
+              </motion.div>
+            )}
+
+            {/* EQUIPMENT TAB */}
+            {tab === 'equipment' && (
+              <motion.div key="equipment" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
+                {eqError && (
+                  <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(239,68,68,0.12)' : '#fef2f2', border: isDark ? '1px solid rgba(239,68,68,0.35)' : '1px solid #fecaca', color: '#ef4444', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span>{eqError}</span>
+                    <button type="button" className="btn btn-secondary" style={{ fontSize: '0.8rem' }} onClick={refreshEquipment} disabled={eqLoading}>{eqLoading ? 'Retrying…' : 'Retry'}</button>
+                  </div>
+                )}
+                <EqInverterSection siteId={siteId} isDark={isDark} items={eqBundle?.inverters ?? []} loading={eqLoading} onRefresh={refreshEquipment} />
+                <EqBatterySection siteId={siteId} isDark={isDark} items={eqBundle?.batteries ?? []} loading={eqLoading} onRefresh={refreshEquipment} />
+                <EqPanelSection siteId={siteId} isDark={isDark} items={eqBundle?.panels ?? []} loading={eqLoading} onRefresh={refreshEquipment} />
               </motion.div>
             )}
 

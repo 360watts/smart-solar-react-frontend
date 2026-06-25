@@ -72,19 +72,19 @@ function computeLayout(vh: number, nodes: { pv: NodePos; hub: NodePos; batt: Nod
 }
 
 // Wide layout — desktop / tablet (container ≥ 480 px)
-const WIDE_LAYOUT = computeLayout(312, {
-  pv:   { x: 90,  y: 163 },
-  hub:  { x: 350, y: 163 },
+const WIDE_LAYOUT = computeLayout(362, {
+  pv:   { x: 90,  y: 213 },
+  hub:  { x: 350, y: 213 },
   batt: { x: 350, y: 42  },
-  grid: { x: 610, y: 163 },
+  grid: { x: 610, y: 213 },
 });
 
 // Narrow layout — mobile (container < 480 px).
-const NARROW_LAYOUT = computeLayout(300, {
-  pv:   { x: 90,  y: 188 },
-  hub:  { x: 350, y: 188 },
+const NARROW_LAYOUT = computeLayout(350, {
+  pv:   { x: 90,  y: 228 },
+  hub:  { x: 350, y: 228 },
   batt: { x: 350, y: 43  },
-  grid: { x: 610, y: 188 },
+  grid: { x: 610, y: 228 },
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

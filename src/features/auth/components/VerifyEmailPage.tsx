@@ -71,7 +71,7 @@ const VerifyEmailPage: React.FC = () => {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
+            <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
               Verification successful!
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 15, color: '#94a3b8', lineHeight: 1.7 }}>
@@ -101,7 +101,7 @@ const VerifyEmailPage: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px', fontSize: 26,
             }}>✕</div>
-            <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Syne', sans-serif" }}>
+            <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
               Verification failed
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>

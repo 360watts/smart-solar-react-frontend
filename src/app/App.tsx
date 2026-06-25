@@ -42,6 +42,11 @@ const PortalOverview    = lazy(() => import('../features/portal/PortalOverview')
 const PortalAlerts      = lazy(() => import('../features/portal/PortalAlerts'));
 const PortalDevice      = lazy(() => import('../features/portal/PortalDevice'));
 const PortalProfile     = lazy(() => import('../features/portal/PortalProfile'));
+const PortalWeather     = lazy(() => import('../features/portal/PortalWeather'));
+const PortalHistory     = lazy(() => import('../features/portal/PortalHistory'));
+const PortalSolar       = lazy(() => import('../features/portal/PortalSolar'));
+const PortalLoad        = lazy(() => import('../features/portal/PortalLoad'));
+const PortalDetails     = lazy(() => import('../features/portal/PortalDetails'));
 const AcceptInvitePage  = lazy(() => import('../features/portal/pages/AcceptInvitePage'));
 
 /** Renders AiChat only for staff/superusers — customers have PortalChat instead. */
@@ -99,9 +104,14 @@ function App() {
                 }
               >
                 <Route index element={<Suspense fallback={null}><PortalOverview /></Suspense>} />
-                <Route path="alerts" element={<Suspense fallback={null}><PortalAlerts /></Suspense>} />
-                <Route path="device" element={<Suspense fallback={null}><PortalDevice /></Suspense>} />
-<Route path="profile" element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
+                <Route path="alerts"   element={<Suspense fallback={null}><PortalAlerts /></Suspense>} />
+                <Route path="device"   element={<Suspense fallback={null}><PortalDevice /></Suspense>} />
+                <Route path="profile"  element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
+                <Route path="weather"  element={<Suspense fallback={null}><PortalWeather /></Suspense>} />
+                <Route path="history"  element={<Suspense fallback={null}><PortalHistory /></Suspense>} />
+                <Route path="solar"    element={<Suspense fallback={null}><PortalSolar /></Suspense>} />
+                <Route path="load"     element={<Suspense fallback={null}><PortalLoad /></Suspense>} />
+                <Route path="details"  element={<Suspense fallback={null}><PortalDetails /></Suspense>} />
               </Route>
 
               {/* Staff portal — sidebar layout */}

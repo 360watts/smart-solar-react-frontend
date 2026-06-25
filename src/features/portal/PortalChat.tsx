@@ -169,7 +169,7 @@ const PortalChat: React.FC<PortalChatProps> = ({ openRef }) => {
     <>
       {PortalFeedbackUI}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Figtree:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Figtree:wght@400;500;600&display=swap');
 
         @keyframes pc2-ring   { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.42);opacity:0} }
         @keyframes pc2-in {
@@ -300,7 +300,7 @@ const PortalChat: React.FC<PortalChatProps> = ({ openRef }) => {
         .pc2-hdr-btn--light { color: rgba(0,0,0,0.35); }
         .pc2-hdr-btn--light:hover { background: rgba(0,0,0,0.07); color: rgba(0,0,0,0.65); }
         .pc2-hdr__greeting {
-          font-family: 'Syne', sans-serif; font-weight: 800; font-size: 19px;
+          font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 19px;
           letter-spacing: -0.02em; margin-top: 12px; line-height: 1.15;
         }
         .pc2-hdr__greeting--dark { color: #F9FAFB; }
@@ -488,14 +488,14 @@ const PortalChat: React.FC<PortalChatProps> = ({ openRef }) => {
           animation: pc2-float 4s ease-in-out infinite;
         }
         .pc2-gate__title {
-          font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px;
+          font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px;
           letter-spacing: -0.01em; margin-bottom: 8px;
         }
         .pc2-gate__sub { font-size: 13px; line-height: 1.6; margin-bottom: 24px; max-width: 260px; }
         .pc2-gate__cta {
           padding: 11px 28px; border-radius: 50px;
           background: linear-gradient(135deg, #F59E0B, #D97706);
-          color: #fff; font-family: 'Syne', sans-serif;
+          color: #fff; font-family: 'Outfit', sans-serif;
           font-weight: 700; font-size: 13.5px; text-decoration: none;
           box-shadow: 0 4px 18px rgba(245,158,11,0.4);
           transition: all 0.22s cubic-bezier(.34,1.4,.64,1); display: inline-block;

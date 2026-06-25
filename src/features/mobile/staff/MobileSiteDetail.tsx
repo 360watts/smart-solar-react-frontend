@@ -12,7 +12,7 @@ import {
   Menu,
 } from 'lucide-react';
 
-type Tab = 'overview' | 'gateway' | 'appliances' | 'lifecycle';
+type Tab = 'overview' | 'gateway' | 'appliances' | 'lifecycle' | 'equipment';
 const LIFECYCLE_OPTIONS = ['draft','commissioning','active','inactive','archived'];
 
 const MobileSiteDetail: React.FC = () => {
@@ -44,6 +44,8 @@ const MobileSiteDetail: React.FC = () => {
     has_microwave: false, has_desert_cooler: false, appliance_notes: '',
   });
   const [appliancesLoading, setAppliancesLoading] = useState(true);
+  const [eqBundle, setEqBundle] = useState<{ inverters: any[]; batteries: any[]; panels: any[] } | null>(null);
+  const [eqLoading, setEqLoading] = useState(false);
 
   const [displayName, setDisplayName]   = useState('');
   const [capacityKw, setCapacityKw]     = useState('');
@@ -86,6 +88,14 @@ const MobileSiteDetail: React.FC = () => {
       setOwnerUsers(Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : []);
     }).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    if (tab !== 'equipment' || !siteId) return;
+    setEqLoading(true);
+    apiService.getSiteEquipment(siteId).then(d => {
+      setEqBundle({ inverters: d.inverters ?? [], batteries: d.batteries ?? [], panels: d.panels ?? [] });
+    }).catch(() => {}).finally(() => setEqLoading(false));
+  }, [tab, siteId]);
 
   const handleSaveDetails = async () => {
     setBusy(true); setError(null);
@@ -224,7 +234,7 @@ const MobileSiteDetail: React.FC = () => {
 
       <div style={{ padding:'0 12px', background: surface, backdropFilter:'blur(16px)', borderBottom:`1px solid ${border}` }}>
         <div style={{ display:'flex', gap:4, padding:'8px 0' }}>
-          {(['overview','gateway','appliances','lifecycle'] as Tab[]).map(t => (
+          {(['overview','equipment','gateway','appliances','lifecycle'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
               style={{ flex:1, minHeight:44, padding:'7px 4px', background: tab===t ? `${accent}18` : 'transparent', border: tab===t ? `1px solid ${accent}30` : '1px solid transparent', borderRadius:999, cursor:'pointer', fontSize:'0.68rem', fontWeight:700, color: tab===t ? accent : muted, textTransform:'capitalize', transition:'all 150ms', fontFamily:"'DM Sans', sans-serif" }}>
               {t}
@@ -421,6 +431,43 @@ const MobileSiteDetail: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {tab === 'equipment' && (
+          <div style={card({ padding: '16px' })}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <Server size={16} color={accent} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif" }}>Site Equipment</div>
+            </div>
+            {eqLoading ? (
+              <div style={{ textAlign: 'center', color: muted, fontSize: '0.8rem', padding: 20 }}>Loading…</div>
+            ) : !eqBundle ? (
+              <div style={{ textAlign: 'center', color: muted, fontSize: '0.8rem', padding: 20 }}>No equipment data.</div>
+            ) : (
+              <>
+                {[
+                  { label: 'Inverters', items: eqBundle.inverters, summary: (it: any) => `${it.make} ${it.model_name || ''} · ${it.capacity_kva} kVA` },
+                  { label: 'Batteries', items: eqBundle.batteries, summary: (it: any) => `${it.make} ${it.model_name || ''} · ${it.capacity_kwh} kWh` },
+                  { label: 'Solar Panels', items: eqBundle.panels, summary: (it: any) => `${it.make} ${it.model_name || ''} · ${it.capacity_wp} Wp` },
+                ].map(({ label, items, summary }) => (
+                  <div key={label} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>
+                      {label} ({items.length})
+                    </div>
+                    {items.length === 0 ? (
+                      <div style={{ fontSize: '0.78rem', color: muted }}>None registered</div>
+                    ) : items.map((it: any) => (
+                      <div key={it.id} style={{ fontSize: '0.78rem', color: text, padding: '6px 0', borderBottom: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{summary(it)}</span>
+                        <span style={{ color: it.is_active ? accent : '#ef4444', fontSize: '0.7rem', fontWeight: 600 }}>{it.is_active ? 'Active' : 'Inactive'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <div style={{ marginTop: 10, fontSize: '0.72rem', color: muted, textAlign: 'center' }}>Use desktop to add or edit equipment</div>
+              </>
+            )}
+          </div>
         )}
 
         {tab === 'lifecycle' && (

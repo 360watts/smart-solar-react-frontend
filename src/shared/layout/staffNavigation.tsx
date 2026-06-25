@@ -94,9 +94,9 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/equipment',
-    label: 'Equipment',
-    title: 'Equipment',
-    subtitle: 'Catalog equipment, inventory references, and component definitions',
+    label: 'Product Catalog',
+    title: 'Product Catalog',
+    subtitle: 'Manage solar panels, inverters & batteries catalog',
     group: 'Operations',
     density: 'admin',
     icon: Server,

@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { IST_TIMEZONE } from '../../../../app/constants';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 function formatEnergyForDisplay(kwh: number | null | undefined): { value: string; unit: string } {
   if (kwh == null || Number.isNaN(kwh)) return { value: '—', unit: 'kWh' };
@@ -11,6 +12,7 @@ function formatEnergyForDisplay(kwh: number | null | undefined): { value: string
 }
 
 const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
+  const { isDark } = useTheme();
   if (!latest) return null;
   if (!isLatestToday) return null;
 
@@ -68,7 +70,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
             <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', fontWeight: 700 }}>
               {energyDisplay.value}
             </span>
-            <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>{energyDisplay.unit}</span>
+            <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#64748b', fontWeight: 600 }}>{energyDisplay.unit}</span>
           </span>
         </motion.span>
           );
@@ -80,7 +82,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          color: 'var(--text-muted)',
+          color: isDark ? '#b8d0ec' : '#475569',
           fontFamily: 'Poppins, sans-serif',
           alignSelf: 'flex-start',
           flexBasis: '100%',

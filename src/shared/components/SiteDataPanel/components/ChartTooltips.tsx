@@ -32,7 +32,7 @@ export const ForecastTooltip = ({ active, payload, label }: any) => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#c8daf0' : '#374151' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
@@ -82,7 +82,7 @@ export const ChartTooltip = ({ active, payload, label, unitResolver }: { active?
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#94a3b8' : '#374151' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#c8daf0' : '#374151' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
@@ -118,7 +118,7 @@ export const ForecastXAxisTick = ({ x, y, payload, forecastWindow: fw }: any) =>
         {line1}
       </text>
       {!isToday && line2 && (
-        <text x={0} y={0} dy={25} textAnchor="middle" fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">
+        <text x={0} y={0} dy={25} textAnchor="middle" fill="#a8c4e0" fontSize={9} fontFamily="Inter, sans-serif" fontWeight={600}>
           {line2}
         </text>
       )}
@@ -139,7 +139,7 @@ export const ChartXAxisTick = ({ x, y, payload }: any) => {
         {line1}
       </text>
       {line2 && (
-        <text x={0} y={0} dy={25} textAnchor="middle" fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">
+        <text x={0} y={0} dy={25} textAnchor="middle" fill="#a8c4e0" fontSize={9} fontFamily="Inter, sans-serif" fontWeight={600}>
           {line2}
         </text>
       )}

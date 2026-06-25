@@ -9,7 +9,7 @@ import { Zap, Sun } from 'lucide-react';
 import KpiCard, { IconSunKpi, IconBattery, IconLoad, IconGrid, IconThermometer } from '../components/KpiCard';
 import EnergyBreakdownRow from '../components/EnergyBreakdownRow';
 import InsightsRow from '../components/InsightsRow';
-import EnergyFlowBlock from '../../EnergyFlow';
+import { EnergyFlowHealthRow } from '../../../../features/staff/EnergyFlowHealthRow';
 
 const iconSize = 16;
 
@@ -217,35 +217,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </motion.div>
       )}
 
-      {/* ── Live Energy Flow Diagram — only when data is fresh (< 10 min) ── */}
-      {isDataLive ? (
-        <EnergyFlowBlock
-          pvKw={pvKw}
-          loadKw={loadKw}
-          gridKw={gridKw}
-          battKw={batPowerKw}
-          battSoc={batSoc}
-          smartDevices={smartDevices}
-          siteId={siteId}
-          inverterPhases={inverterPhasesForFlow}
-        />
-      ) : (
-        <div style={{
-          padding: '20px', borderRadius: 12, textAlign: 'center',
-          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-          border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)',
-          color: isDark ? '#6b7280' : '#9ca3af', fontSize: '0.85rem',
-          marginBottom: 20,
-        }}>
-          {latest?.timestamp ? (() => {
-            const mins = Math.round((Date.now() - new Date(latest.timestamp).getTime()) / 60000);
-            const ago = mins >= 60
-              ? `${Math.floor(mins / 60)}h ${mins % 60}m ago`
-              : `${mins}m ago`;
-            return `No live data — last reading ${ago}`;
-          })() : 'No data received yet'}
-        </div>
-      )}
+      {/* ── Solar Observatory — flow + health 50/50 ── */}
+      <div style={{ marginBottom: 20 }}>
+        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} />
+      </div>
 
       {/* ── KPI Cards ── */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>

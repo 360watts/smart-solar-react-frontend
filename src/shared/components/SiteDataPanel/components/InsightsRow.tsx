@@ -1,8 +1,10 @@
 // src/shared/components/SiteDataPanel/components/InsightsRow.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: boolean }) => {
+  const { isDark } = useTheme();
   if (!latest || !isLatestToday) return null;
 
   const pvKwh = Number(latest.pv_today_kwh ?? 0);
@@ -64,7 +66,7 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
       transition={{ delay: 0.6 }}
       style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}
     >
-      <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 50 }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#b8d0ec' : '#475569', fontFamily: 'Poppins, sans-serif', alignSelf: 'center', minWidth: 50 }}>
         Insights
       </span>
       {items.map((item, idx) => (
@@ -89,14 +91,14 @@ const InsightsRow = ({ latest, isLatestToday }: { latest: any; isLatestToday: bo
         >
           <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{item.icon}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: '0.688rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.688rem', color: isDark ? '#b8d0ec' : '#475569', fontFamily: 'Poppins, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {item.label}
             </span>
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, color: item.color, fontSize: '1rem', lineHeight: 1 }}>
               {item.value}
             </span>
             {item.sub && (
-              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+              <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#64748b', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
                 {item.sub}
               </span>
             )}

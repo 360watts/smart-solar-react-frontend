@@ -46,3 +46,4 @@ build/
 .env.test.local.example
 .env.production.local.example
 .worktrees/
+.env

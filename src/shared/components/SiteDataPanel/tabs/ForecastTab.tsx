@@ -20,6 +20,16 @@ function istDate(d: Date): string {
   return d.toLocaleDateString('en-CA', { timeZone: IST });
 }
 
+function startOfSolarDayIST(): string {
+  const now = new Date();
+  const todayStr = istDate(now);
+  const todaySolar = new Date(`${todayStr}T06:00:00+05:30`);
+  if (now < todaySolar) {
+    return new Date(todaySolar.getTime() - 24 * 3600 * 1000).toISOString();
+  }
+  return todaySolar.toISOString();
+}
+
 function istDateOffset(n: number): string {
   const IST_MS = 5.5 * 60 * 60 * 1000;
   const nowIST = Date.now() + IST_MS;
@@ -79,7 +89,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
               </span>
             )}
           </div>
-          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', opacity: 0.45, color: isDark ? '#e2e8f0' : '#64748b' }}>{subtitle}</p>}
+          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: isDark ? '#c4daf0' : '#64748b' }}>{subtitle}</p>}
         </div>
         {headerRight && <div style={{ flexShrink: 0 }}>{headerRight}</div>}
       </div>
@@ -95,7 +105,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
 // ── REGIME_STYLE ───────────────────────────────────────────────────────────────
 
 const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
-  night: { bg: '#1e293b1a', color: '#94a3b8' },
+  night: { bg: '#1e293b1a', color: '#b8d0ec' },
   ramp: { bg: '#f59e0b18', color: '#d97706' },
   midday: { bg: '#F0752218', color: '#c2410c' },
 };
@@ -202,18 +212,18 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
   const options = useMemo<ChartOptions<'bar'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
-      legend: { display: true, position: 'top' as const, labels: { color: isDark ? '#94a3b8' : '#94a3b8', font: { size: 11 }, boxWidth: 12 } },
+      legend: { display: true, position: 'top' as const, labels: { color: '#b8d0ec', font: { size: 11 }, boxWidth: 12 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151',
+        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
       },
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { stacked: true, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { stacked: true, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -254,7 +264,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151',
+        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
@@ -269,8 +279,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -338,7 +348,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
     >
       <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
       {status && <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />}
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#94a3b8', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#64748b', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem', background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           {value}
@@ -350,7 +360,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
           </motion.div>
         )}
       </div>
-      <div style={{ fontSize: '0.62rem', opacity: 0.45, fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#94a3b8' }}>{sub}</div>
+      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#64748b' }}>{sub}</div>
     </motion.div>
   );
 };
@@ -373,7 +383,7 @@ export const PerformanceGauge: React.FC<{ label: string; value: number; max: num
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
-        <div style={{ fontSize: '0.65rem', opacity: 0.5, fontFamily: 'Poppins, sans-serif', color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#b8d0ec' : '#64748b', marginTop: 2 }}>{label}</div>
       </div>
     </motion.div>
   );
@@ -428,7 +438,7 @@ export const SatelliteKtCalendarPicker: React.FC<{
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 30px)', gap: 2 }}>
         {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-          <div key={d} style={{ width: 30, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 600, color: isDark ? '#94a3b8' : '#94a3b8', letterSpacing: '0.04em' }}>{d}</div>
+          <div key={d} style={{ width: 30, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 600, color: '#b8d0ec', letterSpacing: '0.04em' }}>{d}</div>
         ))}
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ width: 30, height: 30 }} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -481,7 +491,7 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151',
+        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
@@ -497,8 +507,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark, causeFilter]);
@@ -813,12 +823,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
+      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   }), [isDark]);
 
@@ -826,12 +836,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
+      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
-      y: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
+      y: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' } },
     },
   }), [isDark]);
 
@@ -842,7 +852,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, opacity: 0.45, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#e2e8f0' : '#94a3b8' }}>
+        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#c4daf0' : '#64748b' }}>
           Performance Summary — Last {daysComputed} days
         </div>
       </div>
@@ -862,7 +872,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
             <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
               {[{ mode: 'mae' as const, label: 'MAE', icon: '📊' }, { mode: 'error' as const, label: 'Error %', icon: '📈' }].map(({ mode, label, icon }) => (
                 <button key={mode} onClick={() => setChartMode(mode)}
-                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#94a3b8' : '#64748b'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#b8d0ec' : '#64748b'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
                   {icon} {label}
                 </button>
               ))}
@@ -1010,19 +1020,29 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
 
     const cutoffMs = vsActual7d
       ? Date.now() - 7 * 24 * 60 * 60 * 1000
-      : (() => { const s = new Date().toLocaleDateString('en-CA', { timeZone: IST }); return new Date(s + 'T00:00:00+05:30').getTime(); })();
+      : new Date(startOfSolarDayIST()).getTime();
 
-    return rows
-      .filter((r: any) => r.__ms >= cutoffMs)
-      .sort((a: any, b: any) => a.__ms - b.__ms)
-      .map((r: any) => ({
+    // Bucket 5-min actual rows into 15-min slots (matching forecast resolution)
+    const BUCKET_MS = 15 * 60 * 1000;
+    const bucketMap = new Map<number, { sumActual: number; count: number; predicted_kw: number | null; p10_kw: number | null; p90_kw: number | null }>();
+    for (const r of rows.filter((r: any) => r.__ms >= cutoffMs)) {
+      const bucketMs = Math.floor(r.__ms / BUCKET_MS) * BUCKET_MS;
+      const b = bucketMap.get(bucketMs) ?? { sumActual: 0, count: 0, predicted_kw: r.predicted_kw ?? null, p10_kw: r.p10_kw ?? null, p90_kw: r.p90_kw ?? null };
+      if (r.actual_kw != null) { b.sumActual += r.actual_kw; b.count += 1; }
+      if (b.predicted_kw == null && r.predicted_kw != null) b.predicted_kw = r.predicted_kw;
+      bucketMap.set(bucketMs, b);
+    }
+
+    return Array.from(bucketMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([bucketMs, b]) => ({
         label: vsActual7d
-          ? new Date(r._slot).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST })
-          : new Date(r._slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        fTs: r.__ms,
-        p50: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
-        actual: r.actual_kw != null ? +Number(r.actual_kw).toFixed(2) : null,
-        diffPct: r.actual_kw != null && r.predicted_kw > 0 ? Math.round(((r.actual_kw - r.predicted_kw) / r.predicted_kw) * 100) : null,
+          ? new Date(bucketMs).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST })
+          : new Date(bucketMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
+        fTs: bucketMs,
+        p50: b.predicted_kw != null ? +Number(b.predicted_kw).toFixed(2) : null,
+        actual: b.count > 0 ? +Number(b.sumActual / b.count).toFixed(2) : null,
+        diffPct: b.count > 0 && b.predicted_kw != null && b.predicted_kw > 0 ? Math.round(((b.sumActual / b.count - b.predicted_kw) / b.predicted_kw) * 100) : null,
       }));
   }, [forecastAccuracy, vsActual7d]);
 
@@ -1036,7 +1056,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151',
+        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1045,7 +1065,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
     },
@@ -1059,7 +1079,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#94a3b8' : '#374151',
+        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1068,7 +1088,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: isDark ? '#b8d0ec' : '#64748b', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       pct: { type: 'linear', position: 'right', ticks: { color: isDark ? '#f87171' : '#dc2626', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
@@ -1196,7 +1216,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                 setVsActual7d(!vsActual7d);
               }}
               aria-pressed={vsActual7d}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#94a3b8' : '#64748b'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#b8d0ec' : '#64748b'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
               <Activity size={12} />Last 7 Days
             </button>
             {(['chart', 'table'] as const).map(mode => (

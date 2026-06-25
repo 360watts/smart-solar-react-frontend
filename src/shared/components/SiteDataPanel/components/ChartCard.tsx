@@ -73,8 +73,9 @@ const ChartCard: React.FC<ChartCardProps> = ({
             )}
           </div>
           {subtitle && (
-            <p style={{ margin: '2px 0 0', fontSize: '0.72rem', opacity: 0.5,
-              fontFamily: 'Poppins, sans-serif', color: isDark ? '#e2e8f0' : '#94a3b8' }}>
+            <p style={{ margin: '2px 0 0', fontSize: '0.72rem',
+              fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+              color: isDark ? '#b8cfe8' : '#64748b' }}>
               {subtitle}
             </p>
           )}

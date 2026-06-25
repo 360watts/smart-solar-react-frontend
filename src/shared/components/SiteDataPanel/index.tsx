@@ -137,9 +137,13 @@ interface Props {
   siteId: string;
   autoRefresh?: boolean;
   inverterCapacityKw?: number | null;
+  initialTab?: TabId;
+  hideTabs?: boolean;
+  hideHeader?: boolean;
+  visibleTabs?: TabId[];
 }
 
-const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterCapacityKw }) => {
+const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterCapacityKw, initialTab, hideTabs = false, hideHeader = false, visibleTabs }) => {
   const { isDark } = useTheme();
   const [isTouch, setIsTouch] = useState(() => window.matchMedia('(hover: none)').matches);
   useEffect(() => {
@@ -160,7 +164,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [secondsSinceUpdate, setSecondsSinceUpdate] = useState<number>(0);
   const isInitialLoad = useRef(true);
 
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
   const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
   const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
     PV: true,
@@ -328,9 +332,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     if (showSpinner) setLoading(true);
     try {
       const now = new Date();
-      const forecastStart = now.toISOString().split('T')[0] + 'T00:00:00Z';
-      const forecastEndDt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-      const forecastEnd = forecastEndDt.toISOString().split('T')[0] + 'T23:59:59Z';
+      // Solar day window: 6am IST today → 7 days out
+      const forecastStart = startOfSolarDayIST();
+      const forecastEndDt = new Date(new Date(forecastStart).getTime() + 7 * 24 * 3600 * 1000);
+      const forecastEnd = forecastEndDt.toISOString();
 
       const buildDayWindows = (start: Date, end: Date) => {
         const windows: { start_date: string; end_date: string }[] = [];
@@ -731,20 +736,33 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const vsActual7dData = useMemo(() => {
     const ts: any[] = forecastAccuracy?.timeseries ?? [];
     const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return ts
+    const BUCKET_MS = 15 * 60 * 1000;
+    const bucketMap = new Map<number, { sumActual: number; count: number; predicted_kw: number | null }>();
+    ts
       .filter((r: any) => r.actual_kw != null && !!r.slot_ts)
       .map((r: any) => ({ ...r, __ms: new Date(r.slot_ts).getTime() }))
       .filter((r: any) => !Number.isNaN(r.__ms) && r.__ms >= cutoffMs)
-      .sort((a: any, b: any) => a.__ms - b.__ms)
-      .map((r: any) => ({
-        label: new Date(r.slot_ts).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        fTs: r.__ms,
-        p50: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
-        actual: r.actual_kw != null ? +Number(r.actual_kw).toFixed(2) : null,
-        diffPct: r.actual_kw != null && r.predicted_kw > 0
-          ? Math.round(((r.actual_kw - r.predicted_kw) / r.predicted_kw) * 100)
-          : null,
-      }));
+      .forEach((r: any) => {
+        const bMs = Math.floor(r.__ms / BUCKET_MS) * BUCKET_MS;
+        const b = bucketMap.get(bMs) ?? { sumActual: 0, count: 0, predicted_kw: r.predicted_kw ?? null };
+        b.sumActual += r.actual_kw; b.count += 1;
+        if (b.predicted_kw == null && r.predicted_kw != null) b.predicted_kw = r.predicted_kw;
+        bucketMap.set(bMs, b);
+      });
+    return Array.from(bucketMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([bMs, b]) => {
+        const actual = b.count > 0 ? +Number(b.sumActual / b.count).toFixed(2) : null;
+        return {
+          label: new Date(bMs).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
+          fTs: bMs,
+          p50: b.predicted_kw != null ? +Number(b.predicted_kw).toFixed(2) : null,
+          actual,
+          diffPct: actual != null && b.predicted_kw != null && b.predicted_kw > 0
+            ? Math.round(((actual - b.predicted_kw) / b.predicted_kw) * 100)
+            : null,
+        };
+      });
   }, [forecastAccuracy]);
 
   const activeVsActualData = vsActual7d ? vsActual7dData : vsActualData;
@@ -868,7 +886,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   return (
     <div style={{ marginTop: 24 }}>
       {/* ── Section header with glassmorphism ── */}
-      <motion.div
+      {!hideHeader && <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
@@ -888,31 +906,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
-            Live Site Intelligence — <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#00a63e' }}>{siteId}</span>
-          </p>
-          {runStateBadge && (
-            <motion.span
-              whileHover={{ scale: 1.05 }}
-              style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                background: `${runStateBadge.color}20`,
-                color: runStateBadge.color,
-                padding: '4px 12px',
-                borderRadius: 20,
-                fontFamily: 'Poppins, sans-serif',
-                border: `1px solid ${runStateBadge.color}40`,
-              }}
-            >
-              ● {runStateBadge.label}
-            </motion.span>
-          )}
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {(activeTab === 'overview' || activeTab === 'history') && (
@@ -1035,7 +1028,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             Refresh
           </motion.button>
         </div>
-      </motion.div>
+      </motion.div>}
 
       {noData ? (
         <motion.div
@@ -1064,7 +1057,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             style={{
-              display: 'flex',
+              display: hideTabs ? 'none' : 'flex',
               borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.15)'}`,
               marginBottom: 20,
               gap: 0,
@@ -1076,7 +1069,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            {TABS.map(tab => {
+            {TABS.filter(tab => !visibleTabs || visibleTabs.includes(tab.id)).map(tab => {
               const isActive = activeTab === tab.id;
               return (
                 <motion.button

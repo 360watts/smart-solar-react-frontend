@@ -241,7 +241,7 @@ const Login: React.FC = () => {
 
               <div
                 style={{
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: "'Outfit', sans-serif",
                   fontSize: 46,
                   fontWeight: 800,
                   lineHeight: 1.12,
@@ -287,7 +287,7 @@ const Login: React.FC = () => {
                 alt="360Watts"
                 style={{ height: 82, objectFit: 'contain', display: 'block', margin: '0 auto 20px' }}
               />
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: '#F0F4FF', marginBottom: 4 }}>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: '#F0F4FF', marginBottom: 4 }}>
                 {mode === 'email-verify' ? 'Verify your email' : 'Welcome back'}
               </div>
               <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#64748B' }}>

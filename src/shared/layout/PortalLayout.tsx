@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, Sparkles, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Bell, Cpu, User, LogOut, Sun, Moon, X, Zap, Sparkles, PanelLeftClose, PanelLeftOpen, CloudSun, TrendingUp, SunMedium, Layers, Activity } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import PortalChat from '../../features/portal/PortalChat';
@@ -8,10 +8,15 @@ import { getDesignTokens } from '../theme';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const NAV_ITEMS = [
-  { path: '/portal',        label: 'Overview',  icon: LayoutDashboard, end: true  },
-  { path: '/portal/alerts', label: 'Alerts',    icon: Bell,             end: false },
-  { path: '/portal/device', label: 'My Device', icon: Cpu,              end: false },
-  { path: '/portal/profile', label: 'Profile',  icon: User,             end: false },
+  { path: '/portal',          label: 'Overview',  icon: LayoutDashboard, end: true  },
+  { path: '/portal/alerts',   label: 'Alerts',    icon: Bell,            end: false },
+  { path: '/portal/solar',    label: 'Solar',     icon: SunMedium,       end: false },
+  { path: '/portal/load',     label: 'Load',      icon: Layers,          end: false },
+  { path: '/portal/history',  label: 'History',   icon: TrendingUp,      end: false },
+  { path: '/portal/weather',  label: 'Weather',   icon: CloudSun,        end: false },
+  { path: '/portal/details',  label: 'Details',   icon: Activity,        end: false },
+  { path: '/portal/device',   label: 'My Device', icon: Cpu,             end: false },
+  { path: '/portal/profile',  label: 'Profile',   icon: User,            end: false },
 ];
 
 const PORTAL_SIDEBAR_EXPANDED = 232;
@@ -195,6 +200,8 @@ const SidebarContent: React.FC<{
       display: 'flex', flexDirection: 'column',
       padding: '0',
       fontFamily: "var(--font-body)",
+      transition: isDrawer ? undefined : 'width 0.28s cubic-bezier(0.4,0,0.2,1)',
+      overflow: 'hidden',
     }}>
       {/* Brand */}
       <div style={{
@@ -447,6 +454,7 @@ const PortalLayout: React.FC = () => {
         minHeight: '100vh',
         boxSizing: 'border-box',
         overflowX: 'auto',
+        transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1), width 0.28s cubic-bezier(0.4,0,0.2,1)',
       }} className="portal-main">
         <Outlet />
       </main>
@@ -472,8 +480,8 @@ const PortalLayout: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          {/* Left two: Overview + Alerts */}
-          {NAV_ITEMS.slice(0, 2).map(({ path, label, icon: Icon, end }) => {
+          {/* Left two: Overview + Solar */}
+          {[NAV_ITEMS[0], NAV_ITEMS[2]].map(({ path, label, icon: Icon, end }) => {
             const isActive = end ? location.pathname === path : location.pathname.startsWith(path);
             return (
               <NavLink key={path} to={path} end={end} style={{
@@ -524,8 +532,8 @@ const PortalLayout: React.FC = () => {
             </button>
           </div>
 
-          {/* Right two: My Device + Profile */}
-          {NAV_ITEMS.slice(2).map(({ path, label, icon: Icon, end }) => {
+          {/* Right two: History + Alerts */}
+          {[NAV_ITEMS[4], NAV_ITEMS[1]].map(({ path, label, icon: Icon, end }) => {
             const isActive = end ? location.pathname === path : location.pathname.startsWith(path);
             return (
               <NavLink key={path} to={path} end={end} style={{

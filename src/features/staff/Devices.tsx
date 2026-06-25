@@ -1057,7 +1057,7 @@ const Devices: React.FC = () => {
                 borderBottom: '2px solid #f59e0b',
               }}>
                 <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.text, fontFamily: '"Syne", -apple-system, BlinkMacSystemFont, sans-serif' }}>
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.text, fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif' }}>
                   Owner Assignment
                 </h3>
               </div>

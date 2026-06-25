@@ -730,8 +730,8 @@ export default function CommissioningWizard() {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <Link to={`/equipment?site=${encodeURIComponent(sid)}`} style={{ textDecoration: 'none' }}>
-                    <button style={buttonStyle()}>Provision Equipment <ArrowRight size={16} /></button>
+                  <Link to={`/sites/${encodeURIComponent(sid)}`} style={{ textDecoration: 'none' }}>
+                    <button style={buttonStyle()}>View Site & Add Equipment <ArrowRight size={16} /></button>
                   </Link>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <Link to={`/sites/${encodeURIComponent(sid)}`} style={{ textDecoration: 'none' }}>
