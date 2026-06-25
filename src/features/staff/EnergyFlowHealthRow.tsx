@@ -386,7 +386,7 @@ function ScanLine() {
 // ─── Observatory health right panel ──────────────────────────────────────────
 
 function HealthPane({ healthData, healthLoading, B }: { healthData: HardwareHealthData|null; healthLoading: boolean; B:ReturnType<typeof mkB> }) {
-  if (healthLoading) return <Skeleton/>;
+  if (healthLoading) return <Skeleton B={B}/>;
   if (!healthData) return (
     <div style={{ padding:32, fontFamily:BODY, fontSize:13, color:B.dim,
       background:B.canvas, textAlign:'center' }}>
@@ -476,7 +476,7 @@ function HealthPane({ healthData, healthLoading, B }: { healthData: HardwareHeal
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function Skeleton({ B }: { B:ReturnType<typeof mkB> }) {
   const pulse = { animate:{ opacity:[0.04,0.1,0.04] }, transition:{ duration:2, repeat:Infinity } };
   return (
     <div style={{ padding:20, display:'flex', flexDirection:'column', gap:16, background:B.canvas }}>
