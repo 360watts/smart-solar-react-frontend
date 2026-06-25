@@ -361,7 +361,7 @@ function InstrumentTile({ comp, data, delay, B }: {
 
 // ─── Scanline animation ───────────────────────────────────────────────────────
 
-function ScanLine() {
+function ScanLine({ B }: { B:ReturnType<typeof mkB> }) {
   return (
     <>
       <style>{`
@@ -538,7 +538,7 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
           borderBottom:`1px solid ${B.borderC}`,
           padding:'11px 20px',
         }}>
-          <ScanLine/>
+          <ScanLine B={B}/>
           <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:1 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontFamily:SYNE, fontSize:14, fontWeight:800, color:B.value,
