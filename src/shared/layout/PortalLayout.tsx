@@ -209,7 +209,30 @@ const SidebarContent: React.FC<{
         borderBottom: `1px solid ${tokens.border}`,
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
-        <SunMark />
+        {/* Logo — toggle collapse on desktop, close drawer on mobile */}
+        <button
+          onClick={onToggleCollapse ?? onClose}
+          title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            outline: 'none',
+            opacity: 0.9,
+            transition: 'opacity 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.9')}
+        >
+          <SunMark />
+        </button>
+
         <div style={{ display: showCollapsed ? 'none' : 'block' }}>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, color: sideText, letterSpacing: '-0.01em' }}>
             360Watts
@@ -221,25 +244,6 @@ const SidebarContent: React.FC<{
         {onClose && (
           <button onClick={onClose} style={{ marginLeft: 'auto', padding: 4, borderRadius: 6, border: 'none', background: 'transparent', color: sideMuted, cursor: 'pointer' }}>
             <X size={16} />
-          </button>
-        )}
-        {!onClose && onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={{
-              marginLeft: showCollapsed ? 'auto' : 0,
-              padding: 6,
-              borderRadius: 8,
-              border: `1px solid ${tokens.border}`,
-              background: tokens.surfaceMuted,
-              color: sideMuted,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            {showCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
           </button>
         )}
       </div>
