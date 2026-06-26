@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   CheckCircle2, ChevronRight, Server, Wifi, Check, 
-  ArrowRight, AlertTriangle, Loader2, Compass, LayoutDashboard
+  ArrowRight, AlertTriangle, Loader2, Compass, LayoutDashboard,
+  Plus, Trash2, Zap
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -20,6 +21,18 @@ const slideVariants = {
 
 export default function CommissioningWizard() {
   const { isDark } = useTheme();
+  type SmartDeviceDraft = {
+    device_type: string;
+    provider_device_id: string;
+    appliance_label: string;
+    display_name: string;
+  };
+  const blankSmartDevice = (): SmartDeviceDraft => ({
+    device_type: 'tuya_plug',
+    provider_device_id: '',
+    appliance_label: 'ev_charger',
+    display_name: '',
+  });
 
   // ── State ──
   const [step, setStep] = useState(1);
@@ -60,6 +73,8 @@ export default function CommissioningWizard() {
   const [usersBusy, setUsersBusy] = useState(false);
   const [idBusy, setIdBusy] = useState(false);
   const [devicesBusy, setDevicesBusy] = useState(false);
+  const [smartDevicesBusy, setSmartDevicesBusy] = useState(false);
+  const [smartDeviceDrafts, setSmartDeviceDrafts] = useState<SmartDeviceDraft[]>([]);
 
   // ── Appliance Inventory (Step 3) ──
   const [numAcUnits, setNumAcUnits] = useState(0);
@@ -163,7 +178,7 @@ export default function CommissioningWizard() {
         if (!mounted) return;
         // Filter to show only unattached devices (site_id is null)
         const unattached = Array.isArray(devices)
-          ? devices.filter((d: any) => !d.site_id)
+          ? devices.filter((d: any) => !d.site_id && (d.device_type || 'gateway') === 'gateway')
           : [];
         setAvailableDevices(unattached);
         // Clear device selection if owner changes
@@ -304,6 +319,36 @@ export default function CommissioningWizard() {
     }
   };
 
+  const step4 = async () => {
+    const targetSiteId = createdSiteId || siteId.trim();
+    if (!targetSiteId) {
+      setError('Site ID required');
+      return;
+    }
+
+    const rows = smartDeviceDrafts
+      .map((row) => ({
+        device_type: row.device_type.trim(),
+        provider_device_id: row.provider_device_id.trim(),
+        appliance_label: row.appliance_label.trim(),
+        display_name: row.display_name.trim(),
+      }))
+      .filter((row) => row.provider_device_id);
+
+    setSmartDevicesBusy(true);
+    setError(null);
+    try {
+      for (const row of rows) {
+        await apiService.createSmartDevice(targetSiteId, row);
+      }
+      setStep(5);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save smart devices');
+    } finally {
+      setSmartDevicesBusy(false);
+    }
+  };
+
   const sid = createdSiteId || siteId.trim();
 
   // ── Render Helpers ──
@@ -312,7 +357,8 @@ export default function CommissioningWizard() {
       { num: 1, label: 'Create Site', icon: <Server size={14} /> },
       { num: 2, label: 'Assign Gateway', icon: <Wifi size={14} /> },
       { num: 3, label: 'Appliances', icon: <LayoutDashboard size={14} /> },
-      { num: 4, label: 'Complete', icon: <CheckCircle2 size={14} /> }
+      { num: 4, label: 'Smart Devices', icon: <Zap size={14} /> },
+      { num: 5, label: 'Complete', icon: <CheckCircle2 size={14} /> }
     ];
 
     return (
@@ -352,7 +398,7 @@ export default function CommissioningWizard() {
       <PageHeader
         icon={<LayoutDashboard size={20} color="white" />}
         title="Commissioning Wizard"
-        subtitle="Configure site details and attach gateway"
+        subtitle="Configure site details, hardware, and appliance-linked smart devices"
         rightSlot={
           <Link to="/sites" style={{ textDecoration: 'none' }}>
             <button style={{
@@ -372,13 +418,14 @@ export default function CommissioningWizard() {
         {/* Header Text */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: textMain, margin: '0 0 8px' }}>
-            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Establish Connectivity' : step === 3 ? 'Appliance Inventory' : 'Commissioning Complete'}
+            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Establish Connectivity' : step === 3 ? 'Appliance Inventory' : step === 4 ? 'Map Smart Devices' : 'Commissioning Complete'}
           </h2>
           <p style={{ fontSize: '0.9rem', color: textSub, margin: 0 }}>
             {step === 1 ? 'Establish the core record for this installation before assigning equipment.' :
              step === 2 ? 'Link a physical gateway device to enable telemetry and monitoring.' :
              step === 3 ? 'Document the major appliances at this site to improve load forecasting accuracy.' :
-             'The site, gateway, and appliance inventory are complete. You can now provision specific hardware.'}
+             step === 4 ? 'Register smart devices and preserve the appliance each device powers, such as EV charging.' :
+             'The site, gateway, appliances, and smart-device mappings are complete.'}
           </p>
         </div>
 
@@ -702,8 +749,8 @@ export default function CommissioningWizard() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 32 }}>
                   <button type="button" disabled={busy} onClick={step3} style={buttonStyle()}>
-                    {busy ? <Loader2 size={16} className="animate-spin" /> : 'Save & Complete'}
-                    {!busy && <CheckCircle2 size={16} />}
+                    {busy ? <Loader2 size={16} className="animate-spin" /> : 'Save & Continue'}
+                    {!busy && <ArrowRight size={16} />}
                   </button>
                   <button type="button" disabled={busy} onClick={() => setStep(4)} style={buttonStyle(true)}>
                     Skip for now
@@ -713,10 +760,111 @@ export default function CommissioningWizard() {
               </motion.div>
             )}
 
-            {/* ── STEP 4: COMPLETION ── */}
+            {/* ── STEP 4: SMART DEVICES ── */}
             {step === 4 && (
-              <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
-                
+              <motion.div key="step4-smart-devices" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
+                  <div>
+                    <div style={{ ...labelStyle, marginBottom: 4 }}>Smart Device Mapping</div>
+                    <div style={{ fontSize: '0.8rem', color: textSub }}>
+                      Keep each smart device linked to the appliance it powers. EV chargers should remain mapped as <strong style={{ color: textMain }}>ev_charger</strong>.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSmartDeviceDrafts((rows) => [...rows, blankSmartDevice()])}
+                    style={buttonStyle(true)}
+                  >
+                    <Plus size={16} /> Add Device
+                  </button>
+                </div>
+
+                {smartDeviceDrafts.length === 0 ? (
+                  <div style={{ padding: 18, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, fontSize: '0.82rem', color: textSub, marginBottom: 24 }}>
+                    No smart devices added in commissioning yet. Add one here or skip and manage them later in site details.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 14 }}>
+                    {smartDeviceDrafts.map((row, index) => (
+                      <div key={index} style={{ padding: 16, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
+                        <div style={{ display: 'grid', gap: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>Smart Device #{index + 1}</div>
+                            <button
+                              type="button"
+                              onClick={() => setSmartDeviceDrafts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
+                              style={{ ...buttonStyle(true, true), padding: '8px 10px' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Provider Type</label>
+                            <select
+                              value={row.device_type}
+                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, device_type: e.target.value } : item))}
+                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
+                            >
+                              <option value="tuya_plug">Tuya Plug</option>
+                              <option value="tuya_switch">Tuya Switch</option>
+                              <option value="ct_clamp">CT Clamp</option>
+                              <option value="modbus_meter">Modbus Meter</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Provider Device ID</label>
+                            <input
+                              value={row.provider_device_id}
+                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, provider_device_id: e.target.value } : item))}
+                              style={inputStyle}
+                              placeholder="e.g. bf12ab34cd56"
+                            />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Appliance Mapping</label>
+                            <select
+                              value={row.appliance_label}
+                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, appliance_label: e.target.value } : item))}
+                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
+                            >
+                              <option value="ev_charger">EV Charger</option>
+                              <option value="geyser">Geyser</option>
+                              <option value="ac_unit">AC Unit</option>
+                              <option value="water_pump">Water Pump</option>
+                              <option value="washing_machine">Washing Machine</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Display Name</label>
+                            <input
+                              value={row.display_name}
+                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, display_name: e.target.value } : item))}
+                              style={inputStyle}
+                              placeholder="e.g. EV Charger Plug"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
+                  <button type="button" disabled={smartDevicesBusy} onClick={step4} style={buttonStyle()}>
+                    {smartDevicesBusy ? <Loader2 size={16} className="animate-spin" /> : 'Save Smart Devices'}
+                    {!smartDevicesBusy && <ArrowRight size={16} />}
+                  </button>
+                  <button type="button" disabled={smartDevicesBusy} onClick={() => setStep(5)} style={buttonStyle(true)}>
+                    Skip for now
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── STEP 5: COMPLETION ── */}
+            {step === 5 && (
+              <motion.div key="step5" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
                 <div style={{ 
                   width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,166,62,0.1)', border: '1px solid rgba(0,166,62,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: primary
@@ -726,7 +874,7 @@ export default function CommissioningWizard() {
                 
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: textMain, margin: '0 0 8px' }}>Site Provisioned</h3>
                 <p style={{ fontSize: '0.85rem', color: textMute, margin: '0 0 32px', lineHeight: 1.5 }}>
-                  The foundational setup for <strong>{sid}</strong> is complete. You can now proceed to map physical hardware to this location.
+                  The foundational setup for <strong>{sid}</strong> is complete. Hardware and appliance-linked smart devices can now be managed from the site detail view.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -742,7 +890,6 @@ export default function CommissioningWizard() {
                     </Link>
                   </div>
                 </div>
-
               </motion.div>
             )}
           </AnimatePresence>

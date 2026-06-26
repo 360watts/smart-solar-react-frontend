@@ -197,6 +197,8 @@ const Employees: React.FC = () => {
         mobile_number: editForm.mobile_number,
         address: editForm.address,
         is_active: editForm.is_active,
+        is_staff: editForm.is_staff,
+        is_superuser: editForm.is_superuser,
         role: editForm.is_superuser ? 'admin' : 'employee',
         department_id: editForm.department_id,
       });
@@ -237,6 +239,7 @@ const Employees: React.FC = () => {
       mobile_number: createForm.mobile_number,
       address: createForm.address,
       is_staff: createForm.is_staff,
+      is_superuser: false,
       department_id: createForm.department_id,
     };
 

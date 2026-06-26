@@ -698,6 +698,26 @@ class ApiService {
     }
   }
 
+  async createSmartDevice(siteId: string, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/sites/${siteId}/smart-devices/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSmartDevice(deviceId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/smart-devices/${deviceId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSmartDevice(deviceId: number): Promise<any> {
+    return this.request(`/smart-devices/${deviceId}/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getLatestEnergyMeter(siteId: string): Promise<CtMeterReading | null> {
     try {
       return await this.request(`/sites/${siteId}/energy-meter/latest/`);
