@@ -3,7 +3,7 @@ import MobileDevices from '../mobile/staff/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell, Shield } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Info, X, CheckCircle2, MapPin, ChevronLeft, RefreshCw, RotateCcw, ScrollText, Sun, Server, Clock, Settings, Wifi, WifiOff, ChevronDown, ChevronRight, Activity, BellOff, Bell, Shield, Zap } from 'lucide-react';
 import { apiService, AlertItem } from '../../services/api';
 import { useDebouncedCallback } from '../../shared/hooks/useDebounce';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -16,6 +16,8 @@ import { AccessibleModal } from '../../shared/components/AccessibleModal';
 import PageHeader from '../../shared/layout/PageHeader';
 import { useModal } from '../../shared/hooks';
 import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
+import DeviceTypeSelector from './DeviceTypeSelector';
+import EditDeviceModal from './EditDeviceModal';
 
 interface User {
   id: number;
@@ -30,6 +32,7 @@ interface User {
 interface Device {
   id: number;
   device_serial: string;
+  device_type?: 'gateway' | 'energy_meter';
   hw_id?: string;
   model?: string;
   user?: string;
@@ -254,6 +257,7 @@ const Devices: React.FC = () => {
 
   const [editForm, setEditForm] = useState({
     device_serial: '',
+    device_type: 'gateway' as 'gateway' | 'energy_meter',
     user: '',
     config_version: '',
     wifi_ssid: '',
@@ -261,6 +265,7 @@ const Devices: React.FC = () => {
   });
   const [createForm, setCreateForm] = useState({
     device_serial_preview: '',
+    device_type: 'gateway' as 'gateway' | 'energy_meter',
     user: '',
     config_version: '',
     wifi_ssid: '',
@@ -289,6 +294,8 @@ const Devices: React.FC = () => {
   const [bulkDeleteModal, setBulkDeleteModal] = useState<{ show: boolean; deviceList: Device[] }>({ show: false, deviceList: [] });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [deviceSiteMap, setDeviceSiteMap] = useState<Map<number, SolarSite | null>>(new Map());
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [modalDevice, setModalDevice] = useState<Device | null>(null);
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
     try {
@@ -404,6 +411,9 @@ const Devices: React.FC = () => {
     }
     if (alert.fault_code === 'rs485_auto_reboot') {
       return 'Auto-reboot queued after consecutive RS-485 missing-data verdicts.';
+    }
+    if (alert.fault_code === 'device_clock_skew') {
+      return 'Device clock is out of sync. RTC may not be synchronized.';
     }
     return alert.message;
   };
@@ -647,31 +657,25 @@ const Devices: React.FC = () => {
   const handleEdit = async (device: Device) => {
     try {
       const fullDevice = await apiService.getDevice(device.id);
-      setEditingDevice(fullDevice);
-      setEditForm({
-        device_serial: fullDevice.device_serial,
-        user: fullDevice.user || '',
-        config_version: fullDevice.config_version || '',
-        wifi_ssid: fullDevice.wifi_ssid || '',
-        wifi_password: fullDevice.wifi_password || '',
-      });
-      setShowChangeWifiPassword(false);
-      setUserSearchTerm(fullDevice.user ? `${users.find(u => u.username === fullDevice.user)?.first_name} ${users.find(u => u.username === fullDevice.user)?.last_name} (${fullDevice.user})` : '');
-      setShowUserDropdown(false);
+      setModalDevice(fullDevice);
+      setShowEditModal(true);
     } catch (err) {
       console.error('Failed to fetch device details for editing:', err);
-      // Fallback to using the list device
-      setEditingDevice(device);
-      setEditForm({
-        device_serial: device.device_serial,
-        user: device.user || '',
-        config_version: device.config_version || '',
-        wifi_ssid: (device as any).wifi_ssid || '',
-        wifi_password: (device as any).wifi_password || '',
-      });
-      setShowChangeWifiPassword(false);
-      setUserSearchTerm(device.user ? `${users.find(u => u.username === device.user)?.first_name} ${users.find(u => u.username === device.user)?.last_name} (${device.user})` : '');
-      setShowUserDropdown(false);
+      setModalDevice(device);
+      setShowEditModal(true);
+    }
+  };
+
+  const handleEditModalSave = async (data: Partial<Device>) => {
+    if (!modalDevice) return;
+    try {
+      await apiService.updateDevice(modalDevice.id, data);
+      setShowEditModal(false);
+      setModalDevice(null);
+      await fetchDevices(currentPage, searchTerm);
+    } catch (err) {
+      console.error('Failed to update device:', err);
+      throw err;
     }
   };
 
@@ -683,6 +687,8 @@ const Devices: React.FC = () => {
       if (!showChangeWifiPassword) {
         delete payload.wifi_password;
       }
+      // device_type is read-only but we include it for consistency
+      payload.device_type = editForm.device_type;
       await apiService.updateDevice(editingDevice.id, payload);
       setEditingDevice(null);
       // Refetch to get the updated device with all fields including audit trail
@@ -706,6 +712,8 @@ const Devices: React.FC = () => {
       }
       setCreatingDevice(false);
       setCreateForm({
+        device_serial_preview: '',
+        device_type: 'gateway',
         user: '',
         config_version: '',
         wifi_ssid: '',
@@ -1045,6 +1053,20 @@ const Devices: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Device Type Selection */}
+            <DeviceTypeSelector
+              value={editingDevice ? editForm.device_type : createForm.device_type}
+              onChange={(type) => {
+                if (editingDevice) {
+                  setEditForm({...editForm, device_type: type});
+                } else {
+                  setCreateForm({...createForm, device_type: type});
+                }
+              }}
+              disabled={!!editingDevice}
+              disabledReason="Device type is locked after creation. Contact system admin to change."
+            />
 
             {/* Ownership & Assignment — Refined */}
             <div style={{ marginBottom: '24px' }}>
@@ -2909,6 +2931,7 @@ const Devices: React.FC = () => {
                 />
               </th>
               <th style={{ textAlign: 'center' }}>Device Serial</th>
+              <th style={{ textAlign: 'center' }}>Type</th>
               <th style={{ textAlign: 'center' }}>Status</th>
               <th style={{ textAlign: 'center' }}>Assigned To</th>
               <th style={{ textAlign: 'center' }}>Site Name</th>
@@ -2921,7 +2944,7 @@ const Devices: React.FC = () => {
           <tbody className="stagger-children">
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
                     description={searchTerm ? 'Try a different search term.' : 'Register a device to get started.'}
@@ -2949,6 +2972,25 @@ const Devices: React.FC = () => {
                   />
                 </td>
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {(() => {
+                    const dt = device.device_type || 'gateway';
+                    const isGateway = dt === 'gateway';
+                    return (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700,
+                        fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
+                        background: isGateway ? 'rgba(59,130,246,0.10)' : 'rgba(245,158,11,0.10)',
+                        color: isGateway ? '#3B82F6' : '#F59E0B',
+                        border: `1px solid ${isGateway ? 'rgba(59,130,246,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                      }}>
+                        {isGateway ? <Server size={10} /> : <Zap size={10} />}
+                        {isGateway ? 'Gateway' : 'Meter'}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td style={{ textAlign: 'center' }}>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -3524,6 +3566,17 @@ const Devices: React.FC = () => {
         </div>
       </AccessibleModal>
     )}
+
+    <EditDeviceModal
+      isOpen={showEditModal}
+      device={modalDevice}
+      isDark={isDark}
+      onClose={() => {
+        setShowEditModal(false);
+        setModalDevice(null);
+      }}
+      onSave={handleEditModalSave}
+    />
 
     </div>
   );
