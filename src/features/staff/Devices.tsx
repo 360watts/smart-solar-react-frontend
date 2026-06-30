@@ -3571,6 +3571,7 @@ const Devices: React.FC = () => {
       isOpen={showEditModal}
       device={modalDevice}
       isDark={isDark}
+      presets={presets}
       onClose={() => {
         setShowEditModal(false);
         setModalDevice(null);

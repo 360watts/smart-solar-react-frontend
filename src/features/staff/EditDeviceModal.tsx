@@ -53,10 +53,18 @@ interface Device {
   updated_at?: string;
 }
 
+interface Preset {
+  id: number;
+  config_id?: string;
+  name: string;
+  gateway_configuration?: { general_settings?: { config_id?: string } };
+}
+
 interface EditDeviceModalProps {
   isOpen: boolean;
   device: Device | null;
   isDark: boolean;
+  presets?: Preset[];
   onClose: () => void;
   onSave: (data: Partial<Device>) => Promise<void>;
 }
@@ -281,7 +289,7 @@ function DeviceTypeChip({ type }: { type?: string }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
-  isOpen, device, isDark, onClose, onSave,
+  isOpen, device, isDark, presets = [], onClose, onSave,
 }) => {
   const [formData, setFormData] = useState<Partial<Device>>({});
   const [originalType, setOriginalType] = useState<string>('gateway');
@@ -575,11 +583,50 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
 
                     {/* Configuration */}
                     <SectionLabel>Configuration</SectionLabel>
+                    {presets.length > 0 && (
+                      <div style={{ marginBottom: 10 }}>
+                        <label style={{
+                          display: 'block', fontSize: 10, fontFamily: P.mono, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', color: P.blue, marginBottom: 6, fontWeight: 700,
+                        }}>Preset Template</label>
+                        <select
+                          value={(() => {
+                            const cv = formData.config_version || '';
+                            const match = presets.find(p => {
+                              const cid = p.gateway_configuration?.general_settings?.config_id || p.config_id || '';
+                              return cid === cv;
+                            });
+                            return match ? (match.gateway_configuration?.general_settings?.config_id || match.config_id || '') : '';
+                          })()}
+                          onChange={e => set('config_version', e.target.value)}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            padding: '9px 12px',
+                            background: isDark ? P.surface : PL.surface,
+                            border: `1px solid ${isDark ? P.border : PL.border}`,
+                            borderRadius: 6,
+                            color: isDark ? P.text : PL.text,
+                            fontFamily: P.mono, fontSize: 13,
+                            outline: 'none',
+                          }}
+                        >
+                          <option value="">— Select preset —</option>
+                          {presets.map(p => {
+                            const cid = p.gateway_configuration?.general_settings?.config_id || p.config_id || '';
+                            return (
+                              <option key={p.id} value={cid}>
+                                {p.name}{cid ? ` (${cid})` : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
                     <EditField
-                      label="Config Version"
+                      label="Config Version ID"
                       value={formData.config_version || ''}
                       onChange={v => set('config_version', v)}
-                      placeholder="e.g. v1.0.0"
+                      placeholder="e.g. cfg-abc123"
                       isDark={isDark}
                     />
 
