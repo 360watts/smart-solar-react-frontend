@@ -48,8 +48,8 @@ export function snapToInverterSize(requiredAcKw: number): number {
   return STANDARD_INVERTER_KW.find(s => s >= requiredAcKw) ?? STANDARD_INVERTER_KW[STANDARD_INVERTER_KW.length - 1];
 }
 
-// DC sizing: size array from consumption first, then derive inverter from DC.
-// DC/AC ratio > 1 ensures DC array is always larger than inverter.
+// Calculate raw AC from consumption, then derive raw DC from DC/AC ratio.
+// Snapped inverter and system sizes are derived afterward for market-available sizes.
 export function calcDcAndInverter(
   avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1, panelWp = 615,
 ): { inverterKw: number; dcKw: number; rawDcKw: number; rawAcKw: number } {
@@ -59,12 +59,11 @@ export function calcDcAndInverter(
   const avgDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
   // Step 1: AC output required from inverter (consumption ÷ PSH × PF)
   const requiredAcKw = avgDailyKwh / (safePsh * safePf);
-  // Step 2: snap to nearest standard inverter size
-  const inverterKw = snapToInverterSize(requiredAcKw);
-  // Step 3: DC array = inverter × DC/AC ratio (DC is always larger than inverter)
   const rawAcKw = parseFloat(requiredAcKw.toFixed(2));
-  const rawDcKw = parseFloat((inverterKw * safeDcAc).toFixed(2));
-  // Step 4: snap DC up to nearest standard system size
+  // Step 2: raw DC sizing follows the raw AC requirement times the chosen ratio
+  const rawDcKw = parseFloat((rawAcKw * safeDcAc).toFixed(2));
+  // Step 3: snap to nearest standard inverter and DC system sizes
+  const inverterKw = snapToInverterSize(requiredAcKw);
   const dcKw = snapToSystemSize(rawDcKw);
   return { inverterKw, dcKw, rawDcKw, rawAcKw };
 }

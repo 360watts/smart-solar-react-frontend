@@ -5066,6 +5066,9 @@ select.full-width {
   padding: var(--space-8);
   max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .admin-header {
@@ -7539,12 +7542,13 @@ body.dark-mode .config-arrow {
   }
 }
 
-/* ── Tables: horizontal scroll on mobile ── */
+/* ── Tables: horizontal scroll at any zoom level ── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 768px) {
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
   .table-responsive table {
     min-width: 560px;
   }
@@ -7957,10 +7961,13 @@ body.dark-mode .config-arrow {
 
 .responsive-page .table-responsive {
   width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .responsive-page .table-responsive > table {
   width: 100%;
+  min-width: 760px;
 }
 
 .devices-pagination-bar .pagination-controls {

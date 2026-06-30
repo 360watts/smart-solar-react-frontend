@@ -220,8 +220,8 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
 
   function autofillBomQuantities() {
     const { ebBill } = form.getValues();
-    const { inverterKw, recommendedSystemKw } = calcEbBill({ ...ebBill });
-    const dcKw = recommendedSystemKw;   // inverterKw × dcAcRatio
+    const { inverterKw, exactDcKw, recommendedSystemKw } = calcEbBill({ ...ebBill });
+    const dcKw = exactDcKw > 0 ? exactDcKw : recommendedSystemKw;
     const acKw = inverterKw;
     if (acKw <= 0) return;
 

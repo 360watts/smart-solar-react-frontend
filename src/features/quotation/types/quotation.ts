@@ -75,8 +75,8 @@ export interface EbCalcResult {
   annualSaving: number;
   inverterKw: number;          // snapped to nearest standard inverter size (AC kW)
   exactAcKw: number;           // raw AC requirement before snapping (kW)
-  recommendedSystemKw: number; // snapped to nearest standard system size (kWp)
-  exactDcKw: number;           // raw DC = inverterKw × dcAcRatio, before snapping (kWp)
+  recommendedSystemKw: number; // snapped DC system size after applying dcAcRatio (kWp)
+  exactDcKw: number;           // raw DC sizing after applying dcAcRatio, before snapping (kWp)
   avgRatePerKwh: number;
 }
 
