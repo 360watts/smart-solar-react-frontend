@@ -121,6 +121,7 @@ export interface AlertItem {
   message: string;
   device_id: string;
   device_serial?: string;
+  site_id?: string;
   timestamp: string;
   resolved: boolean;
   created_by_username?: string;

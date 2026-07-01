@@ -60,6 +60,7 @@ const isFreshTimestamp = (timestamp?: string | null) =>
   !!timestamp && Date.now() - new Date(timestamp).getTime() <= FRESH_DATA_MS;
 const isFreshTelemetry = (row?: TelemetryRow | null) =>
   !!row && row.data_stale !== true && isFreshTimestamp(row.timestamp);
+const isResolvedAlert = (alert: AlertItem) => alert.resolved || alert.status === 'resolved';
 const formatAge = (timestamp?: string | null) => {
   if (!timestamp) return 'No telemetry received';
   const diff = Math.max(0, Date.now() - new Date(timestamp).getTime());
@@ -104,8 +105,13 @@ const MobileDashboard: React.FC = () => {
 
   const activeAlerts = useMemo(() => {
     if (!site) return [];
-    const ids = new Set(site.devices.map(d => d.device_id));
-    return allAlerts.filter(a => ids.has(parseInt(a.device_id)) && !a.resolved && (a.status === 'active' || a.status === 'acknowledged' || a.status == null));
+    const deviceIds = new Set(site.devices.map(d => String(d.device_id)));
+    const deviceSerials = new Set(site.devices.map(d => d.device_serial).filter(Boolean));
+    return allAlerts.filter(a => {
+      if (isResolvedAlert(a) || !(a.status === 'active' || a.status === 'acknowledged' || a.status == null)) return false;
+      if (a.site_id === site.site_id) return true;
+      return deviceIds.has(String(a.device_id)) || deviceSerials.has(a.device_id) || (!!a.device_serial && deviceSerials.has(a.device_serial));
+    });
   }, [allAlerts, site]);
   const hasCriticalAlerts = activeAlerts.some(a => a.severity === 'critical');
 

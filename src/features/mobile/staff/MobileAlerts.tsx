@@ -16,6 +16,9 @@ const STATUS_COLOR: Record<string, string> = {
   active: '#F87171', acknowledged: '#F59E0B', resolved: '#2FBF71',
 };
 
+const isResolvedAlert = (alert: AlertItem) => alert.resolved || alert.status === 'resolved';
+const isActiveAlert = (alert: AlertItem) => !isResolvedAlert(alert) && (alert.status === 'active' || alert.status == null);
+
 const MobileAlerts: React.FC = () => {
   const { isDark } = useTheme();
 
@@ -46,15 +49,15 @@ const MobileAlerts: React.FC = () => {
   useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
   const counts = useMemo(() => ({
-    active:   alerts.filter(a => !a.resolved && a.status === 'active').length,
-    critical: alerts.filter(a => !a.resolved && a.severity === 'critical').length,
-    resolved: alerts.filter(a => a.resolved  || a.status === 'resolved').length,
+    active:   alerts.filter(isActiveAlert).length,
+    critical: alerts.filter(a => !isResolvedAlert(a) && a.severity === 'critical').length,
+    resolved: alerts.filter(isResolvedAlert).length,
   }), [alerts]);
 
   const filtered = useMemo(() => {
     setPage(1);
     return alerts.filter(a => {
-    const isResolved = a.status === 'resolved' || a.resolved;
+    const isResolved = isResolvedAlert(a);
     if (filterStatus === 'active'       && (isResolved || a.status === 'acknowledged')) return false;
     if (filterStatus === 'acknowledged' && a.status !== 'acknowledged')                 return false;
     if (filterStatus === 'resolved'     && !isResolved)                                 return false;
