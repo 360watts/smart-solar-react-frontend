@@ -28,11 +28,11 @@ export default defineConfig(({ mode }) => {
       // app code when it changes, not the entire bundle every deploy.
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-charts': ['chart.js', 'react-chartjs-2', 'recharts'],
-            'vendor-ui': ['framer-motion', 'lucide-react'],
-            'vendor-utils': ['axios', 'date-fns'],
+          manualChunks(id) {
+            if (id.includes('react-dom') || id.includes('react-router-dom') || /node_modules\/react\//.test(id)) return 'vendor-react';
+            if (id.includes('chart.js') || id.includes('react-chartjs-2') || id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('framer-motion') || id.includes('lucide-react')) return 'vendor-ui';
+            if (id.includes('/axios/') || id.includes('date-fns')) return 'vendor-utils';
           },
         },
       },

@@ -86,7 +86,8 @@ function useLiveTelemetry(siteId: string) {
       try {
         const rows = await apiService.getSiteTelemetry(siteId, { days:1, aggregate:'none' });
         if (cancelled || !rows?.length) return;
-        const r = rows[rows.length - 1];
+        // Prefer last non-standby row — run_state=0 zeros all registers.
+        const r = rows.slice().reverse().find((x: any) => Number(x.run_state) !== 0) ?? rows[rows.length - 1];
         const pv = (Number(r.pv1_power_w??0)+Number(r.pv2_power_w??0)+Number(r.pv3_power_w??0)+Number(r.pv4_power_w??0))/1000;
         setValues({
           pvKw:    pv || null,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Shield, Trash2, Settings, Bell, FileText, AlertTriangle, X, ChevronRight, Lock } from 'lucide-react';
-import { useTheme } from '../../shared/hooks/useTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface DeleteDeviceOptions {
   revoke_iot: boolean;

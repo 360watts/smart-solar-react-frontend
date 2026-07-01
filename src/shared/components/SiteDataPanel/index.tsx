@@ -367,7 +367,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       };
       const tel = await apiService.getSiteTelemetry(siteId, telemetryParams);
       if (Array.isArray(tel) && tel.length > 0) {
-        const latest = tel[tel.length - 1];
+        // Prefer the last non-standby row — run_state=0 zeros all registers.
+        const latest = tel.slice().reverse().find(r => Number(r.run_state) !== 0) ?? tel[tel.length - 1];
         setLatestLiveTelemetry(latest ?? null);
         dispatchFetch({ type: 'MARK_UPDATED' });
       }
@@ -453,7 +454,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       }
 
       if (latestRawRows.length > 0) {
-        setLatestLiveTelemetry(latestRawRows[latestRawRows.length - 1] ?? null);
+        // Prefer the last non-standby row — run_state=0 zeros all registers.
+        const liveRow = latestRawRows.slice().reverse().find(r => Number(r.run_state) !== 0) ?? latestRawRows[latestRawRows.length - 1];
+        setLatestLiveTelemetry(liveRow ?? null);
       } else {
         setLatestLiveTelemetry(null);
       }

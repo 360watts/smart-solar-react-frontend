@@ -35,6 +35,16 @@ function trimStart(x1: number, y1: number, x2: number, y2: number, trim: number)
 const bez = (x1: number, y1: number, x2: number, y2: number) =>
   `M ${x1} ${y1} L ${x2} ${y2}`;
 
+function ctActivePowerW(reading: CtMeterReading | null): number {
+  if (!reading) return 0;
+  const reported = reading.active_power_total;
+  if (reported != null && Math.abs(reported) > 0.05) return reported;
+  const phases = [reading.active_power_l1, reading.active_power_l2, reading.active_power_l3]
+    .filter((v): v is number => v != null);
+  if (!phases.length || phases.every(v => Math.abs(v) <= 0.05)) return reported ?? 0;
+  return phases.reduce((sum, v) => sum + v, 0);
+}
+
 function hubPath(
   sx: number, sy: number,
   direction: 'toHub' | 'fromHub',
@@ -728,7 +738,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       {/* Total Load + EV node (if present) + Y-connector + Sub-loads */}
       <div style={{ padding: '0 18px 0', marginTop: 0 }}>
         {(() => {
-          const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
+          const ctGridKw = Math.abs(ctActivePowerW(ctReading)) / 1000;
           const totalLoadKw = load + ctGridKw;
           const totalLoadFmt = fmtPower(totalLoadKw);
           const totalLoadActive = totalLoadKw > 0;
@@ -762,7 +772,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
         {/* Y-connector — 3 branches when EV present, 2 branches otherwise */}
         {(() => {
-          const ctGridKw = ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : 0;
+          const ctGridKw = Math.abs(ctActivePowerW(ctReading)) / 1000;
           const solarBranchActive = load > 0;
           const gridBranchActive  = gridLoadActive || ctGridKw > 0;
           const evBranchActive    = evLoadActive;
@@ -862,18 +872,18 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             accentColor="#60a5fa" devices={gridLoads} isDark={isDark}
             compact={compactFlow}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#60a5fa'))}
-            ctTotalKw={ctReading ? Math.abs(ctReading.active_power_total ?? 0) / 1000 : undefined}
+            ctTotalKw={ctReading ? Math.abs(ctActivePowerW(ctReading)) / 1000 : undefined}
             onCtHeaderClick={() => ctReading && handleNodeClick({
               type: 'ctmeter',
               id: 'ctmeter',
               title: 'Grid Load · Energy Meter',
               subtitle: '3-Phase Measurement',
-              power_kw: Math.abs(ctReading.active_power_total ?? 0) / 1000,
-              status: (Math.abs(ctReading.active_power_total ?? 0) / 1000) > 0 ? 'active' : 'inactive',
+              power_kw: Math.abs(ctActivePowerW(ctReading)) / 1000,
+              status: (Math.abs(ctActivePowerW(ctReading)) / 1000) > 0 ? 'active' : 'inactive',
               color: '#60a5fa',
               icon: <Activity size={24} color="#60a5fa" />,
               details: {
-                'Active Power': `${Math.abs(ctReading.active_power_total ?? 0).toFixed(1)} W`,
+                'Active Power': `${Math.abs(ctActivePowerW(ctReading)).toFixed(1)} W`,
                 'Apparent Power': `${Math.abs(ctReading.apparent_power_total ?? 0).toFixed(1)} VA`,
                 'Power Factor': (ctReading.power_factor_total ?? 0).toFixed(3),
               },

@@ -16,6 +16,16 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+function ctActivePowerW(reading: CtMeterReading | null): number | null {
+  if (!reading) return null;
+  const reported = reading.active_power_total;
+  if (reported != null && Math.abs(reported) > 0.05) return reported;
+  const phases = [reading.active_power_l1, reading.active_power_l2, reading.active_power_l3]
+    .filter((v): v is number => v != null);
+  if (!phases.length || phases.every(v => Math.abs(v) <= 0.05)) return reported ?? null;
+  return phases.reduce((sum, v) => sum + v, 0);
+}
+
 export type NodeType = 'solar' | 'battery' | 'grid' | 'load' | 'device' | 'ctmeter';
 
 export interface NodeData {
@@ -438,7 +448,7 @@ function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases | null;
         label="Active Power" unit="W"
         invVals={[inv?.l1.power_w ?? null, inv?.l2.power_w ?? null, inv?.l3.power_w ?? null]}
         ctVals={[ct?.active_power_l1 ?? null, ct?.active_power_l2 ?? null, ct?.active_power_l3 ?? null]}
-        invTotal={invPowerTotal} ctTotal={ct?.active_power_total ?? null}
+        invTotal={invPowerTotal} ctTotal={ctActivePowerW(ct)}
         isDark={isDark} delay={0}
       />
       <ComparisonMetricRow
