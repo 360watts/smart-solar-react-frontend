@@ -29,6 +29,7 @@ interface Site {
 interface TelemetryRow {
   timestamp: string;
   data_stale?: boolean;
+  data_source?: string;
   pv1_power_w?: number; pv2_power_w?: number; pv3_power_w?: number; pv4_power_w?: number;
   grid_power_w?: number; load_power_w?: number; battery_power_w?: number;
   battery_soc_percent?: number; pv_today_kwh?: number; load_today_kwh?: number;
@@ -58,8 +59,13 @@ const fmtKWh = (k: number | null | undefined) => k != null ? `${k.toFixed(1)}` :
 const FRESH_DATA_MS = 5 * 60 * 1000;
 const isFreshTimestamp = (timestamp?: string | null) =>
   !!timestamp && Date.now() - new Date(timestamp).getTime() <= FRESH_DATA_MS;
-const isFreshTelemetry = (row?: TelemetryRow | null) =>
-  !!row && row.data_stale !== true && isFreshTimestamp(row.timestamp);
+const telemetryAgeMs = (timestamp?: string | null) =>
+  timestamp ? Math.max(0, Date.now() - new Date(timestamp).getTime()) : Infinity;
+const isFreshTelemetry = (row?: TelemetryRow | null) => {
+  if (!row?.timestamp) return false;
+  const thresholdMs = row.data_source === 'deye_cloud' ? 15 * 60 * 1000 : FRESH_DATA_MS;
+  return row.data_stale !== true && telemetryAgeMs(row.timestamp) <= thresholdMs;
+};
 const isResolvedAlert = (alert: AlertItem) => alert.resolved || alert.status === 'resolved';
 const formatAge = (timestamp?: string | null) => {
   if (!timestamp) return 'No telemetry received';
@@ -116,6 +122,12 @@ const MobileDashboard: React.FC = () => {
   const hasCriticalAlerts = activeAlerts.some(a => a.severity === 'critical');
 
   const lastTelemetry = telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
+  const isDeyeCloud = lastTelemetry?.data_source === 'deye_cloud';
+  const rs485Stale = lastTelemetry?.data_stale === true;
+  const latestAgeMs = telemetryAgeMs(lastTelemetry?.timestamp);
+  const gatewayOffline = isDeyeCloud ? !online : latestAgeMs > 10 * 60 * 1000;
+  const deyeCloudAgeMs = isDeyeCloud ? latestAgeMs : null;
+  const loggerOffline = isDeyeCloud && deyeCloudAgeMs > 20 * 60 * 1000;
   const dataIsStale = !!lastTelemetry && !isFreshTelemetry(lastTelemetry);
   const lat = dataIsStale ? null : lastTelemetry;
   const day = lastTelemetry;
@@ -582,6 +594,75 @@ const MobileDashboard: React.FC = () => {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {isDeyeCloud && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              padding: '11px 12px',
+              borderRadius: 12,
+              background: loggerOffline
+                ? 'rgba(239,68,68,0.08)'
+                : isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)',
+              border: loggerOffline ? '1px solid rgba(239,68,68,0.30)' : '1px solid rgba(59,130,246,0.30)',
+              color: loggerOffline ? '#EF4444' : '#3B82F6',
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>☁️</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {[
+                    { label: gatewayOffline ? 'Gateway offline' : 'Gateway online', off: gatewayOffline },
+                    { label: loggerOffline ? 'Logger offline / standby' : 'Deye logger online', off: loggerOffline },
+                  ].map(({ label, off }) => (
+                    <span key={label} style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      background: off ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
+                      color: off ? '#EF4444' : '#3B82F6',
+                      border: `1px solid ${off ? 'rgba(239,68,68,0.28)' : 'rgba(59,130,246,0.28)'}`,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: off ? '#EF4444' : '#3B82F6', display: 'inline-block' }} />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.72rem', lineHeight: 1.45, color: loggerOffline ? '#EF4444' : '#3B82F6' }}>
+                  {loggerOffline
+                    ? <>RS-485 monitoring unavailable. Deye Cloud data is <strong>{Math.round((deyeCloudAgeMs ?? 0) / 60000)} min old</strong> — logger may be in nighttime standby.</>
+                    : gatewayOffline
+                      ? <>Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick). RS-485 gateway is offline.</>
+                      : <>Showing values from the <strong>Deye Cloud logger</strong> (WiFi stick). RS-485 gateway is online.</>
+                  }
+                </div>
+              </div>
+            </div>
+          )}
+
+          {rs485Stale && !isDeyeCloud && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '10px 12px',
+              borderRadius: 12,
+              background: 'rgba(245,158,11,0.08)',
+              border: '1px solid rgba(245,158,11,0.28)',
+              color: '#F59E0B',
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              <AlertTriangle size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+              <div style={{ fontSize: '0.72rem', lineHeight: 1.45 }}>
+                <strong>RS-485 frozen</strong> — PV and inverter readings are stale. The Deye app may still show live data via the WiFi stick.
+              </div>
             </div>
           )}
 
