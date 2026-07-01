@@ -38,11 +38,18 @@ const MobilePortalAlerts: React.FC = () => {
   const amber  = '#E9B949';
   const danger = '#EF4444';
 
+  const siteIdRef = React.useRef<string | null>(null);
+
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const data = await apiService.getAlerts();
+      if (!siteIdRef.current) {
+        const portal = await apiService.getPortalSummary() as any;
+        siteIdRef.current = portal?.sites?.[0]?.site_id ?? portal?.site_id ?? null;
+      }
+      if (!siteIdRef.current) throw new Error('No site found for this account');
+      const data = await apiService.getSiteAlerts(siteIdRef.current);
       setAlerts(Array.isArray(data) ? data : []);
     } catch (e: any) {
       setError(e?.message || 'Failed to load alerts');

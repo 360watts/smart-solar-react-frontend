@@ -344,11 +344,11 @@ class ApiService {
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
 
-    // Abort after 60 s — Railway cold starts can take up to ~50 s.
+    // Backend request timeout — long enough for cold starts, short enough to fail fast.
     const controller = new AbortController();
     const timeoutId = setTimeout(
       () => controller.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
-      60000,
+      15000,
     );
 
     let response: Response;
@@ -371,7 +371,7 @@ class ApiService {
         const retryController = new AbortController();
         const retryTimeoutId = setTimeout(
           () => retryController.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
-          40000,
+          12000,
         );
         try {
           response = await fetch(url, {
@@ -513,6 +513,22 @@ class ApiService {
     }));
 
     cacheService.set(cacheKey, data, DEFAULT_TTL);
+    return data;
+  }
+
+  async getSiteAlerts(siteId: string): Promise<AlertItem[]> {
+    const cacheKey = `site_alerts_${siteId}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    const raw: any[] = await this.request(`/sites/${encodeURIComponent(siteId)}/alerts/`);
+    const data: AlertItem[] = (Array.isArray(raw) ? raw : []).map(a => ({
+      ...a,
+      type: a.type ?? a.alert_type ?? '',
+      timestamp: a.timestamp ?? a.triggered_at ?? '',
+      device_id: a.device_id ?? a.device_serial ?? '',
+      resolved: a.resolved ?? (a.status === 'resolved'),
+    }));
+    cacheService.set(cacheKey, data, 60 * 1000); // 1-min cache — alerts are time-sensitive
     return data;
   }
 
@@ -755,11 +771,7 @@ class ApiService {
     // 55-second TTL: slightly under the 60-second auto-refresh interval so the
     // next poll always fetches fresh data rather than hitting a same-age cache.
     const cacheKey = `telemetry_${siteId}_${query.toString()}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(url);
-    cacheService.set(cacheKey, data, 55 * 1000);
-    return data;
+    return cacheService.dedup(cacheKey, () => this.request(url), 55 * 1000);
   }
 
   /**
@@ -822,11 +834,7 @@ class ApiService {
     const url = `/sites/${siteId}/forecast/${query.toString() ? '?' + query.toString() : ''}`;
     // 15-minute TTL: scheduler refreshes forecast every 15 min, so this is the ideal cache window
     const cacheKey = `forecast_${siteId}_${query.toString()}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(url);
-    cacheService.set(cacheKey, data, 15 * 60 * 1000);
-    return data;
+    return cacheService.dedup(cacheKey, () => this.request(url), 15 * 60 * 1000);
   }
 
   /**
@@ -843,11 +851,7 @@ class ApiService {
   async getSiteWeather(siteId: string): Promise<{ current: any | null; hourly_forecast: any[] } | null> {
     // 15-minute TTL: weather data refreshes at the same cadence as the forecast scheduler
     const cacheKey = `weather_${siteId}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${siteId}/weather/`);
-    cacheService.set(cacheKey, data, 15 * 60 * 1000);
-    return data;
+    return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/weather/`), 15 * 60 * 1000);
   }
 
   async getPhaseLoad(siteId: string, hours: number = 24, aggregate: string = 'hourly'): Promise<any[]> {

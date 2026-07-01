@@ -101,9 +101,10 @@ function MetricBox({ label, value, sub, color = BLACK, x = 0, y = 0, w = 160, h 
 // ─── Slide 1: Cover ───────────────────────────────────────────────────────────
 function CoverSlide({ data, logoUrl, finalLogoUrl }: { data: QuotationData; logoUrl: string; finalLogoUrl: string }) {
   const { customer, ebBill, optionA } = data;
-  const { inverterKw } = calcEbBill(ebBill);
-  const systemKw = getSystemKw(optionA.rows) || inverterKw;
-  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy);
+  const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
+  const systemKw = getSystemKw(optionA.rows) || recommendedSystemKw || inverterKw;
+  const quotedSystemKw = recommendedSystemKw || systemKw;
+  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy, optionA.discount, quotedSystemKw);
   const systemTypeLabel = { 'ON-GRID': 'On-Grid System', 'HYBRID': 'Hybrid System', 'OFF-GRID': 'Off-Grid System' }[customer.systemType];
 
   return (
@@ -283,9 +284,10 @@ function QuotationSlide({ option, label, slideNum, data, logoUrl, finalLogoUrl }
   option: QuoteOption; label: string; slideNum: number; data: QuotationData; logoUrl: string; finalLogoUrl: string;
 }) {
   const { customer, ebBill } = data;
-  const { inverterKw } = calcEbBill(ebBill);
-  const { grossTotal, netInvestment } = calcBomTotals(option.rows, option.subsidy);
-  const systemKw = getSystemKw(option.rows) || inverterKw;
+  const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
+  const systemKw = getSystemKw(option.rows) || recommendedSystemKw || inverterKw;
+  const quotedSystemKw = recommendedSystemKw || systemKw;
+  const { grossTotal, netInvestment } = calcBomTotals(option.rows, option.subsidy, option.discount, quotedSystemKw);
   const annualSaving = calcEbBill(ebBill).annualSaving;
   const payback = annualSaving > 0 ? (netInvestment / annualSaving).toFixed(1) : '—';
 
@@ -481,8 +483,10 @@ function TermsSlide({ logoUrl, finalLogoUrl }: { logoUrl: string; finalLogoUrl: 
 // ─── Slide 6: ROI Charts ──────────────────────────────────────────────────────
 function ChartsSlide({ data, logoUrl, finalLogoUrl }: { data: QuotationData; logoUrl: string; finalLogoUrl: string }) {
   const { ebBill, optionA } = data;
-  const { annualSaving } = calcEbBill(ebBill);
-  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy);
+  const { annualSaving, recommendedSystemKw } = calcEbBill(ebBill);
+  const systemKw = getSystemKw(optionA.rows);
+  const quotedSystemKw = recommendedSystemKw || systemKw;
+  const { netInvestment } = calcBomTotals(optionA.rows, optionA.subsidy, optionA.discount, quotedSystemKw);
   const roi = calcROI(netInvestment, annualSaving);
   const pts = roi.yearlyData;
   const breakEvenYr = pts.find(p => p.breakeven >= 0)?.year ?? 0;

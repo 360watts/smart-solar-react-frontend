@@ -139,6 +139,12 @@ function getDefaults(): QuotationData {
       powerFactor: 1.0,
       dcAcRatio: 1.1,
       phase: 'single' as const,
+      evSizing: {
+        modelName: '',
+        batteryCapacityKwh: 0,
+        fullChargesPerWeek: 0,
+        halfChargesPerWeek: 0,
+      },
     },
     optionA: {
       rows: newRows(),
@@ -204,6 +210,8 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             unitPrice: parseFloat(p.unit_price) || r.unitPrice,
             marginPct: parseFloat(p.margin_pct) ?? r.marginPct,
             gstPct: parseFloat(p.gst_pct) ?? r.gstPct,
+            priceSource: 'legacy-equipment-price' as const,
+            priceUnit: p.uom,
           };
         });
       }
@@ -221,7 +229,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   function autofillBomQuantities() {
     const { ebBill } = form.getValues();
     const { inverterKw, exactDcKw, recommendedSystemKw } = calcEbBill({ ...ebBill });
-    const dcKw = exactDcKw > 0 ? exactDcKw : recommendedSystemKw;
+    const dcKw = recommendedSystemKw > 0 ? recommendedSystemKw : exactDcKw;
     const acKw = inverterKw;
     if (acKw <= 0) return;
 
@@ -240,12 +248,14 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
           return { ...r, qty: panelQty * 2 };
         }
         if (item === 'mounting structure') {
+          if (r.priceSource === 'catalog') return r;
           const ratePerKw = r.unitPrice > 0 && r.unitPrice <= 10000 ? r.unitPrice : 4000;
-          return { ...r, unitPrice: Math.round(ratePerKw * acKw) };
+          return { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' };
         }
         if (item === 'installation') {
+          if (r.priceSource === 'catalog') return r;
           const ratePerKw = r.unitPrice > 0 && r.unitPrice <= 10000 ? r.unitPrice : 3000;
-          return { ...r, unitPrice: Math.round(ratePerKw * acKw) };
+          return { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' };
         }
         return r;
       });

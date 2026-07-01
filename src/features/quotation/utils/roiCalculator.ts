@@ -1,4 +1,4 @@
-import type { BomRow, BomTotals, EbBillData, EbCalcResult, ROIData, YearlyROIPoint } from '../types/quotation';
+import type { BomRow, BomTotals, EbBillData, EbCalcResult, EvSizingResult, ROIData, YearlyROIPoint } from '../types/quotation';
 
 // TANGEDCO bi-monthly slabs (Tamil Nadu domestic tariff)
 // Two structures apply: consumption < 500 kWh uses a concessional 101–200 rate of ₹2.35
@@ -102,14 +102,66 @@ export function calcEbBill(data: EbBillData): EbCalcResult {
   return { avgBimonthlyKwh, avgDailyKwh, tangedcoBill, annualSaving, inverterKw, exactAcKw, recommendedSystemKw, exactDcKw, avgRatePerKwh };
 }
 
-export function calcBomRow(row: BomRow): number {
-  const bomCost = row.qty * row.unitPrice;
+export function calcEvSizing(data: EbBillData): EvSizingResult | null {
+  const ev = data.evSizing;
+  if (!ev) return null;
+
+  const batteryCapacityKwh = ev.batteryCapacityKwh || 0;
+  const fullChargesPerWeek = ev.fullChargesPerWeek || 0;
+  const halfChargesPerWeek = ev.halfChargesPerWeek || 0;
+  if (batteryCapacityKwh <= 0 || (fullChargesPerWeek <= 0 && halfChargesPerWeek <= 0)) return null;
+
+  // Workbook logic: extra EV demand = full-charge load + half-charge load, adjusted by 90% charging efficiency.
+  const extraDailyKwh = parseFloat((
+    ((batteryCapacityKwh * 0.9 * fullChargesPerWeek) + (batteryCapacityKwh * 0.5 * 0.9 * halfChargesPerWeek)) / 7
+  ).toFixed(2));
+
+  const validReadings = data.readings.filter(r => r.units > 0);
+  const avgBimonthlyKwh = validReadings.length
+    ? validReadings.reduce((s, r) => s + r.units, 0) / validReadings.length
+    : 0;
+  const baseDailyKwh = avgBimonthlyKwh / DAYS_PER_BIMONTHLY;
+  const totalDailyKwh = parseFloat((baseDailyKwh + extraDailyKwh).toFixed(2));
+  const equivalentBimonthlyKwh = totalDailyKwh * DAYS_PER_BIMONTHLY;
+
+  const psh = data.peakSunHours || 4.5;
+  const pf = data.powerFactor || 1.0;
+  const dcAc = data.dcAcRatio || 1.1;
+  const { inverterKw, rawAcKw: exactAcKw, dcKw: recommendedSystemKw, rawDcKw: exactDcKw } =
+    calcDcAndInverter(equivalentBimonthlyKwh, psh, pf, dcAc);
+
+  return { extraDailyKwh, totalDailyKwh, inverterKw, exactAcKw, recommendedSystemKw, exactDcKw };
+}
+
+function panelWpFromDescription(description: string): number {
+  const match = description.match(/(\d+(?:\.\d+)?)\s*[Ww]p/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+export function calcBomBaseCost(row: BomRow, systemKw = 0): number {
+  const qty = Number(row.qty) || 0;
+  const unitPrice = Number(row.unitPrice) || 0;
+
+  if (row.priceUnit === 'Wp') {
+    const wp = panelWpFromDescription(row.description);
+    return qty * wp * unitPrice;
+  }
+
+  if (row.priceUnit === 'rate_per_kw') {
+    return unitPrice * systemKw;
+  }
+
+  return qty * unitPrice;
+}
+
+export function calcBomRow(row: BomRow, systemKw = 0): number {
+  const bomCost = calcBomBaseCost(row, systemKw);
   const basicCost = bomCost * (1 + row.marginPct / 100);
   return basicCost * (1 + row.gstPct / 100);
 }
 
-export function calcBomTotals(rows: BomRow[], subsidy: number, discount = 0): BomTotals {
-  const grossTotal = rows.reduce((s, r) => s + calcBomRow(r), 0);
+export function calcBomTotals(rows: BomRow[], subsidy: number, discount = 0, systemKw = 0): BomTotals {
+  const grossTotal = rows.reduce((s, r) => s + calcBomRow(r, systemKw), 0);
   const netInvestment = grossTotal - (subsidy || 0) - (discount || 0);
   return { grossTotal, netInvestment };
 }

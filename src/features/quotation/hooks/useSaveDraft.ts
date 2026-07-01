@@ -9,7 +9,7 @@ function buildPayload(data: QuotationData): Record<string, unknown> {
   const systemKw = ebResult.recommendedSystemKw > 0 ? ebResult.recommendedSystemKw : 5;
 
   // Net investment from optionA
-  const totals = calcBomTotals(data.optionA.rows, data.optionA.subsidy);
+  const totals = calcBomTotals(data.optionA.rows, data.optionA.subsidy, data.optionA.discount, systemKw);
 
   const systemTypeMap: Record<string, string> = {
     'ON-GRID': 'on_grid',

@@ -23,6 +23,22 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    build: {
+      // Split vendor code into stable chunks so returning users only re-download
+      // app code when it changes, not the entire bundle every deploy.
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-charts': ['chart.js', 'react-chartjs-2', 'recharts'],
+            'vendor-ui': ['framer-motion', 'lucide-react'],
+            'vendor-utils': ['axios', 'date-fns'],
+          },
+        },
+      },
+      // Warn on chunks > 500 kB so regressions are caught at build time.
+      chunkSizeWarningLimit: 500,
+    },
     server: {
       watch: usePolling
         ? {

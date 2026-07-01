@@ -4,6 +4,13 @@ export interface EbReading {
   billAmount: number;
 }
 
+export interface EvSizingData {
+  modelName: string;
+  batteryCapacityKwh: number;
+  fullChargesPerWeek: number;
+  halfChargesPerWeek: number;
+}
+
 export interface BomRow {
   id: string;
   item: string;
@@ -13,6 +20,8 @@ export interface BomRow {
   unitPrice: number;
   marginPct: number;
   gstPct: number;
+  priceSource?: 'manual' | 'legacy-equipment-price' | 'catalog';
+  priceUnit?: string;
 }
 
 export interface QuoteOption {
@@ -41,6 +50,7 @@ export interface EbBillData {
   powerFactor: number;
   dcAcRatio: number;
   phase: 'single' | 'three';
+  evSizing?: EvSizingData;
 }
 
 export interface QuotationData {
@@ -78,6 +88,15 @@ export interface EbCalcResult {
   recommendedSystemKw: number; // snapped DC system size after applying dcAcRatio (kWp)
   exactDcKw: number;           // raw DC sizing after applying dcAcRatio, before snapping (kWp)
   avgRatePerKwh: number;
+}
+
+export interface EvSizingResult {
+  extraDailyKwh: number;
+  totalDailyKwh: number;
+  inverterKw: number;
+  exactAcKw: number;
+  recommendedSystemKw: number;
+  exactDcKw: number;
 }
 
 export interface BomTotals {

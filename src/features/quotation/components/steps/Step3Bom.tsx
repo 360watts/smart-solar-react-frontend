@@ -2,7 +2,7 @@ import { useFieldArray, UseFormReturn } from 'react-hook-form';
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { calcBomRow, calcBomTotals, calcEbBill, calcSubsidy, formatINR } from '../../utils/roiCalculator';
+import { calcBomBaseCost, calcBomRow, calcBomTotals, calcEbBill, calcSubsidy, formatINR } from '../../utils/roiCalculator';
 import { apiService } from '../../../../services/api';
 import type { ProductCatalogItem } from '../../../../services/api';
 import type { QuotationData, BomRow } from '../../types/quotation';
@@ -10,16 +10,16 @@ import type { QuotationData, BomRow } from '../../types/quotation';
 interface Props { form: UseFormReturn<QuotationData> }
 
 const DEFAULT_ROWS: Omit<BomRow, 'id'>[] = [
-  { item: 'Panels',             brand: '',          description: '615Wp TOPCon',                qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 5  },
+  { item: 'Panels',             brand: '',          description: '615Wp TOPCon',                qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 5,  priceSource: 'manual', priceUnit: 'Wp' },
   { item: 'Inverter',           brand: '',          description: '12kW 3-ph String',             qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 5  },
   { item: 'DCDB',               brand: '',          description: '',                              qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 18 },
   { item: 'ACDB',               brand: '',          description: '',                              qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 18 },
-  { item: 'Mounting structure', brand: '',          description: 'GI Steel',                     qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 18 },
+  { item: 'Mounting structure', brand: '',          description: 'GI Steel',                     qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 18, priceSource: 'manual', priceUnit: 'rate_per_kw' },
   { item: 'Earthing rod',       brand: '',          description: '2m',                           qty: 3,  unitPrice: 0, marginPct: 20,  gstPct: 18 },
   { item: 'Lightning arrestor', brand: '',          description: '1m',                           qty: 1,  unitPrice: 0, marginPct: 0,   gstPct: 18 },
   { item: 'MC4 connectors',     brand: '',          description: '',                              qty: 12, unitPrice: 0, marginPct: 20,  gstPct: 18 },
   { item: 'Accessories',        brand: '',          description: 'Pins & misc',                  qty: 1,  unitPrice: 0, marginPct: 25,  gstPct: 18 },
-  { item: 'Installation',       brand: '',          description: 'Design / install / logistics', qty: 1,  unitPrice: 0, marginPct: 25,  gstPct: 18 },
+  { item: 'Installation',       brand: '',          description: 'Design / install / logistics', qty: 1,  unitPrice: 0, marginPct: 25,  gstPct: 18, priceSource: 'manual', priceUnit: 'rate_per_kw' },
   { item: 'IoT hub',            brand: '360Watts',  description: 'Energy automation',            qty: 1,  unitPrice: 0, marginPct: 100, gstPct: 18 },
   { item: 'Wiring',             brand: '',          description: 'DC + AC cables',               qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 18 },
 ];
@@ -199,6 +199,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
   const { register, watch, control, setValue } = form;
   const ebBill = watch('ebBill');
   const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
+  const systemKw = recommendedSystemKw;
   const { fields, append, remove } = useFieldArray({ control, name: `${prefix}.rows` as any });
   const liveRows: BomRow[] = watch(`${prefix}.rows`) ?? [];
   const subsidy: number    = watch(`${prefix}.subsidy`) ?? 78000;
@@ -214,11 +215,11 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
     const computed = calcSubsidy(recommendedSystemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three', isDcr);
     setValue(`${prefix}.subsidy`, computed);
   }, [recommendedSystemKw, customerType, phase, isDcr]); // eslint-disable-line react-hooks/exhaustive-deps
-  const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy, discount);
-  const totalBaseRs   = liveRows.reduce((s, r) => s + r.qty * r.unitPrice, 0);
-  const totalMarginRs = liveRows.reduce((s, r) => s + (r.qty * r.unitPrice * r.marginPct / 100), 0);
+  const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy, discount, systemKw);
+  const totalBaseRs   = liveRows.reduce((s, r) => s + calcBomBaseCost(r, systemKw), 0);
+  const totalMarginRs = liveRows.reduce((s, r) => s + (calcBomBaseCost(r, systemKw) * r.marginPct / 100), 0);
   const totalGstRs    = liveRows.reduce((s, r) => {
-    const withMargin = r.qty * r.unitPrice * (1 + r.marginPct / 100);
+    const withMargin = calcBomBaseCost(r, systemKw) * (1 + r.marginPct / 100);
     return s + withMargin * r.gstPct / 100;
   }, 0);
   const isRecommended: boolean    = watch(`${prefix}.isRecommended`);
@@ -229,15 +230,18 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
     const rows: BomRow[] = form.getValues(`${prefix}.rows`);
     const rowKey = Object.entries(ITEM_TO_CATEGORY).find(([, c]) => c === category)?.[0] ?? '';
     const unitPrice = parseFloat(item.price_per_unit);
+    const catalogPriceMeta = {
+      priceSource: 'catalog' as const,
+      priceUnit: item.price_unit,
+    };
 
     let description = item.model_name;
     if (category === 'panels') {
       const wp = item.specs.wp as number ?? 0;
-      const unitPriceCalc = item.price_unit === 'Wp' ? wp * unitPrice : unitPrice;
       description = `${wp}Wp ${item.model_name} ${item.specs.dcr ? 'DCR' : 'non-DCR'}`.trim();
       const updated = rows.map(r =>
         r.item.toLowerCase() === rowKey
-          ? { ...r, brand: item.brand, description, unitPrice: unitPriceCalc, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
+          ? { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
           : r
       );
       setValue(`${prefix}.rows`, updated);
@@ -252,7 +256,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
 
     const updated = rows.map(r =>
       r.item.toLowerCase() === rowKey
-        ? { ...r, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
+        ? { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
         : r
     );
     setValue(`${prefix}.rows`, updated);
@@ -364,7 +368,8 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               <th style={{ width: 90 }}>Brand</th>
               <th style={{ width: 140 }}>Description</th>
               <th className="right" style={{ width: 52 }}>Qty</th>
-              <th className="right" style={{ width: 96 }}>Unit ₹</th>
+              <th className="right" style={{ width: 96 }}>Rate ₹</th>
+              <th className="right" style={{ width: 96 }}>Base ₹</th>
               <th className="right" style={{ width: 62 }}>Mgn%</th>
               <th className="right" style={{ width: 52 }}>GST%</th>
               <th className="right" style={{ width: 100 }}>Final ₹</th>
@@ -374,15 +379,19 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
           <tbody>
             {(fields as unknown as BomRow[]).map((field, idx) => {
               const liveRow: BomRow = liveRows[idx] ?? field;
-              const finalCost = calcBomRow(liveRow);
+              const baseCost = calcBomBaseCost(liveRow, systemKw);
+              const finalCost = calcBomRow(liveRow, systemKw);
               return (
                 <tr key={field.id}>
                   <td><input className="sq-bom-input" style={{ minWidth: 80 }} {...register(`${prefix}.rows.${idx}.item`)} /></td>
                   <td><input className="sq-bom-input" style={{ minWidth: 60 }} {...register(`${prefix}.rows.${idx}.brand`)} /></td>
                   <td><input className="sq-bom-input" style={{ minWidth: 100 }} {...register(`${prefix}.rows.${idx}.description`)} /></td>
-                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
-                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
-                  <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
+	                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
+	                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg, #0f172a)' : 'var(--fg-muted, #64748b)', paddingRight: 8 }}>
+                    {baseCost > 0 ? formatINR(baseCost) : '—'}
+                  </td>
+	                  <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
                   <td><input type="number" min={0} max={28} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} /></td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: finalCost > 0 ? 'var(--fg, #0f172a)' : 'var(--fg-muted, #64748b)', paddingRight: 8 }}>
                     {finalCost > 0 ? formatINR(finalCost) : '—'}
@@ -402,6 +411,9 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               <td colSpan={3} style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', paddingLeft: 4 }}>Totals</td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
                 {liveRows.reduce((s, r) => s + (r.qty || 0), 0)}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
+                —
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
                 {formatINR(totalBaseRs)}

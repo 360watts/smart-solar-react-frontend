@@ -44,15 +44,16 @@ function parsePanelWp(description: string): number {
 export function Step4Review({ form }: Props) {
   const data = form.getValues();
   const calc = calcEbBill(data.ebBill);
-  const { netInvestment } = calcBomTotals(data.optionA.rows, data.optionA.subsidy);
-  const safeInvestment = Math.max(0, netInvestment);
+  const quotedSystemKw = calc.recommendedSystemKw;
 
-  // Derive system kW from actual BoM: panel qty × Wp from description
+  // Derive production kW from actual BoM, while pricing rate-per-kW rows from the quoted system size.
   const panelRow = data.optionA.rows.find(r => r.item.toLowerCase() === 'panels');
   const panelWp = panelRow ? parsePanelWp(panelRow.description) : 0;
   const systemKw = panelRow && panelWp > 0
     ? (panelRow.qty * panelWp) / 1000
-    : calc.recommendedSystemKw;
+    : quotedSystemKw;
+  const { netInvestment } = calcBomTotals(data.optionA.rows, data.optionA.subsidy, data.optionA.discount, quotedSystemKw);
+  const safeInvestment = Math.max(0, netInvestment);
 
   // Annual saving = systemKw × PSH × 365.25 × 0.96 × avg ₹/kWh from bills
   const annualSaving = systemKw * data.ebBill.peakSunHours * 365.25 * 0.96 * calc.avgRatePerKwh;

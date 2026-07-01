@@ -11,7 +11,7 @@
  *
  * This file is the entry-point shell. Each tab's JSX lives in ./tabs/<Tab>.tsx.
  */
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement, BarElement,
@@ -131,6 +131,58 @@ const formatPowerForKpi = (kw: number | null | undefined): { value: string; unit
   return { value: kw.toFixed(2), unit: 'kW' };
 };
 
+// ── Data fetch state ──────────────────────────────────────────────────────────
+interface FetchState {
+  telemetry: any[];
+  forecast: any[];
+  weather: any;
+  smartDevices: any[];
+  loading: boolean;
+  error: string | null;
+  historyError: string | null;
+  lastUpdated: Date | null;
+  secondsSinceUpdate: number;
+}
+
+const FETCH_INITIAL: FetchState = {
+  telemetry: [], forecast: [], weather: null, smartDevices: [],
+  loading: true, error: null, historyError: null, lastUpdated: null, secondsSinceUpdate: 0,
+};
+
+type FetchAction =
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; payload: Pick<FetchState, 'telemetry' | 'forecast' | 'weather' | 'smartDevices' | 'lastUpdated'> }
+  | { type: 'FETCH_ERROR'; error: string }
+  | { type: 'HISTORY_ERROR'; error: string | null }
+  | { type: 'HISTORY_APPEND'; rows: any[] }
+  | { type: 'MARK_UPDATED' }
+  | { type: 'TICK' };
+
+function fetchReducer(state: FetchState, action: FetchAction): FetchState {
+  switch (action.type) {
+    case 'FETCH_START':
+      return { ...state, loading: true, error: null };
+    case 'FETCH_SUCCESS':
+      return { ...state, ...action.payload, loading: false, error: null, secondsSinceUpdate: 0 };
+    case 'FETCH_ERROR':
+      return { ...state, loading: false, error: action.error };
+    case 'HISTORY_APPEND': {
+      const tsSet = new Set(state.telemetry.map((r: any) => r.timestamp));
+      const newer = action.rows.filter((r: any) => !tsSet.has(r.timestamp));
+      if (newer.length === 0) return state;
+      return { ...state, telemetry: [...state.telemetry, ...newer].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp)) };
+    }
+    case 'MARK_UPDATED':
+      return { ...state, lastUpdated: new Date(), secondsSinceUpdate: 0 };
+    case 'HISTORY_ERROR':
+      return { ...state, historyError: action.error };
+    case 'TICK':
+      return { ...state, secondsSinceUpdate: state.lastUpdated ? Math.floor((Date.now() - state.lastUpdated.getTime()) / 1000) : state.secondsSinceUpdate };
+    default:
+      return state;
+  }
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -153,16 +205,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const [telemetry, setTelemetry] = useState<any[]>([]);
-  const [forecast, setForecast] = useState<any[]>([]);
-  const [weather, setWeather] = useState<any>(null);
-  const [smartDevices, setSmartDevices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [secondsSinceUpdate, setSecondsSinceUpdate] = useState<number>(0);
+  const [fetchState, dispatchFetch] = useReducer(fetchReducer, FETCH_INITIAL);
+  const { telemetry, forecast, weather, smartDevices, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
   const isInitialLoad = useRef(true);
+  // Guards the fire-and-forget analytics Promise: set to true on unmount or
+  // siteId change so callbacks don't set state on a stale/unmounted component.
+  const analyticsStaleRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
   const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
@@ -280,11 +328,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     if (!siteId) return;
     let cancelled = false;
     const poll = async () => {
+      if (document.hidden) return;
       const status = await apiService.getGatewayStatus(siteId);
       if (!cancelled) setGatewayOnline(status?.is_online ?? null);
     };
     poll();
-    const iv = setInterval(poll, 30_000);
+    const iv = setInterval(poll, 60_000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [siteId]);
 
@@ -320,8 +369,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       if (Array.isArray(tel) && tel.length > 0) {
         const latest = tel[tel.length - 1];
         setLatestLiveTelemetry(latest ?? null);
-        setLastUpdated(new Date());
-        setSecondsSinceUpdate(0);
+        dispatchFetch({ type: 'MARK_UPDATED' });
       }
     } catch {
       // silent
@@ -329,7 +377,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
   const fetchAll = useCallback(async (showSpinner = false) => {
-    if (showSpinner) setLoading(true);
+    if (showSpinner) dispatchFetch({ type: 'FETCH_START' });
     try {
       const now = new Date();
       // Solar day window: 6am IST today → 7 days out
@@ -337,13 +385,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       const forecastEndDt = new Date(new Date(forecastStart).getTime() + 7 * 24 * 3600 * 1000);
       const forecastEnd = forecastEndDt.toISOString();
 
-      const buildDayWindows = (start: Date, end: Date) => {
+      const buildWindows = (start: Date, end: Date, rangeKey: string) => {
         const windows: { start_date: string; end_date: string }[] = [];
         const cursor = new Date(start);
         cursor.setUTCHours(0, 0, 0, 0);
+        // Use larger time windows for longer ranges to reduce parallel request count:
+        // 24h → 1-day windows (already handled above this code path)
+        // 7d  → 1-day windows (7 requests)
+        // 30d → 7-day weekly windows (~5 requests instead of 30)
+        // custom range > 14 days → 7-day windows
+        const customDays = rangeKey === 'custom' ? Math.ceil((end.getTime() - start.getTime()) / 86_400_000) : 0;
+        const stepDays = (rangeKey === '30d' || customDays > 14) ? 7 : 1;
         while (cursor < end) {
           const dayStart = cursor.toISOString();
-          cursor.setUTCDate(cursor.getUTCDate() + 1);
+          cursor.setUTCDate(cursor.getUTCDate() + stepDays);
           windows.push({ start_date: dayStart, end_date: (cursor < end ? new Date(cursor) : end).toISOString() });
         }
         return windows;
@@ -370,22 +425,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         } else {
           rangeStart = new Date(now.getTime() - 24 * 3600 * 1000);
         }
-        const windows = buildDayWindows(rangeStart, rangeEnd);
+        const windows = buildWindows(rangeStart, rangeEnd, dateRange);
         const aggregate = getTelemetryAggregateForRange(dateRange, debouncedStart, debouncedEnd);
-        for (let i = 0; i < windows.length; i += 3) {
-          const batch = windows.slice(i, i + 3);
-          const results = await Promise.allSettled(
-            batch.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date, aggregate }))
-          );
-          for (const r of results) {
-            if (r.status === 'fulfilled' && Array.isArray(r.value)) telemetryRows.push(...r.value);
-          }
+        // Fetch all day-windows in parallel — cacheService.dedup ensures repeated
+        // calls for the same window (e.g. from concurrent renders) share one request.
+        const results = await Promise.allSettled(
+          windows.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date, aggregate }))
+        );
+        for (const r of results) {
+          if (r.status === 'fulfilled' && Array.isArray(r.value)) telemetryRows.push(...r.value);
         }
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
       const [fcst, wth, devices] = await forecastWeatherPromise;
-      setSmartDevices(Array.isArray(devices) ? devices : []);
 
       let latestRawRows: any[] = [];
       try {
@@ -405,13 +458,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         setLatestLiveTelemetry(null);
       }
 
-      setTelemetry(telemetryRows);
-      setForecast(Array.isArray(fcst) ? fcst : []);
-      setWeather(wth || null);
-      setLastUpdated(new Date());
-      setSecondsSinceUpdate(0);
-      setError(null);
+      dispatchFetch({ type: 'FETCH_SUCCESS', payload: {
+        telemetry: telemetryRows,
+        forecast: Array.isArray(fcst) ? fcst : [],
+        weather: wth || null,
+        smartDevices: Array.isArray(devices) ? devices : [],
+        lastUpdated: new Date(),
+      }});
 
+      // Fire analytics after primary data renders.
+      // analyticsStaleRef is set to true by the useEffect cleanup (below fetchAll
+      // call site) when siteId changes or the component unmounts, preventing stale
+      // state updates on an unmounted/switched component.
       Promise.allSettled([
         apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw'),
         apiService.getForecastAccuracy(siteId, 30),
@@ -419,6 +477,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         apiService.getWeatherAccuracy(siteId, 7),
         apiService.getLoadForecastAccuracy(siteId, 7),
       ]).then(([pl, fa, lf, wa, lfa]) => {
+        if (analyticsStaleRef.current) return;
         if (pl.status === 'fulfilled') setPhaseLoad(Array.isArray(pl.value) ? pl.value : []);
         if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
         if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);
@@ -426,9 +485,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         if (lfa.status === 'fulfilled') setLoadForecastAccuracy(lfa.value ?? null);
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load site data');
+      dispatchFetch({ type: 'FETCH_ERROR', error: err instanceof Error ? err.message : 'Failed to load site data' });
     } finally {
-      setLoading(false);
       isInitialLoad.current = false;
     }
   }, [siteId, dateRange, debouncedStart, debouncedEnd, phaseLoadHours]);
@@ -447,12 +505,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       rangeEnd   = new Date(debouncedEnd);
     }
     if (dateRange === 'custom' && rangeStart && (rangeEnd.getTime() - rangeStart.getTime()) <= 24 * 3600 * 1000) {
-      setHistoryError(null);
+      dispatchFetch({ type: 'HISTORY_ERROR', error: null });
       return;
     }
-    if (!rangeStart) { setHistoryError(null); return; }
+    if (!rangeStart) { dispatchFetch({ type: 'HISTORY_ERROR', error: null }); return; }
 
-    setHistoryError(null);
+    dispatchFetch({ type: 'HISTORY_ERROR', error: null });
 
     const windows: { start_date: string; end_date: string }[] = [];
     const cursor = new Date(rangeStart);
@@ -469,26 +527,25 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       try {
         const hist = await apiService.getSiteHistory(siteId, { ...params, aggregate: '15min' });
         if (Array.isArray(hist) && hist.length > 0) {
-          setTelemetry(prev => {
-            const tsSet = new Set(prev.map((r: any) => r.timestamp));
-            const newer = hist.filter((r: any) => !tsSet.has(r.timestamp));
-            if (newer.length === 0) return prev;
-            return [...prev, ...newer].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
-          });
+          dispatchFetch({ type: 'HISTORY_APPEND', rows: hist });
         }
       } catch (err) {
-        setHistoryError(err instanceof Error ? err.message : 'Failed to load history');
+        dispatchFetch({ type: 'HISTORY_ERROR', error: err instanceof Error ? err.message : 'Failed to load history' });
       }
     }
   }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
   useEffect(() => {
     isInitialLoad.current = true;
-    setLoading(true);
+    analyticsStaleRef.current = false;
+    dispatchFetch({ type: 'FETCH_START' });
     fetchAll(false).then(() => fetchHistory());
-    if (!autoRefresh) return;
+    if (!autoRefresh) return () => { analyticsStaleRef.current = true; };
     const fullId = setInterval(() => fetchAll(false).then(() => fetchHistory()), 5 * 60_000);
-    return () => clearInterval(fullId);
+    return () => {
+      analyticsStaleRef.current = true;
+      clearInterval(fullId);
+    };
   }, [fetchAll, fetchHistory, autoRefresh]);
 
   useEffect(() => {
@@ -500,7 +557,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   useEffect(() => {
     if (!lastUpdated) return;
     const tick = setInterval(() => {
-      setSecondsSinceUpdate(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+      dispatchFetch({ type: 'TICK' });
     }, 1000);
     return () => clearInterval(tick);
   }, [lastUpdated]);

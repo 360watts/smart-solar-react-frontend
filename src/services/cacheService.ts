@@ -22,6 +22,8 @@ interface CacheSubscription {
 class CacheService {
   private cache: Map<string, CacheEntry> = new Map();
   private subscribers: Map<string, Set<CacheSubscription>> = new Map();
+  /** Prevents duplicate simultaneous fetches for the same cache key. */
+  private inflight: Map<string, Promise<any>> = new Map();
   private static readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes default
   private static readonly LONG_TTL = 30 * 60 * 1000; // 30 minutes for static data
   private static readonly REALTIME_TTL = 10 * 1000; // 10 seconds for real-time data
@@ -226,6 +228,35 @@ class CacheService {
         });
       }
     });
+  }
+
+  /**
+   * Deduplicate in-flight requests: if a fetch for `key` is already running,
+   * returns the same promise instead of starting a second HTTP request.
+   * Sets cache on resolution; clears inflight entry regardless of outcome.
+   *
+   * Usage: `return cacheService.dedup('telemetry_x', () => this.request(...), ttlMs)`
+   */
+  async dedup<T>(key: string, fetcher: () => Promise<T>, ttlMs: number = CacheService.DEFAULT_TTL): Promise<T> {
+    const cached = this.get(key);
+    if (cached !== null) return cached as T;
+
+    const existing = this.inflight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = fetcher().then(
+      (data) => { this.set(key, data, ttlMs); return data; },
+    ).catch((err) => {
+      // Remove from inflight immediately on failure so the next caller retries
+      // rather than sharing a rejected promise.
+      this.inflight.delete(key);
+      throw err;
+    }).finally(
+      () => { this.inflight.delete(key); },
+    );
+
+    this.inflight.set(key, promise);
+    return promise;
   }
 
   /**

@@ -511,6 +511,20 @@ export default function SiteDetail() {
     }
   };
 
+  const refreshSmartDevices = useCallback(async () => {
+    if (!siteId) return;
+    setSmartDevicesLoading(true);
+    try {
+      const devices = await apiService.getSmartDevices(siteId);
+      setSmartDevices(Array.isArray(devices) ? devices : []);
+    } catch {
+      setSmartDevices([]);
+    } finally {
+      setSmartDevicesLoading(false);
+    }
+  }, [siteId]);
+
+
   // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {
     flex: 1, padding: '10px 14px', borderRadius: 8,
@@ -821,19 +835,6 @@ export default function SiteDetail() {
       setBusy(false);
     }
   };
-
-  const refreshSmartDevices = useCallback(async () => {
-    if (!siteId) return;
-    setSmartDevicesLoading(true);
-    try {
-      const devices = await apiService.getSmartDevices(siteId);
-      setSmartDevices(Array.isArray(devices) ? devices : []);
-    } catch {
-      setSmartDevices([]);
-    } finally {
-      setSmartDevicesLoading(false);
-    }
-  }, [siteId]);
 
   const resetSmartDeviceForm = () => {
     setEditingSmartDeviceId(null);
