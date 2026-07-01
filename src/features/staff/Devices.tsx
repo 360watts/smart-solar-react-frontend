@@ -18,6 +18,7 @@ import { useModal } from '../../shared/hooks';
 import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
 import DeviceTypeSelector from './DeviceTypeSelector';
 import EditDeviceModal from './EditDeviceModal';
+import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
 
 interface User {
   id: number;
@@ -805,13 +806,13 @@ const Devices: React.FC = () => {
     deleteModal.openModal(device);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (options: DeleteDeviceOptions) => {
     if (!deleteModal.data) return;
+    const serial = deleteModal.data.device_serial;
     try {
-      await apiService.deleteDevice(deleteModal.data.id);
-      const serial = deleteModal.data.device_serial;
+      await apiService.deleteDevice(deleteModal.data.id, options);
       deleteModal.closeModal();
-      setSuccessModal({ show: true, message: `Device ${serial} has been permanently deleted.` });
+      setSuccessModal({ show: true, message: `Device ${serial} has been deleted successfully.` });
       setSelectedDevice(null);
       fetchDevices();
     } catch (err) {
@@ -2609,31 +2610,12 @@ const Devices: React.FC = () => {
           document.body
         )}
 
-        <AccessibleModal
+        <DeleteDeviceModal
           open={deleteModal.open}
+          device={deleteModal.data}
           onClose={deleteModal.closeModal}
-          title="Delete Device Permanently"
-          id="delete-modal-title"
-        >
-          {deleteModal.data && (
-            <div className="modal-delete-content">
-              <div className="modal-warning-box">
-                <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> PERMANENT DELETION</strong>
-                <p>This action cannot be undone. All device data will be permanently deleted.</p>
-              </div>
-              <p>Device to delete: <strong>{deleteModal.data.device_serial}</strong></p>
-              <ul className="modal-consequences-list">
-                <li>All telemetry data will be lost</li>
-                <li>All command history will be deleted</li>
-                <li>Device must be re-provisioned to use again</li>
-              </ul>
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={deleteModal.closeModal}>Cancel</button>
-                <button type="button" className="btn-danger" onClick={confirmDelete}>Yes, Delete Permanently</button>
-              </div>
-            </div>
-          )}
-        </AccessibleModal>
+          onConfirm={confirmDelete}
+        />
 
         {/* Modern Success Notification Modal */}
         {successModal.show && ReactDOM.createPortal(
@@ -3303,31 +3285,12 @@ const Devices: React.FC = () => {
       document.body
     )}
 
-    <AccessibleModal
+    <DeleteDeviceModal
       open={deleteModal.open}
+      device={deleteModal.data}
       onClose={deleteModal.closeModal}
-      title="Delete Device Permanently"
-      id="delete-modal-title-list"
-    >
-      {deleteModal.data && (
-        <div className="modal-delete-content">
-          <div className="modal-warning-box">
-            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> PERMANENT DELETION</strong>
-            <p>This action cannot be undone. All device data will be permanently deleted.</p>
-          </div>
-          <p>Device to delete: <strong>{deleteModal.data.device_serial}</strong></p>
-          <ul className="modal-consequences-list">
-            <li>All telemetry data will be lost</li>
-            <li>All command history will be deleted</li>
-            <li>Device must be re-provisioned to use again</li>
-          </ul>
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={deleteModal.closeModal}>Cancel</button>
-            <button type="button" className="btn-danger" onClick={confirmDelete}>Yes, Delete Permanently</button>
-          </div>
-        </div>
-      )}
-    </AccessibleModal>
+      onConfirm={confirmDelete}
+    />
 
     {/* Modern Success Notification Modal */}
     {successModal.show && ReactDOM.createPortal(

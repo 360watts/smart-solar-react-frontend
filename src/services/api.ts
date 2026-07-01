@@ -1314,9 +1314,16 @@ class ApiService {
     });
   }
 
-  async deleteDevice(deviceId: number): Promise<any> {
+  async deleteDevice(deviceId: number, options?: {
+    revoke_iot?: boolean;
+    delete_config?: boolean;
+    delete_alerts?: boolean;
+    delete_logs?: boolean;
+  }): Promise<any> {
     return this.request(`/devices/${deviceId}/delete/`, {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options ?? {}),
     });
   }
 
