@@ -19,6 +19,7 @@ import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
 import DeviceTypeSelector from './DeviceTypeSelector';
 import EditDeviceModal from './EditDeviceModal';
 import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
+import RestoreArchivedDeviceModal from './RestoreArchivedDeviceModal';
 
 interface User {
   id: number;
@@ -297,6 +298,7 @@ const Devices: React.FC = () => {
   const [deviceSiteMap, setDeviceSiteMap] = useState<Map<number, SolarSite | null>>(new Map());
   const [showEditModal, setShowEditModal] = useState(false);
   const [modalDevice, setModalDevice] = useState<Device | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
     try {
@@ -2882,7 +2884,7 @@ const Devices: React.FC = () => {
               </button>
             )}
             <button
-              onClick={() => { setCreatingDevice(true); setUserSearchTerm(''); setShowUserDropdown(false); }}
+              onClick={() => setShowRestoreModal(true)}
               style={{
                 padding: '9px 18px',
                 borderRadius: '10px',
@@ -2894,9 +2896,12 @@ const Devices: React.FC = () => {
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(47,191,113,0.35)',
                 letterSpacing: '0.01em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
-              + Register Device
+              ↺ Restore Archived Device
             </button>
           </div>
         </div>
@@ -2929,8 +2934,8 @@ const Devices: React.FC = () => {
                 <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
-                    description={searchTerm ? 'Try a different search term.' : 'Register a device to get started.'}
-                    action={!searchTerm ? { label: 'Register New Device', onClick: () => { setCreatingDevice(true); setUserSearchTerm(''); setShowUserDropdown(false); } } : undefined}
+                    description={searchTerm ? 'Try a different search term.' : 'Devices self-provision on first boot. If a serial went missing, restore it from the archive.'}
+                    action={!searchTerm ? { label: 'Restore Archived Device', onClick: () => setShowRestoreModal(true) } : undefined}
                   />
                 </td>
               </tr>
@@ -3290,6 +3295,15 @@ const Devices: React.FC = () => {
       device={deleteModal.data}
       onClose={deleteModal.closeModal}
       onConfirm={confirmDelete}
+    />
+
+    <RestoreArchivedDeviceModal
+      open={showRestoreModal}
+      onClose={() => setShowRestoreModal(false)}
+      onRestored={(device) => {
+        setSuccessModal({ show: true, message: `Device ${device.device_serial} has been restored.` });
+        fetchDevices(currentPage, searchTerm);
+      }}
     />
 
     {/* Modern Success Notification Modal */}

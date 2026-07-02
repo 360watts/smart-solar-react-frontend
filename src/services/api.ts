@@ -1236,6 +1236,26 @@ class ApiService {
     return result;
   }
 
+  // Sets/clears which device this device's energy-meter reading mirrors (e.g. a
+  // gateway relaying the same CT meter its RS-485 bus also reaches). Pass
+  // mirrorsDevicePk: null to clear. Auto-linked by the backend for the
+  // unambiguous 1-gateway/1-meter case — this is the manual override for sites
+  // with zero or multiple energy meters.
+  async siteSetDeviceMirror(
+    siteId: string,
+    devicePk: number,
+    mirrorsDevicePk: number | null,
+    mirrorsNodeId?: string,
+  ): Promise<any> {
+    const enc = encodeURIComponent(siteId);
+    const result = await this.request(`/sites/${enc}/devices/${devicePk}/mirror/`, {
+      method: 'POST',
+      body: JSON.stringify({ mirrors_device_pk: mirrorsDevicePk, mirrors_node_id: mirrorsNodeId ?? '' }),
+    });
+    cacheService.clearPattern(/^sites/);
+    return result;
+  }
+
   async deleteSite(siteId: string): Promise<void> {
     const enc = encodeURIComponent(siteId);
     await this.request(`/sites/${enc}/`, {
@@ -1294,6 +1314,20 @@ class ApiService {
     return this.request('/devices/create/', {
       method: 'POST',
       body: JSON.stringify(deviceData),
+    });
+  }
+
+  async getArchivedDevices(search?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    const queryString = params.toString();
+    return this.request(`/devices/archived/${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async restoreDevice(deviceSerial: string): Promise<any> {
+    return this.request('/devices/create/', {
+      method: 'POST',
+      body: JSON.stringify({ device_serial: deviceSerial }),
     });
   }
 
@@ -1786,9 +1820,60 @@ class ApiService {
   async getSiteHardwareHealth(siteId: string, days = 7): Promise<HardwareHealthData> {
     return this.request(`/sites/${siteId}/hardware-health/?days=${days}`);
   }
+
+  async getSiteSavings(siteId: string): Promise<SiteSavingsData> {
+    const res = await this.request(`/sites/${siteId}/savings/latest/`);
+    return res.data ?? res;
+  }
+
+  async updateSavingsRecord(siteId: string, payload: UpdateSavingsRecordPayload): Promise<SiteSavingsData> {
+    const res = await this.request(`/sites/${siteId}/savings/record/`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return res.data ?? res;
+  }
 }
 
 export const apiService = new ApiService();
+
+// ─── Savings & ROI ───────────────────────────────────────────────────────────
+
+export interface SiteSavingsData {
+  id: number;
+  electricityBill: {
+    amount: number;
+    period: string;
+    billingMonths: number;
+    status: string;
+  };
+  consumption: {
+    totalUnitsWithoutSolar: number;
+    solarUnits: number;
+    ebImportUnits: number;
+    ebExportUnits: number;
+    evUnits: number;
+  };
+  savings: {
+    billWithoutSolar: number;
+    savingsAmount: number;
+    savingsPercentage: number;
+  };
+  investment: {
+    upfrontAmount: number;
+    savedAmount: number;
+    paybackPercentage: number;
+    remainingInvestment: number;
+    monthsToBreakEven: number;
+    breakEvenDate: string;
+  };
+}
+
+export interface UpdateSavingsRecordPayload {
+  eb_bill_amount?: number | null;
+  upfront_investment?: number;
+  payment_status?: string;
+}
 
 // ─── Hardware Health ──────────────────────────────────────────────────────────
 

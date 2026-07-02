@@ -11,6 +11,7 @@ import {
   Plus, Pencil, Trash2, Sun,
 } from 'lucide-react';
 import { EmptyState } from '../../shared/components/EmptyState';
+import SavingsBillingEditor from './SavingsBillingEditor';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -692,6 +693,15 @@ export default function SiteDetail() {
     finally { setBusy(false); }
   };
 
+  const handleSetMirror = async (deviceId: number, mirrorsDevicePk: number | null) => {
+    setBusy(true); setError(null);
+    try {
+      const data = await apiService.siteSetDeviceMirror(siteId, deviceId, mirrorsDevicePk);
+      setSite(data);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to update data-source pairing'); }
+    finally { setBusy(false); }
+  };
+
   const handleDetach = async (deviceId: number, deviceSerial: string, roleLabel: string) => {
     if (!window.confirm(`Detach ${roleLabel} ${deviceSerial} from this site?`)) return;
     setBusy(true); setError(null);
@@ -1171,6 +1181,11 @@ export default function SiteDetail() {
                     </Link>
                   </div>
                 </div>
+
+                {/* ── Savings & Billing Manual Entry ── */}
+                <div style={{ marginTop: 20 }}>
+                  <SavingsBillingEditor siteId={site.site_id} />
+                </div>
               </motion.div>
             )}
 
@@ -1206,9 +1221,15 @@ export default function SiteDetail() {
                         <span><strong>Signal:</strong> {gw.signal_strength_dbm != null ? `${gw.signal_strength_dbm}%` : 'N/A'}</span>
                         <span style={{ textTransform: 'capitalize' }}><strong>Health:</strong> {heartbeatHealth?.severity || 'ok'}</span>
                       </div>
+                      {Array.isArray(gw.mirrored_by_serials) && gw.mirrored_by_serials.length > 0 && (
+                        <div style={{ fontSize: '0.78rem', color: palette.ok.color, marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <LinkIcon size={12} />
+                          Backed up by {gw.mirrored_by_serials.join(', ')} — it will publish directly if this gateway goes offline
+                        </div>
+                      )}
 
                       <div style={{ height: 1, background: palette.ok.border, margin: '20px 0' }} />
-                      
+
                       <label style={{ ...labelStyle, color: textMain }}>Reassign to another site</label>
                       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
@@ -1306,6 +1327,24 @@ export default function SiteDetail() {
                               <div style={{ fontWeight: 700, color: textMain }}>{meter.device_serial}</div>
                               <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>PK: {meter.device_id} · Type: energy_meter</div>
                               <div style={{ fontSize: '0.78rem', color: textSub }}>Last seen: {meter.last_seen_at ? new Date(meter.last_seen_at).toLocaleString() : 'Never'}</div>
+                              {meter.mirrors_device_id && meter.mirrors_device_id === gw?.device_id ? (
+                                <div style={{ fontSize: '0.76rem', color: palette.ok.color, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <LinkIcon size={12} />
+                                  Normally relayed via <strong style={{ fontFamily: 'monospace' }}>{meter.mirrors_device_serial}</strong> — falls back to direct cloud publish if the gateway goes offline
+                                </div>
+                              ) : gw ? (
+                                <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: '0.74rem', color: textMute }}>Not paired to the gateway's relay path.</span>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => handleSetMirror(meter.device_id, gw.device_id)}
+                                    style={{ ...buttonStyle(true), padding: '2px 8px', fontSize: '0.74rem' }}
+                                  >
+                                    <LinkIcon size={11} /> Pair to {gw.device_serial}
+                                  </button>
+                                </div>
+                              ) : null}
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               <button type="button" disabled={busy} onClick={() => {

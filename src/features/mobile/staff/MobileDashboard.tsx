@@ -125,9 +125,10 @@ const MobileDashboard: React.FC = () => {
   const isDeyeCloud = lastTelemetry?.data_source === 'deye_cloud';
   const rs485Stale = lastTelemetry?.data_stale === true;
   const latestAgeMs = telemetryAgeMs(lastTelemetry?.timestamp);
+  const online = site ? siteIsOnline(site) : false;
   const gatewayOffline = isDeyeCloud ? !online : latestAgeMs > 10 * 60 * 1000;
   const deyeCloudAgeMs = isDeyeCloud ? latestAgeMs : null;
-  const loggerOffline = isDeyeCloud && deyeCloudAgeMs > 20 * 60 * 1000;
+  const loggerOffline = isDeyeCloud && (deyeCloudAgeMs ?? 0) > 20 * 60 * 1000;
   const dataIsStale = !!lastTelemetry && !isFreshTelemetry(lastTelemetry);
   const lat = dataIsStale ? null : lastTelemetry;
   const day = lastTelemetry;
@@ -160,7 +161,6 @@ const MobileDashboard: React.FC = () => {
     grid_power_factor: lastTelemetry.grid_power_factor ?? null,
   } : undefined;
   const isBatDischarging = batW != null && batW < -50;
-  const online = site ? siteIsOnline(site) : false;
   const liveStatusText = !lastTelemetry ? 'No live data' : dataIsStale ? `Stale · ${lastTelemetryLabel}` : `Live · ${lastTelemetryLabel}`;
 
   const fetchAll = useCallback(async () => {
