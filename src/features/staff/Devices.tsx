@@ -195,6 +195,53 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Log scan alert grouping ─────────────────────────────────────────────────
+// Collapses repeated log lines that differ only in timestamps/ids/numbers
+// (e.g. "RS485 timeout after 3021ms" x 40) into one group with an occurrence
+// count, so a noisy day doesn't drown out distinct issues.
+const normalizeLogLine = (text: string): string =>
+  text
+    .replace(/\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?\b/g, '#TS#')
+    .replace(/\b0x[0-9a-fA-F]+\b/g, '#HEX#')
+    .replace(/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g, '#UUID#')
+    .replace(/\b\d+(\.\d+)?\b/g, '#N#')
+    .trim();
+
+interface ScanLogOccurrence { filename: string; line: number; text: string }
+interface ScanLogGroup {
+  key: string;
+  severity: 'error' | 'warning';
+  template: string;
+  sampleText: string;
+  count: number;
+  occurrences: ScanLogOccurrence[];
+}
+
+const groupScanResults = (
+  results: { filename: string; errors: { line: number; text: string }[]; warnings: { line: number; text: string }[] }[]
+): ScanLogGroup[] => {
+  const groups = new Map<string, ScanLogGroup>();
+  for (const file of results) {
+    for (const entry of file.errors) {
+      const template = normalizeLogLine(entry.text);
+      const key = `error::${template}`;
+      const group = groups.get(key) ?? { key, severity: 'error' as const, template, sampleText: entry.text, count: 0, occurrences: [] };
+      group.count += 1;
+      group.occurrences.push({ filename: file.filename, line: entry.line, text: entry.text });
+      groups.set(key, group);
+    }
+    for (const entry of file.warnings) {
+      const template = normalizeLogLine(entry.text);
+      const key = `warning::${template}`;
+      const group = groups.get(key) ?? { key, severity: 'warning' as const, template, sampleText: entry.text, count: 0, occurrences: [] };
+      group.count += 1;
+      group.occurrences.push({ filename: file.filename, line: entry.line, text: entry.text });
+      groups.set(key, group);
+    }
+  }
+  return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+};
+
 const Devices: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
@@ -256,6 +303,10 @@ const Devices: React.FC = () => {
   const [scanMeta, setScanMeta] = useState<{ files_scanned: number; total_errors: number; total_warnings: number } | null>(null);
   const [mqttCertData, setMqttCertData] = useState<{ cert: string; key: string; endpoint: string } | null>(null);
   const [showMqttCertModal, setShowMqttCertModal] = useState(false);
+  const [scanGrouped, setScanGrouped] = useState(true);
+  const [scanSeverityFilter, setScanSeverityFilter] = useState<'all' | 'error' | 'warning'>('all');
+  const [scanSearchFilter, setScanSearchFilter] = useState('');
+  const [expandedScanGroups, setExpandedScanGroups] = useState<Set<string>>(new Set());
 
   const [editForm, setEditForm] = useState({
     device_serial: '',
@@ -484,6 +535,9 @@ const Devices: React.FC = () => {
     setScanResults(null);
     setScanMeta(null);
     setScanLoading(true);
+    setScanSeverityFilter('all');
+    setScanSearchFilter('');
+    setExpandedScanGroups(new Set());
     try {
       const data = await apiService.scanDeviceLogFiles(selectedDevice.id, scanDate);
       setScanResults(data.results);
@@ -2786,6 +2840,45 @@ const Devices: React.FC = () => {
                 </div>
               )}
 
+              {/* Filter toolbar */}
+              {!scanLoading && scanResults && scanResults.some(r => r.errors.length > 0 || r.warnings.length > 0) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0, flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    value={scanSearchFilter}
+                    onChange={e => setScanSearchFilter(e.target.value)}
+                    placeholder="Filter alerts…"
+                    style={{ flex: '1 1 160px', minWidth: 120, padding: '6px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#e2e8f0', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', outline: 'none' }}
+                  />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {(['all', 'error', 'warning'] as const).map(sev => (
+                      <button
+                        key={sev}
+                        onClick={() => setScanSeverityFilter(sev)}
+                        style={{
+                          padding: '5px 11px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                          fontFamily: '"Fira Code", monospace', textTransform: 'capitalize',
+                          border: `1px solid ${scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.4)' : sev === 'warning' ? 'rgba(251,191,36,0.4)' : 'rgba(148,163,184,0.4)') : 'rgba(255,255,255,0.08)'}`,
+                          background: scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.15)' : sev === 'warning' ? 'rgba(251,191,36,0.12)' : 'rgba(148,163,184,0.12)') : 'transparent',
+                          color: scanSeverityFilter === sev ? (sev === 'error' ? '#f87171' : sev === 'warning' ? '#fbbf24' : '#cbd5e1') : '#64748b',
+                        }}
+                      >{sev}</button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setScanGrouped(g => !g)}
+                    title={scanGrouped ? 'Show every line individually' : 'Group repeated alerts together'}
+                    style={{
+                      padding: '5px 11px', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                      fontFamily: '"Fira Code", monospace', display: 'flex', alignItems: 'center', gap: 5,
+                      border: `1px solid ${scanGrouped ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      background: scanGrouped ? 'rgba(96,165,250,0.12)' : 'transparent',
+                      color: scanGrouped ? '#60a5fa' : '#64748b',
+                    }}
+                  >⧉ {scanGrouped ? 'Grouped' : 'Group similar'}</button>
+                </div>
+              )}
+
               {/* Body */}
               <div style={{ overflowY: 'auto', flex: 1, padding: '0 0 16px' }}>
                 {scanLoading ? (
@@ -2802,9 +2895,82 @@ const Devices: React.FC = () => {
                       <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
                     </div>
                   );
+
+                  const search = scanSearchFilter.trim().toLowerCase();
+                  const matchesSearch = (text: string) => !search || text.toLowerCase().includes(search);
+                  const passSeverity = (sev: 'error' | 'warning') => scanSeverityFilter === 'all' || scanSeverityFilter === sev;
+
+                  const noMatches = (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 10 }}>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', color: '#94a3b8' }}>No alerts match the current filters.</div>
+                    </div>
+                  );
+
+                  if (scanGrouped) {
+                    const groups = groupScanResults(filesWithIssues)
+                      .filter(g => passSeverity(g.severity) && (matchesSearch(g.sampleText) || g.occurrences.some(o => matchesSearch(o.text))));
+                    if (groups.length === 0) return noMatches;
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 20px' }}>
+                        {groups.map(group => {
+                          const expanded = expandedScanGroups.has(group.key);
+                          const isErr = group.severity === 'error';
+                          const color = isErr ? '#f87171' : '#fbbf24';
+                          const border = isErr ? 'rgba(239,68,68,0.16)' : 'rgba(251,191,36,0.14)';
+                          const bg = isErr ? 'rgba(239,68,68,0.05)' : 'rgba(251,191,36,0.04)';
+                          const fileCount = new Set(group.occurrences.map(o => o.filename)).size;
+                          return (
+                            <div key={group.key} style={{ borderRadius: 8, border: `1px solid ${border}`, overflow: 'hidden' }}>
+                              <div
+                                onClick={() => setExpandedScanGroups(prev => {
+                                  const next = new Set(prev);
+                                  next.has(group.key) ? next.delete(group.key) : next.add(group.key);
+                                  return next;
+                                })}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: bg, cursor: group.count > 1 ? 'pointer' : 'default' }}
+                              >
+                                <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', fontWeight: 700, color, minWidth: 30, textAlign: 'center', padding: '2px 6px', borderRadius: 10, background: isErr ? 'rgba(239,68,68,0.14)' : 'rgba(251,191,36,0.12)', flexShrink: 0 }}>
+                                  ×{group.count}
+                                </span>
+                                <span style={{ flex: 1, fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: isErr ? '#fca5a5' : '#fde68a', wordBreak: 'break-all', lineHeight: 1.5 }}>
+                                  {group.sampleText}
+                                </span>
+                                {fileCount > 1 && (
+                                  <span style={{ fontSize: '0.65rem', color: '#64748b', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>{fileCount} files</span>
+                                )}
+                                {group.count > 1 && (
+                                  <span style={{ color: '#64748b', fontSize: '0.7rem', flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▸</span>
+                                )}
+                              </div>
+                              {expanded && group.count > 1 && (
+                                <div style={{ padding: '2px 12px 8px', display: 'flex', flexDirection: 'column', gap: 2, background: 'rgba(0,0,0,0.15)' }}>
+                                  {group.occurrences.map((occ, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', color: '#94a3b8', padding: '3px 4px' }}>
+                                      <span style={{ minWidth: 130, flexShrink: 0, color: '#64748b' }}>{occ.filename}:{occ.line}</span>
+                                      <span style={{ wordBreak: 'break-all' }}>{occ.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  const flatFiles = filesWithIssues
+                    .map(file => ({
+                      ...file,
+                      errors: file.errors.filter(e => passSeverity('error') && matchesSearch(e.text)),
+                      warnings: file.warnings.filter(w => passSeverity('warning') && matchesSearch(w.text)),
+                    }))
+                    .filter(file => file.errors.length > 0 || file.warnings.length > 0);
+                  if (flatFiles.length === 0) return noMatches;
+
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                      {filesWithIssues.map((file, fi) => (
+                      {flatFiles.map((file, fi) => (
                         <div key={fi} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                           {/* File header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 8px', background: 'rgba(255,255,255,0.02)' }}>
