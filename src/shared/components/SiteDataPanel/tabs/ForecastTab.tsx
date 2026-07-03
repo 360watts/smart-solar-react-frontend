@@ -30,6 +30,14 @@ function startOfSolarDayIST(): string {
   return todaySolar.toISOString();
 }
 
+/** The solar day that starts at startOfSolarDayIST() runs until 6am IST the
+ * following calendar day — used as the upper bound so "today"'s vs-actual
+ * chart keeps showing the forecast curve overnight, not just up to the last
+ * actual reading. */
+function endOfSolarDayIST(): string {
+  return new Date(new Date(startOfSolarDayIST()).getTime() + 24 * 3600 * 1000).toISOString();
+}
+
 function istDateOffset(n: number): string {
   const IST_MS = 5.5 * 60 * 60 * 1000;
   const nowIST = Date.now() + IST_MS;
@@ -1010,9 +1018,13 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
   // vs actual data — from forecastAccuracy timeseries (today + 7d)
   const vsActualData = useMemo(() => {
     const ts: any[] = forecastAccuracy?.timeseries ?? [];
-    const todayISTStr = istDate(new Date());
+    // Keep rows with EITHER an actual reading or a forecast value — previously
+    // requiring actual_kw != null silently dropped every future-dated row, so
+    // "today" could never show anything past the last real telemetry sample.
+    // Actual is real-time (stops at now, naturally, since no reading exists
+    // yet); P50 forecast continues on its own past that point.
     const rows = ts
-      .filter((r: any) => r.actual_kw != null && (!!r.slot_ts || !!r.ts))
+      .filter((r: any) => (r.actual_kw != null || r.predicted_kw != null) && (!!r.slot_ts || !!r.ts))
       .map((r: any) => { const slot = r.slot_ts || r.ts; return { ...r, __ms: new Date(slot).getTime(), _slot: slot }; })
       .filter((r: any) => !Number.isNaN(r.__ms));
 
@@ -1021,11 +1033,16 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     const cutoffMs = vsActual7d
       ? Date.now() - 7 * 24 * 60 * 60 * 1000
       : new Date(startOfSolarDayIST()).getTime();
+    // "Today" is bounded above by 6am IST the next day, so the forecast line
+    // keeps drawing through the night instead of stopping wherever the data
+    // happens to end. The 7-day view is historical-only and needs no upper
+    // bound beyond "now".
+    const upperBoundMs = vsActual7d ? Date.now() : new Date(endOfSolarDayIST()).getTime();
 
     // Bucket 5-min actual rows into 15-min slots (matching forecast resolution)
     const BUCKET_MS = 15 * 60 * 1000;
     const bucketMap = new Map<number, { sumActual: number; count: number; predicted_kw: number | null; p10_kw: number | null; p90_kw: number | null }>();
-    for (const r of rows.filter((r: any) => r.__ms >= cutoffMs)) {
+    for (const r of rows.filter((r: any) => r.__ms >= cutoffMs && r.__ms <= upperBoundMs)) {
       const bucketMs = Math.floor(r.__ms / BUCKET_MS) * BUCKET_MS;
       const b = bucketMap.get(bucketMs) ?? { sumActual: 0, count: 0, predicted_kw: r.predicted_kw ?? null, p10_kw: r.p10_kw ?? null, p90_kw: r.p90_kw ?? null };
       if (r.actual_kw != null) { b.sumActual += r.actual_kw; b.count += 1; }
