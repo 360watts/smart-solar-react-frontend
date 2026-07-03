@@ -351,7 +351,7 @@ const MobileOTA: React.FC = () => {
                             {fw.is_active && <span style={{ fontSize: '0.6rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'DM Sans', sans-serif" }}>ACTIVE</span>}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
-                            {fw.name} · {fw.deviceModel}
+                            Firmware v{fw.version} · {fw.deviceModel ?? 'Unknown'}
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
@@ -565,7 +565,7 @@ const MobileOTA: React.FC = () => {
                         <span style={{ ...mono, fontSize: '0.88rem', fontWeight: 700, color: accent }}>v{selectedFW.version}</span>
                         <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: selectedFW.status === 'stable' ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: selectedFW.status === 'stable' ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{selectedFW.status}</span>
                       </div>
-                      <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{selectedFW.name} · {fmtBytes(selectedFW.size)}</div>
+                      <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{selectedFW.version} · {fmtBytes(selectedFW.size)}</div>
                     </div>
                     <CheckCircle size={15} color={accent} style={{ flexShrink: 0 }} />
                   </div>
@@ -585,7 +585,7 @@ const MobileOTA: React.FC = () => {
                               <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: f.status === 'stable' ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: f.status === 'stable' ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{f.status}</span>
                               {f.is_active && <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'DM Sans', sans-serif" }}>active</span>}
                             </div>
-                            <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>{f.name} · {fmtBytes(f.size)}</div>
+                            <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{f.version} · {fmtBytes(f.size)}</div>
                           </div>
                         </button>
                       );

@@ -345,7 +345,7 @@ export const OTA: React.FC = () => {
       const response = await apiService.getFirmwareVersions(false);
       const transformed: FirmwareVersion[] = (response.results || response || []).map((fw: any) => ({
         id: fw.id,
-        name: fw.filename || `Firmware v${fw.version}`,
+        name: fw.version ? `Firmware v${fw.version}` : 'Firmware',
         version: fw.version,
         deviceModel: fw.description?.match(/(?:ESP32|STM32|[A-Z0-9-]+)/i)?.[0] || 'Unknown',
         minBootloaderVersion: '1.0.0',
@@ -936,7 +936,7 @@ export const OTA: React.FC = () => {
                 style={inputStyle(isDark)}>
                 <option value="">— Select Version —</option>
                 {firmwares.filter(f => f.status === 'stable').map(f => (
-                  <option key={f.id} value={f.version}>{f.name} v{f.version}</option>
+                  <option key={f.id} value={f.version}>Firmware v{f.version}</option>
                 ))}
               </select>
             </div>

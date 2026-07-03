@@ -15,8 +15,9 @@ npm install          # Install dependencies
 npm run dev          # Dev server (http://localhost:5173/)
 npm run build        # Production build → dist/
 npm test             # Jest + React Testing Library
-npx playwright test  # E2E tests
 ```
+
+Note: `playwright` is listed as a devDependency but there is no `playwright.config.*`, no `e2e`/`tests` directory, and no `test:e2e` script — E2E testing is not actually wired up in this repo.
 
 **Environment variable:**
 ```bash
@@ -27,30 +28,71 @@ VITE_API_BASE_URL=https://smart-solar-django-backend.vercel.app/api
 
 ### Route Structure
 
+Defined in `src/app/App.tsx`. Two layout trees: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`/`AdminRoute`) and customer portal (`PortalLayout`, gated by `CustomerRoute`).
+
 ```
-/login                  → Login (public)
-/                       → Dashboard (protected)
-/devices                → Device list
-/devices/:id/config     → Device MODBUS configuration
-/alerts                 → Active alerts
-/users                  → User management
-/employees              → Employee list (admin only)
-/device-presets         → MODBUS register presets
-/ota                    → Firmware OTA management
-/profile                → User profile
+/login                        → Login (public)
+/verify-email                 → Email verification (public, from OTP email)
+/invite/:token                → Accept invite (public, standalone)
+
+# Customer portal (PortalLayout, CustomerRoute)
+/portal                       → PortalOverview (index)
+/portal/alerts                → PortalAlerts
+/portal/device                → PortalDevice
+/portal/profile               → PortalProfile
+/portal/weather                → PortalWeather
+/portal/history                → PortalHistory
+/portal/solar                 → PortalSolar
+/portal/load                  → PortalLoad
+/portal/details               → PortalDetails
+
+# Staff portal (StaffLayout, StaffRoute)
+/                              → RoleRedirect (→ /dashboard for staff, /portal for customers)
+/dashboard                     → Dashboard
+/devices                       → Device list
+/configuration                 → Configuration
+/alerts                        → Active alerts
+/users                         → User management
+/employees                     → Employee list (AdminRoute)
+/departments                   → Department list (AdminRoute)
+/device-presets                → MODBUS register presets
+/ota                           → Firmware OTA management (AdminRoute)
+/sites                         → Site list
+/sites/commissioning           → CommissioningWizard
+/sites/:siteId                 → SiteDetail
+/equipment                     → Equipment
+/quotation                     → QuotationPage
+/profile                       → User profile
 ```
+
+Note: `/devices/:id/config` (previously documented) does not exist in the current router.
 
 ### Key Directories
 
+Feature-based layout (entry point is `src/main.jsx`, not `main.tsx`):
+
 ```
 src/
-  components/     — One file per page/feature (Dashboard, Devices, Alerts, etc.)
-  contexts/       — AuthContext (JWT), NavigationContext, ThemeContext, ToastContext
-  hooks/          — Custom React hooks
+  app/            — App.tsx (router), constants, ambient declarations
+  features/
+    auth/         — Login, VerifyEmailPage
+    staff/        — Staff dashboard pages (Dashboard, Devices, Sites, Equipment, etc.)
+    portal/       — Customer portal pages (PortalOverview, PortalAlerts, PortalDevice, ...)
+    mobile/       — Mobile-specific staff/ and portal/ variants
+    quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
+  shared/
+    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...)
+    guards/       — StaffRoute, AdminRoute, CustomerRoute
+    hooks/        — Custom React hooks
+    layout/       — StaffLayout, PortalLayout, NavigationProgress
+    lib/          — Utility helpers
+    theme/        — Theme tokens/helpers
+    types/        — TypeScript interfaces
+    ui/           — shadcn/ui component overrides (e.g. chart.tsx)
   services/       — API call functions (maps to Django endpoints)
-  types/          — TypeScript interfaces
-  lib/            — Utility helpers
-  ui/             — shadcn/ui component overrides
+  styles/         — Global stylesheets
+  contexts/       — AuthContext (JWT), NavigationContext, ThemeContext, ToastContext
+  _archive/       — Retired/legacy code kept for reference, not built
 ```
 
 ### Auth
@@ -65,38 +107,21 @@ All API calls go through `src/services/`. Base URL from `VITE_API_BASE_URL`. Cal
 
 Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code colors — use Tailwind tokens or CSS variables.
 
-### UI Theme + Select Migration Status (2026-03-26)
+### UI Theme + Select Migration
 
-Current implementation status for the unified theme/token migration:
+See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration history and remaining native-`<select>` wave status. Note that doc still references pre-restructure paths (`src/components/...`, `src/ui/chart.tsx`); current locations are `src/features/staff/...` and `src/shared/ui/chart.tsx` respectively.
 
-- Canonical dark selector is now root-based: `html.dark-mode` (kept backward-compatible with `body.dark-mode` during transition).
-- `src/ui/chart.tsx` dark selector was aligned from `.dark` to `.dark-mode`.
-- Hardcoded `body` dark colors in `src/index.css` and `body.dark-mode` hard overrides in `src/App.css` were neutralized so token values drive theme behavior.
-- Conflicting native select rule `color-scheme: light !important` was removed from `src/App.css`.
+### Notable `src/features/staff/` Components
 
-Batch 1 component status (completed):
+- `CommissioningWizard.tsx` — new-site commissioning flow
+- `SavingsBillingEditor.tsx` — savings/billing tariff editor
+- `RestoreArchivedDeviceModal.tsx` — restore a soft-deleted device
+- `ComponentDetailModalPremium.tsx` — premium component detail modal
+- `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `is_staff`/`is_superuser`)
 
-- `src/components/Sites.tsx` — inline select `colorScheme` and styled `<option>` overrides removed.
-- `src/components/CommissioningWizard.tsx` — inline select `colorScheme` and styled `<option>` overrides removed.
-- `src/components/SiteDetail.tsx` — reviewed in Batch 1 scope and retained for next primitive migration step.
+### Customer Portal: `src/features/portal/` vs `smart-solar-customer-portal` repo
 
-Additional components verified to still use native `<select>` (next migration waves):
-
-- `src/components/Devices.tsx`
-- `src/components/Users.tsx`
-- `src/components/Equipment.tsx`
-- `src/components/SiteDataPanel.tsx`
-- `src/components/SlaveConfigModal.tsx`
-- `src/components/Employees.tsx`
-- `src/components/DevicePresets.tsx`
-- `src/components/Configuration.tsx`
-- `src/components/OTA.tsx`
-
-Guidance for remaining waves:
-
-- Keep payload parity checks when migrating owner/user selects (`owner_user_id` must remain numeric).
-- Prefer headless primitives (Radix + portal rendering) for `BaseSelect`/`SearchableSelect`.
-- Keep each wave small and independently revertible.
+This repo also contains `src/features/portal/` (customer-facing pages, `/portal/*` routes) in addition to the separate `smart-solar-customer-portal` repo. Relationship between the two has not been confirmed from git history — flagging as needing clarification rather than guessing (e.g. whether one is a deprecated/legacy portal and the other the active migration target, or they serve different purposes).
 
 ### Live Data
 
