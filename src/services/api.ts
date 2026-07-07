@@ -146,6 +146,58 @@ export interface AlertItem {
   };
 }
 
+// ─── Incident item (Phase C /incidents/, /data-quality-gaps/, /uptime/) ───────
+
+export type IncidentCategory =
+  | 'hardware' | 'connectivity' | 'data_quality' | 'weather_environmental' | 'maintenance' | 'grid';
+
+export type IncidentStatus = 'active' | 'acknowledged' | 'resolved';
+
+export interface IncidentItem {
+  id: number;
+  deviceId: number | null;
+  deviceSerial: string | null;
+  category: IncidentCategory;
+  incidentType: string;
+  incidentTypeTitle: string;
+  severity: 'critical' | 'warning' | 'info';
+  status: IncidentStatus;
+  tsStart: string;
+  tsEnd: string | null;
+  durationSeconds: number | null;
+  title: string;
+  summary: string;
+  detectedBy: string;
+  evidenceCount: number;
+}
+
+export interface SiteIncidentsResponse {
+  count: number;
+  limit: number;
+  offset: number;
+  results: IncidentItem[];
+}
+
+function _mapIncidentDict(raw: any): IncidentItem {
+  return {
+    id: raw.id,
+    deviceId: raw.device_id ?? null,
+    deviceSerial: raw.device_serial ?? null,
+    category: raw.category,
+    incidentType: raw.incident_type,
+    incidentTypeTitle: raw.incident_type_title,
+    severity: raw.severity,
+    status: raw.status,
+    tsStart: raw.ts_start,
+    tsEnd: raw.ts_end ?? null,
+    durationSeconds: raw.duration_seconds ?? null,
+    title: raw.title,
+    summary: raw.summary ?? '',
+    detectedBy: raw.detected_by,
+    evidenceCount: raw.evidence_count ?? 0,
+  };
+}
+
 /** Per-alert result from POST /api/alerts/diagnose-batch/ */
 export interface AlertDiagnosticResult {
   alert_id: number;
@@ -531,6 +583,50 @@ class ApiService {
     }));
     cacheService.set(cacheKey, data, 60 * 1000); // 1-min cache — alerts are time-sensitive
     return data;
+  }
+
+  async getSiteIncidents(
+    siteId: string,
+    opts?: { limit?: number; offset?: number; category?: IncidentCategory; status?: IncidentStatus },
+  ): Promise<SiteIncidentsResponse> {
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.offset) params.set('offset', String(opts.offset));
+    if (opts?.category) params.set('category', opts.category);
+    if (opts?.status) params.set('status', opts.status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const raw = await this.request(`/sites/${encodeURIComponent(siteId)}/incidents/${qs}`);
+    return {
+      count: raw.count,
+      limit: raw.limit,
+      offset: raw.offset,
+      results: (raw.results || []).map(_mapIncidentDict),
+    };
+  }
+
+  async getSiteDataQualityGaps(siteId: string, start: string, end: string): Promise<Array<{
+    tsStart: string; tsEnd: string; category: IncidentCategory; incidentType: string; severity: string;
+  }>> {
+    const params = new URLSearchParams({ start, end });
+    const raw: any[] = await this.request(`/sites/${encodeURIComponent(siteId)}/data-quality-gaps/?${params.toString()}`);
+    return raw.map(g => ({
+      tsStart: g.ts_start, tsEnd: g.ts_end, category: g.category, incidentType: g.incident_type, severity: g.severity,
+    }));
+  }
+
+  async getSiteUptime(siteId: string, days = 30): Promise<{
+    rollingAvgUptimePct: number | null;
+    dailyScores: Array<{ reportDate: string; uptimePct: number; totalExpectedSlots: number; impactedSlots: number; impactedSlotsByCategory: Record<string, number> }>;
+  }> {
+    const raw = await this.request(`/sites/${encodeURIComponent(siteId)}/uptime/?days=${days}`);
+    return {
+      rollingAvgUptimePct: raw.rolling_avg_uptime_pct,
+      dailyScores: (raw.daily_scores || []).map((s: any) => ({
+        reportDate: s.report_date, uptimePct: s.uptime_pct,
+        totalExpectedSlots: s.total_expected_slots, impactedSlots: s.impacted_slots,
+        impactedSlotsByCategory: s.impacted_slots_by_category || {},
+      })),
+    };
   }
 
   async diagnoseBatch(): Promise<DiagnoseBatchResponse> {
