@@ -4,23 +4,9 @@ import {
   ShieldCheck, Zap, Search, X, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { apiService } from '../../services/api';
+import { apiService, IncidentItem } from '../../services/api';
 import { useIsMobile, useAutoRefresh } from '../../shared/hooks';
 import MobilePortalAlerts from '../mobile/portal/MobilePortalAlerts';
-
-interface AlertItem {
-  id: string | number;
-  type?: string;
-  alert_type?: string;
-  severity: string;
-  message: string;
-  device_id?: string;
-  device_serial?: string;
-  timestamp?: string;
-  triggered_at?: string;
-  status: string;
-  resolved: boolean;
-}
 
 const SEV_CONFIG: Record<string, { border: string; glow: string; bg: string; label: string; icon: React.ReactNode }> = {
   critical: { border: '#F87171', glow: 'rgba(248,113,113,0.12)', bg: 'rgba(248,113,113,0.08)',  label: 'Critical', icon: <AlertTriangle size={12} /> },
@@ -55,13 +41,14 @@ function timeAgo(dateStr?: string): string {
 const PortalAlerts: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
-  const [alerts, setAlerts]       = useState<AlertItem[]>([]);
+  const [alerts, setAlerts]       = useState<IncidentItem[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [statusFilter, setStatusFilter]     = useState<StatusFilter>('all');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [search, setSearch]       = useState('');
   const [page, setPage]           = useState(1);
+  const [siteId, setSiteId]       = useState<string | null>(null);
 
   const text    = isDark ? '#F0F4FF' : '#0A0E1A';
   const muted   = isDark ? '#8892A4' : '#64748B';
@@ -70,29 +57,53 @@ const PortalAlerts: React.FC = () => {
   const inputBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
   const pillBg  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
 
-  const load = async () => {
+  const load = useCallback(async (sid: string) => {
     setLoading(true); setError(null);
     try {
-      const data: AlertItem[] = await apiService.getAlerts();
-      setAlerts(data);
+      const data = await apiService.getSiteIncidents(sid);
+      setAlerts(data.results);
     } catch (e: any) {
       setError(e?.message || 'Failed to load alerts');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const silentLoad = useCallback(async () => {
+    if (!siteId) return;
     setError(null);
     try {
-      const data: AlertItem[] = await apiService.getAlerts();
-      setAlerts(data);
+      const data = await apiService.getSiteIncidents(siteId);
+      setAlerts(data.results);
     } catch {}
-  }, []);
+  }, [siteId]);
 
   const { triggerNow } = useAutoRefresh(silentLoad, 120);
 
-  useEffect(() => { load(); }, []);
+  // Resolve the portal user's site once, then load its incidents.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const summary: any = await apiService.getPortalSummary();
+        const site = summary?.sites?.[0];
+        if (cancelled) return;
+        if (site?.site_id) {
+          setSiteId(site.site_id);
+          load(site.site_id);
+        } else {
+          setError('No site found for your account.');
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setError('Failed to load alerts');
+          setLoading(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [load]);
 
   // Reset page whenever filters change
   useEffect(() => { setPage(1); }, [statusFilter, severityFilter, search]);
@@ -100,11 +111,11 @@ const PortalAlerts: React.FC = () => {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return alerts.filter(a => {
-      if (statusFilter === 'active'   && (a.resolved || a.status === 'resolved')) return false;
-      if (statusFilter === 'resolved' && !a.resolved && a.status !== 'resolved')  return false;
+      if (statusFilter === 'active'   && a.status === 'resolved') return false;
+      if (statusFilter === 'resolved' && a.status !== 'resolved') return false;
       if (severityFilter !== 'all'    && a.severity !== severityFilter)            return false;
       if (q) {
-        const haystack = [a.message, a.device_serial, a.device_id, a.severity, a.status]
+        const haystack = [a.summary, a.deviceSerial, a.incidentType, a.severity, a.status]
           .filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
       }
@@ -116,9 +127,9 @@ const PortalAlerts: React.FC = () => {
   const safePage    = Math.min(page, totalPages);
   const pageItems   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const activeCount   = alerts.filter(a => !a.resolved && a.status !== 'resolved').length;
-  const resolvedCount = alerts.filter(a =>  a.resolved || a.status === 'resolved').length;
-  const criticalCount = alerts.filter(a => a.severity === 'critical' && !a.resolved && a.status !== 'resolved').length;
+  const activeCount   = alerts.filter(a => a.status !== 'resolved').length;
+  const resolvedCount = alerts.filter(a => a.status === 'resolved').length;
+  const criticalCount = alerts.filter(a => a.severity === 'critical' && a.status !== 'resolved').length;
 
   const hasFilters = statusFilter !== 'all' || severityFilter !== 'all' || search.trim() !== '';
 
@@ -165,7 +176,7 @@ const PortalAlerts: React.FC = () => {
         <div style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: '#FCA5A5', display: 'flex', gap: 10, alignItems: 'center', fontSize: 14 }}>
           <AlertTriangle size={16} />
           {error}
-          <button onClick={load} style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+          <button onClick={() => siteId && load(siteId)} style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600, color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
         </div>
       )}
 
@@ -293,8 +304,8 @@ const PortalAlerts: React.FC = () => {
           {pageItems.map((alert, i) => {
             const sev    = SEV_CONFIG[alert.severity]  ?? SEV_CONFIG.info;
             const status = STATUS_CONFIG[alert.status] ?? STATUS_CONFIG.active;
-            const ts     = alert.timestamp || alert.triggered_at;
-            const device = alert.device_serial || alert.device_id;
+            const ts     = alert.tsStart;
+            const device = alert.deviceSerial;
 
             return (
               <div key={alert.id} className="portal-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
@@ -331,7 +342,7 @@ const PortalAlerts: React.FC = () => {
                         </div>
                         {ts && <span style={{ fontSize: 12, color: muted, fontVariantNumeric: 'tabular-nums' }}>{timeAgo(ts)}</span>}
                       </div>
-                      <p style={{ margin: 0, fontSize: 14, color: text, lineHeight: 1.5, fontWeight: 500 }}>{alert.message}</p>
+                      <p style={{ margin: 0, fontSize: 14, color: text, lineHeight: 1.5, fontWeight: 500 }}>{alert.summary}</p>
                       {device && (
                         <p style={{ margin: '6px 0 0', fontSize: 12, color: muted, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Zap size={11} /> {device}
