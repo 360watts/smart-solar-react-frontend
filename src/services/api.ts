@@ -604,6 +604,26 @@ class ApiService {
     };
   }
 
+  // Fleet-wide incidents: reuses the existing Incident-backed /alerts/manage/ shim
+  // response (which already returns all sites' data for staff users) rather than
+  // requiring a new dedicated fleet-wide backend endpoint. If a true fleet-wide
+  // /incidents/ endpoint becomes necessary, that's backend scope for a future plan.
+  async getIncidents(opts?: { limit?: number; offset?: number; category?: IncidentCategory; status?: IncidentStatus }): Promise<SiteIncidentsResponse> {
+    const raw: any[] = await this.request('/alerts/manage/');
+    return {
+      count: raw.length, limit: raw.length, offset: 0,
+      results: raw.map((a: any) => ({
+        id: typeof a.id === 'number' ? a.id : 0,
+        deviceId: null, deviceSerial: a.device_serial ?? a.device_id ?? null,
+        category: a.category ?? 'hardware', incidentType: a.fault_code ?? a.type ?? '',
+        incidentTypeTitle: a.title ?? '', severity: a.severity, status: a.status ?? (a.resolved ? 'resolved' : 'active'),
+        tsStart: a.timestamp ?? a.triggered_at ?? '', tsEnd: a.resolved_at ?? null,
+        durationSeconds: null, title: a.title ?? '', summary: a.message ?? '',
+        detectedBy: '', evidenceCount: a.metadata?.diagnostic ? 1 : 0,
+      })),
+    };
+  }
+
   async getSiteDataQualityGaps(siteId: string, start: string, end: string): Promise<Array<{
     tsStart: string; tsEnd: string; category: IncidentCategory; incidentType: string; severity: string;
   }>> {

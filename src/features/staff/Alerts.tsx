@@ -8,7 +8,7 @@ import {
   Download, Filter, X, BarChart, LineChart, AreaChart,
   Brain, ChevronUp, Heart, ZoomIn, Calendar,
 } from 'lucide-react';
-import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse, AlertItem } from '../../services/api';
+import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse, IncidentItem } from '../../services/api';
 import type { DiagnoseBatchResponse, AlertDiagnosticResult } from '../../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -35,20 +35,14 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Alert {
-  id: string;
-  type: string;
-  severity: 'critical' | 'warning' | 'info';
-  message: string;
-  device_id: string;
-  device_serial?: string;
-  timestamp: string;
-  resolved: boolean;
+// Migrated from the Alert-shim (`getAlerts()`) to the Incident endpoint (`getIncidents()`,
+// Phase D Task 2). `Alert` is now `IncidentItem` plus a few optional fields the fleet-wide
+// incidents shim doesn't (yet) populate — kept optional so the UI degrades gracefully
+// (e.g. no diagnostic panel / no audit-trail attribution) instead of breaking.
+type Alert = IncidentItem & {
   created_by_username?: string;
   created_at?: string;
   generated?: boolean;
-  fault_code?: string;
-  status?: 'active' | 'acknowledged' | 'resolved';
   metadata?: {
     diagnostic?: {
       root_cause: string;
@@ -60,7 +54,7 @@ interface Alert {
       parse_error?: string;
     };
   };
-}
+};
 
 type AlertDiagnostic = NonNullable<NonNullable<Alert['metadata']>['diagnostic']>;
 
@@ -197,7 +191,7 @@ const Alerts: React.FC = () => {
   const [diagRunning, setDiagRunning] = useState(false);
   const [diagResults, setDiagResults] = useState<DiagnoseBatchResponse | null>(null);
   const [diagPanelOpen, setDiagPanelOpen] = useState(false);
-  const [selectedAlertForDiag, setSelectedAlertForDiag] = useState<string | null>(null);
+  const [selectedAlertForDiag, setSelectedAlertForDiag] = useState<number | null>(null);
   const [diagRunStartedAt, setDiagRunStartedAt] = useState<string | null>(null);
 
   // Fleet Health Report state
@@ -335,8 +329,8 @@ const Alerts: React.FC = () => {
 
   const fetchAlerts = async () => {
     try {
-      const data = await apiService.getAlerts();
-      setAlerts(data);
+      const data = await apiService.getIncidents();
+      setAlerts(data.results);
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -346,7 +340,7 @@ const Alerts: React.FC = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Bust the cache so getAlerts() always hits the network
+    // Bust the cache so getIncidents() (backed by /alerts/manage/) always hits the network
     apiService.invalidateAlertsCache();
     await fetchAlerts();
     // Also re-fetch the active tab's own data
@@ -372,18 +366,17 @@ const Alerts: React.FC = () => {
   const filteredAlerts = alerts.filter(alert => {
     if (filterSeverity !== 'all' && alert.severity !== filterSeverity) return false;
     if (filterStatus !== 'all') {
-      const resolvedOrStatus = alert.status === 'resolved' || alert.resolved;
+      const resolvedOrStatus = alert.status === 'resolved';
       if (filterStatus === 'resolved' && !resolvedOrStatus) return false;
       if (filterStatus === 'active' && (resolvedOrStatus || alert.status === 'acknowledged')) return false;
       if (filterStatus === 'acknowledged' && alert.status !== 'acknowledged') return false;
     }
     if (alertSearch.trim()) {
       const q = alertSearch.toLowerCase();
-      return alert.message.toLowerCase().includes(q)
+      return alert.summary.toLowerCase().includes(q)
         || getAlertDisplayMessage(alert).toLowerCase().includes(q)
-        || alert.device_id.toLowerCase().includes(q)
-        || alert.type.toLowerCase().includes(q)
-        || (alert.fault_code?.toLowerCase().includes(q) ?? false);
+        || (alert.deviceSerial ?? '').toLowerCase().includes(q)
+        || alert.incidentType.toLowerCase().includes(q);
     }
     return true;
   });
@@ -399,14 +392,14 @@ const Alerts: React.FC = () => {
     setCurrentPage(1);
   }, [filterSeverity, filterStatus, alertSearch]);
 
-  const unresolvedAlerts = alerts.filter(a => !a.resolved && a.status !== 'resolved');
+  const unresolvedAlerts = alerts.filter(a => a.status !== 'resolved');
   const criticalCount  = alerts.filter(a => a.severity === 'critical').length;
-  const unresolvedCriticalAlerts = alerts.filter(a => a.severity === 'critical' && !a.resolved && a.status !== 'resolved');
-  const unresolvedWarningAlerts = alerts.filter(a => a.severity === 'warning' && !a.resolved && a.status !== 'resolved');
-  const unresolvedInfoAlerts = alerts.filter(a => a.severity === 'info' && !a.resolved && a.status !== 'resolved');
+  const unresolvedCriticalAlerts = alerts.filter(a => a.severity === 'critical' && a.status !== 'resolved');
+  const unresolvedWarningAlerts = alerts.filter(a => a.severity === 'warning' && a.status !== 'resolved');
+  const unresolvedInfoAlerts = alerts.filter(a => a.severity === 'info' && a.status !== 'resolved');
   const warningCount   = alerts.filter(a => a.severity === 'warning').length;
   const infoCount      = alerts.filter(a => a.severity === 'info').length;
-  const resolvedCount  = alerts.filter(a => a.resolved || a.status === 'resolved').length;
+  const resolvedCount  = alerts.filter(a => a.status === 'resolved').length;
   const resolutionPct  = alerts.length > 0 ? Math.round((resolvedCount / alerts.length) * 100) : 0;
 
   const bdr = tok.border(isDark);
@@ -414,19 +407,19 @@ const Alerts: React.FC = () => {
   const sub = tok.textSecondary(isDark);
 
   const getAlertStatus = (alert: Alert) => {
-    if (alert.status === 'resolved' || alert.resolved) return 'resolved';
+    if (alert.status === 'resolved') return 'resolved';
     if (alert.status === 'acknowledged') return 'acknowledged';
     return 'active';
   };
 
   const getAlertDisplayMessage = (alert: Alert) => {
-    if (alert.fault_code === 'rs485_stale') {
+    if (alert.incidentType === 'rs485_stale') {
       return 'RS-485 missing data detected: device firmware reported all register values as zero.';
     }
-    if (alert.fault_code === 'rs485_auto_reboot') {
+    if (alert.incidentType === 'rs485_auto_reboot') {
       return 'Auto-reboot queued after consecutive RS-485 missing-data verdicts (all-registers-zero condition).';
     }
-    return alert.message;
+    return alert.summary;
   };
 
   const isRetryableDiagnostic = (diagnostic?: AlertDiagnostic) => {
@@ -812,7 +805,7 @@ const Alerts: React.FC = () => {
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {alert.type.replace(/_/g, ' ')}
+                          {alert.incidentType.replace(/_/g, ' ')}
                         </div>
                         <div style={{ fontSize: '0.8125rem', color: sub, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {getAlertDisplayMessage(alert)}
@@ -1130,16 +1123,16 @@ const Alerts: React.FC = () => {
                           fontSize: '0.75rem', fontWeight: 700,
                           letterSpacing: '0.05em', textTransform: 'uppercase',
                         }}>
-                          {alert.type.replace(/_/g, ' ')}
+                          {alert.incidentType.replace(/_/g, ' ')}
                         </span>
                         {/* Fault code */}
-                        {alert.fault_code && (
+                        {alert.incidentType && (
                           <code style={{
                             fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700,
                             padding: '2px 8px', borderRadius: 5,
                             background: 'rgba(99,102,241,0.12)', color: '#818CF8',
                             border: '1px solid rgba(99,102,241,0.3)',
-                          }}>{alert.fault_code}</code>
+                          }}>{alert.incidentType}</code>
                         )}
                         {/* Diagnostic badge */}
                         {alert.metadata?.diagnostic && (
@@ -1168,7 +1161,7 @@ const Alerts: React.FC = () => {
                         {/* Device */}
                         <span style={{ fontSize: '0.8125rem', color: sub, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Clock size={12} />
-                          {alert.device_id}
+                          {alert.deviceSerial ?? alert.deviceId ?? '—'}
                         </span>
                         {/* Fault tag */}
                         {alert.generated === false && (
@@ -1179,7 +1172,7 @@ const Alerts: React.FC = () => {
                         )}
                         {/* Timestamp - push right */}
                         <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: tok.textMuted(isDark), whiteSpace: 'nowrap' }}>
-                          {new Date(alert.timestamp).toLocaleString()}
+                          {new Date(alert.tsStart).toLocaleString()}
                         </span>
                       </div>
 
@@ -1309,7 +1302,7 @@ const Alerts: React.FC = () => {
 
       {/* ══════════════════════ DIAGNOSTIC DETAIL MODAL ══════════════════════ */}
       {selectedAlertForDiag !== null && (() => {
-        const alert = alerts.find((a: AlertItem) => a.id === selectedAlertForDiag);
+        const alert = alerts.find((a: Alert) => a.id === selectedAlertForDiag);
         if (!alert || !alert.metadata?.diagnostic) return null;
         const diag = alert.metadata.diagnostic;
         const sevColor: Record<string, string> = {
@@ -1343,14 +1336,14 @@ const Alerts: React.FC = () => {
                       AI Diagnostic Report
                     </h3>
                   </div>
-                  {alert.fault_code && (
+                  {alert.incidentType && (
                     <code style={{
                       fontSize: '0.8rem', fontFamily: 'monospace', fontWeight: 700,
                       padding: '4px 10px', borderRadius: 6,
                       background: 'rgba(99,102,241,0.12)', color: '#818CF8',
                       border: '1px solid rgba(99,102,241,0.3)', display: 'inline-block',
                     }}>
-                      {alert.fault_code}
+                      {alert.incidentType}
                     </code>
                   )}
                 </div>
@@ -1376,7 +1369,7 @@ const Alerts: React.FC = () => {
                     Device
                   </span>
                   <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', fontWeight: 600, color: txt }}>
-                    {alert.device_serial ?? alert.device_id ?? '—'}
+                    {alert.deviceSerial ?? alert.deviceId ?? '—'}
                   </p>
                 </div>
                 <div>
@@ -1384,7 +1377,7 @@ const Alerts: React.FC = () => {
                     Triggered
                   </span>
                   <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', fontWeight: 600, color: txt }}>
-                    {new Date(alert.timestamp).toLocaleString()}
+                    {new Date(alert.tsStart).toLocaleString()}
                   </p>
                 </div>
               </div>
