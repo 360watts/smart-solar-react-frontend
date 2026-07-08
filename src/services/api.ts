@@ -200,6 +200,17 @@ function _mapIncidentDict(raw: any): IncidentItem {
 
 export type BookingStatus = 'pending' | 'scheduled' | 'completed' | 'closed' | 'cancelled';
 
+export interface Technician {
+  id: number;
+  vendor: number;
+  vendor_company?: string;
+  name: string;
+  phone: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ServiceVendor {
   id: number;
   company_name: string;
@@ -207,6 +218,7 @@ export interface ServiceVendor {
   phone: string;
   email: string;
   is_active: boolean;
+  technicians?: Technician[];
   created_at: string;
   updated_at: string;
 }
@@ -233,6 +245,12 @@ export interface ServiceBooking {
   vendor_company?: string | null;
   vendor_name?: string | null;
   vendor_phone?: string | null;
+  // Who's actually showing up for this visit — the assigned roster
+  // Technician if one was picked, else the vendor's default contact
+  // (vendor_name/vendor_phone). Prefer these two for "who to expect".
+  technician: number | null;
+  technician_name?: string | null;
+  technician_phone?: string | null;
   service_date: string | null;
   service_time: string | null;
   technician_notes: string;
@@ -1808,10 +1826,16 @@ class ApiService {
     vendorId: number,
     serviceDate: string,
     serviceTime: string,
+    technicianId?: number | null,
   ): Promise<ServiceBooking> {
     return this.request(`/bookings/${bookingId}/assign/`, {
       method: 'POST',
-      body: JSON.stringify({ vendor_id: vendorId, service_date: serviceDate, service_time: serviceTime }),
+      body: JSON.stringify({
+        vendor_id: vendorId,
+        service_date: serviceDate,
+        service_time: serviceTime,
+        ...(technicianId ? { technician_id: technicianId } : {}),
+      }),
     });
   }
 
@@ -1837,6 +1861,15 @@ class ApiService {
     email?: string;
   }): Promise<ServiceVendor> {
     return this.request('/service-vendors/', { method: 'POST', body: JSON.stringify(vendor) });
+  }
+
+  async getTechnicians(vendorId?: number): Promise<Technician[]> {
+    const params = vendorId ? `?vendor=${vendorId}` : '';
+    return this.request(`/technicians/${params}`);
+  }
+
+  async createTechnician(technician: { vendor: number; name: string; phone: string }): Promise<Technician> {
+    return this.request('/technicians/', { method: 'POST', body: JSON.stringify(technician) });
   }
 
   async getFleetHealthReport(reportIdOrDate?: string | number | null): Promise<any> {

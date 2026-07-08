@@ -405,7 +405,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     <div style={{
       width: isDrawer ? 'min(236px, 90vw)' : (showCollapsed ? STAFF_SIDEBAR_COLLAPSED : STAFF_SIDEBAR_EXPANDED),
       height: '100%',
-      background: sideBg,
+      backgroundColor: sideBg,
       backgroundImage: GRAIN_SVG,
       borderRight: `1px solid ${sideBorder}`,
       display: 'flex',
@@ -488,7 +488,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <div style={{
           padding: '8px 6px 14px', flexShrink: 0,
           position: 'sticky', bottom: 0,
-          background: sideBg, backgroundImage: GRAIN_SVG,
+          backgroundColor: sideBg, backgroundImage: GRAIN_SVG,
           borderTop: `1px solid ${sideBorder}`,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
@@ -526,7 +526,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           padding: '8px 8px 14px',
           flexShrink: 0,
           position: 'sticky', bottom: 0,
-          background: sideBg,
+          backgroundColor: sideBg,
           backgroundImage: GRAIN_SVG,
           borderTop: `1px solid ${sideBorder}`,
         }}>
