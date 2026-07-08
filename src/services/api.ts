@@ -216,9 +216,14 @@ export interface ServiceBooking {
   booking_number: string;
   customer: number;
   customer_name?: string;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  customer_address?: string | null;
   site: number;
   site_id: string;
   site_name?: string;
+  site_latitude?: number | null;
+  site_longitude?: number | null;
   issue_category: 'panel' | 'inverter' | 'battery' | 'monitoring' | 'cleaning' | 'other';
   issue_description: string;
   status: BookingStatus;
@@ -580,27 +585,33 @@ class ApiService {
     cacheService.clear('alerts_manage');
   }
 
+  // Incident (Phase C/D) → AlertItem shape, for consumers not yet migrated to
+  // the native IncidentItem type (MobileAlerts.tsx, MobilePortalAlerts.tsx,
+  // Dashboard.tsx, Devices.tsx). Backed by /incidents/*, not the removed
+  // /api/alerts/* shim.
+  private _incidentToAlertItem(inc: any): AlertItem {
+    return {
+      id: String(inc.id),
+      type: inc.incident_type ?? '',
+      severity: inc.severity,
+      message: inc.summary || inc.title || '',
+      device_id: inc.device_serial ?? '',
+      device_serial: inc.device_serial ?? undefined,
+      timestamp: inc.ts_start ?? '',
+      resolved: inc.status === 'resolved',
+      generated: false,
+      fault_code: inc.incident_type ?? undefined,
+      status: inc.status,
+    };
+  }
+
   async getAlerts(): Promise<AlertItem[]> {
     const cacheKey = 'alerts_manage';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
-    // /alerts/manage/ returns all statuses (active, acknowledged, resolved)
-    // /alerts/ only returned active alerts
-    const raw: any[] = await this.request('/alerts/manage/');
-
-    // Normalize field differences between /alerts/ and /alerts/manage/ responses
-    const data: AlertItem[] = raw.map(a => ({
-      ...a,
-      // /alerts/manage/ uses alert_type; component expects type
-      type: a.type ?? a.alert_type ?? '',
-      // /alerts/manage/ uses triggered_at; component expects timestamp
-      timestamp: a.timestamp ?? a.triggered_at ?? '',
-      // /alerts/manage/ uses device_serial; component expects device_id
-      device_id: a.device_id ?? a.device_serial ?? a.metadata?.device_serial ?? '',
-      // normalise resolved boolean from status field
-      resolved: a.resolved ?? (a.status === 'resolved'),
-    }));
+    const raw = await this.request('/incidents/');
+    const data: AlertItem[] = (raw.results || []).map((inc: any) => this._incidentToAlertItem(inc));
 
     cacheService.set(cacheKey, data, DEFAULT_TTL);
     return data;
@@ -610,14 +621,8 @@ class ApiService {
     const cacheKey = `site_alerts_${siteId}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
-    const raw: any[] = await this.request(`/sites/${encodeURIComponent(siteId)}/alerts/`);
-    const data: AlertItem[] = (Array.isArray(raw) ? raw : []).map(a => ({
-      ...a,
-      type: a.type ?? a.alert_type ?? '',
-      timestamp: a.timestamp ?? a.triggered_at ?? '',
-      device_id: a.device_id ?? a.device_serial ?? '',
-      resolved: a.resolved ?? (a.status === 'resolved'),
-    }));
+    const raw = await this.request(`/sites/${encodeURIComponent(siteId)}/incidents/`);
+    const data: AlertItem[] = (raw.results || []).map((inc: any) => this._incidentToAlertItem(inc));
     cacheService.set(cacheKey, data, 60 * 1000); // 1-min cache — alerts are time-sensitive
     return data;
   }
@@ -641,24 +646,32 @@ class ApiService {
     };
   }
 
-  // Fleet-wide incidents: reuses the existing Incident-backed /alerts/manage/ shim
-  // response (which already returns all sites' data for staff users) rather than
-  // requiring a new dedicated fleet-wide backend endpoint. If a true fleet-wide
-  // /incidents/ endpoint becomes necessary, that's backend scope for a future plan.
+  // Fleet-wide incidents, backed by GET /api/incidents/ (Incident-native;
+  // replaces the old Alert-shaped /alerts/manage/ shim removed in Phase D Task 11).
   async getIncidents(opts?: { limit?: number; offset?: number; category?: IncidentCategory; status?: IncidentStatus }): Promise<SiteIncidentsResponse> {
-    const raw: any[] = await this.request('/alerts/manage/');
+    const params = new URLSearchParams();
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    if (opts?.offset) params.set('offset', String(opts.offset));
+    if (opts?.category) params.set('category', opts.category);
+    if (opts?.status) params.set('status', opts.status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const raw = await this.request(`/incidents/${qs}`);
     return {
-      count: raw.length, limit: raw.length, offset: 0,
-      results: raw.map((a: any) => ({
-        id: typeof a.id === 'number' ? a.id : 0,
-        deviceId: null, deviceSerial: a.device_serial ?? a.device_id ?? null,
-        category: a.category ?? 'hardware', incidentType: a.fault_code ?? a.type ?? '',
-        incidentTypeTitle: a.title ?? '', severity: a.severity, status: a.status ?? (a.resolved ? 'resolved' : 'active'),
-        tsStart: a.timestamp ?? a.triggered_at ?? '', tsEnd: a.resolved_at ?? null,
-        durationSeconds: null, title: a.title ?? '', summary: a.message ?? '',
-        detectedBy: '', evidenceCount: a.metadata?.diagnostic ? 1 : 0,
-      })),
+      count: raw.count,
+      limit: raw.limit,
+      offset: raw.offset,
+      results: (raw.results || []).map(_mapIncidentDict),
     };
+  }
+
+  async acknowledgeIncident(incidentId: number): Promise<IncidentItem> {
+    const raw = await this.request(`/incidents/${incidentId}/acknowledge/`, { method: 'POST' });
+    return _mapIncidentDict(raw);
+  }
+
+  async resolveIncident(incidentId: number): Promise<IncidentItem> {
+    const raw = await this.request(`/incidents/${incidentId}/resolve/`, { method: 'POST' });
+    return _mapIncidentDict(raw);
   }
 
   async getSiteDataQualityGaps(siteId: string, start: string, end: string): Promise<Array<{
@@ -687,7 +700,7 @@ class ApiService {
   }
 
   async diagnoseBatch(): Promise<DiagnoseBatchResponse> {
-    return this.request('/alerts/diagnose-batch/', { method: 'POST' });
+    return this.request('/incidents/diagnose-batch/', { method: 'POST' });
   }
 
   async getSystemHealth(): Promise<any> {
@@ -1782,7 +1795,7 @@ class ApiService {
     const params = new URLSearchParams({ days: String(days) });
     if (device) params.set('device', device);
     if (site) params.set('site', site);
-    return this.request(`/alerts/analytics/?${params}`);
+    return this.request(`/incidents/analytics/?${params}`);
   }
 
   async getServiceBookings(status?: BookingStatus): Promise<ServiceBooking[]> {

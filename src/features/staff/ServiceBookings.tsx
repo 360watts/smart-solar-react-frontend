@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { CalendarCheck, MapPin, Phone, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { apiService, BookingStatus, ServiceBooking, ServiceVendor } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getDesignTokens } from '../../shared/theme';
@@ -254,6 +254,74 @@ function AssignDialog({
   );
 }
 
+function DetailRow({ label, value, href }: { label: string; value: React.ReactNode; href?: string }) {
+  const { isDark } = useTheme();
+  const t = getDesignTokens(isDark);
+  const content = href ? (
+    <a href={href} style={{ color: t.primary, textDecoration: 'none' }}>{value}</a>
+  ) : value;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: `1px solid ${t.border}`, fontSize: 13 }}>
+      <span style={{ color: t.textMuted }}>{label}</span>
+      <span style={{ color: t.text, textAlign: 'right', fontWeight: 500 }}>{content || '—'}</span>
+    </div>
+  );
+}
+
+function BookingDetailsModal({ booking, onClose }: { booking: ServiceBooking; onClose: () => void }) {
+  const { isDark } = useTheme();
+  const t = getDesignTokens(isDark);
+  const mapHref = booking.site_latitude != null && booking.site_longitude != null
+    ? `https://www.google.com/maps?q=${booking.site_latitude},${booking.site_longitude}`
+    : undefined;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.55)', padding: 16,
+    }} onClick={onClose}>
+      <div
+        style={{ width: '100%', maxWidth: 460, borderRadius: 16, background: t.surfaceRaised, border: `1px solid ${t.border}`, padding: 20, boxShadow: t.shadow }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: t.text }}>Booking Details</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted }}>
+            <X size={18} />
+          </button>
+        </div>
+        <p style={{ fontSize: 12, fontFamily: 'monospace', color: t.textDim, marginBottom: 14 }}>{booking.booking_number}</p>
+
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: t.textDim, marginBottom: 4 }}>Customer</p>
+        <DetailRow label="Name" value={booking.customer_name} />
+        <DetailRow label="Phone" value={booking.customer_phone} href={booking.customer_phone ? `tel:${booking.customer_phone}` : undefined} />
+        <DetailRow label="Email" value={booking.customer_email} href={booking.customer_email ? `mailto:${booking.customer_email}` : undefined} />
+        <DetailRow label="Address" value={booking.customer_address} />
+
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: t.textDim, marginTop: 14, marginBottom: 4 }}>Site</p>
+        <DetailRow label="Site" value={`${booking.site_name || booking.site_id} (${booking.site_id})`} />
+        <DetailRow
+          label="Coordinates"
+          value={mapHref ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> Open in Maps</span> : '—'}
+          href={mapHref}
+        />
+
+        <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: t.textDim, marginTop: 14, marginBottom: 4 }}>Issue</p>
+        <DetailRow label="Category" value={<span style={{ textTransform: 'capitalize' }}>{booking.issue_category}</span>} />
+        <div style={{ padding: '8px 0', fontSize: 13, color: t.text }}>
+          {booking.issue_description || <span style={{ color: t.textMuted }}>No description provided.</span>}
+        </div>
+        {booking.technician_notes && (
+          <>
+            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: t.textDim, marginTop: 14, marginBottom: 4 }}>Technician Notes</p>
+            <div style={{ padding: '8px 0', fontSize: 13, color: t.text }}>{booking.technician_notes}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ServiceBookings() {
   const { isDark } = useTheme();
   const t = getDesignTokens(isDark);
@@ -263,6 +331,7 @@ export default function ServiceBookings() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [assigningBooking, setAssigningBooking] = useState<ServiceBooking | null>(null);
+  const [detailsBooking, setDetailsBooking] = useState<ServiceBooking | null>(null);
 
   async function load() {
     setLoading(true);
@@ -336,6 +405,7 @@ export default function ServiceBookings() {
           <thead>
             <tr style={{ textAlign: 'left', fontSize: 12, color: t.textDim, textTransform: 'uppercase', letterSpacing: 0.4 }}>
               <th style={{ padding: '12px 16px' }}>Booking</th>
+              <th style={{ padding: '12px 16px' }}>Customer</th>
               <th style={{ padding: '12px 16px' }}>Site</th>
               <th style={{ padding: '12px 16px' }}>Issue</th>
               <th style={{ padding: '12px 16px' }}>Status</th>
@@ -345,10 +415,25 @@ export default function ServiceBookings() {
             </tr>
           </thead>
           <tbody>
-            {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonTableRow key={i} columns={7} />)}
+            {loading && Array.from({ length: 4 }).map((_, i) => <SkeletonTableRow key={i} columns={8} />)}
             {!loading && bookings.map(b => (
               <tr key={b.id} style={{ borderTop: `1px solid ${t.border}`, fontSize: 13, color: t.text }}>
-                <td style={{ padding: '12px 16px', fontFamily: 'monospace' }}>{b.booking_number}</td>
+                <td style={{ padding: '12px 16px' }}>
+                  <button
+                    onClick={() => setDetailsBooking(b)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'monospace', color: t.primary, textDecoration: 'underline', fontSize: 13 }}
+                  >
+                    {b.booking_number}
+                  </button>
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ fontWeight: 600 }}>{b.customer_name || '—'}</div>
+                  {b.customer_phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: t.textMuted, fontSize: 12, marginTop: 2 }}>
+                      <Phone size={11} /> {b.customer_phone}
+                    </div>
+                  )}
+                </td>
                 <td style={{ padding: '12px 16px' }}>{b.site_name || b.site_id}</td>
                 <td style={{ padding: '12px 16px', textTransform: 'capitalize' }}>{b.issue_category}</td>
                 <td style={{ padding: '12px 16px' }}><StatusPill status={b.status} /></td>
@@ -407,6 +492,10 @@ export default function ServiceBookings() {
           onAssigned={updated => setBookings(prev => prev.map(b => (b.id === updated.id ? updated : b)))}
           onVendorCreated={vendor => setVendors(prev => [...prev, vendor])}
         />
+      )}
+
+      {detailsBooking && (
+        <BookingDetailsModal booking={detailsBooking} onClose={() => setDetailsBooking(null)} />
       )}
     </div>
   );
