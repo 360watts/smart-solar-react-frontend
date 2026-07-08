@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
   LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
-  Zap,
+  Zap, CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -25,10 +25,11 @@ const NAV_CONFIG = [
 ];
 
 const NAV_STAFF = [
-  { path: '/sites',      label: 'Sites',       icon: Building2 },
-  { path: '/equipment',  label: 'Product Catalog', icon: Server    },
-  { path: '/quotation',  label: 'Quotation',   icon: FileText  },
-  { path: '/ota',        label: 'OTA Updates', icon: Download  },
+  { path: '/sites',            label: 'Sites',            icon: Building2    },
+  { path: '/equipment',        label: 'Product Catalog',  icon: Server       },
+  { path: '/quotation',        label: 'Quotation',        icon: FileText     },
+  { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck },
+  { path: '/ota',              label: 'OTA Updates',      icon: Download     },
 ];
 
 const NAV_ADMIN = [

@@ -198,6 +198,43 @@ function _mapIncidentDict(raw: any): IncidentItem {
   };
 }
 
+export type BookingStatus = 'pending' | 'scheduled' | 'completed' | 'closed' | 'cancelled';
+
+export interface ServiceVendor {
+  id: number;
+  company_name: string;
+  technician_name: string;
+  phone: string;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceBooking {
+  id: number;
+  booking_number: string;
+  customer: number;
+  customer_name?: string;
+  site: number;
+  site_id: string;
+  site_name?: string;
+  issue_category: 'panel' | 'inverter' | 'battery' | 'monitoring' | 'cleaning' | 'other';
+  issue_description: string;
+  status: BookingStatus;
+  preferred_date: string | null;
+  preferred_slot: 'morning' | 'afternoon' | '';
+  vendor: number | null;
+  vendor_company?: string | null;
+  vendor_name?: string | null;
+  vendor_phone?: string | null;
+  service_date: string | null;
+  service_time: string | null;
+  technician_notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Per-alert result from POST /api/alerts/diagnose-batch/ */
 export interface AlertDiagnosticResult {
   alert_id: number;
@@ -1433,9 +1470,10 @@ class ApiService {
     });
   }
 
-  async getArchivedDevices(search?: string): Promise<any> {
+  async getArchivedDevices(search?: string, deviceType?: 'gateway' | 'energy_meter'): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
+    if (deviceType) params.append('device_type', deviceType);
     const queryString = params.toString();
     return this.request(`/devices/archived/${queryString ? `?${queryString}` : ''}`);
   }
@@ -1444,6 +1482,19 @@ class ApiService {
     return this.request('/devices/create/', {
       method: 'POST',
       body: JSON.stringify({ device_serial: deviceSerial }),
+    });
+  }
+
+  /** Permanently delete a single archived device. Irreversible — admin-only on the backend. */
+  async hardDeleteArchivedDevice(deviceId: number): Promise<any> {
+    return this.request(`/devices/archived/${deviceId}/hard-delete/`, { method: 'DELETE' });
+  }
+
+  /** Permanently delete multiple archived devices. Each id is processed independently server-side. */
+  async hardDeleteArchivedDevicesBulk(deviceIds: number[]): Promise<any> {
+    return this.request('/devices/archived/hard-delete-bulk/', {
+      method: 'POST',
+      body: JSON.stringify({ device_ids: deviceIds }),
     });
   }
 
@@ -1732,6 +1783,47 @@ class ApiService {
     if (device) params.set('device', device);
     if (site) params.set('site', site);
     return this.request(`/alerts/analytics/?${params}`);
+  }
+
+  async getServiceBookings(status?: BookingStatus): Promise<ServiceBooking[]> {
+    const params = status ? `?status=${status}` : '';
+    return this.request(`/bookings/all/${params}`);
+  }
+
+  async assignVendor(
+    bookingId: number,
+    vendorId: number,
+    serviceDate: string,
+    serviceTime: string,
+  ): Promise<ServiceBooking> {
+    return this.request(`/bookings/${bookingId}/assign/`, {
+      method: 'POST',
+      body: JSON.stringify({ vendor_id: vendorId, service_date: serviceDate, service_time: serviceTime }),
+    });
+  }
+
+  async updateBookingStatus(
+    bookingId: number,
+    nextStatus: 'completed' | 'closed',
+    technicianNotes?: string,
+  ): Promise<ServiceBooking> {
+    return this.request(`/bookings/${bookingId}/status/`, {
+      method: 'POST',
+      body: JSON.stringify({ status: nextStatus, technician_notes: technicianNotes ?? '' }),
+    });
+  }
+
+  async getServiceVendors(): Promise<ServiceVendor[]> {
+    return this.request('/service-vendors/');
+  }
+
+  async createServiceVendor(vendor: {
+    company_name: string;
+    technician_name: string;
+    phone: string;
+    email?: string;
+  }): Promise<ServiceVendor> {
+    return this.request('/service-vendors/', { method: 'POST', body: JSON.stringify(vendor) });
   }
 
   async getFleetHealthReport(reportIdOrDate?: string | number | null): Promise<any> {

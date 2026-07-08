@@ -32,6 +32,7 @@ const Sites = lazy(() => import('../features/staff/Sites'));
 const SiteDetail = lazy(() => import('../features/staff/SiteDetail'));
 const CommissioningWizard = lazy(() => import('../features/staff/CommissioningWizard'));
 const QuotationPage = lazy(() => import('../features/quotation/QuotationPage'));
+const ServiceBookings = lazy(() => import('../features/staff/ServiceBookings'));
 
 // Layouts (lazy — separate bundles)
 const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
@@ -130,6 +131,7 @@ function App() {
                 <Route path="/devices" element={<Suspense fallback={<SkeletonDashboard />}><Devices /></Suspense>} />
                 <Route path="/configuration" element={<Suspense fallback={<SkeletonDashboard />}><Configuration /></Suspense>} />
                 <Route path="/alerts" element={<Suspense fallback={<SkeletonDashboard />}><Alerts /></Suspense>} />
+                <Route path="/service-bookings" element={<Suspense fallback={<SkeletonDashboard />}><ServiceBookings /></Suspense>} />
                 <Route path="/users" element={<Suspense fallback={<SkeletonDashboard />}><Users /></Suspense>} />
                 <Route path="/employees" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Employees /></Suspense></AdminRoute>} />
                 <Route path="/departments" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Departments /></Suspense></AdminRoute>} />

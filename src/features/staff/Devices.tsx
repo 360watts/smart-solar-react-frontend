@@ -3470,6 +3470,16 @@ const Devices: React.FC = () => {
         setSuccessModal({ show: true, message: `Device ${device.device_serial} has been restored.` });
         fetchDevices(currentPage, searchTerm);
       }}
+      onHardDeleted={({ deletedCount, failedCount }) => {
+        if (deletedCount > 0) {
+          setSuccessModal({
+            show: true,
+            message: failedCount > 0
+              ? `${deletedCount} device${deletedCount !== 1 ? 's' : ''} permanently deleted, ${failedCount} could not be deleted (telemetry history).`
+              : `${deletedCount} device${deletedCount !== 1 ? 's' : ''} permanently deleted.`,
+          });
+        }
+      }}
     />
 
     {/* Modern Success Notification Modal */}

@@ -3,6 +3,7 @@ import {
   Bell,
   Briefcase,
   Building2,
+  CalendarCheck,
   Download,
   FileText,
   LayoutDashboard,
@@ -82,6 +83,15 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
     group: 'Sales & Quotations',
     density: 'workflow',
     icon: FileText,
+  },
+  {
+    path: '/service-bookings',
+    label: '360Care Bookings',
+    title: '360Care Service Bookings',
+    subtitle: 'Assign vendors, schedule visits, and track jobs through completion',
+    group: 'Operations',
+    density: 'workflow',
+    icon: CalendarCheck,
   },
   {
     path: '/configuration',
