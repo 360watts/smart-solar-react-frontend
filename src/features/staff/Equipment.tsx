@@ -28,12 +28,12 @@ const mkT = (isDark: boolean) => ({
   glass:          isDark ? 'rgba(13,19,32,0.97)' : 'rgba(255,255,255,0.98)',
   glassHL:        isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.9)',
   inputBg:        isDark ? '#0C1420' : '#FFFFFF',
-  inputBorder:    isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db',
+  inputBorder:    isDark ? 'rgba(255,255,255,0.12)' : 'var(--border-strong)',
 });
 
 const inputStyle = (isDark: boolean): React.CSSProperties => ({
   padding: '8px 11px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #d1d5db',
+  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
   background: isDark ? '#0C1420' : '#FFFFFF',
   color: isDark ? '#F0F4FF' : '#12151A',
   fontSize: '0.875rem',

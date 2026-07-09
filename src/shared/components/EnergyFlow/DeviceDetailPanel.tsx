@@ -95,7 +95,7 @@ function SectionLabel({ children, isDark }: { children: React.ReactNode; isDark:
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
-        color: isDark ? '#94a3b8' : '#64748b',
+        color: isDark ? 'var(--text-dim)' : 'var(--muted-foreground)',
         marginBottom: 8,
       }}
     >
@@ -128,7 +128,7 @@ function MetricCard({
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          color: isDark ? '#94a3b8' : '#64748b',
+          color: isDark ? 'var(--text-dim)' : 'var(--muted-foreground)',
           marginBottom: 4,
         }}
       >
@@ -170,7 +170,7 @@ export default function DeviceDetailPanel({
   const bgColor = isDark ? '#0F1623' : '#ffffff';
   const borderColor = isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0';
   const textColor = isDark ? '#f1f5f9' : '#0f172a';
-  const subTextColor = isDark ? '#94a3b8' : '#64748b';
+  const subTextColor = isDark ? 'var(--text-dim)' : 'var(--muted-foreground)';
 
   return (
     <Sheet

@@ -17,12 +17,12 @@ type StatusFilter = (typeof STATUS_OPTIONS)[number];
 const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
 const STATUS_META: Record<string, { icon: React.ElementType; color: string }> = {
-  draft:    { icon: Clock,        color: 'var(--fg-muted, #64748b)' },
+  draft:    { icon: Clock,        color: 'var(--muted-foreground)' },
   sent:     { icon: Send,         color: 'var(--blue, #3b82f6)' },
   accepted: { icon: CheckCircle,  color: 'var(--green, #00a63e)' },
   rejected: { icon: XCircle,      color: 'var(--red, #ef4444)' },
   revised:  { icon: RotateCcw,    color: 'var(--amber, #f59e0b)' },
-  archived: { icon: Archive,      color: 'var(--fg-muted, #64748b)' },
+  archived: { icon: Archive,      color: 'var(--muted-foreground)' },
 };
 
 function StatusBadge({ status }: { status: string }) {

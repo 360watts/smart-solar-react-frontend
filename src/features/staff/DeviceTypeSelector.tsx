@@ -35,7 +35,7 @@ export const DeviceTypeSelector: React.FC<DeviceTypeSelectorProps> = ({
   // Design palette: Dark OLED + Safety Orange
   const COLORS = {
     accentOrange: '#F97316',
-    primarySlate: '#64748B',
+    primarySlate: 'var(--border-strong)',
     successGreen: '#10B981',
     errorRed: '#EF4444',
     dark: {
@@ -43,14 +43,14 @@ export const DeviceTypeSelector: React.FC<DeviceTypeSelectorProps> = ({
       surface: '#1E293B',
       border: 'rgba(148, 163, 184, 0.15)',
       text: '#F1F5F9',
-      textMuted: '#94A3B8',
+      textMuted: 'var(--muted-foreground)',
     },
     light: {
       bg: '#F8FAFC',
       surface: '#FFFFFF',
       border: 'rgba(100, 116, 139, 0.15)',
       text: '#0F172A',
-      textMuted: '#475569',
+      textMuted: 'var(--muted-foreground)',
     },
   };
 

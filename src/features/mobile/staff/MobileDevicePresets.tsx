@@ -40,7 +40,7 @@ export default function MobileDevicePresets() {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text = isDark ? '#F1F5F9' : '#0F172A';
-  const muted = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted = 'var(--muted-foreground)';
   const accent = '#2FBF71';
 
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -431,7 +431,7 @@ export default function MobileDevicePresets() {
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text }}>{slave.deviceName}</div>
                           <div style={{ fontSize: '0.68rem', color: muted }}>ID {slave.slaveId} · Poll {slave.pollingIntervalMs} ms · Timeout {slave.timeoutMs} ms</div>
                         </div>
-                        <span style={{ padding: '3px 7px', borderRadius: 999, fontSize: '0.58rem', fontWeight: 700, color: slave.enabled ? accent : '#64748b', background: slave.enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)' }}>
+                        <span style={{ padding: '3px 7px', borderRadius: 999, fontSize: '0.58rem', fontWeight: 700, color: slave.enabled ? accent : 'var(--muted-foreground)', background: slave.enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)' }}>
                           {slave.enabled ? 'On' : 'Off'}
                         </span>
                       </div>

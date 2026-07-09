@@ -11,7 +11,7 @@ const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 
 function StatusPill({ status }: { status: string }) {
   const palette: Record<string, { color: string; bg: string }> = {
-    draft: { color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
+    draft: { color: 'var(--muted-foreground)', bg: 'rgba(100,116,139,0.12)' },
     sent: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
     accepted: { color: '#16a34a', bg: 'rgba(22,163,74,0.12)' },
     rejected: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
@@ -27,7 +27,7 @@ export default function MobileQuotationPage() {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text = isDark ? '#F1F5F9' : '#0F172A';
-  const muted = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted = 'var(--muted-foreground)';
   const accent = '#2FBF71';
 
   const [view, setView] = useState<'list' | 'wizard'>('list');

@@ -536,7 +536,7 @@ const AiChat: React.FC = () => {
         .aif-hdr-btn--icon { width: 26px; padding: 0; }
         .aif-panel--dark .aif-hdr-btn { background: rgba(255,255,255,0.05); color: #cbd5e1; }
         .aif-panel--dark .aif-hdr-btn:hover { background: rgba(255,255,255,0.09); color: #f8fafc; }
-        .aif-panel--light .aif-hdr-btn { background: rgba(0,0,0,0.04); color: #94a3b8; }
+        .aif-panel--light .aif-hdr-btn { background: rgba(0,0,0,0.04); color: var(--muted-foreground); }
         .aif-panel--light .aif-hdr-btn:hover { background: rgba(0,0,0,0.08); color: #475569; }
 
         /* ── Status strip ── */
@@ -556,7 +556,7 @@ const AiChat: React.FC = () => {
         .aif-strip__sep { opacity: 0.3; }
         .aif-strip__spacer { flex: 1; }
         .aif-panel--dark .aif-strip__hint { color: #cbd5e1; }
-        .aif-panel--light .aif-strip__hint { color: #94a3b8; }
+        .aif-panel--light .aif-strip__hint { color: var(--muted-foreground); }
 
         /* ── Messages ── */
         .aif-msgs {
@@ -587,7 +587,7 @@ const AiChat: React.FC = () => {
           font-size: 0.78rem; margin: 0; line-height: 1.5;
         }
         .aif-panel--dark .aif-empty__sub { color: #e2e8f0; }
-        .aif-panel--light .aif-empty__sub { color: #94a3b8; }
+        .aif-panel--light .aif-empty__sub { color: var(--muted-foreground); }
         .aif-cmds { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
         .aif-cmd {
           display: flex; align-items: center; gap: 10px;
@@ -606,7 +606,7 @@ const AiChat: React.FC = () => {
           transform: translateX(2px);
         }
         .aif-panel--light .aif-cmd {
-          background: rgba(255,255,255,0.7); color: #64748b;
+          background: rgba(255,255,255,0.7); color: var(--muted-foreground);
           border: 1px solid rgba(0,0,0,0.06);
         }
         .aif-panel--light .aif-cmd:hover { background: rgba(56,189,248,0.06); color: #0f172a; border-color: rgba(56,189,248,0.25); }
@@ -646,7 +646,7 @@ const AiChat: React.FC = () => {
           flex-shrink: 0; opacity: 0.35; letter-spacing: 0.04em;
         }
         .aif-panel--dark  .aif-msg__ts { color: #e2e8f0; }
-        .aif-panel--light .aif-msg__ts { color: #94a3b8; }
+        .aif-panel--light .aif-msg__ts { color: var(--muted-foreground); }
 
         .aif-msg__asst { padding: 8px 0 10px; border-left: 2px solid; padding-left: 12px; margin: 2px 0 6px; }
         .aif-panel--dark  .aif-msg__asst { border-color: rgba(56,189,248,0.35); }
@@ -779,7 +779,7 @@ const AiChat: React.FC = () => {
           display: flex; align-items: center; gap: 4px;
           background: none; border: 1px solid rgba(100,116,139,0.2); border-radius: 4px;
           padding: 2px 7px; cursor: pointer; font-size: 0.64rem; font-weight: 500;
-          font-family: 'IBM Plex Mono', monospace; color: #94a3b8;
+          font-family: 'IBM Plex Mono', monospace; color: var(--muted-foreground);
           transition: all 0.15s;
         }
         .aif-panel--dark .aif-code__copy { color: #f8fafc; }
@@ -838,7 +838,7 @@ const AiChat: React.FC = () => {
         .aif-panel--dark  .aif-textarea { color: #f8fafc; }
         .aif-panel--light .aif-textarea { color: #0f172a; }
         .aif-textarea::placeholder { color: #cfe8f7; }
-        .aif-panel--light .aif-textarea::placeholder { color: #94a3b8; }
+        .aif-panel--light .aif-textarea::placeholder { color: var(--muted-foreground); }
         .aif-textarea:disabled { opacity: 0.35; cursor: not-allowed; }
         /* Composer action bar */
         .aif-composer-bar {

@@ -264,7 +264,7 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark }: {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: evCharging ? evColor : '#94a3b8', flexShrink: 0 }} />
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: evCharging ? evColor : DS.colors.textDim, flexShrink: 0 }} />
                 <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: evCharging ? evColor : DS.colors.textDim }}>EV</span>
               </div>
               <span style={{

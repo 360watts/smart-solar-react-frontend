@@ -46,7 +46,7 @@ const B_LIGHT = {
 
   value:   '#0f172a',
   label:   '#374151',
-  dim:     '#64748b',
+  dim:     'var(--muted-foreground)',
 
   cyan:    '#0284c7',
   cyanG:   'rgba(2,132,199,0.15)',

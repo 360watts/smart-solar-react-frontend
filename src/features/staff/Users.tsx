@@ -381,7 +381,7 @@ const Users: React.FC = () => {
             )}
           </div>
           {loadingDevices ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary, #94a3b8)' }}>Loading devices...</div>
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted-foreground)' }}>Loading devices...</div>
           ) : userDevices.length > 0 ? (
             <div className="table-responsive"><table className="table">
               <thead>
@@ -415,7 +415,7 @@ const Users: React.FC = () => {
               </tbody>
             </table></div>
           ) : (
-            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted, #64748b)', fontSize: '0.9375rem' }}>
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.9375rem' }}>
               No devices assigned to this user yet.
             </div>
           )}
@@ -725,7 +725,7 @@ const Users: React.FC = () => {
                   })()}
                 </td>
                 <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary, #94a3b8)', margin: '0 6px' }} title="Edit">
+                  <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', margin: '0 6px' }} title="Edit">
                     <Pencil size={16} strokeWidth={2} />
                   </button>
                   <button onClick={() => handleDelete(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)', margin: '0 6px' }} title="Delete">
@@ -744,7 +744,7 @@ const Users: React.FC = () => {
             borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
             gap: '16px'
           }}>
-            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #94a3b8)' }}>
+            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
               Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} users
             </div>
             <div className="pagination-controls">
@@ -789,7 +789,7 @@ const Users: React.FC = () => {
                       );
                     } else if (pages[pages.length - 1]?.key !== 'ellipsis-' + Math.floor(i / 10)) {
                       pages.push(
-                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--text-secondary, #94a3b8)' }}>...</span>
+                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--muted-foreground)' }}>...</span>
                       );
                     }
                   }

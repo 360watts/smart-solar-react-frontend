@@ -26,7 +26,7 @@ const MobileSiteDetail: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inputBg = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
 
@@ -169,7 +169,7 @@ const MobileSiteDetail: React.FC = () => {
   };
 
   const statusColor: Record<string, string> = {
-    active: '#2FBF71', commissioning: '#60A5FA', inactive: '#F87171', draft: '#94A3B8', archived: '#64748b',
+    active: '#2FBF71', commissioning: '#60A5FA', inactive: '#F87171', draft: 'var(--muted-foreground)', archived: 'var(--border-strong)',
   };
 
   if (loading) return (
@@ -215,7 +215,7 @@ const MobileSiteDetail: React.FC = () => {
         </div>
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:10 }}>
           {site?.site_status && (
-            <span style={{ padding:'3px 10px', borderRadius:999, fontSize:'0.62rem', fontWeight:700, background:`${statusColor[site.site_status]??'#94A3B8'}18`, color:statusColor[site.site_status]??'#94A3B8', border:`1px solid ${statusColor[site.site_status]??'#94A3B8'}30`, fontFamily:"'DM Sans', sans-serif" }}>
+            <span style={{ padding:'3px 10px', borderRadius:999, fontSize:'0.62rem', fontWeight:700, background:`color-mix(in srgb, ${statusColor[site.site_status]??'var(--muted-foreground)'} 18%, transparent)`, color:statusColor[site.site_status]??'var(--muted-foreground)', border:`1px solid color-mix(in srgb, ${statusColor[site.site_status]??'var(--muted-foreground)'} 30%, transparent)`, fontFamily:"'DM Sans', sans-serif" }}>
               {site.site_status.toUpperCase()}
             </span>
           )}

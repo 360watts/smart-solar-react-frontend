@@ -363,7 +363,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
         </div>
         {trend && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700, color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : '#94a3b8' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700, color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)' }}>
             {trend.direction === 'down' && '↓'} {trend.direction === 'up' && '↑'} {trend.pct.toFixed(1)}%
           </motion.div>
         )}
@@ -594,12 +594,12 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
   };
 
   const kpiCards = [
-    { label: 'System Health', value: healthPct != null ? `${healthPct.toFixed(1)}%` : '—', sub: `${normalCount} / ${totalDaytime} slots normal`, color: healthPct != null ? (healthPct >= 80 ? '#00a63e' : healthPct >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8' },
+    { label: 'System Health', value: healthPct != null ? `${healthPct.toFixed(1)}%` : '—', sub: `${normalCount} / ${totalDaytime} slots normal`, color: healthPct != null ? (healthPct >= 80 ? '#00a63e' : healthPct >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
     { label: 'Non-Weather Faults', value: String(nonWeatherCount), sub: 'Red: kt < 0.30, GHI ≥ 300 W/m²', color: '#ef4444' },
     { label: 'Cloud Events', value: String(cloudCount), sub: 'Amber: kt < 0.30, GHI < 300 W/m²', color: '#f59e0b' },
-    { label: 'Avg Daytime kt', value: avgKt != null ? avgKt.toFixed(3) : '—', sub: 'kt = actual kW / expected kW', color: avgKt != null ? (avgKt >= 0.70 ? '#00a63e' : avgKt >= 0.30 ? '#3b82f6' : '#ef4444') : '#94a3b8' },
+    { label: 'Avg Daytime kt', value: avgKt != null ? avgKt.toFixed(3) : '—', sub: 'kt = actual kW / expected kW', color: avgKt != null ? (avgKt >= 0.70 ? '#00a63e' : avgKt >= 0.30 ? '#3b82f6' : '#ef4444') : 'var(--muted-foreground)' },
     { label: 'Time to 1st Fault', value: timeToFirstFault ?? 'None', sub: 'First non-weather/cloud event', color: timeToFirstFault ? '#f59e0b' : '#00a63e' },
-    { label: '7-Day Health Trend', value: avgHealthPct7d != null ? `${avgHealthPct7d.toFixed(1)}%` : '—', sub: 'Rolling average of system health', color: avgHealthPct7d != null ? (avgHealthPct7d >= 80 ? '#00a63e' : avgHealthPct7d >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8' },
+    { label: '7-Day Health Trend', value: avgHealthPct7d != null ? `${avgHealthPct7d.toFixed(1)}%` : '—', sub: 'Rolling average of system health', color: avgHealthPct7d != null ? (avgHealthPct7d >= 80 ? '#00a63e' : avgHealthPct7d >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
   ];
 
   if (!accuracy) {

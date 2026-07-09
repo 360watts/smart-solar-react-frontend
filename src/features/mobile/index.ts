@@ -12,7 +12,3 @@ export { default as MobileProfile } from './staff/MobileProfile';
 export { default as MobileQuotationPage } from './staff/MobileQuotationPage';
 export { default as MobileDevicePresets } from './staff/MobileDevicePresets';
 export { default as MobileDepartments } from './staff/MobileDepartments';
-export { default as MobilePortalOverview } from './portal/MobilePortalOverview';
-export { default as MobilePortalAlerts } from './portal/MobilePortalAlerts';
-export { default as MobilePortalDevice } from './portal/MobilePortalDevice';
-export { default as MobilePortalProfile } from './portal/MobilePortalProfile';

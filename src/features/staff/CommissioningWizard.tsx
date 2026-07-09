@@ -101,8 +101,8 @@ export default function CommissioningWizard() {
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
   const textMain    = isDark ? '#F0F4FF' : '#0f172a';
-  const textMute    = isDark ? '#8892A4' : '#94a3b8';
-  const textSub     = isDark ? '#94a3b8' : '#94a3b8';
+  const textMute    = 'var(--muted-foreground)';
+  const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
   const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
   const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';

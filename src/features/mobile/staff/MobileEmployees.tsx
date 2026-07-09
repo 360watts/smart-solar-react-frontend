@@ -50,7 +50,7 @@ const MobileEmployees: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inputBg = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
 

@@ -449,7 +449,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
               const sdFmt = fmtPower(sdKw);
               const sdActive = device.is_active && sdKw > 0.001;
               const deviceName = deviceLabel(device);
-              const deviceColor = sdActive ? accentColor : isDark ? '#cbd5e1' : '#9ca3af';
+              const deviceColor = sdActive ? accentColor : isDark ? '#cbd5e1' : 'var(--text-dim)';
               return (
                 <SmartCard
                   key={device.id} label={deviceName}
@@ -592,7 +592,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 0' }}>
-        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: isDark ? '#cbd5e1' : '#9ca3af' }}>
+        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: isDark ? '#cbd5e1' : 'var(--text-dim)' }}>
           Energy Flow
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -898,8 +898,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '7px 18px 12px', borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.07)' : '#f1f5f9'}`,
       }}>
-        <span style={{ fontSize: 10, color: isDark ? '#94a3b8' : '#9ca3af' }}>{statusText}</span>
-        <span style={{ fontSize: 9.5, color: isDark ? '#cbd5e1' : '#d1d5db', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{statusText}</span>
+        <span style={{ fontSize: 9.5, color: isDark ? '#cbd5e1' : 'var(--border-strong)', fontVariantNumeric: 'tabular-nums' }}>
           {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>

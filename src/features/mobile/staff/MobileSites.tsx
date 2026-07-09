@@ -27,7 +27,7 @@ interface SiteRow {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active: '#2FBF71', commissioning: '#F59E0B', inactive: '#64748b', archived: '#94a3b8',
+  active: '#2FBF71', commissioning: '#F59E0B', inactive: 'var(--muted-foreground)', archived: 'var(--text-dim)',
 };
 
 const MobileSites: React.FC = () => {
@@ -38,7 +38,7 @@ const MobileSites: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 
   const [sites,        setSites]        = useState<SiteRow[]>([]);
@@ -132,7 +132,7 @@ const MobileSites: React.FC = () => {
           {[
             { label: 'Total',  value: counts.total,     color: text },
             { label: 'Online', value: counts.online,    color: accent },
-            { label: 'Offline', value: counts.total - counts.online, color: '#64748b' },
+            { label: 'Offline', value: counts.total - counts.online, color: 'var(--muted-foreground)' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}` }}>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', fontWeight: 700, color }}>{value}</span>
@@ -215,11 +215,11 @@ const MobileSites: React.FC = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <span style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{site.display_name}</span>
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: `${sc}20`, color: sc, fontFamily: "'DM Sans', sans-serif", border: `1px solid ${sc}40` }}>{status}</span>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: `color-mix(in srgb, ${sc} 20%, transparent)`, color: sc, fontFamily: "'DM Sans', sans-serif", border: `1px solid color-mix(in srgb, ${sc} 40%, transparent)` }}>{status}</span>
                         </div>
                         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', color: muted, marginBottom: 5 }}>{site.site_id}</div>
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.67rem', color: gwOnline ? '#2FBF71' : '#64748b', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{gwOnline ? '● Online' : '○ Offline'}</span>
+                          <span style={{ fontSize: '0.67rem', color: gwOnline ? '#2FBF71' : 'var(--muted-foreground)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{gwOnline ? '● Online' : '○ Offline'}</span>
                           {devCount > 0 && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{onlineDev}/{devCount} devices</span>}
                           {site.capacity_kw && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.capacity_kw} kWp</span>}
                         </div>
@@ -297,10 +297,10 @@ const MobileSites: React.FC = () => {
                                 {site.devices!.map(d => (
                                   <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 9, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}` }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                      {d.is_online ? <Wifi size={12} color="#2FBF71" /> : <WifiOff size={12} color="#64748b" />}
+                                      {d.is_online ? <Wifi size={12} color="#2FBF71" /> : <WifiOff size={12} color="var(--muted-foreground)" />}
                                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', fontWeight: 600, color: text }}>{d.device_serial}</span>
                                     </div>
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: d.is_online ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{d.is_online ? 'Online' : 'Offline'}</span>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: d.is_online ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{d.is_online ? 'Online' : 'Offline'}</span>
                                   </div>
                                 ))}
                               </div>

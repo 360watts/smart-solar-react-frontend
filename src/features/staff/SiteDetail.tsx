@@ -121,13 +121,13 @@ const blankEqPanel = (): Omit<EqPanel,'id'|'site'> => ({
 
 const eqMkT = (isDark: boolean) => ({
   surface: isDark ? '#0F1623' : '#FFFFFF',
-  border:  isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb',
+  border:  isDark ? 'rgba(255,255,255,0.08)' : 'var(--border-strong)',
   text:    isDark ? '#F0F4FF' : '#12151A',
   textM:   isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)',
 });
 const eqInput = (isDark: boolean): React.CSSProperties => ({
   padding:'8px 10px',borderRadius:7,width:'100%',boxSizing:'border-box',
-  border:isDark?'1px solid rgba(255,255,255,0.12)':'1px solid #d1d5db',
+  border:isDark?'1px solid rgba(255,255,255,0.12)':'1px solid var(--border-strong)',
   background:isDark?'#0F1623':'#FFFFFF',color:isDark?'#F0F4FF':'#12151A',fontSize:'0.875rem',
 });
 const eqLabel = (isDark: boolean): React.CSSProperties => ({
@@ -153,7 +153,7 @@ const EqFormField: React.FC<{
 };
 
 const EqSectionHeader: React.FC<{icon:React.ReactNode;title:string;count:number;onAdd:()=>void;isDark:boolean}> = ({icon,title,count,onAdd,isDark}) => (
-  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb'}}>
+  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)'}}>
     <div style={{display:'flex',alignItems:'center',gap:10}}>
       <span style={{color:'#22c55e'}}>{icon}</span>
       <h3 style={{margin:0,fontSize:'1rem',fontWeight:700,color:isDark?'#F0F4FF':'#12151A'}}>{title}</h3>
@@ -191,10 +191,10 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
   const save=async()=>{setErr(null);const ve=eqValidateInverter(form);if(ve){setErr(ve);return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateInverter(siteId,modal.item.id,p);else await apiService.createInverter(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
   const doDelete=async()=>{if(!del)return;try{await apiService.deleteInverter(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Zap size={17}/>} title="Inverters" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No inverters" description="Add the inverter from the contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No inverters" description="Add the inverter from the contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>MPPT Range</th><th>Installed</th><th>Warranty</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(inv=>(
@@ -273,10 +273,10 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
   const save=async()=>{setErr(null);if(eqIsBlank(form.make)){setErr('Make is required.');return;}if(eqIsBlank(form.serial_number)){setErr('Serial Number is required.');return;}if(eqParsePos(form.capacity_kwh)==null){setErr('Capacity (kWh) must be > 0.');return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateBattery(siteId,modal.item.id,p);else await apiService.createBattery(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
   const doDelete=async()=>{if(!del)return;try{await apiService.deleteBattery(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Battery size={17}/>} title="Batteries" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No batteries" description="Add the battery from the contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No batteries" description="Add the battery from the contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>Nominal Voltage</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(bat=>(
@@ -349,11 +349,11 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
   const doDelete=async()=>{if(!del)return;try{await apiService.deletePanel(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   const activeWp=items.filter(p=>p.is_active).reduce((s,p)=>s+eqToPanelWp(p.capacity_wp),0);
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid #e5e7eb',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Sun size={17}/>} title="Solar Panels" count={items.length} onAdd={()=>open()} isDark={isDark}/>
-      {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:isDark?'#9ca3af':'#64748b',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
+      {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:'var(--muted-foreground)',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:isDark?'#6b7280':'#9ca3af',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No panels" description="Add panels from the contract. One row per physical panel."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No panels" description="Add panels from the contract. One row per physical panel."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity (Wp)</th><th>Technology</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(p=>(
@@ -489,8 +489,8 @@ export default function SiteDetail() {
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
   const textMain    = isDark ? '#F0F4FF' : '#0f172a';
-  const textMute    = isDark ? '#8892A4' : '#94a3b8';
-  const textSub     = isDark ? '#94a3b8' : '#94a3b8';
+  const textMute    = 'var(--muted-foreground)';
+  const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
   const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
   const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';

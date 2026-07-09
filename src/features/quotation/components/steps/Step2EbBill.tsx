@@ -178,7 +178,7 @@ export function Step2EbBill({ form }: Props) {
                 background: watch('ebBill.phase') === p ? 'var(--green-soft, rgba(0,166,62,0.08))' : 'var(--card, #ffffff)',
                 fontSize: '0.75rem',
                 fontFamily: 'var(--mono)',
-                color: watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--fg-muted, #64748b)',
+                color: watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--muted-foreground)',
                 transition: 'all 0.15s',
               }}
             >

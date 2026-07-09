@@ -47,7 +47,7 @@ const MobileUsers: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inputBg = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
 
@@ -288,7 +288,7 @@ const MobileUsers: React.FC = () => {
                             <span style={{ fontSize:'0.8rem', fontWeight:700, color:text, fontFamily:"'DM Sans', sans-serif", minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                               {assignedSite.display_name || assignedSite.name || assignedSite.site_id || 'Assigned site'}
                             </span>
-                            <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, fontSize:'0.58rem', fontWeight:700, color: assignedSite.is_active === false ? '#64748b' : accent, background: assignedSite.is_active === false ? 'rgba(100,116,139,0.12)' : 'rgba(47,191,113,0.12)', fontFamily:"'DM Sans', sans-serif" }}>
+                            <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, fontSize:'0.58rem', fontWeight:700, color: assignedSite.is_active === false ? 'var(--muted-foreground)' : accent, background: assignedSite.is_active === false ? 'rgba(100,116,139,0.12)' : 'rgba(47,191,113,0.12)', fontFamily:"'DM Sans', sans-serif" }}>
                               {assignedSite.site_status || (assignedSite.is_active === false ? 'Inactive' : 'Active')}
                             </span>
                           </div>

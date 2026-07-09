@@ -65,7 +65,7 @@ const PALETTE_LIGHT = {
   // Text hierarchy
   textPrimary: '#0f172a',
   textSecondary: '#374151',
-  textTertiary: '#64748b',
+  textTertiary: 'var(--muted-foreground)',
 
   // Accent colors (component-specific)
   inverterColor: '#2563eb',    // blue

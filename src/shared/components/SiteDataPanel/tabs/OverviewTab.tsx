@@ -235,7 +235,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             : todayKwh != null && isLatestToday
               ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
               : undefined}
-          accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#F07522'}
+          accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#F07522'}
           icon={<IconSunKpi />}
           badge={rs485Stale && !isDeyeCloud ? (
             <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
@@ -278,7 +278,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             : latest?.load_today_kwh != null && isLatestToday
               ? `${Number(latest.load_today_kwh).toFixed(2)} kWh today`
               : undefined}
-          accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#8b5cf6'}
+          accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#8b5cf6'}
           icon={<IconLoad />}
           badge={rs485Stale && !isDeyeCloud ? (
             <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
@@ -301,7 +301,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 : 'No flow'
               : undefined
           }
-          accent={gridExporting ? '#10b981' : gridImporting ? '#3b82f6' : '#9ca3af'}
+          accent={gridExporting ? '#10b981' : gridImporting ? '#3b82f6' : 'var(--muted-foreground)'}
           icon={<IconGrid />}
         />
         <KpiCard
@@ -322,7 +322,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             value={acOutputPowerDisplay.value}
             unit={acOutputPowerDisplay.unit}
             sub={rs485Stale && !isDeyeCloud ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
-            accent={rs485Stale && !isDeyeCloud ? '#9ca3af' : '#a78bfa'}
+            accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#a78bfa'}
             icon={<Zap size={iconSize} />}
             badge={rs485Stale && !isDeyeCloud ? (
               <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
@@ -374,7 +374,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             {gridPhases.map((ph, i) => {
               const exporting = !phaseDataStale && ph.powerW != null && ph.powerW <= -1;
               const importing = !phaseDataStale && ph.powerW != null && ph.powerW >= 1;
-              const accent = phaseDataStale ? '#9ca3af' : exporting ? '#10b981' : importing ? '#3b82f6' : '#9ca3af';
+              const accent = phaseDataStale ? 'var(--muted-foreground)' : exporting ? '#10b981' : importing ? '#3b82f6' : 'var(--muted-foreground)';
               const powerLabel = phaseDataStale ? '—'
                 : ph.powerW != null
                   ? `${Math.abs(ph.powerW).toFixed(0)} W ${exporting ? '↑' : importing ? '↓' : ''}`
@@ -408,7 +408,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {loadPhases.map((ph, i) => {
               const hasLoad = ph.powerW != null && ph.powerW > 1;
-              const accent = hasLoad ? '#8b5cf6' : '#9ca3af';
+              const accent = hasLoad ? '#8b5cf6' : 'var(--muted-foreground)';
               const powerLabel = ph.powerW != null ? `${Math.abs(ph.powerW).toFixed(0)} W` : '—';
               return (
                 <KpiCard

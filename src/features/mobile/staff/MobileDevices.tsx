@@ -209,7 +209,7 @@ const MobileDevices: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 
   const [devices,    setDevices]    = useState<Device[]>([]);
@@ -408,7 +408,7 @@ const MobileDevices: React.FC = () => {
           {[
             { label: 'Total',   value: counts.total,   color: text },
             { label: 'Online',  value: counts.online,  color: accent },
-            { label: 'Offline', value: counts.offline, color: '#64748b' },
+            { label: 'Offline', value: counts.offline, color: 'var(--muted-foreground)' },
             { label: 'Issues',  value: counts.warn,    color: counts.warn > 0 ? '#F59E0B' : muted },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}`, flexShrink: 0 }}>
@@ -438,7 +438,7 @@ const MobileDevices: React.FC = () => {
 
         <div style={{ display: 'flex', gap: 6 }}>
           {(['all', 'online', 'offline'] as const).map(f => {
-            const color = f === 'online' ? accent : f === 'offline' ? '#64748b' : accent;
+            const color = f === 'online' ? accent : f === 'offline' ? 'var(--muted-foreground)' : accent;
             const active = filter === f;
             return (
               <button
@@ -584,7 +584,7 @@ const MobileDevices: React.FC = () => {
                           { label: 'Config Sync', on: !device.pending_config_update },
                           { label: alertsMuted ? 'Alerts Muted' : 'Alerts Live', on: !alertsMuted },
                         ].map(({ label, on }) => (
-                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(47,191,113,0.1)' : 'rgba(71,85,105,0.12)', color: on ? '#2FBF71' : '#64748b', border: `1px solid ${on ? 'rgba(47,191,113,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'DM Sans', sans-serif" }}>
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(47,191,113,0.1)' : 'rgba(71,85,105,0.12)', color: on ? '#2FBF71' : 'var(--muted-foreground)', border: `1px solid ${on ? 'rgba(47,191,113,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'DM Sans', sans-serif" }}>
                             <Settings size={9} />{label}
                           </div>
                         ))}
@@ -630,7 +630,7 @@ const MobileDevices: React.FC = () => {
                 ((() => {
                   const device = filtered.find(d => d.id === actionMenu)!;
                   const mutedNow = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
-                  return { label: mutedNow ? 'Unmute Alerts' : 'Mute Alerts', icon: mutedNow ? <Bell size={16} /> : <BellOff size={16} />, onClick: () => toggleAlertsMute(device), color: '#94A3B8' };
+                  return { label: mutedNow ? 'Unmute Alerts' : 'Mute Alerts', icon: mutedNow ? <Bell size={16} /> : <BellOff size={16} />, onClick: () => toggleAlertsMute(device), color: 'var(--muted-foreground)' };
                 })()),
                 { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => { setModal({ type: 'delete', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#EF4444' },
               ].map(({ label, icon, onClick, color }) => (

@@ -4,7 +4,6 @@ import '../App.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import AdminRoute from '../shared/guards/AdminRoute';
-import CustomerRoute from '../shared/guards/CustomerRoute';
 import Login from '../features/auth/components/Login';
 import VerifyEmailPage from '../features/auth/components/VerifyEmailPage';
 import NavigationProgress from '../shared/layout/NavigationProgress';
@@ -36,21 +35,8 @@ const ServiceBookings = lazy(() => import('../features/staff/ServiceBookings'));
 
 // Layouts (lazy — separate bundles)
 const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
-const PortalLayout      = lazy(() => import('../shared/layout/PortalLayout'));
 
-// Customer portal
-const PortalOverview    = lazy(() => import('../features/portal/PortalOverview'));
-const PortalAlerts      = lazy(() => import('../features/portal/PortalAlerts'));
-const PortalDevice      = lazy(() => import('../features/portal/PortalDevice'));
-const PortalProfile     = lazy(() => import('../features/portal/PortalProfile'));
-const PortalWeather     = lazy(() => import('../features/portal/PortalWeather'));
-const PortalHistory     = lazy(() => import('../features/portal/PortalHistory'));
-const PortalSolar       = lazy(() => import('../features/portal/PortalSolar'));
-const PortalLoad        = lazy(() => import('../features/portal/PortalLoad'));
-const PortalDetails     = lazy(() => import('../features/portal/PortalDetails'));
-const AcceptInvitePage  = lazy(() => import('../features/portal/pages/AcceptInvitePage'));
-
-/** Renders AiChat only for staff/superusers — customers have PortalChat instead. */
+/** Renders AiChat only for staff/superusers. */
 function StaffAiChat() {
   const { user, isAuthenticated, loading } = useAuth();
   if (loading || !isAuthenticated) return null;
@@ -58,15 +44,29 @@ function StaffAiChat() {
   return <Suspense fallback={null}><AiChat /></Suspense>;
 }
 
+// The customer portal lives in a separate app (my.360watts.com) — this app has no
+// customer-facing routes of its own, so a non-staff account can't be sent to an
+// internal path.
+const CUSTOMER_PORTAL_URL = 'https://my.360watts.com';
+
 /**
  * Redirects authenticated users to the correct landing page based on role.
  * Includes loading guard to prevent flash-redirect while auth state resolves.
+ * Staff/superusers land on the internal dashboard; anyone else is sent to the
+ * external customer portal, since this app doesn't serve customers anymore.
  */
 function RoleRedirect() {
   const { user, isAuthenticated, loading } = useAuth();
+  React.useEffect(() => {
+    if (!loading && isAuthenticated && !(user?.is_staff || user?.is_superuser)) {
+      window.location.href = CUSTOMER_PORTAL_URL;
+    }
+  }, [loading, isAuthenticated, user]);
+
   if (loading) return <div className="loading">Loading…</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <Navigate to={user?.is_staff || user?.is_superuser ? '/dashboard' : '/portal'} replace />;
+  if (!(user?.is_staff || user?.is_superuser)) return <div className="loading">Redirecting…</div>;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -89,31 +89,6 @@ function App() {
 
               {/* Email verification — linked from pre-creation OTP email */}
               <Route path="/verify-email" element={<VerifyEmailPage />} />
-
-              {/* Public invite acceptance — no auth required, standalone page */}
-              <Route path="/invite/:token" element={<Suspense fallback={null}><AcceptInvitePage /></Suspense>} />
-
-              {/* Customer portal — own layout, no staff navbar */}
-              <Route
-                path="/portal"
-                element={
-                  <CustomerRoute>
-                    <Suspense fallback={<div className="loading">Loading portal…</div>}>
-                      <PortalLayout />
-                    </Suspense>
-                  </CustomerRoute>
-                }
-              >
-                <Route index element={<Suspense fallback={null}><PortalOverview /></Suspense>} />
-                <Route path="alerts"   element={<Suspense fallback={null}><PortalAlerts /></Suspense>} />
-                <Route path="device"   element={<Suspense fallback={null}><PortalDevice /></Suspense>} />
-                <Route path="profile"  element={<Suspense fallback={null}><PortalProfile /></Suspense>} />
-                <Route path="weather"  element={<Suspense fallback={null}><PortalWeather /></Suspense>} />
-                <Route path="history"  element={<Suspense fallback={null}><PortalHistory /></Suspense>} />
-                <Route path="solar"    element={<Suspense fallback={null}><PortalSolar /></Suspense>} />
-                <Route path="load"     element={<Suspense fallback={null}><PortalLoad /></Suspense>} />
-                <Route path="details"  element={<Suspense fallback={null}><PortalDetails /></Suspense>} />
-              </Route>
 
               {/* Staff portal — sidebar layout */}
               <Route

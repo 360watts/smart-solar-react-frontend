@@ -169,7 +169,7 @@ const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, ac
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             style={{
               display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700,
-              color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : '#94a3b8',
+              color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)',
             }}
           >
             {trend.direction === 'down' && '↓'} {trend.direction === 'up' && '↑'} {trend.pct.toFixed(1)}%
@@ -1101,7 +1101,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               style={{
                 padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'chart' ? `1px solid #00a63e` : '1px solid transparent',
                 background: phaseForecastSubTab === 'chart' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
-                color: phaseForecastSubTab === 'chart' ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#e2e8f0' : '#94a3b8'),
+                color: phaseForecastSubTab === 'chart' ? (isDark ? '#d1fae5' : '#065f46') : 'var(--muted-foreground)',
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
               }}
             >
@@ -1113,7 +1113,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               style={{
                 padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'accuracy' ? `1px solid #00a63e` : '1px solid transparent',
                 background: phaseForecastSubTab === 'accuracy' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
-                color: phaseForecastSubTab === 'accuracy' ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#e2e8f0' : '#94a3b8'),
+                color: phaseForecastSubTab === 'accuracy' ? (isDark ? '#d1fae5' : '#065f46') : 'var(--muted-foreground)',
                 cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
               }}
             >
@@ -1191,7 +1191,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                       border: 'none',
                       borderLeft: i > 0 ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
                       background: isActive ? (isDark ? `${color}22` : `${color}15`) : 'transparent',
-                      color: isActive ? color : (isDark ? '#64748b' : '#94a3b8'),
+                      color: isActive ? color : 'var(--muted-foreground)',
                       padding: '5px 10px', fontSize: '0.67rem', fontWeight: isActive ? 700 : 600,
                       cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
                       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -1225,7 +1225,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                       border: 'none',
                       borderLeft: label === 'kWh' ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
                       background: isActive ? (isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.12)') : 'transparent',
-                      color: isActive ? '#2FBF71' : (isDark ? '#64748b' : '#94a3b8'),
+                      color: isActive ? '#2FBF71' : 'var(--muted-foreground)',
                       padding: '5px 10px', fontSize: '0.67rem', fontWeight: isActive ? 700 : 600,
                       cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
                       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -1245,7 +1245,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 style={{
                   border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.4)' : (isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)')}`,
                   background: loadTotalCombined ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)') : 'transparent',
-                  color: loadTotalCombined ? '#38bdf8' : (isDark ? '#64748b' : '#94a3b8'),
+                  color: loadTotalCombined ? '#38bdf8' : 'var(--muted-foreground)',
                   borderRadius: 10, padding: '5px 10px', fontSize: '0.67rem', fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
                   display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -1278,7 +1278,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☀ 06:00 IST</span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 600, color: isDark ? '#64748b' : '#94a3b8', fontFamily: 'Poppins, sans-serif' }}>{pct.toFixed(0)}% of solar day elapsed</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--muted-foreground)', fontFamily: 'Poppins, sans-serif' }}>{pct.toFixed(0)}% of solar day elapsed</span>
                     <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6366f1', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☾ 06:00 IST</span>
                   </div>
                   <div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)', overflow: 'hidden', position: 'relative' }}>

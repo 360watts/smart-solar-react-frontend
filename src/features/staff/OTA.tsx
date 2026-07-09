@@ -68,13 +68,13 @@ const tok = {
   bgMuted:  (d: boolean) => d ? 'rgba(255,255,255,0.04)' : '#F3F4F6',
 
   // Borders
-  border:   (d: boolean) => d ? 'rgba(255,255,255,0.08)' : '#E5E7EB',
+  border:   (d: boolean) => d ? 'rgba(255,255,255,0.08)' : 'var(--border-strong)',
   borderFocus: '#22C55E',
 
   // Text
   textPrimary:   (d: boolean) => d ? '#F8FAFC' : '#0F172A',
-  textSecondary: (d: boolean) => d ? '#94A3B8' : '#64748B',
-  textMuted:     (d: boolean) => d ? '#64748B' : '#94A3B8',
+  textSecondary: (_d: boolean) => 'var(--muted-foreground)',
+  textMuted:     (_d: boolean) => 'var(--text-dim)',
 
   // Accents
   green:  '#22C55E',
@@ -161,7 +161,7 @@ const mapLogStatus = (s: string | null): DeviceStatus['status'] => {
 };
 
 const STATUS_CONFIG: Record<DeviceStatus['status'], { label: string; bg: string; text: string; dot: string }> = {
-  idle:       { label: 'Idle',        bg: 'rgba(100,116,139,0.15)', text: '#94A3B8', dot: '#64748B' },
+  idle:       { label: 'Idle',        bg: 'rgba(100,116,139,0.15)', text: 'var(--muted-foreground)', dot: 'var(--muted-foreground)' },
   downloading:{ label: 'Downloading', bg: 'rgba(6,182,212,0.15)',   text: '#06B6D4', dot: '#06B6D4' },
   flashing:   { label: 'Flashing',    bg: 'rgba(245,158,11,0.15)',  text: '#F59E0B', dot: '#F59E0B' },
   rebooting:  { label: 'Rebooting',   bg: 'rgba(251,146,60,0.15)',  text: '#FB923C', dot: '#FB923C' },
@@ -197,7 +197,7 @@ const CardHeader: React.FC<{
       </div>
       <div>
         <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: '#F8FAFC' }}>{title}</div>
-        <div style={{ fontSize: '0.8125rem', color: '#94A3B8', marginTop: 1 }}>{subtitle}</div>
+        <div style={{ fontSize: '0.8125rem', color: 'var(--muted-foreground)', marginTop: 1 }}>{subtitle}</div>
       </div>
     </div>
     {right}
@@ -792,7 +792,7 @@ export const OTA: React.FC = () => {
 
             {uploadProgress !== null && (
               <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isDark ? '#94A3B8' : '#64748B', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--muted-foreground)', marginBottom: 4 }}>
                   <span>{uploadProgress < 100 ? 'Uploading…' : 'Processing…'}</span>
                   <span>{uploadProgress}%</span>
                 </div>
@@ -811,7 +811,7 @@ export const OTA: React.FC = () => {
             <button type="submit" disabled={uploadProgress !== null} style={{
               ...btnBase,
               background: uploadProgress !== null ? (isDark ? '#cbd5e1' : '#CBD5E1') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-              color: uploadProgress !== null ? (isDark ? '#64748B' : '#94A3B8') : 'white',
+              color: uploadProgress !== null ? 'var(--muted-foreground)' : 'white',
               boxShadow: uploadProgress !== null ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
               justifyContent: 'center',
               cursor: uploadProgress !== null ? 'not-allowed' : 'pointer',

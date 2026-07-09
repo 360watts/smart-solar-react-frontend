@@ -85,8 +85,8 @@ const P = {
   red:          '#EF4444',
   redDim:       'rgba(239,68,68,0.12)',
   text:         '#E2E8F0',
-  textMid:      '#94A3B8',
-  textDim:      '#475569',
+  textMid:      'var(--muted-foreground)',
+  textDim:      'var(--text-dim)',
   mono:         '"JetBrains Mono", "Fira Code", ui-monospace, monospace',
   sans:         '"Fira Sans", system-ui, sans-serif',
 };
@@ -99,8 +99,8 @@ const PL = {
   border:  'rgba(0,0,0,0.07)',
   borderAccent: 'rgba(0,0,0,0.12)',
   text:    '#0F172A',
-  textMid: '#475569',
-  textDim: '#94A3B8',
+  textMid: 'var(--muted-foreground)',
+  textDim: 'var(--text-dim)',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

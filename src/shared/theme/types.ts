@@ -38,5 +38,3 @@ export type DesignTokens = {
   shadow: string;
   charts: ChartTokens;
 };
-
-export type ThemeCssVars = Record<`--${string}`, string>;

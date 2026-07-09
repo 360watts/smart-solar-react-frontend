@@ -691,16 +691,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const dcTemp = latest?.dc_temp_c ?? null;
 
   const runStateBadge = runState != null ? (
-    runState === 0 ? { label: 'Standby',    color: '#9ca3af' } :
+    runState === 0 ? { label: 'Standby',    color: 'var(--muted-foreground)' } :
     runState === 1 ? { label: 'Self-Check', color: '#60a5fa' } :
     runState === 2 ? { label: 'Normal',     color: '#00a63e' } :
     runState === 3 ? { label: 'Alarm',      color: '#f59e0b' } :
     runState === 4 ? { label: 'Fault',      color: '#ef4444' } :
     runState === 5 ? { label: 'Activating', color: '#a78bfa' } :
-      { label: `State ${runState}`, color: '#6b7280' }
+      { label: `State ${runState}`, color: 'var(--muted-foreground)' }
   ) : null;
 
-  const invTempColor = invTemp == null ? '#9ca3af'
+  const invTempColor = invTemp == null ? 'var(--muted-foreground)'
     : invTemp > 60 ? '#ef4444'
     : invTemp > 45 ? '#f59e0b'
     : '#10b981';

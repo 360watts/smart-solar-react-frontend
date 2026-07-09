@@ -388,12 +388,12 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
                   <td><input className="sq-bom-input" style={{ minWidth: 100 }} {...register(`${prefix}.rows.${idx}.description`)} /></td>
 	                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
 	                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg, #0f172a)' : 'var(--fg-muted, #64748b)', paddingRight: 8 }}>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg, #0f172a)' : 'var(--muted-foreground)', paddingRight: 8 }}>
                     {baseCost > 0 ? formatINR(baseCost) : '—'}
                   </td>
 	                  <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
                   <td><input type="number" min={0} max={28} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} /></td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: finalCost > 0 ? 'var(--fg, #0f172a)' : 'var(--fg-muted, #64748b)', paddingRight: 8 }}>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: finalCost > 0 ? 'var(--fg, #0f172a)' : 'var(--muted-foreground)', paddingRight: 8 }}>
                     {finalCost > 0 ? formatINR(finalCost) : '—'}
                   </td>
                   <td style={{ paddingRight: 6 }}>
@@ -430,7 +430,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               <td />
             </tr>
             <tr>
-              <td colSpan={6} style={{ color: 'var(--fg-muted, #64748b)', fontSize: '0.65rem' }}>PM Surya Ghar Subsidy</td>
+              <td colSpan={6} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>PM Surya Ghar Subsidy</td>
               <td colSpan={2} style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
                 − {formatINR(subsidy)}
               </td>
@@ -438,7 +438,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             </tr>
             {discount > 0 && (
               <tr>
-                <td colSpan={6} style={{ color: 'var(--fg-muted, #64748b)', fontSize: '0.65rem' }}>Discount</td>
+                <td colSpan={6} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>Discount</td>
                 <td colSpan={2} style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
                   − {formatINR(discount)}
                 </td>

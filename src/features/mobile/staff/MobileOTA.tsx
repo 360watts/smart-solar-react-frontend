@@ -25,7 +25,7 @@ interface DeviceStatus {
 }
 
 const S: Record<string, { color: string; label: string }> = {
-  idle:        { color: '#64748b', label: 'Idle' },
+  idle:        { color: 'var(--muted-foreground)', label: 'Idle' },
   healthy:     { color: '#2FBF71', label: 'Healthy' },
   trial:       { color: '#60A5FA', label: 'Trial' },
   downloading: { color: '#F59E0B', label: 'Downloading' },
@@ -60,7 +60,7 @@ const MobileOTA: React.FC = () => {
   const surface2= isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inp     = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
 
@@ -335,7 +335,7 @@ const MobileOTA: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {filteredFW.map(fw => {
                   const isExp = expandedFW.has(fw.id);
-                  const statusColor = fw.status === 'stable' ? '#2FBF71' : '#64748b';
+                  const statusColor = fw.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)';
                   return (
                     <div key={fw.id} style={card(fw.is_active ? accent : statusColor)}>
                       <button
@@ -563,7 +563,7 @@ const MobileOTA: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span style={{ ...mono, fontSize: '0.88rem', fontWeight: 700, color: accent }}>v{selectedFW.version}</span>
-                        <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: selectedFW.status === 'stable' ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: selectedFW.status === 'stable' ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{selectedFW.status}</span>
+                        <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: selectedFW.status === 'stable' ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: selectedFW.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{selectedFW.status}</span>
                       </div>
                       <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{selectedFW.version} · {fmtBytes(selectedFW.size)}</div>
                     </div>
@@ -582,7 +582,7 @@ const MobileOTA: React.FC = () => {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                               <span style={{ ...mono, fontSize: '0.83rem', fontWeight: 700, color: sel ? accent : text }}>v{f.version}</span>
-                              <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: f.status === 'stable' ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: f.status === 'stable' ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>{f.status}</span>
+                              <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: f.status === 'stable' ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: f.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{f.status}</span>
                               {f.is_active && <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'DM Sans', sans-serif" }}>active</span>}
                             </div>
                             <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{f.version} · {fmtBytes(f.size)}</div>

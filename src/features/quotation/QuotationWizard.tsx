@@ -348,7 +348,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
               )}
               {!done && !active && (
                 <span style={{ marginTop: 3, flexShrink: 0 }}>
-                  <Icon style={{ width: 13, height: 13, color: 'var(--fg-muted, #94a3b8)' }} />
+                  <Icon style={{ width: 13, height: 13, color: 'var(--muted-foreground)' }} />
                 </span>
               )}
             </button>

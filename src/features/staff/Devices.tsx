@@ -1030,7 +1030,7 @@ const Devices: React.FC = () => {
           <p style={{
             margin: 0,
             fontSize: '13px',
-            color: isDark ? '#cbd5e1' : '#64748b',
+            color: 'var(--muted-foreground)',
             fontFamily: '"Inter", sans-serif',
             fontWeight: 400,
           }}>
@@ -1106,7 +1106,7 @@ const Devices: React.FC = () => {
                   <input type="text"
                     value={editForm.device_serial}
                     disabled autoComplete="off"
-                    style={{ padding: '12px 14px', borderRadius: '10px', width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', color: isDark ? '#9ca3af' : '#667085', fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', cursor: 'not-allowed' }} />
+                    style={{ padding: '12px 14px', borderRadius: '10px', width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', color: 'var(--muted-foreground)', fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', cursor: 'not-allowed' }} />
                 </div>
               )}
             </div>
@@ -1148,7 +1148,7 @@ const Devices: React.FC = () => {
                     onFocus={() => setShowUserDropdown(true)} autoComplete="off"
                     style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
                   {(editingDevice ? editForm.user : createForm.user) && (
-                    <div style={{ marginTop: 8, fontSize: '0.875rem', color: isDark ? '#b0b0b0' : '#94a3b8' }}>
+                    <div style={{ marginTop: 8, fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
                       <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
                       <button type="button" onClick={() => { if (editingDevice) setEditForm({...editForm, user: ''}); else setCreateForm({...createForm, user: ''}); setUserSearchTerm(''); }} className="btn-icon btn-icon-danger" style={{ marginLeft: 10 }}>✕</button>
                     </div>
@@ -1360,10 +1360,10 @@ const Devices: React.FC = () => {
                 display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0,
                 padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
                 background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                color: selectedDevice.is_online ? '#10b981' : '#64748b',
+                color: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)',
                 border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : '#64748b', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block' }} />
                 {selectedDevice.is_online ? 'Online' : 'Offline'}
               </span>
             </div>
@@ -1694,10 +1694,10 @@ const Devices: React.FC = () => {
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '4px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600,
                     background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                    color: selectedDevice.is_online ? '#10b981' : '#64748b',
+                    color: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)',
                     border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : '#64748b', display: 'inline-block' }} />
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block' }} />
                     {selectedDevice.is_online ? 'Online' : 'Offline'}
                   </span>
                 )},
@@ -1791,7 +1791,7 @@ const Devices: React.FC = () => {
                           <div>
                             <span style={{ fontSize: '0.75rem', color: T.textM }} className="config-label">Device: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{selectedDevice.config_ack_ver}</span>
-                            <span style={{ margin: '0 8px', color: isDark ? '#808080' : 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
+                            <span style={{ margin: '0 8px', color: isDark ? 'var(--text-dim)' : 'rgba(0, 0, 0, 0.4)' }} className="config-arrow">→</span>
                             <span style={{ fontSize: '0.75rem', color: T.textM }} className="config-label">Latest: </span>
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{devicePreset.version}</span>
                           </div>
@@ -2017,7 +2017,7 @@ const Devices: React.FC = () => {
           <div style={{ padding: '16px 20px 20px' }}>
             {!selectedDevice.logs_enabled && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 8, background: T.borderM, border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', marginBottom: 12 }}>
-                <Info size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <Info size={15} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
                 <p style={{ margin: 0, color: T.textD, fontSize: '0.875rem', fontStyle: 'italic' }}>
                   Logging is disabled. Enable it in Device Details to receive logs.
                 </p>
@@ -2751,20 +2751,20 @@ const Devices: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: '#6b7280', marginLeft: 6 }}>{viewingFileName}</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: 'var(--muted-foreground)', marginLeft: 6 }}>{viewingFileName}</span>
                   {viewingFileContent && (
-                    <span style={{ fontSize: '0.72rem', color: '#4b5563', marginLeft: 4 }}>— {viewingFileContent.split('\n').filter(Boolean).length} lines</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginLeft: 4 }}>— {viewingFileContent.split('\n').filter(Boolean).length} lines</span>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => handleDownloadLogFile(viewingFileId)}
-                    style={{ padding: '4px 12px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8' }}>
+                    style={{ padding: '4px 12px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'var(--muted-foreground)' }}>
                     Download
                   </button>
                   <button
                     onClick={() => { setViewingFileContent(null); setViewingFileId(null); setViewingFileName(''); }}
-                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8' }}>
+                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'var(--muted-foreground)' }}>
                     ✕
                   </button>
                 </div>
@@ -2772,7 +2772,7 @@ const Devices: React.FC = () => {
               {/* Modal body */}
               <div style={{ overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', flex: 1 }}>
                 {viewingFileLoading && (
-                  <p style={{ color: '#4b5563', padding: '20px 16px', margin: 0 }}>Loading…</p>
+                  <p style={{ color: 'var(--muted-foreground)', padding: '20px 16px', margin: 0 }}>Loading…</p>
                 )}
                 {!viewingFileLoading && viewingFileContent === null && (
                   <p style={{ color: '#ef4444', padding: '20px 16px', margin: 0 }}>Failed to load file.</p>
@@ -2780,7 +2780,7 @@ const Devices: React.FC = () => {
                 {viewingFileContent !== null && viewingFileContent.split('\n').filter(Boolean).map((line, i) => {
                   const isError = /error|exception|fail/i.test(line);
                   const isWarn = /warn/i.test(line);
-                  const lineColor = isError ? '#f87171' : isWarn ? '#fbbf24' : '#d1d5db';
+                  const lineColor = isError ? '#f87171' : isWarn ? '#fbbf24' : 'var(--muted-foreground)';
                   const lineBg = isError ? 'rgba(248,113,113,0.07)' : 'transparent';
                   return (
                     <div key={i} style={{ display: 'flex', gap: 12, padding: '3px 16px', background: lineBg, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
@@ -2812,7 +2812,7 @@ const Devices: React.FC = () => {
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>⚡</div>
                   <div>
                     <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Day Scan — {scanDateLabel}</div>
-                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: '#94a3b8', marginTop: 1 }}>
+                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
                       {scanLoading ? 'Scanning all files for the day…' : scanMeta ? `${scanMeta.files_scanned} file${scanMeta.files_scanned !== 1 ? 's' : ''} scanned` : ''}
                     </div>
                   </div>
@@ -2830,7 +2830,7 @@ const Devices: React.FC = () => {
                 <button
                   onClick={() => { if (!scanLoading) { setScanModalOpen(false); setScanResults(null); } }}
                   disabled={scanLoading}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#64748b', cursor: scanLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0, opacity: scanLoading ? 0.4 : 1 }}>✕</button>
+                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'var(--muted-foreground)', cursor: scanLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0, opacity: scanLoading ? 0.4 : 1 }}>✕</button>
               </div>
 
               {/* Indeterminate progress bar while loading */}
@@ -2860,7 +2860,7 @@ const Devices: React.FC = () => {
                           fontFamily: '"Fira Code", monospace', textTransform: 'capitalize',
                           border: `1px solid ${scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.4)' : sev === 'warning' ? 'rgba(251,191,36,0.4)' : 'rgba(148,163,184,0.4)') : 'rgba(255,255,255,0.08)'}`,
                           background: scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.15)' : sev === 'warning' ? 'rgba(251,191,36,0.12)' : 'rgba(148,163,184,0.12)') : 'transparent',
-                          color: scanSeverityFilter === sev ? (sev === 'error' ? '#f87171' : sev === 'warning' ? '#fbbf24' : '#cbd5e1') : '#64748b',
+                          color: scanSeverityFilter === sev ? (sev === 'error' ? '#f87171' : sev === 'warning' ? '#fbbf24' : 'var(--muted-foreground)') : 'var(--muted-foreground)',
                         }}
                       >{sev}</button>
                     ))}
@@ -2873,7 +2873,7 @@ const Devices: React.FC = () => {
                       fontFamily: '"Fira Code", monospace', display: 'flex', alignItems: 'center', gap: 5,
                       border: `1px solid ${scanGrouped ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
                       background: scanGrouped ? 'rgba(96,165,250,0.12)' : 'transparent',
-                      color: scanGrouped ? '#60a5fa' : '#64748b',
+                      color: scanGrouped ? '#60a5fa' : 'var(--muted-foreground)',
                     }}
                   >⧉ {scanGrouped ? 'Grouped' : 'Group similar'}</button>
                 </div>
@@ -2884,7 +2884,7 @@ const Devices: React.FC = () => {
                 {scanLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 14 }}>
                     <div style={{ width: 36, height: 36, border: '3px solid rgba(239,68,68,0.2)', borderTop: '3px solid #ef4444', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ color: '#94a3b8', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
+                    <span style={{ color: 'var(--muted-foreground)', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
                   </div>
                 ) : scanResults ? (() => {
                   const filesWithIssues = scanResults.filter(r => r.errors.length > 0 || r.warnings.length > 0);
@@ -2892,7 +2892,7 @@ const Devices: React.FC = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 20px', gap: 12 }}>
                       <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
                       <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#22c55e' }}>Clean day</div>
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: 'var(--muted-foreground)', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
                     </div>
                   );
 
@@ -2902,7 +2902,7 @@ const Devices: React.FC = () => {
 
                   const noMatches = (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 10 }}>
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', color: '#94a3b8' }}>No alerts match the current filters.</div>
+                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>No alerts match the current filters.</div>
                     </div>
                   );
 
@@ -2936,17 +2936,17 @@ const Devices: React.FC = () => {
                                   {group.sampleText}
                                 </span>
                                 {fileCount > 1 && (
-                                  <span style={{ fontSize: '0.65rem', color: '#64748b', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>{fileCount} files</span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>{fileCount} files</span>
                                 )}
                                 {group.count > 1 && (
-                                  <span style={{ color: '#64748b', fontSize: '0.7rem', flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▸</span>
+                                  <span style={{ color: 'var(--muted-foreground)', fontSize: '0.7rem', flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▸</span>
                                 )}
                               </div>
                               {expanded && group.count > 1 && (
                                 <div style={{ padding: '2px 12px 8px', display: 'flex', flexDirection: 'column', gap: 2, background: 'rgba(0,0,0,0.15)' }}>
                                   {group.occurrences.map((occ, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', color: '#94a3b8', padding: '3px 4px' }}>
-                                      <span style={{ minWidth: 130, flexShrink: 0, color: '#64748b' }}>{occ.filename}:{occ.line}</span>
+                                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', color: 'var(--muted-foreground)', padding: '3px 4px' }}>
+                                      <span style={{ minWidth: 130, flexShrink: 0, color: 'var(--muted-foreground)' }}>{occ.filename}:{occ.line}</span>
                                       <span style={{ wordBreak: 'break-all' }}>{occ.text}</span>
                                     </div>
                                   ))}
@@ -2974,20 +2974,20 @@ const Devices: React.FC = () => {
                         <div key={fi} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                           {/* File header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 8px', background: 'rgba(255,255,255,0.02)' }}>
-                            <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#94a3b8' }}>{file.filename}</span>
+                            <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>{file.filename}</span>
                             {file.errors.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.errors.length}E</span>}
                             {file.warnings.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.warnings.length}W</span>}
                           </div>
                           <div style={{ padding: '0 20px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {file.errors.map((entry, i) => (
                               <div key={`e${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.14)' }}>
-                                <div style={{ padding: '5px 10px', background: 'rgba(239,68,68,0.1)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.1)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', background: 'rgba(239,68,68,0.1)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.1)' }}>{entry.line}</div>
                                 <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fca5a5', background: 'rgba(239,68,68,0.04)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
                               </div>
                             ))}
                             {file.warnings.map((entry, i) => (
                               <div key={`w${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(251,191,36,0.1)' }}>
-                                <div style={{ padding: '5px 10px', background: 'rgba(251,191,36,0.07)', color: '#6b7280', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.08)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', background: 'rgba(251,191,36,0.07)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.08)' }}>{entry.line}</div>
                                 <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fde68a', background: 'rgba(251,191,36,0.03)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
                               </div>
                             ))}
@@ -3149,10 +3149,10 @@ const Devices: React.FC = () => {
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '3px 9px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
                     background: device.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                    color: device.is_online ? '#10b981' : '#64748b',
+                    color: device.is_online ? '#10b981' : 'var(--muted-foreground)',
                     border: device.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#10b981' : '#64748b', display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block', flexShrink: 0 }} />
                     {device.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
@@ -3571,7 +3571,7 @@ const Devices: React.FC = () => {
             </h3>
           </div>
 
-          <div style={{ marginBottom: '1.5rem', color: isDark ? '#b0b0b0' : '#495057', lineHeight: '1.6' }}>
+          <div style={{ marginBottom: '1.5rem', color: 'var(--muted-foreground)', lineHeight: '1.6' }}>
             <div style={{
               background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
               border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',

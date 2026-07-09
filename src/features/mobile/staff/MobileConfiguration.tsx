@@ -54,7 +54,7 @@ const MobileConfiguration: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 
   const [slaves,     setSlaves]     = useState<SlaveDevice[]>([]);
@@ -147,7 +147,7 @@ const MobileConfiguration: React.FC = () => {
           {[
             { label: 'Total',    value: counts.total,      color: 'rgba(241,245,249,0.9)', bg: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
             { label: 'Enabled',  value: counts.enabled,    color: '#2FBF71', bg: 'rgba(47,191,113,0.1)' },
-            { label: 'Disabled', value: counts.disabled,   color: '#94A3B8', bg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+            { label: 'Disabled', value: counts.disabled,   color: 'var(--muted-foreground)', bg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
             { label: 'Registers',value: counts.totalRegs,  color: '#60A5FA', bg: 'rgba(96,165,250,0.1)' },
           ].map(({ label, value, bg: kBg, color }) => (
             <div key={label} style={{ background: kBg, borderRadius: 10, padding: '8px 4px', textAlign: 'center', border: `1px solid ${border}` }}>
@@ -184,7 +184,7 @@ const MobileConfiguration: React.FC = () => {
 
         <div style={{ display: 'flex', gap: 6 }}>
           {(['all', 'enabled', 'disabled'] as const).map(f => {
-            const c = f === 'enabled' ? '#2FBF71' : f === 'disabled' ? '#64748b' : accent;
+            const c = f === 'enabled' ? '#2FBF71' : f === 'disabled' ? 'var(--muted-foreground)' : accent;
             return (
               <button key={f} onClick={() => setFilter(f)}
                 style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0, background: filter === f ? `${c}18` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'), color: filter === f ? c : muted, fontFamily: "'DM Sans', sans-serif" }}>
@@ -221,16 +221,16 @@ const MobileConfiguration: React.FC = () => {
               ? Math.round((slave.success_count / Math.max(1, slave.success_count + slave.error_count)) * 100) : null;
 
             return (
-              <div key={slave.id} style={{ ...card(), borderLeft: `3px solid ${enabled ? accent : '#64748b'}` }}>
+              <div key={slave.id} style={{ ...card(), borderLeft: `3px solid ${enabled ? accent : 'var(--border-strong)'}` }}>
                 <button onClick={() => toggle(expanded, setExpanded, slave.id)}
                   style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '14px', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 12, background: enabled ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${enabled ? 'rgba(47,191,113,0.2)' : 'rgba(100,116,139,0.15)'}` }}>
-                    {enabled ? <CheckCircle size={16} color="#2FBF71" /> : <XCircle size={16} color="#64748b" />}
+                    {enabled ? <CheckCircle size={16} color="#2FBF71" /> : <XCircle size={16} color="var(--muted-foreground)" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
                       <span style={{ fontSize: '0.88rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontFamily: "'DM Sans', sans-serif" }}>{name}</span>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: enabled ? '#2FBF71' : '#64748b', fontFamily: "'DM Sans', sans-serif" }}>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: 999, flexShrink: 0, background: enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: enabled ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>
                         {enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </div>
@@ -320,7 +320,7 @@ const MobileConfiguration: React.FC = () => {
                                         {reg.unit && ` · ${reg.unit}`}
                                       </div>
                                     </div>
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: regEnabled ? '#2FBF71' : '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>{regEnabled ? 'ON' : 'OFF'}</span>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: regEnabled ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'JetBrains Mono', monospace" }}>{regEnabled ? 'ON' : 'OFF'}</span>
                                   </div>
                                 );
                               })}

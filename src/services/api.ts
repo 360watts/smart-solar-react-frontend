@@ -33,30 +33,6 @@ export interface CtMeterReading {
   power_factor_total: number | null;
 }
 
-// ─── Site Member Sharing ──────────────────────────────────────────────────────
-
-export interface SiteMember {
-  id: number;
-  role: 'viewer' | 'co_owner';
-  status: 'pending' | 'active' | 'revoked';
-  user: { id: number; first_name: string; last_name: string } | null;
-  added_by: { id: number; first_name: string } | null;
-  created_at: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-  invite_link?: string;
-  qr_code?: string;
-  expires_at?: string;
-}
-
-export interface InviteDetails {
-  site_name: string;
-  role: 'viewer' | 'co_owner';
-  invited_by: string;
-  expires_at: string;
-  invite_email?: string;
-}
-
 // ─── Alerts Analytics ────────────────────────────────────────────────────────
 
 export interface AlertAnalyticsFaultSummary {
@@ -635,15 +611,6 @@ class ApiService {
     return data;
   }
 
-  async getSiteAlerts(siteId: string): Promise<AlertItem[]> {
-    const cacheKey = `site_alerts_${siteId}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const raw = await this.request(`/sites/${encodeURIComponent(siteId)}/incidents/`);
-    const data: AlertItem[] = (raw.results || []).map((inc: any) => this._incidentToAlertItem(inc));
-    cacheService.set(cacheKey, data, 60 * 1000); // 1-min cache — alerts are time-sensitive
-    return data;
-  }
 
   async getSiteIncidents(
     siteId: string,
@@ -976,41 +943,6 @@ class ApiService {
     return data;
   }
 
-  /**
-   * Combined energy summary with today's detailed information including weather, forecasts, and user info.
-   */
-  async getEnergySummaryCombined(siteId: string): Promise<{
-    meta: { site_id: string; unit: string; generated_at: string };
-    summaries: {
-      weekly: any;
-      monthly: any;
-      yearly: any;
-      energy_wallet: any;
-    };
-    today: {
-      user_full_name: string | null;
-      weather: any;
-      temperature_c: number | null;
-      generated_today_kwh: number;
-      consumed_today_kwh: number;
-      power_to_eb_kwh: number;
-      battery_percentage: number | null;
-      forecast: {
-        solar: { overall: any; hourly: any[] };
-        load: { overall: any; hourly: any[] };
-        weather: { current: any; hourly: any[] };
-      };
-    };
-    timeseries: { today_overall: any[]; today_hourly: any[] };
-  }> {
-    const cacheKey = `energy_summary_combined_${siteId}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${siteId}/energy-summary/?combined=true`);
-    cacheService.set(cacheKey, data, 15 * 60 * 1000); // 15 min cache
-    return data;
-  }
-
   async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
     const query = new URLSearchParams();
     if (params?.date) query.append('date', params.date);
@@ -1110,55 +1042,6 @@ class ApiService {
   // Profile Management (for current logged-in user)
   async getProfile(): Promise<any> {
     return this.request('/profile/');
-  }
-
-  async getPortalSummary(): Promise<{
-    profile: any;
-    sites: any[];
-    active_alert_count: number;
-    plan_features?: { can_access_ai: boolean; can_view_history_90d: boolean };
-  }> {
-    return this.request('/portal/summary/');
-  }
-
-  // ── Site Member Sharing ────────────────────────────────────────────────────
-
-  async getSiteMembers(siteId: string, includeRevoked = false): Promise<SiteMember[]> {
-    const qs = includeRevoked ? '?include_revoked=1' : '';
-    return this.request(`/sites/${siteId}/members/${qs}`);
-  }
-
-  async inviteSiteMember(siteId: string, email: string | null, role: 'viewer' | 'co_owner'): Promise<SiteMember> {
-    return this.request(`/sites/${siteId}/members/`, {
-      method: 'POST',
-      body: JSON.stringify({ invite_email: email ?? undefined, role }),
-    });
-  }
-
-  async updateSiteMember(siteId: string, memberId: number, data: { role?: string; status?: string }): Promise<SiteMember> {
-    return this.request(`/sites/${siteId}/members/${memberId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async resendSiteInvite(siteId: string, memberId: number): Promise<void> {
-    return this.request(`/sites/${siteId}/members/${memberId}/resend/`, { method: 'POST' });
-  }
-
-  async getInviteDetails(token: string): Promise<InviteDetails> {
-    return this.request(`/site-invites/${token}/`);
-  }
-
-  async acceptInvite(token: string): Promise<void> {
-    return this.request(`/site-invites/${token}/accept/`, { method: 'POST' });
-  }
-
-  async registerUser(data: { email: string; password: string; first_name?: string; last_name?: string; invite_token: string }): Promise<any> {
-    return this.request('/auth/register/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
   }
 
   async updateProfile(data: any): Promise<any> {

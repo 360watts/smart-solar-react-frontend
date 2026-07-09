@@ -527,13 +527,13 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   const labelStyle: React.CSSProperties = {
     fontSize: '0.813rem',
     fontWeight: 600,
-    color: isDark ? '#d1d5db' : '#374151',
+    color: 'var(--muted-foreground)',
   };
 
   const inputStyle: React.CSSProperties = {
     padding: '10px 12px',
     borderRadius: 8,
-    border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e5e7eb',
+    border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid var(--border-strong)',
     background: isDark ? '#2a2a2a' : '#ffffff',
     color: isDark ? '#f3f4f6' : '#111827',
     fontSize: '0.875rem',
@@ -551,7 +551,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '24px 28px',
-            borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e5e7eb',
+            borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid var(--border-strong)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -580,7 +580,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                   ? `Edit Slave: ${editingSlave.deviceName}`
                   : 'Configure New Slave'}
               </div>
-              <div style={{ fontSize: '0.875rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 4 }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginTop: 4 }}>
                 {editingSlave ? 'Update slave device settings and registers' : 'Add a new Modbus slave device'}
               </div>
             </div>
@@ -594,7 +594,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
               borderRadius: 10,
               border: 'none',
               background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              color: isDark ? '#9ca3af' : '#6b7280',
+              color: 'var(--muted-foreground)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -679,12 +679,12 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
                   <div style={{ marginTop: 4 }}>
-                    <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                    <small style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
                       Unique identifier (1–247)
                     </small>
                     {existingSlaveIds.length > 0 && (
@@ -725,7 +725,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
@@ -759,11 +759,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
-                  <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>How often to poll</small>
+                  <small style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>How often to poll</small>
                 </div>
                 <div style={formGroupStyle}>
                   <label style={labelStyle}>Response Timeout (ms)</label>
@@ -784,11 +784,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
-                  <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>Max wait for response</small>
+                  <small style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>Max wait for response</small>
                 </div>
                 <div style={formGroupStyle}>
                   <label style={labelStyle}>Priority</label>
@@ -810,11 +810,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                      e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                       e.target.style.boxShadow = 'none';
                     }}
                   />
-                  <small style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>1=Highest, 10=Lowest</small>
+                  <small style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>1=Highest, 10=Lowest</small>
                 </div>
                 <div style={{ ...formGroupStyle, alignItems: 'center', paddingTop: 4 }}>
                   <label style={{ ...labelStyle, marginBottom: 8 }}>Status</label>
@@ -825,7 +825,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       width: 52,
                       height: 28,
                       borderRadius: 14,
-                      background: slaveForm.enabled ? '#22c55e' : (isDark ? '#94a3b8' : '#d1d5db'),
+                      background: slaveForm.enabled ? '#22c55e' : ('var(--muted-foreground)'),
                       cursor: 'pointer',
                       position: 'relative',
                       transition: 'background 0.2s ease',
@@ -853,11 +853,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       {slaveForm.enabled ? (
                         <CheckCircle2 size={14} color="#22c55e" />
                       ) : (
-                        <XCircle size={14} color={isDark ? '#6b7280' : '#9ca3af'} />
+                        <XCircle size={14} color={'var(--muted-foreground)'} />
                       )}
                     </div>
                   </div>
-                  <small style={{ fontSize: '0.75rem', color: slaveForm.enabled ? '#22c55e' : (isDark ? '#9ca3af' : '#6b7280'), marginTop: 6, fontWeight: 600 }}>
+                  <small style={{ fontSize: '0.75rem', color: slaveForm.enabled ? '#22c55e' : ('var(--muted-foreground)'), marginTop: 6, fontWeight: 600 }}>
                     {slaveForm.enabled ? 'Enabled' : 'Disabled'}
                   </small>
                 </div>
@@ -917,7 +917,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -942,7 +942,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -967,7 +967,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -988,7 +988,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1024,7 +1024,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1056,7 +1056,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1080,7 +1080,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1110,7 +1110,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1131,7 +1131,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1165,7 +1165,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1189,7 +1189,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1209,7 +1209,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1230,7 +1230,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     >
@@ -1269,7 +1269,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1293,7 +1293,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1316,7 +1316,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                        e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                         e.target.style.boxShadow = 'none';
                       }}
                     />
@@ -1332,7 +1332,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         width: 52,
                         height: 28,
                         borderRadius: 14,
-                        background: registerForm.enabled ? '#22c55e' : (isDark ? '#94a3b8' : '#d1d5db'),
+                        background: registerForm.enabled ? '#22c55e' : ('var(--muted-foreground)'),
                         cursor: 'pointer',
                         position: 'relative',
                         transition: 'background 0.2s ease',
@@ -1359,7 +1359,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         {registerForm.enabled ? (
                           <CheckCircle2 size={14} color="#22c55e" />
                         ) : (
-                          <XCircle size={14} color={isDark ? '#6b7280' : '#9ca3af'} />
+                          <XCircle size={14} color={'var(--muted-foreground)'} />
                         )}
                       </div>
                     </div>
@@ -1411,7 +1411,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         onClick={resetRegisterForm}
                         style={{
                           background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                          color: isDark ? '#d1d5db' : '#374151',
+                          color: 'var(--muted-foreground)',
                           border: 'none',
                           borderRadius: 8,
                           padding: '10px 16px',
@@ -1454,8 +1454,8 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                     onClick={downloadTemplate}
                     style={{
                       background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.9)',
-                      color: isDark ? '#e5e7eb' : '#374151',
-                      border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e5e7eb',
+                      color: 'var(--muted-foreground)',
+                      border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid var(--border-strong)',
                       borderRadius: 8,
                       padding: '8px 14px',
                       fontSize: '0.875rem',
@@ -1489,9 +1489,9 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       fontSize: '0.875rem',
                       padding: '8px 12px',
                       borderRadius: 8,
-                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`,
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)'}`,
                       background: isDark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
-                      color: isDark ? '#e5e7eb' : 'inherit',
+                      color: isDark ? 'var(--muted-foreground)' : 'inherit',
                       cursor: 'pointer',
                     }}
                   />
@@ -1502,7 +1502,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       gap: 8,
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      color: isDark ? '#d1d5db' : '#374151',
+                      color: 'var(--muted-foreground)',
                     }}
                   >
                     <input
@@ -1530,7 +1530,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         marginBottom: 10,
                       }}
                     >
-                      <span style={{ color: isDark ? '#d1d5db' : '#374151' }}>
+                      <span style={{ color: 'var(--muted-foreground)' }}>
                         {bulkResult.valid.length + bulkResult.errors.length} rows parsed
                       </span>
                       <span style={{ color: '#22c55e', fontWeight: 600 }}>
@@ -1620,7 +1620,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                     <div style={{ position: 'relative' }}>
                       <Search 
                         size={16} 
-                        color={isDark ? '#9ca3af' : '#6b7280'}
+                        color={'var(--muted-foreground)'}
                         style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
                       />
                       <input
@@ -1631,9 +1631,9 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         style={{
                           padding: '8px 12px 8px 36px',
                           borderRadius: 8,
-                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`,
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)'}`,
                           background: isDark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff',
-                          color: isDark ? '#e5e7eb' : 'inherit',
+                          color: isDark ? 'var(--muted-foreground)' : 'inherit',
                           fontSize: '0.875rem',
                           minWidth: 240,
                           transition: 'all 0.2s ease',
@@ -1643,7 +1643,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                           e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb';
+                          e.target.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'var(--border-strong)';
                           e.target.style.boxShadow = 'none';
                         }}
                       />
@@ -1714,17 +1714,17 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                               title="Select all visible"
                             />
                           </th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Label</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Address</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Function</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Data Type</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Unit</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Scale</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Offset</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Category</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Alarms</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Status</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, color: isDark ? '#d1d5db' : '#374151', whiteSpace: 'nowrap' }}>Actions</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Label</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Address</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Function</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Data Type</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Unit</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Scale</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Offset</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Category</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Alarms</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Status</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1765,14 +1765,14 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                                 />
                               </td>
                               <td style={{ padding: '12px 16px', color: isDark ? '#f3f4f6' : '#111827', fontWeight: 500 }}>{reg.label}</td>
-                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.address}</td>
-                              <td style={{ padding: '12px 16px', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.functionCode || 3}</td>
-                              <td style={{ padding: '12px 16px', color: isDark ? '#e5e7eb' : '#374151' }}>{getDataTypeName(reg.dataType)}</td>
-                              <td style={{ padding: '12px 16px', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.unit || '-'}</td>
-                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.scaleFactor}</td>
-                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.offset}</td>
-                              <td style={{ padding: '12px 16px', color: isDark ? '#e5e7eb' : '#374151' }}>{reg.category || '-'}</td>
-                              <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--muted-foreground)' }}>{reg.address}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{reg.functionCode || 3}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{getDataTypeName(reg.dataType)}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{reg.unit || '-'}</td>
+                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--muted-foreground)' }}>{reg.scaleFactor}</td>
+                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--muted-foreground)' }}>{reg.offset}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{reg.category || '-'}</td>
+                              <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>
                                 {reg.highAlarmThreshold || reg.lowAlarmThreshold ? (
                                   <>
                                     {reg.highAlarmThreshold && `H:${reg.highAlarmThreshold}`}
@@ -1889,12 +1889,12 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                 <div style={{
                   padding: '40px 20px',
                   textAlign: 'center',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  color: 'var(--muted-foreground)',
                   background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
                   borderRadius: 10,
                   border: isDark ? '1px dashed rgba(255, 255, 255, 0.1)' : '1px dashed rgba(0, 0, 0, 0.1)',
                 }}>
-                  <Settings size={32} color={isDark ? '#6b7280' : '#9ca3af'} style={{ margin: '0 auto 12px' }} />
+                  <Settings size={32} color={'var(--muted-foreground)'} style={{ margin: '0 auto 12px' }} />
                   <div style={{ fontSize: '0.875rem' }}>
                     No registers configured yet. Add registers above to define what data to read from this slave device.
                   </div>
@@ -1907,7 +1907,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
         {/* Footer */}
         <div
           style={{
-            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e5e7eb',
+            borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid var(--border-strong)',
             padding: '20px 28px',
             display: 'flex',
             gap: 12,
@@ -1920,7 +1920,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
             onClick={onCancel}
             style={{
               background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-              color: isDark ? '#d1d5db' : '#374151',
+              color: 'var(--muted-foreground)',
               border: 'none',
               borderRadius: 8,
               padding: '10px 20px',

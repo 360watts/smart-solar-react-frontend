@@ -11,7 +11,7 @@ const STATUS_CONFIG: Record<BookingStatus, { color: string; bg: string; label: s
   pending:   { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', label: 'Pending' },
   scheduled: { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)', label: 'Scheduled' },
   completed: { color: '#10B981', bg: 'rgba(16,185,129,0.12)', label: 'Completed' },
-  closed:    { color: '#6B7280', bg: 'rgba(107,114,128,0.12)', label: 'Closed' },
+  closed:    { color: 'var(--muted-foreground)', bg: 'color-mix(in srgb, var(--muted-foreground) 12%, transparent)', label: 'Closed' },
   cancelled: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)', label: 'Cancelled' },
 };
 

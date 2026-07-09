@@ -147,7 +147,7 @@ export function Step4Review({ form }: Props) {
 
       {/* Hint */}
       <div style={{ borderTop: '1px solid var(--line, rgba(0,0,0,0.08))', paddingTop: 14 }}>
-        <p style={{ fontFamily: 'var(--mono)', fontSize: '0.6rem', color: 'var(--fg-muted, #64748b)', letterSpacing: '0.04em' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: '0.6rem', color: 'var(--muted-foreground)', letterSpacing: '0.04em' }}>
           Click <span style={{ color: 'var(--amber, #f59e0b)' }}>Generate PDF</span> below to download the 10-slide proposal.
         </p>
       </div>

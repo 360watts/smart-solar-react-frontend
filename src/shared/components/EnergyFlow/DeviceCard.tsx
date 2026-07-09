@@ -98,7 +98,7 @@ export function NodeCard({
       {/* Value */}
       <div style={{
         fontSize: 16, fontWeight: 800, lineHeight: 1,
-        color: active ? color : isDark ? '#94a3b8' : '#9ca3af',
+        color: active ? color : 'var(--text-dim)',
         fontVariantNumeric: 'tabular-nums',
         letterSpacing: '-0.02em',
         display: 'flex', alignItems: 'baseline', gap: 2,
@@ -111,7 +111,7 @@ export function NodeCard({
       {subLabel && (
         <span style={{
           fontSize: 8.5,
-          color: active ? `${color}cc` : isDark ? '#cbd5e1' : '#9ca3af',
+          color: active ? `${color}cc` : isDark ? '#cbd5e1' : 'var(--text-dim)',
           marginTop: -3,
           whiteSpace: 'nowrap',
           fontWeight: 600,
@@ -124,7 +124,7 @@ export function NodeCard({
       <span style={{
         fontSize: 8, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.1em',
-        color: active ? color : isDark ? '#94a3b8' : '#b0bcc8',
+        color: active ? color : isDark ? 'var(--text-dim)' : '#b0bcc8',
         marginTop: subLabel ? 0 : -3,
         whiteSpace: 'nowrap',
         opacity: active ? 0.85 : 1,
@@ -230,7 +230,7 @@ export function SmartCard({
       {/* Value */}
       <div style={{
         fontSize: compact ? 12 : 14, fontWeight: 800, lineHeight: 1,
-        color: active ? color : isDark ? '#94a3b8' : '#9ca3af',
+        color: active ? color : 'var(--text-dim)',
         fontVariantNumeric: 'tabular-nums',
         display: 'flex', alignItems: 'baseline', gap: 1.5,
         letterSpacing: '-0.01em',
@@ -243,7 +243,7 @@ export function SmartCard({
       <span style={{
         fontSize: compact ? 6.8 : 7.5, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.09em',
-        color: active ? color : isDark ? '#94a3b8' : '#b0bcc8',
+        color: active ? color : isDark ? 'var(--text-dim)' : '#b0bcc8',
         opacity: active ? 0.85 : 1,
         whiteSpace: 'nowrap', textAlign: 'center',
         maxWidth: compact ? 70 : 80, overflow: 'hidden', textOverflow: 'ellipsis',

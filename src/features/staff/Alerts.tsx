@@ -1044,7 +1044,7 @@ const Alerts: React.FC = () => {
                             {r.queue_status === 'done' && !completedThisRun && !retryNeeded && (
                               <span style={{
                                 fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                                background: 'rgba(148,163,184,0.12)', color: '#64748B', border: '1px solid rgba(148,163,184,0.28)',
+                                background: 'rgba(148,163,184,0.12)', color: 'var(--muted-foreground)', border: '1px solid rgba(148,163,184,0.28)',
                               }}>
                                 Historical
                               </span>

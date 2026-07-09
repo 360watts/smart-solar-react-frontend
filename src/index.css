@@ -49,10 +49,11 @@
   --popover-foreground: #12151A;
   --primary: #2FBF71;
   --primary-foreground: #0A0E1A;
+  --text-inverse: #0A0E1A;
   --secondary: #E9B949;
   --secondary-foreground: #12151A;
   --muted: #EEF3F0;
-  --muted-foreground: rgba(18,21,26,0.62);
+  --muted-foreground: color-mix(in srgb, #12151A 52%, #2FBF71 10%);
   --accent: #E9B949;
   --accent-foreground: #12151A;
   --destructive: #DC2626;
@@ -62,10 +63,23 @@
   --ring: #2FBF71;
   /* Design system extended palette */
   --green: #2FBF71;
-  --green-soft: rgba(47,191,113,0.1);
+  --green-soft: rgba(47,191,113,0.12);
+  --primary-hover: #1A9955;
+  --primary-soft: rgba(47,191,113,0.12);
+  --secondary-soft: rgba(233,185,73,0.14);
+  --success: #34D399;
+  --success-soft: rgba(52,211,153,0.14);
+  --warning: #F59E0B;
+  --warning-soft: rgba(245,158,11,0.14);
+  --danger-soft: rgba(220,38,38,0.12);
+  --info: #3B82F6;
+  --info-soft: rgba(59,130,246,0.12);
   --surface-raised: #FFFFFF;
   --surface-muted: #EEF3F0;
-  --text-dim: rgba(18,21,26,0.38);
+  /* Brand-tinted secondary text — mixed toward the emerald accent rather than a flat grey/opacity.
+     Percentages intentionally sum below 100%; color-mix treats the remainder as transparency,
+     giving the same ~62%/~38% visual weight as before while adding the brand tint. */
+  --text-dim: color-mix(in srgb, #12151A 30%, #2FBF71 8%);
   --border-strong: rgba(18,21,26,0.16);
   --shadow-card: 0 1px 3px rgba(18,21,26,0.07), 0 12px 30px rgba(18,21,26,0.07);
   --font-display: 'Outfit', 'DM Sans', sans-serif;
@@ -92,23 +106,34 @@
   --popover-foreground: #F0F4FF;
   --primary: #2FBF71;
   --primary-foreground: #0A0E1A;
+  --text-inverse: #0A0E1A;
   --secondary: #E9B949;
   --secondary-foreground: #0A0E1A;
   --muted: rgba(255,255,255,0.08);
-  --muted-foreground: rgba(240,244,255,0.88);
+  --muted-foreground: color-mix(in srgb, #F0F4FF 52%, #2FBF71 10%);
   --accent: #E9B949;
   --accent-foreground: #0A0E1A;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
   --border: rgba(255,255,255,0.07);
   --input: rgba(255,255,255,0.1);
-  --ring: #2FBF71;
+  --ring: #5BBD79;
   /* Design system extended palette */
   --green: #2FBF71;
-  --green-soft: rgba(47,191,113,0.1);
+  --green-soft: rgba(47,191,113,0.14);
+  --primary-hover: #5BBD79;
+  --primary-soft: rgba(47,191,113,0.14);
+  --secondary-soft: rgba(233,185,73,0.16);
+  --success: #34D399;
+  --success-soft: rgba(52,211,153,0.16);
+  --warning: #F59E0B;
+  --warning-soft: rgba(245,158,11,0.16);
+  --danger-soft: rgba(220,38,38,0.16);
+  --info: #60A5FA;
+  --info-soft: rgba(96,165,250,0.16);
   --surface-raised: #111927;
   --surface-muted: #131B2E;
-  --text-dim: rgba(240,244,255,0.42);
+  --text-dim: color-mix(in srgb, #F0F4FF 34%, #2FBF71 8%);
   --border-strong: rgba(255,255,255,0.14);
   --shadow-card: 0 2px 12px rgba(0,0,0,0.22), 0 18px 42px rgba(0,0,0,0.32);
   --chart-pv: #F0CB6C;

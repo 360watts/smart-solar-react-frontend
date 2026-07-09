@@ -78,7 +78,7 @@ body:not(.dark-mode) .topnav-icon-btn:hover {
 }
 body:not(.dark-mode) .topnav-user-btn:hover {
   background: rgba(0,0,0,0.05) !important;
-  border-color: #D1D5DB !important;
+  border-color: var(--border-strong) !important;
 }
 
 /* ── Hide old sidebar elements ───────────────────────────────────────────── */

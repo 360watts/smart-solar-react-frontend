@@ -100,8 +100,8 @@ const useTokens = (isDark: boolean) => ({
   border: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.07)',
   borderAccent: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.14)',
   textPrimary: isDark ? '#F0F4FF' : '#0f172a',
-  textSecondary: isDark ? '#8892A4' : '#64748b',
-  textMuted: isDark ? '#4A5568' : '#94a3b8',
+  textSecondary: 'var(--muted-foreground)',
+  textMuted: 'var(--text-dim)',
   shadow: isDark ? '0 4px 24px rgba(0,0,0,0.45)' : '0 4px 20px rgba(0,0,0,0.08)',
   shadowActive: isDark ? '0 8px 32px rgba(0,0,0,0.6)' : '0 8px 28px rgba(0,0,0,0.14)',
 });
@@ -528,12 +528,12 @@ const BatteryDetails: React.FC<{
       {/* Battery status pill */}
       {t.battery_status != null && (() => {
         const BAT_STATUS: Record<number, { label: string; color: string }> = {
-          0: { label: 'Standby',      color: '#94a3b8' },
+          0: { label: 'Standby',      color: 'var(--muted-foreground)' },
           1: { label: 'Charging',     color: '#10b981' },
           2: { label: 'Discharging',  color: '#f59e0b' },
           3: { label: 'Fault',        color: '#ef4444' },
         };
-        const s = BAT_STATUS[Number(t.battery_status)] ?? { label: `Status ${t.battery_status}`, color: '#94a3b8' };
+        const s = BAT_STATUS[Number(t.battery_status)] ?? { label: `Status ${t.battery_status}`, color: 'var(--muted-foreground)' };
         return (
           <StatusPill
             label={s.label}

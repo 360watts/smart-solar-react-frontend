@@ -103,11 +103,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   const selected = COUNTRIES.find(c => c.dialCode === dialCode) || COUNTRIES[0];
 
-  const inputBorder  = isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb';
+  const inputBorder  = isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)';
   const inputBg      = isDark ? '#2a2a2a' : '#ffffff';
   const inputColor   = isDark ? '#f3f4f6' : '#111827';
   const dropBg       = isDark ? '#1e1e1e' : '#ffffff';
-  const dropBorder   = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb';
+  const dropBorder   = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)';
   const hoverBg      = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
 
   const wrapStyle: React.CSSProperties = inlineStyle

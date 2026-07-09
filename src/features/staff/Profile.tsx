@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/staff/MobileProfile';
-import SecurityCard from '../portal/security/SecurityCard';
+import SecurityCard from './security/SecurityCard';
 
 const GREEN='#4CAF82',GREEN_D='#3d8a68',NAVY='#2B4A6B',ORANGE='#F07522';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
@@ -141,41 +141,74 @@ const Profile:React.FC=()=>{
   const dept=profile.department?(typeof profile.department==='object'?profile.department.name:profile.department):null;
   const jd=profile.date_joined?new Date(profile.date_joined).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
 
-  return(<div style={{minHeight:'100vh',background:tok.bg,padding:'48px 24px',fontFamily:"'Fira Sans','DM Sans',sans-serif",transition:'background 0.2s'}}>
-    <style>{`@import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
-    @keyframes pspin{to{transform:rotate(360deg);}}@keyframes pfu{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}@keyframes psd{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-    .pst:hover{border-color:${ACCENT}!important;transform:translateY(-3px);}.pco:hover{border-color:${ACCENT}!important;}.paw:hover .pao{opacity:1!important;}.peb:hover{background:#3a5f8a!important;}`}</style>
-    <div style={{maxWidth:1100,margin:'0 auto',animation:'pfu 0.4s ease'}}>
-      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:48,flexWrap:'wrap',gap:24}}>
-        <div style={{display:'flex',alignItems:'center',gap:32}}>
-          <div style={{position:'relative',width:128,height:128,flexShrink:0}}>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleAv} style={{display:'none'}}/>
-            <div className="paw" onClick={()=>fileRef.current?.click()} style={{width:128,height:128,borderRadius:'50%',cursor:'pointer',backgroundImage:avPrev?`url(${avPrev})`:avUrl?`url(${avUrl})`:ag,backgroundSize:'cover',backgroundPosition:'center',display:'flex',alignItems:'center',justifyContent:'center',fontSize:38,fontWeight:700,color:'#fff',border:`3px solid ${ACCENT}`,boxShadow:`0 0 20px ${ACCENT}30`,position:'relative',overflow:'hidden'} as React.CSSProperties}>
-              {!avPrev&&!avUrl&&ini}
-              <div className="pao" style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,opacity:0,transition:'opacity 0.25s',borderRadius:'50%'}}><Upload size={24} color={ACCENT}/><span style={{fontSize:10,color:ACCENT,fontWeight:600}}>Upload</span></div>
-              {upAv&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%'}}><div style={{width:28,height:28,borderRadius:'50%',border:`2px solid ${ACCENT}35`,borderTop:`2px solid ${ACCENT}`,animation:'pspin 0.8s linear infinite'}}/></div>}
+  const statItems=[{l:'Member Since',v:jd},{l:'Role',v:profile.role||rl},{l:'Timezone',v:profile.timezone||'Asia/Kolkata'},{l:'Status',v:profile.employment_status||'Active'}];
+  const contactItems=[{I:Mail,l:'Email',v:profile.email},{I:Phone,l:'Phone',v:profile.mobile_number||'Not provided'},{I:MapPin,l:'Address',v:profile.address||'Not provided'}];
+  const card={background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:14,boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.05)'};
+
+  return(<div style={{minHeight:'100vh',background:tok.bg,padding:'clamp(20px,4vw,48px) clamp(14px,3vw,24px)',transition:'background 0.2s'}}>
+    <style>{`@keyframes pspin{to{transform:rotate(360deg);}}@keyframes pfu{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}@keyframes psd{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .paw:hover .pao{opacity:1!important;}
+    .peb:hover{background:${GREEN_D}!important;}
+    @media (prefers-reduced-motion: reduce){.paw .pao{transition:none!important;}}`}</style>
+    <div style={{maxWidth:1000,margin:'0 auto',animation:'pfu 0.4s ease'}}>
+
+      {/* Identity card: gradient keyline + avatar + actions + integrated stat strip */}
+      <div style={{...card,overflow:'hidden',marginBottom:20}}>
+        <div style={{height:4,background:`linear-gradient(90deg,${GREEN} 0%,${GREEN_D} 60%,${NAVY} 100%)`}}/>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:24,padding:'28px clamp(20px,3vw,32px)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:24,flexWrap:'wrap'}}>
+            <div style={{position:'relative',width:96,height:96,flexShrink:0}}>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleAv} style={{display:'none'}}/>
+              <div className="paw" onClick={()=>fileRef.current?.click()} style={{width:96,height:96,borderRadius:24,cursor:'pointer',backgroundImage:avPrev?`url(${avPrev})`:avUrl?`url(${avUrl})`:ag,backgroundSize:'cover',backgroundPosition:'center',display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,fontWeight:700,color:'#fff',border:`2px solid ${tok.border}`,position:'relative',overflow:'hidden'} as React.CSSProperties}>
+                {!avPrev&&!avUrl&&ini}
+                <div className="pao" style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.55)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,opacity:0,transition:'opacity 0.25s'}}><Upload size={22} color="#fff"/><span style={{fontSize:10,color:'#fff',fontWeight:600}}>Upload</span></div>
+                {upAv&&<div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.65)',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{width:26,height:26,borderRadius:'50%',border:`2px solid ${GREEN}35`,borderTop:`2px solid ${GREEN}`,animation:'pspin 0.8s linear infinite'}}/></div>}
+              </div>
+              <div style={{position:'absolute',bottom:-3,right:-3,width:16,height:16,borderRadius:'50%',background:GREEN,border:`3px solid ${tok.surface}`}} title="Active"/>
             </div>
-            <div style={{position:'absolute',bottom:5,right:5,width:14,height:14,borderRadius:'50%',background:ACCENT,border:`2px solid ${tok.bg}`,boxShadow:`0 0 8px ${ACCENT}80`}}/>
+            <div>
+              <h1 style={{fontSize:'clamp(22px,3vw,30px)',fontWeight:700,color:tok.text,margin:'0 0 6px',letterSpacing:'-0.02em'}}>{dn}</h1>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 11px',background:`${GREEN}16`,border:`1px solid ${GREEN}38`,borderRadius:999,fontSize:12,fontWeight:600,color:isDark?GREEN:GREEN_D}}><ShieldCheck size={12}/>{rl}</span>
+                {dept&&<span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:13,color:tok.muted}}><Building2 size={13}/>{dept}</span>}
+                <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:13,color:tok.muted}}><Calendar size={13}/>Joined {jd}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 style={{fontSize:32,fontWeight:700,color:tok.text,margin:'0 0 5px',letterSpacing:'-0.02em'}}>{dn}</h1>
-            <p style={{fontSize:15,color:ACCENT,margin:'0 0 7px',fontWeight:500}}>{rl}</p>
-            {dept&&<p style={{fontSize:13,color:tok.muted,margin:'0 0 7px',display:'flex',alignItems:'center',gap:5}}><MapPin size={13}/>{dept}</p>}
-            <div style={{display:'flex',alignItems:'center',gap:6}}><Calendar size={13} color={tok.muted}/><span style={{color:tok.muted,fontSize:13}}>Joined {jd}</span></div>
+          <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+            <button className="peb" onClick={()=>setShowEdit(true)} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',background:GREEN,color:'#fff',border:'none',borderRadius:9,fontSize:14,fontWeight:600,cursor:'pointer',transition:'background 0.2s',boxShadow:`0 2px 10px ${GREEN}30`}}><Edit2 size={15}/>Edit Profile</button>
+            <SecurityCard triggerOnly/>
           </div>
         </div>
-        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-          <button className="peb" onClick={()=>setShowEdit(true)} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',background:NAVY,color:'#fff',border:'none',borderRadius:9,fontSize:14,fontWeight:600,cursor:'pointer',transition:'background 0.2s',boxShadow:'0 2px 8px rgba(43,74,107,0.3)'}}><Edit2 size={15}/>Edit Profile</button>
-          <SecurityCard triggerOnly/>
+
+        {/* Stat strip: one surface, hairline-divided, instead of four floating boxes */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',borderTop:`1px solid ${tok.border}`}}>
+          {statItems.map((s,i)=>(
+            <div key={i} style={{padding:'16px clamp(20px,3vw,32px)',borderLeft:i>0?`1px solid ${tok.border}`:'none'}}>
+              <div style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.08em',fontWeight:600,marginBottom:5}}>{s.l}</div>
+              <div style={{fontSize:15,fontWeight:700,color:tok.text}}>{s.v}</div>
+            </div>
+          ))}
         </div>
       </div>
-      {success&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:`${ACCENT}12`,border:`1px solid ${ACCENT}35`,borderRadius:8,marginBottom:24,animation:'psd 0.3s ease'}}><Check size={15} color={ACCENT}/><span style={{fontSize:13,color:ACCENT}}>{success}</span></div>}
-      {error&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'rgba(248,81,73,0.08)',border:'1px solid rgba(248,81,73,0.22)',borderRadius:8,marginBottom:24}}><AlertCircle size={15} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{error}</span></div>}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(215px,1fr))',gap:14,marginBottom:28}}>
-        {[{l:'Member Since',v:jd},{l:'Role',v:profile.role||rl},{l:'Timezone',v:profile.timezone||'Asia/Kolkata'},{l:'Status',v:profile.employment_status||'Active'}].map((s,i)=>(<div key={i} className="pst" style={{background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:10,padding:'20px 22px',transition:'all 0.25s ease',cursor:'default',boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.06)'}}><div style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:8}}>{s.l}</div><div style={{fontSize:19,fontWeight:700,color:ACCENT}}>{s.v}</div></div>))}
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(265px,1fr))',gap:14}}>
-        {[{I:Mail,l:'Email',v:profile.email},{I:Phone,l:'Phone',v:profile.mobile_number||'Not provided'},{I:MapPin,l:'Address',v:profile.address||'Not provided'}].map((c,i)=>(<div key={i} className="pco" style={{background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:10,padding:'20px 22px',transition:'border-color 0.2s',boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.06)'}}><div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}><c.I size={16} color={ACCENT}/><span style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600}}>{c.l}</span></div><div style={{fontSize:14,color:tok.text,fontWeight:500,wordBreak:'break-all',fontFamily:"'Fira Code',monospace"}}>{c.v}</div></div>))}
+
+      {success&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:`${GREEN}12`,border:`1px solid ${GREEN}35`,borderRadius:10,marginBottom:20,animation:'psd 0.3s ease'}}><Check size={15} color={GREEN}/><span style={{fontSize:13,color:isDark?GREEN:GREEN_D}}>{success}</span></div>}
+      {error&&<div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'rgba(248,81,73,0.08)',border:'1px solid rgba(248,81,73,0.22)',borderRadius:10,marginBottom:20}}><AlertCircle size={15} color="#F85149"/><span style={{fontSize:13,color:'#F85149'}}>{error}</span></div>}
+
+      {/* Contact information */}
+      <div style={{...card,padding:'22px clamp(20px,3vw,32px)'}}>
+        <div style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:16}}>Contact information</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:'14px 28px'}}>
+          {contactItems.map((c,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12}}>
+              <div style={{width:34,height:34,borderRadius:9,background:`${GREEN}14`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><c.I size={15} color={isDark?GREEN:GREEN_D}/></div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,color:tok.muted,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:3}}>{c.l}</div>
+                <div style={{fontSize:14,color:tok.text,fontWeight:500,wordBreak:'break-word'}}>{c.v}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
     {showEdit&&profile&&<EditModal profile={profile} dark={isDark} accent={ACCENT} onSave={handleSave} onClose={()=>setShowEdit(false)}/>}

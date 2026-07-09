@@ -91,7 +91,7 @@ const MobileDashboard: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = isDark ? '#F1F5F9' : '#0F172A';
-  const muted   = isDark ? 'rgba(241,245,249,0.45)' : '#94A3B8';
+  const muted   = 'var(--muted-foreground)';
 
   const [sites, setSites]         = useState<Site[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -480,8 +480,8 @@ const MobileDashboard: React.FC = () => {
                           : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                         border: `1px solid ${on ? 'rgba(47,191,113,0.3)' : border}`,
                       }}>
-                        {on ? <Wifi size={10} color="#2FBF71" /> : <WifiOff size={10} color="#94A3B8" />}
-                        <span style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: on ? '#2FBF71' : '#94A3B8', fontFamily: "'DM Sans', sans-serif" }}>
+                        {on ? <Wifi size={10} color="#2FBF71" /> : <WifiOff size={10} color="var(--muted-foreground)" />}
+                        <span style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: on ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>
                           {on ? 'On' : 'Off'}
                         </span>
                       </div>
@@ -520,7 +520,7 @@ const MobileDashboard: React.FC = () => {
                 border: `1px solid ${online ? 'rgba(47,191,113,0.2)' : border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : '#94A3B8', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : 'var(--muted-foreground)', display: 'inline-block' }} />
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
@@ -846,10 +846,10 @@ const MobileDashboard: React.FC = () => {
               {site.devices.map(d => (
                 <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 10px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)', border: `1px solid ${border}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    {d.is_online ? <Wifi size={13} color="#2FBF71" /> : <WifiOff size={13} color="#64748B" />}
+                    {d.is_online ? <Wifi size={13} color="#2FBF71" /> : <WifiOff size={13} color="var(--muted-foreground)" />}
                     <span style={{ fontSize: '0.72rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: text }}>{d.device_serial}</span>
                   </div>
-                  <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: d.is_online ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: d.is_online ? '#2FBF71' : '#64748B', fontFamily: "'DM Sans', sans-serif" }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: d.is_online ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: d.is_online ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>
                     {d.is_online ? 'Online' : 'Offline'}
                   </span>
                 </div>

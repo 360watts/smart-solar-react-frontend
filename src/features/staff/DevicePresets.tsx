@@ -687,7 +687,7 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '24px 28px',
-              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -696,10 +696,10 @@ const DevicePresets: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</div>
-                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>{editingPreset ? 'Update gateway configuration preset' : 'Configure a new gateway preset'}</div>
+                  <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>{editingPreset ? 'Update gateway configuration preset' : 'Configure a new gateway preset'}</div>
                 </div>
               </div>
-              <button type="button" onClick={() => { setEditingPreset(null); setCreatingPreset(false); }} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button type="button" onClick={() => { setEditingPreset(null); setCreatingPreset(false); }} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={18} />
               </button>
             </div>
@@ -721,7 +721,7 @@ const DevicePresets: React.FC = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                     {editingPreset && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Config ID</label>
+                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Config ID</label>
                         <input
                           type="text"
                           value={editForm.config_id}
@@ -729,12 +729,12 @@ const DevicePresets: React.FC = () => {
                           required
                           autoComplete="off"
                           readOnly
-                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                         />
                       </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...(editingPreset ? {} : { gridColumn: '1 / -1' }) }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Preset Name</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Preset Name</label>
                       <input
                         type="text"
                         value={editingPreset ? editForm.name : createForm.name}
@@ -742,18 +742,18 @@ const DevicePresets: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="e.g., Standard Gateway Config"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: '1 / -1' }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Description</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Description</label>
                       <textarea
                         value={editingPreset ? editForm.description : createForm.description}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, description: e.target.value}) : setCreateForm({...createForm, description: e.target.value})}
                         autoComplete="off"
                         placeholder="Describe the purpose of this preset..."
                         rows={2}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', resize: 'vertical' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', resize: 'vertical' }}
                       />
                     </div>
                   </div>
@@ -771,11 +771,11 @@ const DevicePresets: React.FC = () => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Baud Rate</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Baud Rate</label>
                       <select
                         value={editingPreset ? editForm.baud_rate : createForm.baud_rate}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, baud_rate: parseInt(e.target.value)}) : setCreateForm({...createForm, baud_rate: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={9600}>9600</option>
                         <option value={19200}>19200</option>
@@ -785,33 +785,33 @@ const DevicePresets: React.FC = () => {
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Data Bits</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Data Bits</label>
                       <select
                         value={editingPreset ? editForm.data_bits : createForm.data_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, data_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, data_bits: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={7}>7</option>
                         <option value={8}>8</option>
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Stop Bits</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Stop Bits</label>
                       <select
                         value={editingPreset ? editForm.stop_bits : createForm.stop_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, stop_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, stop_bits: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={1}>1</option>
                         <option value={2}>2</option>
                       </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Parity</label>
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Parity</label>
                       <select
                         value={editingPreset ? editForm.parity : createForm.parity}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, parity: parseInt(e.target.value)}) : setCreateForm({...createForm, parity: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                       >
                         <option value={0}>None</option>
                         <option value={1}>Odd</option>
@@ -832,7 +832,7 @@ const DevicePresets: React.FC = () => {
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
                       <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Initial Slave Setup</span>
                     </div>
-                    <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 16, marginTop: -8 }}>Optionally configure a slave device for this preset immediately.</p>
+                    <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginBottom: 16, marginTop: -8 }}>Optionally configure a slave device for this preset immediately.</p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{
@@ -841,7 +841,7 @@ const DevicePresets: React.FC = () => {
                         border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                       }}>
                         <div style={{ marginBottom: createPresetSlaveMode === 'create' ? 12 : 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>
                             <input
                               type="radio"
                               name="slaveMode"
@@ -852,48 +852,48 @@ const DevicePresets: React.FC = () => {
                           </label>
                         </div>
                         <div style={{ display: createPresetSlaveMode === 'create' ? 'block' : 'none' }}>
-                          <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '0 0 12px 0' }}>Define a new slave device configuration from scratch.</p>
+                          <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', margin: '0 0 12px 0' }}>Define a new slave device configuration from scratch.</p>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Slave ID</label>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Slave ID</label>
                               <input
                                 type="number"
                                 value={slaveForm.slave_id}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, slave_id: e.target.value })}
                                 required
                                 placeholder="1-247"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Device Name</label>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Device Name</label>
                               <input
                                 type="text"
                                 value={slaveForm.device_name}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, device_name: e.target.value })}
                                 required
                                 placeholder="Device Name"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Polling (ms)</label>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Polling (ms)</label>
                               <input
                                 type="number"
                                 value={slaveForm.polling_interval_ms}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, polling_interval_ms: parseInt(e.target.value) })}
                                 placeholder="5000"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>Timeout (ms)</label>
+                              <label style={{ fontSize: '0.813rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>Timeout (ms)</label>
                               <input
                                 type="number"
                                 value={slaveForm.timeout_ms}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, timeout_ms: parseInt(e.target.value) })}
                                 placeholder="1000"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
                               />
                             </div>
                           </div>
@@ -906,7 +906,7 @@ const DevicePresets: React.FC = () => {
                         border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                       }}>
                         <div style={{ marginBottom: createPresetSlaveMode === 'select' ? 12 : 0 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>
                             <input
                               type="radio"
                               name="slaveMode"
@@ -917,11 +917,11 @@ const DevicePresets: React.FC = () => {
                           </label>
                         </div>
                         <div style={{ display: createPresetSlaveMode === 'select' ? 'block' : 'none' }}>
-                          <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '0 0 12px 0' }}>Select an existing slave configuration to reuse.</p>
+                          <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', margin: '0 0 12px 0' }}>Select an existing slave configuration to reuse.</p>
                           {globalSlavesLoading ? (
-                            <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: 0 }}>Loading slaves...</p>
+                            <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', margin: 0 }}>Loading slaves...</p>
                           ) : globalSlaves.length === 0 ? (
-                            <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: 0 }}>No existing slaves found.</p>
+                            <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', margin: 0 }}>No existing slaves found.</p>
                           ) : (() => {
                             const filtered = globalSlaves.filter(s =>
                               s.deviceName.toLowerCase().includes(slaveSearch.toLowerCase()) ||
@@ -934,11 +934,11 @@ const DevicePresets: React.FC = () => {
                                   placeholder="Search by name or slave ID…"
                                   value={slaveSearch}
                                   onChange={(e) => setSlaveSearch(e.target.value)}
-                                  style={{ width: '100%', marginBottom: '8px', padding: '10px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                                  style={{ width: '100%', marginBottom: '8px', padding: '10px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', boxSizing: 'border-box' }}
                                 />
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', borderRadius: 8, padding: '8px' }}>
                                   {filtered.length === 0 ? (
-                                    <p style={{ margin: 0, color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.85em' }}>No slaves match your search.</p>
+                                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: '0.85em' }}>No slaves match your search.</p>
                                   ) : filtered.map((slave) => (
                                     <label key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 6px', borderRadius: '3px', background: selectedGlobalSlaveIds.includes(slave.id) ? 'rgba(99,102,241,0.2)' : 'transparent' }}>
                                       <input
@@ -952,11 +952,11 @@ const DevicePresets: React.FC = () => {
                                           }
                                         }}
                                       />
-                                      <span style={{ fontSize: '0.875rem', color: isDark ? '#f3f4f6' : '#111827' }}><strong>{slave.deviceName}</strong> <span style={{ color: isDark ? '#9ca3af' : '#6b7280', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
+                                      <span style={{ fontSize: '0.875rem', color: isDark ? '#f3f4f6' : '#111827' }}><strong>{slave.deviceName}</strong> <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
                                     </label>
                                   ))}
                                 </div>
-                                <small style={{ marginTop: '4px', display: 'block', fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                <small style={{ marginTop: '4px', display: 'block', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
                                   {filtered.length} of {globalSlaves.length} shown
                                   {selectedGlobalSlaveIds.length > 0 && (
                                     <span style={{ color: '#6366f1' }}> · {selectedGlobalSlaveIds.length} selected</span>
@@ -973,7 +973,7 @@ const DevicePresets: React.FC = () => {
                         borderRadius: 10, padding: '14px 16px',
                         border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                       }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: isDark ? '#d1d5db' : '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>
                           <input
                             type="radio"
                             name="slaveMode"
@@ -982,7 +982,7 @@ const DevicePresets: React.FC = () => {
                           />
                           <span>Skip for Now</span>
                         </label>
-                        <p style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', margin: '8px 0 0 0' }}>Create preset without any initial slave configuration.</p>
+                        <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', margin: '8px 0 0 0' }}>Create preset without any initial slave configuration.</p>
                       </div>
                     </div>
                   </div>
@@ -1057,10 +1057,10 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', gap: 10, justifyContent: 'flex-end',
               padding: '16px 28px',
-              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>{editingPreset ? 'Save' : 'Create'}</button>
             </div>
           </div>
@@ -1089,7 +1089,7 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '24px 28px',
-              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -1098,10 +1098,10 @@ const DevicePresets: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{selectedPreset.name}</div>
-                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>Configuration details</div>
+                  <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>Configuration details</div>
                 </div>
               </div>
-              <button type="button" onClick={() => setSelectedPreset(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setSelectedPreset(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={18} />
               </button>
             </div>
@@ -1118,9 +1118,9 @@ const DevicePresets: React.FC = () => {
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>General Settings</span>
                   </div>
-                  <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
+                  <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Last Updated:</strong> {selectedPreset.gateway_configuration.general_settings.last_updated}</p>
                 </div>
 
                 <div style={{
@@ -1132,10 +1132,10 @@ const DevicePresets: React.FC = () => {
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
                     <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>UART Configuration</span>
                   </div>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
-                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Stop Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.stop_bits}</p>
+                  <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Parity:</strong> {selectedPreset.gateway_configuration.uart_configuration.parity}</p>
                 </div>
               </div>
 
@@ -1148,8 +1148,8 @@ const DevicePresets: React.FC = () => {
                   <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
                   <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Info</span>
                 </div>
-                <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
-                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: isDark ? '#d1d5db' : '#374151' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
+                <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
+                <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
               </div>
             </div>
 
@@ -1157,10 +1157,10 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', gap: 10, justifyContent: 'flex-end',
               padding: '16px 28px',
-              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
         </div>,
@@ -1188,7 +1188,7 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '24px 28px',
-              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -1197,10 +1197,10 @@ const DevicePresets: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Manage Slave Devices</div>
-                  <div style={{ fontSize: '0.813rem', color: isDark ? '#9ca3af' : '#6b7280', marginTop: 2 }}>{configuringSlaves.name}</div>
+                  <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>{configuringSlaves.name}</div>
                 </div>
               </div>
-              <button type="button" onClick={() => setConfiguringSlaves(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: isDark ? '#9ca3af' : '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button type="button" onClick={() => setConfiguringSlaves(null)} style={{ width: 40, height: 40, borderRadius: 10, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={18} />
               </button>
             </div>
@@ -1236,14 +1236,14 @@ const DevicePresets: React.FC = () => {
                       placeholder="Search by name or ID…"
                       value={slaveListSearch}
                       onChange={(e) => setSlaveListSearch(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.8rem', minWidth: 180, boxSizing: 'border-box' }}
+                      style={{ padding: '8px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.8rem', minWidth: 180, boxSizing: 'border-box' }}
                     />
                     <button onClick={handleCreateSlave} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', whiteSpace: 'nowrap' }}>Add Slave</button>
                   </div>
                 </div>
 
                 {slaves.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted-foreground)' }}>
                     <p style={{ margin: '0 0 8px 0', fontSize: '0.875rem' }}>No slave devices configured yet.</p>
                     <p style={{ margin: 0, fontSize: '0.875rem' }}>Click "Add Slave" to configure your first slave device.</p>
                   </div>
@@ -1302,10 +1302,10 @@ const DevicePresets: React.FC = () => {
             <div style={{
               display: 'flex', gap: 10, justifyContent: 'flex-end',
               padding: '16px 28px',
-              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+              borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCancelSlaveConfig} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: isDark ? '#d1d5db' : '#374151', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={handleCancelSlaveConfig} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
         </div>,
@@ -1377,7 +1377,7 @@ const DevicePresets: React.FC = () => {
                   borderRadius: 8,
                   border: 'none',
                   background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  color: 'var(--muted-foreground)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1390,7 +1390,7 @@ const DevicePresets: React.FC = () => {
 
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+              <p style={{ color: 'var(--muted-foreground)', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
                 Are you sure you want to delete preset <strong>{deletePresetModal.preset.name}</strong>?
               </p>
               <div style={{
@@ -1412,9 +1412,9 @@ const DevicePresets: React.FC = () => {
                 style={{
                   padding: '10px 18px',
                   borderRadius: 8,
-                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
                   background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                  color: isDark ? '#d1d5db' : '#374151',
+                  color: 'var(--muted-foreground)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1498,7 +1498,7 @@ const DevicePresets: React.FC = () => {
                   borderRadius: 8,
                   border: 'none',
                   background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  color: 'var(--muted-foreground)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1511,7 +1511,7 @@ const DevicePresets: React.FC = () => {
 
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+              <p style={{ color: 'var(--muted-foreground)', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
                 Are you sure you want to remove slave device <strong>{deleteSlaveModal.slave.deviceName}</strong> (ID: {deleteSlaveModal.slave.slaveId})?
               </p>
               <div style={{
@@ -1533,9 +1533,9 @@ const DevicePresets: React.FC = () => {
                 style={{
                   padding: '10px 18px',
                   borderRadius: 8,
-                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                  border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
                   background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
-                  color: isDark ? '#d1d5db' : '#374151',
+                  color: 'var(--muted-foreground)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1619,7 +1619,7 @@ const DevicePresets: React.FC = () => {
                   borderRadius: 8,
                   border: 'none',
                   background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#9ca3af' : '#6b7280',
+                  color: 'var(--muted-foreground)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1632,7 +1632,7 @@ const DevicePresets: React.FC = () => {
 
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: isDark ? '#d1d5db' : '#374151', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
+              <p style={{ color: 'var(--muted-foreground)', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
                 {successModal.message}
               </p>
             </div>
