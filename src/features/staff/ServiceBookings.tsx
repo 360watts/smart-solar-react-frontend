@@ -523,20 +523,33 @@ function TechnicianPicker({
 }
 
 function AssignDialog({
-  booking, vendors, onClose, onAssigned, onVendorCreated,
+  booking, vendors, mode = 'assign', onClose, onAssigned, onVendorCreated,
 }: {
   booking: ServiceBooking;
   vendors: ServiceVendor[];
+  mode?: 'assign' | 'reassign';
   onClose: () => void;
   onAssigned: (updated: ServiceBooking) => void;
   onVendorCreated: (vendor: ServiceVendor) => void;
 }) {
   const { isDark } = useTheme();
   const t = getDesignTokens(isDark);
-  const [vendorId, setVendorId] = useState<number | null>(null);
-  const [technician, setTechnician] = useState<Technician | null>(null);
-  const [date, setDate] = useState(booking.preferred_date ?? '');
-  const [time, setTime] = useState(booking.preferred_slot === 'afternoon' ? '13:00' : '09:00');
+  const isReassign = mode === 'reassign';
+  const [vendorId, setVendorId] = useState<number | null>(isReassign ? booking.vendor : null);
+  const [technician, setTechnician] = useState<Technician | null>(
+    isReassign && booking.technician
+      ? {
+          id: booking.technician, vendor: booking.vendor ?? 0,
+          name: booking.technician_name ?? '', phone: booking.technician_phone ?? '',
+          is_active: true, created_at: '', updated_at: '',
+        }
+      : null,
+  );
+  const [date, setDate] = useState(isReassign ? booking.service_date ?? '' : booking.preferred_date ?? '');
+  const [time, setTime] = useState(
+    isReassign ? (booking.service_time ?? '09:00:00').slice(0, 5)
+      : booking.preferred_slot === 'afternoon' ? '13:00' : '09:00',
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -553,11 +566,11 @@ function AssignDialog({
     setSaving(true);
     setError(null);
     try {
-      const updated = await apiService.assignVendor(booking.id, vendorId, date, `${time}:00`, technician?.id ?? null);
+      const updated = await apiService.assignVendor(booking.id, vendorId, date, `${time}:00`, technician?.id ?? null, mode);
       onAssigned(updated);
       onClose();
     } catch {
-      setError("Couldn't confirm this dispatch. Please try again.");
+      setError(isReassign ? "Couldn't confirm this reassignment. Please try again." : "Couldn't confirm this dispatch. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -577,7 +590,7 @@ function AssignDialog({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <p style={{ ...mono, margin: 0, fontSize: 11, color: t.textDim, letterSpacing: 0.6 }}>
-                DISPATCH · {booking.booking_number}
+                {isReassign ? 'REASSIGN' : 'DISPATCH'} · {booking.booking_number}
               </p>
               <h3 style={{ margin: '2px 0 0', fontSize: 17, fontWeight: 700, color: t.text }}>
                 {booking.site_name || booking.site_id}
@@ -587,7 +600,13 @@ function AssignDialog({
               <X size={18} />
             </button>
           </div>
-          {(booking.preferred_date || booking.preferred_slot) && (
+          {isReassign ? (
+            <p style={{ fontSize: 12, color: t.textMuted, marginTop: 8, marginBottom: 0 }}>
+              Currently <strong style={{ color: t.text }}>
+                {booking.technician_name || booking.vendor_name || 'unassigned'}
+              </strong> · {booking.service_date} {booking.service_time?.slice(0, 5)}
+            </p>
+          ) : (booking.preferred_date || booking.preferred_slot) && (
             <p style={{ fontSize: 12, color: t.textMuted, marginTop: 8, marginBottom: 0 }}>
               Customer asked for <strong style={{ color: t.text }}>
                 {booking.preferred_date ?? 'any date'}{booking.preferred_slot ? ` · ${booking.preferred_slot}` : ''}
@@ -633,7 +652,7 @@ function AssignDialog({
         {/* Ticket stub — assembles as the fields above are filled in */}
         <div style={{ margin: '0 20px 20px', borderTop: `1px dashed ${t.border}`, paddingTop: 14 }}>
           <p style={{ ...mono, fontSize: 10, color: t.textDim, letterSpacing: 0.8, margin: '0 0 8px' }}>
-            DISPATCH TICKET
+            {isReassign ? 'REASSIGNMENT TICKET' : 'DISPATCH TICKET'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -668,7 +687,7 @@ function AssignDialog({
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {saving ? 'Confirming…' : <><Check size={15} /> Confirm dispatch</>}
+            {saving ? 'Confirming…' : <><Check size={15} /> {isReassign ? 'Confirm reassignment' : 'Confirm dispatch'}</>}
           </button>
         </div>
       </div>
@@ -753,6 +772,7 @@ export default function ServiceBookings() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [assigningBooking, setAssigningBooking] = useState<ServiceBooking | null>(null);
+  const [assignMode, setAssignMode] = useState<'assign' | 'reassign'>('assign');
   const [detailsBooking, setDetailsBooking] = useState<ServiceBooking | null>(null);
 
   async function load() {
@@ -874,19 +894,27 @@ export default function ServiceBookings() {
                 <td style={{ padding: '12px 16px' }}>
                   {b.status === 'pending' && (
                     <button
-                      onClick={() => setAssigningBooking(b)}
+                      onClick={() => { setAssignMode('assign'); setAssigningBooking(b); }}
                       style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: t.primary, color: t.textInverse, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                     >
                       Assign
                     </button>
                   )}
                   {b.status === 'scheduled' && (
-                    <button
-                      onClick={() => markStatus(b, 'completed')}
-                      style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${t.border}`, background: t.surface, color: t.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      Mark completed
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => markStatus(b, 'completed')}
+                        style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${t.border}`, background: t.surface, color: t.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Mark completed
+                      </button>
+                      <button
+                        onClick={() => { setAssignMode('reassign'); setAssigningBooking(b); }}
+                        style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${t.border}`, background: t.surface, color: t.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Reassign
+                      </button>
+                    </div>
                   )}
                   {b.status === 'completed' && (
                     <button
@@ -910,6 +938,7 @@ export default function ServiceBookings() {
         <AssignDialog
           booking={assigningBooking}
           vendors={vendors}
+          mode={assignMode}
           onClose={() => setAssigningBooking(null)}
           onAssigned={updated => setBookings(prev => prev.map(b => (b.id === updated.id ? updated : b)))}
           onVendorCreated={vendor => setVendors(prev => [...prev, vendor])}

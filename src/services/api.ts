@@ -1710,8 +1710,9 @@ class ApiService {
     serviceDate: string,
     serviceTime: string,
     technicianId?: number | null,
+    mode: 'assign' | 'reassign' = 'assign',
   ): Promise<ServiceBooking> {
-    return this.request(`/bookings/${bookingId}/assign/`, {
+    return this.request(`/bookings/${bookingId}/${mode}/`, {
       method: 'POST',
       body: JSON.stringify({
         vendor_id: vendorId,
