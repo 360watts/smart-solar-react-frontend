@@ -291,7 +291,7 @@ export const OTA: React.FC = () => {
   // ── State ──
   const [firmwares, setFirmwares] = useState<FirmwareVersion[]>([]);
   const [uploadForm, setUploadForm] = useState({
-    name: '', version: '', deviceModel: 'ESP32-S3', minBootloader: '1.0.0',
+    name: '', version: '', deviceModel: 'ESP32-S3', deviceType: 'gateway', minBootloader: '1.0.0',
     releaseNotes: '', file: null as File | null,
   });
   const [dragOver, setDragOver] = useState(false);
@@ -469,6 +469,7 @@ export const OTA: React.FC = () => {
       const formData = new FormData();
       formData.append('file', uploadForm.file);
       formData.append('version', uploadForm.version);
+      formData.append('device_type', uploadForm.deviceType);
       formData.append('description', uploadForm.name);
       formData.append('release_notes', uploadForm.releaseNotes);
       formData.append('is_active', 'false');
@@ -481,7 +482,7 @@ export const OTA: React.FC = () => {
         show: true,
         message: `Firmware uploaded successfully!\n\nVersion: ${response.version}\nSize: ${(response.size / 1024).toFixed(2)} KB\nChecksum: ${response.checksum?.substring(0, 16)}...\nStored in: ${storageLabel}${warningLine}`,
       });
-      setUploadForm({ name: '', version: '', deviceModel: 'ESP32-S3', minBootloader: '1.0.0', releaseNotes: '', file: null });
+      setUploadForm({ name: '', version: '', deviceModel: 'ESP32-S3', deviceType: 'gateway', minBootloader: '1.0.0', releaseNotes: '', file: null });
       if (fileInputRef.current) fileInputRef.current.value = '';
       await loadFirmwareData();
     } catch (error: any) {
@@ -735,6 +736,14 @@ export const OTA: React.FC = () => {
                   <option value="ESP32">ESP32</option>
                   <option value="STM32">STM32</option>
                   <option value="nRF52">nRF52</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle(isDark)}>Usage Type *</label>
+                <select value={uploadForm.deviceType} onChange={e => setUploadForm(f => ({ ...f, deviceType: e.target.value }))}
+                  required style={inputStyle(isDark)}>
+                  <option value="gateway">Gateway</option>
+                  <option value="energymeter">Energy Meter</option>
                 </select>
               </div>
               <div>
