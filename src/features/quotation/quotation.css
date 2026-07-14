@@ -1973,3 +1973,51 @@ html.dark-mode .sq-history-page {
 @media (max-width: 760px) {
   .sq-action-stats { grid-template-columns: 1fr; }
 }
+
+.sq-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+}
+
+.sq-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.sq-status-pill--draft { background: var(--sq-flow-draft-soft); color: var(--sq-flow-draft); }
+.sq-status-pill--draft .sq-status-pill__dot { background: var(--sq-flow-draft); }
+
+.sq-status-pill--sent { background: var(--sq-flow-sent-soft); color: #8a6a13; }
+.sq-status-pill--sent .sq-status-pill__dot { background: var(--sq-flow-sent); }
+html.dark-mode .sq-status-pill--sent { color: var(--sq-flow-sent); }
+
+.sq-status-pill--accepted { background: var(--sq-flow-accepted-soft); color: #1c7a49; }
+.sq-status-pill--accepted .sq-status-pill__dot { background: var(--sq-flow-accepted); }
+html.dark-mode .sq-status-pill--accepted { color: var(--sq-flow-accepted); }
+
+.sq-status-pill--rejected,
+.sq-status-pill--expired { background: var(--sq-flow-rejected-soft); color: var(--sq-flow-rejected); }
+.sq-status-pill--rejected .sq-status-pill__dot,
+.sq-status-pill--expired .sq-status-pill__dot { background: var(--sq-flow-rejected); }
+
+.sq-history-row.is-urgent {
+  position: relative;
+}
+
+.sq-history-row.is-urgent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--sq-flow-sent);
+  border-radius: 0 3px 3px 0;
+}

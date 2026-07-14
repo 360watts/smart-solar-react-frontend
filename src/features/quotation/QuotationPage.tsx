@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { Plus, FileText, Clock, CheckCircle, XCircle, Send, Archive, ChevronRight, RotateCcw, Trash2, ChevronLeft, MoreVertical } from 'lucide-react';
+import { Plus, FileText, CheckCircle, XCircle, Send, ChevronRight, Trash2, ChevronLeft, MoreVertical } from 'lucide-react';
 import { apiService, QuotationListItem } from '../../services/api';
 import { generatePdfBlob } from './hooks/usePdfExport';
 import type { QuotationData } from './types/quotation';
@@ -11,6 +11,7 @@ import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileQuotationPage from '../mobile/staff/MobileQuotationPage';
 import PipelineFlow from './components/PipelineFlow';
 import ActionStats from './components/ActionStats';
+import { daysSince } from './utils/pipelineStats';
 import './quotation.css';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
@@ -18,25 +19,10 @@ type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
 const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
-const STATUS_META: Record<string, { icon: React.ElementType; color: string }> = {
-  draft:    { icon: Clock,        color: 'var(--muted-foreground)' },
-  sent:     { icon: Send,         color: 'var(--blue, #3b82f6)' },
-  accepted: { icon: CheckCircle,  color: 'var(--green, #00a63e)' },
-  rejected: { icon: XCircle,      color: 'var(--red, #ef4444)' },
-  revised:  { icon: RotateCcw,    color: 'var(--amber, #f59e0b)' },
-  archived: { icon: Archive,      color: 'var(--muted-foreground)' },
-};
-
 function StatusBadge({ status }: { status: string }) {
-  const meta = STATUS_META[status] ?? STATUS_META.draft;
-  const Icon = meta.icon;
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase',
-      color: meta.color,
-    }}>
-      <Icon style={{ width: 10, height: 10 }} />
+    <span className={`sq-status-pill sq-status-pill--${status}`}>
+      <span className="sq-status-pill__dot" />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
@@ -445,8 +431,10 @@ export default function QuotationPage() {
                   </td>
                 </tr>
               ) : (
-                items.map(item => (
-                  <tr key={item.id} className="sq-history-row">
+                items.map(item => {
+                  const isUrgent = item.status === 'sent' && daysSince(item.updated_at) >= 3;
+                  return (
+                  <tr key={item.id} className={`sq-history-row${isUrgent ? ' is-urgent' : ''}`}>
                     <td className="sq-history-td">
                       <button
                         type="button"
@@ -492,7 +480,7 @@ export default function QuotationPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                );})
               )}
             </tbody>
           </table>
