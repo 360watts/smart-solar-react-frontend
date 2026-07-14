@@ -476,7 +476,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             type="button"
             onClick={handleSaveDraft}
             disabled={saving}
-            className="sq-btn-secondary"
+            className={`sq-btn-secondary${saving ? ' is-live' : ''}`}
           >
             {saving
               ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
@@ -495,7 +495,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
                 <Eye style={{ width: 14, height: 14 }} />
                 Preview
               </button>
-              <button type="button" onClick={handleGenerate} disabled={generating} className="sq-btn-primary">
+              <button type="button" onClick={handleGenerate} disabled={generating} className={`sq-btn-primary${generating ? ' is-live' : ''}`}>
                 {generating
                   ? <><Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />Generating…</>
                   : <><FileText style={{ width: 14, height: 14 }} />Download PDF</>

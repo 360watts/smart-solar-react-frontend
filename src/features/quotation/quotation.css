@@ -993,6 +993,16 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
    QUOTATION HISTORY PAGE
 ═══════════════════════════════════════════════════════════ */
 
+.sq-root {
+  --sq-flow-sent: #e9b949;
+  --sq-flow-sent-soft: rgba(233, 185, 73, 0.16);
+}
+
+html.dark-mode .sq-root {
+  --sq-flow-sent: #f0cb6c;
+  --sq-flow-sent-soft: rgba(240, 203, 108, 0.14);
+}
+
 .sq-history-page {
   --sq-history-card-border: rgba(15, 23, 42, 0.08);
   --sq-history-card-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
@@ -1002,7 +1012,6 @@ select.sq-bom-input option { background: var(--card, #ffffff); color: var(--fg, 
   --sq-flow-draft: #64748b;
   --sq-flow-draft-soft: rgba(100, 116, 139, 0.10);
   --sq-flow-sent: #e9b949;
-  --sq-flow-sent-soft: rgba(233, 185, 73, 0.16);
   --sq-flow-accepted: #2FBF71;
   --sq-flow-accepted-soft: rgba(47, 191, 113, 0.14);
   --sq-flow-rejected: #ef4444;
@@ -1024,7 +1033,6 @@ html.dark-mode .sq-history-page {
   --sq-flow-draft: #94a3b8;
   --sq-flow-draft-soft: rgba(148, 163, 184, 0.10);
   --sq-flow-sent: #f0cb6c;
-  --sq-flow-sent-soft: rgba(240, 203, 108, 0.14);
   --sq-flow-accepted: #2FBF71;
   --sq-flow-accepted-soft: rgba(47, 191, 113, 0.16);
   --sq-flow-rejected: #f87171;
@@ -2020,4 +2028,9 @@ html.dark-mode .sq-status-pill--accepted { color: var(--sq-flow-accepted); }
   width: 3px;
   background: var(--sq-flow-sent);
   border-radius: 0 3px 3px 0;
+}
+
+.sq-btn-secondary.is-live,
+.sq-btn-primary.is-live {
+  box-shadow: 0 0 0 2px var(--sq-flow-sent-soft, rgba(233, 185, 73, 0.16));
 }
