@@ -10,6 +10,7 @@ import PageHeader from '../../shared/layout/PageHeader';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileQuotationPage from '../mobile/staff/MobileQuotationPage';
 import PipelineFlow from './components/PipelineFlow';
+import ActionStats from './components/ActionStats';
 import './quotation.css';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
@@ -383,6 +384,8 @@ export default function QuotationPage() {
           total={{ count: total, value: visiblePipelineValue }}
           loading={loading}
         />
+
+        {!loading && <ActionStats items={items} />}
 
         <div className="card sq-history-card">
           <div className="sq-history-toolbar">
