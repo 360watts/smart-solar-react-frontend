@@ -9,6 +9,7 @@ import QuotationWizard from './QuotationWizard';
 import PageHeader from '../../shared/layout/PageHeader';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileQuotationPage from '../mobile/staff/MobileQuotationPage';
+import PipelineFlow from './components/PipelineFlow';
 import './quotation.css';
 
 const STATUS_OPTIONS = ['all', 'draft', 'sent', 'accepted', 'rejected', 'expired'] as const;
@@ -273,6 +274,9 @@ export default function QuotationPage() {
   const visibleSent = items.filter(item => item.status === 'sent').length;
   const visibleAccepted = items.filter(item => item.status === 'accepted').length;
   const visiblePipelineValue = items.reduce((sum, item) => sum + Number(item.net_investment || 0), 0);
+  const visibleDraftValue = items.filter(i => i.status === 'draft').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
+  const visibleSentValue = items.filter(i => i.status === 'sent').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
+  const visibleAcceptedValue = items.filter(i => i.status === 'accepted').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
 
   const fetchPage = useCallback(async (p: number, q: string, s: StatusFilter) => {
     const reqId = ++requestIdRef.current;
@@ -372,44 +376,13 @@ export default function QuotationPage() {
           )}
         />
 
-        <section className="sq-quotation-hero">
-          <div className="sq-quotation-hero__copy">
-            <p className="sq-quotation-hero__eyebrow">Solar Sales Desk</p>
-            <h2 className="sq-quotation-hero__title">Quotes in motion, from first draft to signed deal.</h2>
-            <p className="sq-quotation-hero__body">
-              Keep proposals moving without digging through stale spreadsheets. This view is tuned for fast follow-up,
-              quick edits, and a clean handoff from design to customer approval.
-            </p>
-          </div>
-          <div className="sq-quotation-hero__glance">
-            <span>Visible pipeline</span>
-            <strong>{INR.format(visiblePipelineValue)}</strong>
-            <small>{loading ? 'Refreshing current view…' : `${items.length} quotes in the current result set`}</small>
-          </div>
-        </section>
-
-        <section className="sq-quotation-kpis" aria-label="Quotation summary">
-          <article className="sq-quotation-kpi">
-            <span className="sq-quotation-kpi__label">Total Quotations</span>
-            <strong className="sq-quotation-kpi__value">{loading ? '...' : total}</strong>
-            <span className="sq-quotation-kpi__meta">All results matching the current filters</span>
-          </article>
-          <article className="sq-quotation-kpi">
-            <span className="sq-quotation-kpi__label">Drafts</span>
-            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleDrafts}</strong>
-            <span className="sq-quotation-kpi__meta">Ready for revision or customer-specific tuning</span>
-          </article>
-          <article className="sq-quotation-kpi">
-            <span className="sq-quotation-kpi__label">Sent</span>
-            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleSent}</strong>
-            <span className="sq-quotation-kpi__meta">Follow up before momentum drops</span>
-          </article>
-          <article className="sq-quotation-kpi">
-            <span className="sq-quotation-kpi__label">Accepted</span>
-            <strong className="sq-quotation-kpi__value">{loading ? '...' : visibleAccepted}</strong>
-            <span className="sq-quotation-kpi__meta">Quotes converted in the current view</span>
-          </article>
-        </section>
+        <PipelineFlow
+          draft={{ count: visibleDrafts, value: visibleDraftValue }}
+          sent={{ count: visibleSent, value: visibleSentValue }}
+          accepted={{ count: visibleAccepted, value: visibleAcceptedValue }}
+          total={{ count: total, value: visiblePipelineValue }}
+          loading={loading}
+        />
 
         <div className="card sq-history-card">
           <div className="sq-history-toolbar">
