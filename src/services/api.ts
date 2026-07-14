@@ -580,8 +580,8 @@ class ApiService {
   }
 
   // Incident (Phase C/D) → AlertItem shape, for consumers not yet migrated to
-  // the native IncidentItem type (MobileAlerts.tsx, MobilePortalAlerts.tsx,
-  // Dashboard.tsx, Devices.tsx). Backed by /incidents/*, not the removed
+  // the native IncidentItem type (MobileAlerts.tsx, Dashboard.tsx, Devices.tsx).
+  // Backed by /incidents/*, not the removed
   // /api/alerts/* shim.
   private _incidentToAlertItem(inc: any): AlertItem {
     return {

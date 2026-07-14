@@ -28,30 +28,19 @@ VITE_API_BASE_URL=https://smart-solar-django-backend.vercel.app/api
 
 ### Route Structure
 
-Defined in `src/app/App.tsx`. Two layout trees: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`/`AdminRoute`) and customer portal (`PortalLayout`, gated by `CustomerRoute`).
+Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`/`AdminRoute`). This app has no customer-facing routes — the customer portal was decommissioned here and now lives solely in `smart-solar-customer-portal`. Non-staff accounts hitting `/` are redirected to `https://my.360watts.com` (`RoleRedirect` in `App.tsx`) rather than routed anywhere internally.
 
 ```
 /login                        → Login (public)
 /verify-email                 → Email verification (public, from OTP email)
-/invite/:token                → Accept invite (public, standalone)
-
-# Customer portal (PortalLayout, CustomerRoute)
-/portal                       → PortalOverview (index)
-/portal/alerts                → PortalAlerts
-/portal/device                → PortalDevice
-/portal/profile               → PortalProfile
-/portal/weather                → PortalWeather
-/portal/history                → PortalHistory
-/portal/solar                 → PortalSolar
-/portal/load                  → PortalLoad
-/portal/details               → PortalDetails
 
 # Staff portal (StaffLayout, StaffRoute)
-/                              → RoleRedirect (→ /dashboard for staff, /portal for customers)
+/                              → RoleRedirect (→ /dashboard for staff, external customer portal otherwise)
 /dashboard                     → Dashboard
 /devices                       → Device list
 /configuration                 → Configuration
 /alerts                        → Active alerts
+/service-bookings              → ServiceBookings
 /users                         → User management
 /employees                     → Employee list (AdminRoute)
 /departments                   → Department list (AdminRoute)
@@ -77,14 +66,13 @@ src/
   features/
     auth/         — Login, VerifyEmailPage
     staff/        — Staff dashboard pages (Dashboard, Devices, Sites, Equipment, etc.)
-    portal/       — Customer portal pages (PortalOverview, PortalAlerts, PortalDevice, ...)
-    mobile/       — Mobile-specific staff/ and portal/ variants
+    mobile/       — Mobile-specific staff/ variants (customer-facing mobile/portal/ variant removed with the portal decommission)
     quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
   shared/
     components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...)
-    guards/       — StaffRoute, AdminRoute, CustomerRoute
+    guards/       — StaffRoute, AdminRoute
     hooks/        — Custom React hooks
-    layout/       — StaffLayout, PortalLayout, NavigationProgress
+    layout/       — StaffLayout, NavigationProgress
     lib/          — Utility helpers
     theme/        — Theme tokens/helpers
     types/        — TypeScript interfaces
@@ -119,9 +107,9 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
 - `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `is_staff`/`is_superuser`)
 
-### Customer Portal: `src/features/portal/` vs `smart-solar-customer-portal` repo
+### Customer Portal Decommission
 
-This repo also contains `src/features/portal/` (customer-facing pages, `/portal/*` routes) in addition to the separate `smart-solar-customer-portal` repo. Relationship between the two has not been confirmed from git history — flagging as needing clarification rather than guessing (e.g. whether one is a deprecated/legacy portal and the other the active migration target, or they serve different purposes).
+This app previously shipped its own customer-facing portal at `src/features/portal/` (`/portal/*` routes, `PortalLayout`, `CustomerRoute`). It was unused and has been fully removed — the active customer-facing app is the dedicated `smart-solar-customer-portal` repo, deployed at `my.360watts.com`. `RoleRedirect` (`App.tsx`) sends any non-staff account there instead of routing internally.
 
 ### Live Data
 
