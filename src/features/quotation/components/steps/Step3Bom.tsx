@@ -239,11 +239,16 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
     if (category === 'panels') {
       const wp = item.specs.wp as number ?? 0;
       description = `${wp}Wp ${item.model_name} ${item.specs.dcr ? 'DCR' : 'non-DCR'}`.trim();
-      const updated = rows.map(r =>
-        r.item.toLowerCase() === rowKey
-          ? { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
-          : r
-      );
+      const panelQty = wp > 0 ? Math.ceil((systemKw * 1000) / wp) : rows.find(r => r.item.toLowerCase() === rowKey)?.qty ?? 1;
+      const updated = rows.map(r => {
+        if (r.item.toLowerCase() === rowKey) {
+          return { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, qty: panelQty, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) };
+        }
+        if (r.item.toLowerCase() === 'mc4 connectors') {
+          return { ...r, qty: panelQty * 2 };
+        }
+        return r;
+      });
       setValue(`${prefix}.rows`, updated);
       return;
     }
