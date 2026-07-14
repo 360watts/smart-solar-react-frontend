@@ -47,3 +47,4 @@ build/
 .env.production.local.example
 .worktrees/
 .env
+.superpowers/
