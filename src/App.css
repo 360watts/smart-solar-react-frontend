@@ -8687,57 +8687,9 @@ body.dark-mode .role-badge-user  { background: rgba(47,191,113,0.15);   color: #
 .slave-card-btn-edit:hover   { background: rgba(47,191,113,0.1); color: #2FBF71; border-color: rgba(47,191,113,0.3); }
 .slave-card-btn-delete:hover { background: rgba(239,68,68,0.1); color: var(--danger-color); border-color: rgba(239,68,68,0.3); }
 
-/* Glassmorphism Prototype Theme Tokens — aligned to mobile AppTheme */
-html.dark-mode {
-  --bg: #080C14;
-  --bg-2: #0F1623;
-  --card: #0F1623;
-  --card-2: #111927;
-  --line: rgba(255,255,255,0.08);
-  --line-2: rgba(255,255,255,0.14);
-  --fg: #e6ecf5;
-  --fg-dim: var(--text-dim);
-  --fg-muted: var(--muted-foreground);
-  --green: #00a63e;
-  --green-soft: rgba(47,191,113,0.14);
-  --orange: #F07522;
-  --orange-soft: rgba(240,117,34,0.14);
-  --blue: #4ea3ff;
-  --blue-soft: rgba(78,163,255,0.14);
-  --violet: #a78bfa;
-  --red: #ef4444;
-  --amber: #f59e0b;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --sans: 'Inter', system-ui, sans-serif;
-  --display: 'Poppins', 'Inter', sans-serif;
-  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
-}
-
-html:not(.dark-mode) {
-  --bg: #f8fafc;
-  --bg-2: #ffffff;
-  --card: #ffffff;
-  --card-2: #f1f5f9;
-  --line: rgba(0,0,0,0.08);
-  --line-2: rgba(0,0,0,0.14);
-  --fg: #0f172a;
-  --fg-dim: var(--text-dim);
-  --fg-muted: var(--muted-foreground);
-  --green: #00a63e;
-  --green-soft: rgba(47,191,113,0.08);
-  --orange: #F07522;
-  --orange-soft: rgba(240,117,34,0.08);
-  --blue: #3b82f6;
-  --blue-soft: rgba(59,130,246,0.08);
-  --violet: #8b5cf6;
-  --red: #ef4444;
-  --amber: #f59e0b;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  --sans: 'Inter', system-ui, sans-serif;
-  --display: 'Poppins', 'Inter', sans-serif;
-  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px;
-}
-
+/* Glassmorphism prototype tokens (--bg,--fg,--green,--orange,...) now come
+   from src/styles/glass-tokens.css, aliased onto the real design system in
+   src/index.css, instead of being hardcoded here. */
 
 /* ══════════════════════════════════════════════
    QUOTATION WIZARD — structural styles
