@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Package, Loader2, Save, Eye } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Loader2, Save, Eye } from 'lucide-react';
 import { Step1Customer } from './components/steps/Step1Customer';
-import { Step2EbBill } from './components/steps/Step2EbBill';
-import { Step3Bom, newRows } from './components/steps/Step3Bom';
+import { StepSizingBom, newRows } from './components/steps/StepSizingBom';
 import { Step4Review } from './components/steps/Step4Review';
+import { LiveSummaryRail } from './components/LiveSummaryRail';
 import { PdfPreviewModal } from './components/PdfPreviewModal';
 import { usePdfExport, generatePdfBlob } from './hooks/usePdfExport';
 import { useSaveDraft } from './hooks/useSaveDraft';
@@ -117,10 +117,9 @@ function SharePanel({ quoteNumber, customerPhone, getFormData }: SharePanelProps
 }
 
 const STEPS = [
-  { id: 1, num: 'I',   label: 'Customer & Site',  desc: 'Customer details and site photo',         icon: User },
-  { id: 2, num: 'II',  label: 'EB Bill Analysis',  desc: 'Electricity consumption & system size',   icon: Zap },
-  { id: 3, num: 'III', label: 'System BoM',         desc: 'Bill of materials and pricing',           icon: Package },
-  { id: 4, num: 'IV',  label: 'Review & Generate',  desc: 'ROI analysis and PDF download',           icon: FileText },
+  { id: 1, num: 'I',   label: 'Customer & Site',   desc: 'Customer details and site photo',      icon: User },
+  { id: 2, num: 'II',  label: 'Sizing & BoM',       desc: 'Consumption, system size & pricing',   icon: Zap },
+  { id: 3, num: 'III', label: 'Review & Generate',  desc: 'ROI analysis and PDF download',         icon: FileText },
 ];
 
 const DEFAULT_NOT_INCLUDED =
@@ -177,6 +176,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   const [loadingDraft, setLoadingDraft] = useState(!!publicId);
   const [showPreview, setShowPreview] = useState(false);
   const [quoteStatus, setQuoteStatus] = useState<string>('draft');
+  const [railCollapsed, setRailCollapsed] = useState(false);
   const form = useForm<QuotationData>({ defaultValues: getDefaults() });
   const { containerRef, slideRefs, generating, generate } = usePdfExport();
   const { saveDraft, saving, lastSavedAt, quoteNumber, publicId: savedPublicId, setExistingDraft } = useSaveDraft();
@@ -226,7 +226,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
     setStep(n);
   }
 
-  function autofillBomQuantities() {
+  const autofillBomQuantities = useCallback(() => {
     const { ebBill } = form.getValues();
     const { inverterKw, exactDcKw, recommendedSystemKw } = calcEbBill({ ...ebBill });
     const dcKw = recommendedSystemKw > 0 ? recommendedSystemKw : exactDcKw;
@@ -264,7 +264,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
     form.setValue('optionA.rows', applyQtys(form.getValues('optionA.rows')));
     const optionB = form.getValues('optionB');
     if (optionB) form.setValue('optionB.rows', applyQtys(optionB.rows));
-  }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function persistDraft({ silent = false, leaveWizard = false }: { silent?: boolean; leaveWizard?: boolean } = {}) {
     try {
@@ -282,7 +282,6 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   async function navigateTo(targetStep: number) {
     const nextStep = Math.max(1, Math.min(targetStep, STEPS.length));
     if (nextStep === step) return;
-    if (step === 2 && nextStep > step) autofillBomQuantities();
     const saved = await persistDraft({ silent: true });
     if (!saved) return;
     goTo(nextStep);
@@ -318,192 +317,147 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
     <>
     <div className={`sq-layout ${isMobile ? 'sq-layout--mobile' : ''}`}>
 
-      {/* ── Sidebar ── */}
-      {!isMobile && <aside className="sq-sidebar">
-        <p className="sq-sidebar-label">Steps</p>
-
-        {/* Vertical spine */}
-        <div className="sq-spine" />
-
-        {STEPS.map((s) => {
-          const done   = step > s.id;
-          const active = step === s.id;
-          const Icon   = s.icon;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => void navigateTo(s.id)}
-              className={`sq-step-item ${active ? 'active' : ''} ${done ? 'done' : ''}`}
-            >
-              <span className="sq-step-num">{s.num}</span>
-              <span className="sq-step-meta">
-                <span className="sq-step-name">{s.label}</span>
-                <span className="sq-step-desc">{s.desc}</span>
-              </span>
-              {done && (
-                <span className="sq-step-check">
-                  <Check style={{ width: 13, height: 13 }} strokeWidth={2.5} />
-                </span>
-              )}
-              {!done && !active && (
-                <span style={{ marginTop: 3, flexShrink: 0 }}>
-                  <Icon style={{ width: 13, height: 13, color: 'var(--muted-foreground)' }} />
-                </span>
-              )}
-            </button>
-          );
-        })}
-
-        <div className="sq-sidebar-footer">
-          <div className="sq-progress-label">
-            <span>Progress</span>
-            <span>{step}/{STEPS.length}</span>
-          </div>
-          <div className="sq-progress-bar">
-            <div className="sq-progress-fill" style={{ width: `${pct}%` }} />
-          </div>
+      {/* ── Unified horizontal stepper (desktop + mobile) ── */}
+      <div className="sq-hstepper">
+        <div className="sq-hstepper__top">
+          <span className="sq-hstepper__eyebrow">Proposal Flow</span>
+          <span className="sq-hstepper__progress">{step}/{STEPS.length}</span>
         </div>
-      </aside>}
-
-      {/* ── Content ── */}
-      <div className="sq-content">
-        {isMobile && (
-          <div className="sq-mobile-steps">
-            <div className="sq-mobile-steps__top">
-              <span className="sq-mobile-steps__eyebrow">Proposal Flow</span>
-              <span className="sq-mobile-steps__progress">{step}/{STEPS.length}</span>
-            </div>
-            <div className="sq-mobile-steps__rail">
-              {STEPS.map((s) => {
-                const done = step > s.id;
-                const active = step === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => void navigateTo(s.id)}
-                    className={`sq-mobile-step-chip ${active ? 'active' : ''} ${done ? 'done' : ''}`}
-                  >
-                    <span className="sq-mobile-step-chip__num">{done ? 'OK' : s.num}</span>
-                    <span className="sq-mobile-step-chip__label">{s.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="sq-mobile-steps__bar">
-              <div className="sq-mobile-steps__bar-fill" style={{ width: `${pct}%` }} />
-            </div>
-          </div>
-        )}
-
-        {/* Content header */}
-        <div className="sq-content-header">
-          <motion.p
-            key={`eyebrow-${step}`}
-            className="sq-content-eyebrow"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            Step {step} of {STEPS.length}
-          </motion.p>
-          <AnimatePresence mode="wait">
-            <motion.h2
-              key={`title-${step}`}
-              className="sq-content-title"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22 }}
-            >
-              {current.label}
-            </motion.h2>
-          </AnimatePresence>
-          {quoteNumber && (
-            <span style={{ fontSize: 'var(--font-xs)', color: 'var(--fg-muted)', fontFamily: 'var(--mono)' }}>
-              {quoteNumber}
-            </span>
-          )}
-        </div>
-
-        {/* Animated step body */}
-        <div className="sq-content-body" style={{ overflow: 'hidden' }}>
-          <AnimatePresence mode="wait" custom={dir} initial={false}>
-            <motion.div
-              key={step}
-              custom={dir}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {step === 1 && <Step1Customer form={form} />}
-              {step === 2 && <Step2EbBill form={form} />}
-              {step === 3 && <Step3Bom form={form} />}
-              {step === 4 && (
-                <>
-                  <Step4Review form={form} />
-                  {savedPublicId && quoteNumber && (
-                    <SharePanel
-                      quoteNumber={quoteNumber}
-                      customerPhone={form.watch('customer.phone')}
-                      getFormData={form.getValues}
-                    />
-                  )}
-                </>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Navigation */}
-        <div className="sq-content-nav">
-          <button
-            type="button"
-            onClick={() => void prev()}
-            disabled={step === 1}
-            className="sq-btn-back"
-          >
-            <ChevronLeft style={{ width: 15, height: 15 }} />
-            Back
-          </button>
-
-          {!isMobile && <span className="sq-step-counter">{step} / {STEPS.length}</span>}
-
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className={`sq-btn-secondary${saving ? ' is-live' : ''}`}
-          >
-            {saving
-              ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
-              : <Save style={{ width: 14, height: 14 }} />}
-            {saving ? 'Saving…' : lastSavedAt ? `Saved ${formatRelativeTime(lastSavedAt)}` : 'Save Draft'}
-          </button>
-
-          {step < 4 ? (
-            <button type="button" onClick={() => void next()} className="sq-btn-primary">
-              Continue
-              <ChevronRight style={{ width: 15, height: 15 }} />
-            </button>
-          ) : (
-            <>
-              <button type="button" onClick={() => setShowPreview(true)} className="sq-btn-secondary">
-                <Eye style={{ width: 14, height: 14 }} />
-                Preview
+        <div className="sq-hstepper__rail">
+          {STEPS.map((s) => {
+            const done = step > s.id;
+            const active = step === s.id;
+            const Icon = s.icon;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => void navigateTo(s.id)}
+                className={`sq-hstep-chip ${active ? 'active' : ''} ${done ? 'done' : ''}`}
+              >
+                {done
+                  ? <Check style={{ width: 13, height: 13 }} strokeWidth={2.5} />
+                  : <Icon style={{ width: 13, height: 13 }} />}
+                <span className="sq-hstep-chip__label">{s.label}</span>
               </button>
+            );
+          })}
+        </div>
+        <div className="sq-hstepper__bar">
+          <div className="sq-hstepper__bar-fill" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      {/* ── Content + live rail, two columns on desktop ── */}
+      <div className="sq-body-split">
+        <div className="sq-content">
+          {/* Content header */}
+          <div className="sq-content-header">
+            <motion.p
+              key={`eyebrow-${step}`}
+              className="sq-content-eyebrow"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              Step {step} of {STEPS.length}
+            </motion.p>
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={`title-${step}`}
+                className="sq-content-title"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}
+              >
+                {current.label}
+              </motion.h2>
+            </AnimatePresence>
+            <button type="button" onClick={() => setShowPreview(true)} className="sq-btn-secondary sq-preview-btn">
+              <Eye style={{ width: 14, height: 14 }} />
+              Preview
+            </button>
+          </div>
+
+          {/* Animated step body */}
+          <div className="sq-content-body" style={{ overflow: 'hidden' }}>
+            <AnimatePresence mode="wait" custom={dir} initial={false}>
+              <motion.div
+                key={step}
+                custom={dir}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
+              >
+                {step === 1 && <Step1Customer form={form} />}
+                {step === 2 && <StepSizingBom form={form} autofillBomQuantities={autofillBomQuantities} />}
+                {step === 3 && (
+                  <>
+                    <Step4Review form={form} />
+                    {savedPublicId && quoteNumber && (
+                      <SharePanel
+                        quoteNumber={quoteNumber}
+                        customerPhone={form.watch('customer.phone')}
+                        getFormData={form.getValues}
+                      />
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Navigation */}
+          <div className="sq-content-nav">
+            <button
+              type="button"
+              onClick={() => void prev()}
+              disabled={step === 1}
+              className="sq-btn-back"
+            >
+              <ChevronLeft style={{ width: 15, height: 15 }} />
+              Back
+            </button>
+
+            {!isMobile && <span className="sq-step-counter">{step} / {STEPS.length}</span>}
+
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={saving}
+              className={`sq-btn-secondary${saving ? ' is-live' : ''}`}
+            >
+              {saving
+                ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
+                : <Save style={{ width: 14, height: 14 }} />}
+              {saving ? 'Saving…' : lastSavedAt ? `Saved ${formatRelativeTime(lastSavedAt)}` : 'Save Draft'}
+            </button>
+
+            {step < 3 ? (
+              <button type="button" onClick={() => void next()} className="sq-btn-primary">
+                Continue
+                <ChevronRight style={{ width: 15, height: 15 }} />
+              </button>
+            ) : (
               <button type="button" onClick={handleGenerate} disabled={generating} className={`sq-btn-primary${generating ? ' is-live' : ''}`}>
                 {generating
                   ? <><Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />Generating…</>
                   : <><FileText style={{ width: 14, height: 14 }} />Download PDF</>
                 }
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
+
+        <LiveSummaryRail
+          form={form}
+          quoteNumber={quoteNumber}
+          collapsed={railCollapsed}
+          onToggleCollapsed={() => setRailCollapsed(v => !v)}
+        />
       </div>
 
     </div>
