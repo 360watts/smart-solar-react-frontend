@@ -134,7 +134,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
       border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
       background: 'transparent', cursor: 'pointer', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.4)',
+      color: 'var(--muted-foreground)',
       transition: 'all 0.15s',
     },
     body: { padding: '20px' },
@@ -153,7 +153,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     sectionLabel: {
       fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
       textTransform: 'uppercase' as const,
-      color: isDark ? 'rgba(240,244,255,0.3)' : 'rgba(18,21,26,0.35)',
+      color: 'var(--text-dim)',
       marginBottom: 10,
     },
     optionRow: (checked: boolean, danger: boolean) => ({
@@ -185,7 +185,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     },
     confirmLabel: {
       fontSize: '0.75rem',
-      color: isDark ? 'rgba(240,244,255,0.45)' : 'rgba(18,21,26,0.5)',
+      color: 'var(--muted-foreground)',
       marginBottom: 8, display: 'block',
     },
     confirmInput: {
@@ -210,7 +210,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
       border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
       background: 'transparent', cursor: 'pointer',
       fontSize: '0.875rem', fontWeight: 500,
-      color: isDark ? 'rgba(240,244,255,0.6)' : 'rgba(18,21,26,0.6)',
+      color: 'var(--muted-foreground)',
       transition: 'all 0.15s',
     },
     deleteBtn: (active: boolean) => ({
@@ -250,7 +250,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
               }}>Delete Device</div>
               <div style={{
                 fontSize: '0.75rem', marginTop: 2,
-                color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.45)',
+                color: 'var(--muted-foreground)',
               }}>Soft delete — telemetry data is always retained</div>
             </div>
           </div>
@@ -265,7 +265,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
           <div style={S.serialBox}>
             <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: '0.7rem', color: isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)', marginBottom: 2 }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 2 }}>
                 Device to delete
               </div>
               <div style={S.serialText}>{device.device_serial}</div>
@@ -299,7 +299,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                 }}>
                   <Icon size={15} color={
                     checked ? (danger ? '#EF4444' : '#2FBF71')
-                      : isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.4)'
+                      : 'var(--muted-foreground)'
                   } />
                 </div>
 
@@ -335,7 +335,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                   </div>
                   <div style={{
                     fontSize: '0.72rem', lineHeight: 1.5,
-                    color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.45)',
+                    color: 'var(--muted-foreground)',
                   }}>{description}</div>
                 </div>
               </div>
@@ -349,10 +349,10 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
             background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)',
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
           }}>
-            <Lock size={13} color={isDark ? 'rgba(240,244,255,0.25)' : 'rgba(18,21,26,0.3)'} style={{ flexShrink: 0 }} />
+            <Lock size={13} color={'var(--text-dim)'} style={{ flexShrink: 0 }} />
             <span style={{
               fontSize: '0.7rem',
-              color: isDark ? 'rgba(240,244,255,0.3)' : 'rgba(18,21,26,0.35)',
+              color: 'var(--text-dim)',
             }}>
               Telemetry, energy readings, and S3 archives are always retained and cannot be deleted.
             </span>

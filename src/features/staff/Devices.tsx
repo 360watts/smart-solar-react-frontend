@@ -109,7 +109,7 @@ interface SolarSite {
 const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave, isDark }) => {
   const [open, setOpen] = useState(false);
   const borderM = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
-  const textD   = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
+  const textD   = 'var(--text-dim)';
 
   return (
     <div style={{ borderBottom: `1px solid ${borderM}` }}>
@@ -128,7 +128,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
             ? <ChevronDown size={13} style={{ color: textD }} />
             : <ChevronRight size={13} style={{ color: textD }} />
           }
-          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--muted-foreground)' }}>
             Slave {slave.slave_id} — {slave.device_name}
           </span>
           {!slave.enabled && (
@@ -144,7 +144,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
         <div style={{ overflowX: 'auto', padding: '0 20px 12px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
             <thead>
-              <tr style={{ color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
+              <tr style={{ color: 'var(--muted-foreground)' }}>
                 {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
                   <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -168,10 +168,10 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
                   <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: textD }}>
                     {reg.address}
                   </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)' }}>
+                  <td style={{ padding: '5px 8px', color: 'var(--muted-foreground)' }}>
                     {reg.category || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', color: isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                  <td style={{ padding: '5px 8px', color: 'var(--muted-foreground)', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
                     {reg.unit || '—'}
                   </td>
                   <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : textD }}>
@@ -251,10 +251,10 @@ const Devices: React.FC = () => {
     surface: 'var(--card)',
     cardEl:  'var(--card)',
     border:  'var(--border)',
-    borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
+    borderM: 'var(--border)',
     text:    'var(--foreground)',
-    textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
-    textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
+    textM:   'var(--muted-foreground)',
+    textD:   'var(--text-dim)',
     accent:  'var(--primary)',
   };
   const { user } = useAuth();

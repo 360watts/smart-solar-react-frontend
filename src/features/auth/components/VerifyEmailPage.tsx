@@ -55,7 +55,7 @@ const VerifyEmailPage: React.FC = () => {
               animation: 'spin 0.9s linear infinite',
               margin: '0 auto 20px',
             }} />
-            <p style={{ margin: 0, fontSize: 15, color: '#94a3b8' }}>Confirming your email…</p>
+            <p style={{ margin: 0, fontSize: 15, color: 'var(--text-dim)' }}>Confirming your email…</p>
           </>
         )}
 
@@ -74,7 +74,7 @@ const VerifyEmailPage: React.FC = () => {
             <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
               Verification successful!
             </h2>
-            <p style={{ margin: '0 0 20px', fontSize: 15, color: '#94a3b8', lineHeight: 1.7 }}>
+            <p style={{ margin: '0 0 20px', fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.7 }}>
               Your email address has been confirmed.
             </p>
             <div style={{
@@ -85,11 +85,11 @@ const VerifyEmailPage: React.FC = () => {
               <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 700, color: '#fb923c' }}>
                 What happens next?
               </p>
-              <p style={{ margin: 0, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
                 You will receive another email with your <strong style={{ color: '#cbd5e1' }}>login credentials</strong> once your account has been set up. This usually takes just a few minutes.
               </p>
             </div>
-            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#94a3b8' }}>You can close this tab.</p>
+            <p style={{ margin: '20px 0 0', fontSize: 12, color: 'var(--text-dim)' }}>You can close this tab.</p>
           </>
         )}
 
@@ -104,10 +104,10 @@ const VerifyEmailPage: React.FC = () => {
             <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
               Verification failed
             </h2>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#94a3b8', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
               {errorMsg}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dim)' }}>
               Ask your 360Watts administrator to resend the verification link.
             </p>
           </>

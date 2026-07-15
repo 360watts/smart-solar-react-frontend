@@ -207,7 +207,7 @@ const _CAUSE_COLOR: Record<string, string> = {
   minor_underperformance: '#3b82f6',
   normal: '#00a63e',
   satellite_mismatch: '#00a63e',
-  no_telemetry: '#1F7A52',
+  no_telemetry: '#8B87A8',
 };
 
 // ── SatelliteKtDailyChart ─────────────────────────────────────────────────────
@@ -296,7 +296,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
   const labels = daytimeSlots.map((s: any) => s.timestamp?.slice(11) ?? '');
   const barData = {
     labels,
-    datasets: [{ label: 'kt', data: daytimeSlots.map((s: any) => s.kt), backgroundColor: daytimeSlots.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#1F7A52') + 'CC'), borderColor: daytimeSlots.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#1F7A52'), borderWidth: 1, borderRadius: 3 }],
+    datasets: [{ label: 'kt', data: daytimeSlots.map((s: any) => s.kt), backgroundColor: daytimeSlots.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#8B87A8') + 'CC'), borderColor: daytimeSlots.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#8B87A8'), borderWidth: 1, borderRadius: 3 }],
   };
 
   return (
@@ -527,7 +527,7 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
 
   const barData = {
     labels: filtered.map((s: any) => s.timestamp?.slice(11, 16) ?? ''),
-    datasets: [{ label: 'kt', data: filtered.map((s: any) => s.kt != null ? s.kt : (s.cause === 'no_telemetry' ? 0.02 : null)), backgroundColor: filtered.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#1F7A52') + 'CC'), borderColor: filtered.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#1F7A52'), borderWidth: 1, borderRadius: 3 }],
+    datasets: [{ label: 'kt', data: filtered.map((s: any) => s.kt != null ? s.kt : (s.cause === 'no_telemetry' ? 0.02 : null)), backgroundColor: filtered.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#8B87A8') + 'CC'), borderColor: filtered.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#8B87A8'), borderWidth: 1, borderRadius: 3 }],
   };
 
   return (
@@ -1202,7 +1202,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                     showBands.P10 && { label: 'P10', data: forecastData.map(d => d.p10), borderColor: '#f59e0b', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: false },
                     showBands.P50 && { label: 'P50', data: forecastData.map(d => d.p50), borderColor: '#00a63e', borderWidth: 2.4, tension: 0.3, pointRadius: 0, fill: showBands.P10 ? '-1' : false, backgroundColor: 'rgba(0,166,62,0.08)' },
                     showBands.P90 && { label: 'P90', data: forecastData.map(d => d.p90), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: showBands.P50 ? '-1' : false, backgroundColor: 'rgba(59,130,246,0.06)' },
-                    { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#1F7A52', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
+                    { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#8B87A8', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
                     showBands.GHI && { label: 'GHI', yAxisID: 'ghi', data: forecastData.map(d => d.ghi), borderColor: '#eab308', borderWidth: 1.3, tension: 0.3, pointRadius: 0, fill: true, backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#eab30820'; return makeGradient(chart.ctx, chart.chartArea, '#eab308', 0.15, 0.01); } },
                   ].filter(Boolean) as any[],
                 }}

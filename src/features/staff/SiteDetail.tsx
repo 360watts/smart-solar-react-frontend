@@ -123,7 +123,7 @@ const eqMkT = (isDark: boolean) => ({
   surface: 'var(--card)',
   border:  isDark ? 'rgba(255,255,255,0.08)' : 'var(--border-strong)',
   text:    'var(--foreground)',
-  textM:   isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)',
+  textM:   'var(--muted-foreground)',
 });
 const eqInput = (isDark: boolean): React.CSSProperties => ({
   padding:'8px 10px',borderRadius:7,width:'100%',boxSizing:'border-box',
@@ -132,7 +132,7 @@ const eqInput = (isDark: boolean): React.CSSProperties => ({
 });
 const eqLabel = (isDark: boolean): React.CSSProperties => ({
   fontSize:'0.8rem',fontWeight:600,
-  color:isDark?'rgba(240,244,255,0.52)':'rgba(18,21,26,0.52)',display:'block',marginBottom:4,
+  color:'var(--muted-foreground)',display:'block',marginBottom:4,
 });
 
 const EqFormField: React.FC<{
@@ -169,7 +169,7 @@ const EqDeleteModal: React.FC<{open:boolean;label:string;onConfirm:()=>void;onCa
     <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div style={{background:'var(--card)',borderRadius:12,padding:28,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
         <h3 style={{margin:'0 0 10px',color:'var(--foreground)'}}>Delete {label}?</h3>
-        <p style={{margin:'0 0 22px',color:isDark?'rgba(240,244,255,0.52)':'rgba(18,21,26,0.52)',fontSize:'0.9rem'}}>This cannot be undone.</p>
+        <p style={{margin:'0 0 22px',color:'var(--muted-foreground)',fontSize:'0.9rem'}}>This cannot be undone.</p>
         <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
           <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
           <button onClick={onConfirm} className="btn" style={{background:'#ef4444',color:'#fff',border:'none'}}>Delete</button>

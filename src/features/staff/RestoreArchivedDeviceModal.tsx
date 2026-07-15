@@ -248,7 +248,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
       border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
       background: 'transparent', cursor: 'pointer', flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.4)',
+      color: 'var(--muted-foreground)',
       transition: 'all 0.15s',
     },
     filterWrap: {
@@ -274,7 +274,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
       background: active
         ? 'rgba(47,191,113,0.14)'
         : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
-      color: active ? '#2FBF71' : isDark ? 'rgba(240,244,255,0.5)' : 'rgba(18,21,26,0.55)',
+      color: active ? '#2FBF71' : 'var(--muted-foreground)',
       transition: 'all 0.15s',
     }),
     bulkBar: {
@@ -315,7 +315,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
 
         <div style={{
           fontSize: '0.775rem', lineHeight: 1.5, marginBottom: 12,
-          color: isDark ? 'rgba(240,244,255,0.5)' : 'rgba(18,21,26,0.55)',
+          color: 'var(--muted-foreground)',
         }}>
           This cannot be undone — unlike restore, there is no archive to bring these back from.
           Devices with existing telemetry history are protected at the database level and will be
@@ -338,7 +338,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                 color: 'var(--destructive)',
               }}>{d.device_serial}</span>
               {rowErrors[d.id] && (
-                <span style={{ fontSize: '0.675rem', color: isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)' }}>
+                <span style={{ fontSize: '0.675rem', color: 'var(--muted-foreground)' }}>
                   previously failed
                 </span>
               )}
@@ -348,7 +348,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
 
         <label style={{
           fontSize: '0.75rem', marginBottom: 8, display: 'block',
-          color: isDark ? 'rgba(240,244,255,0.45)' : 'rgba(18,21,26,0.5)',
+          color: 'var(--muted-foreground)',
         }}>
           Type <span style={{ fontFamily: 'Fira Code, JetBrains Mono, monospace', color: 'var(--destructive)' }}>{requiredConfirmText}</span> to confirm
         </label>
@@ -382,7 +382,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
               background: 'transparent', cursor: 'pointer',
               fontSize: '0.875rem', fontWeight: 500,
-              color: isDark ? 'rgba(240,244,255,0.6)' : 'rgba(18,21,26,0.6)',
+              color: 'var(--muted-foreground)',
             }}
           >
             Cancel
@@ -434,7 +434,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               }}>Restore Archived Device</div>
               <div style={{
                 fontSize: '0.75rem', marginTop: 2,
-                color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.45)',
+                color: 'var(--muted-foreground)',
               }}>Devices self-provision on first boot — this brings a soft-deleted serial back online</div>
             </div>
           </div>
@@ -446,7 +446,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
         {/* Search + filter */}
         <div style={S.filterWrap}>
           <div style={S.searchBox}>
-            <Search size={14} color={isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)'} />
+            <Search size={14} color={'var(--muted-foreground)'} />
             <input
               ref={inputRef}
               style={S.searchInput}
@@ -473,7 +473,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               onClick={toggleSelectAll}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-                cursor: 'pointer', fontSize: '0.75rem', color: isDark ? 'rgba(240,244,255,0.5)' : 'rgba(18,21,26,0.55)',
+                cursor: 'pointer', fontSize: '0.75rem', color: 'var(--muted-foreground)',
               }}
             >
               {allVisibleSelected ? <CheckSquare size={14} color="#EF4444" /> : <Square size={14} />}
@@ -485,7 +485,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               onClick={() => setSelectedIds(new Set())}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '0.75rem', color: isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.45)',
+                fontSize: '0.75rem', color: 'var(--muted-foreground)',
                 textDecoration: 'underline',
               }}
             >
@@ -519,16 +519,16 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           {confirmTarget && renderConfirmPanel(confirmTarget)}
 
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)', fontSize: '0.825rem' }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.825rem' }}>
               Scanning the archive…
             </div>
           ) : devices.length === 0 ? (
             <div style={{ padding: '48px 20px', textAlign: 'center' }}>
-              <Archive size={28} color={isDark ? 'rgba(240,244,255,0.15)' : 'rgba(18,21,26,0.15)'} style={{ marginBottom: 10 }} />
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: isDark ? 'rgba(240,244,255,0.55)' : 'rgba(18,21,26,0.6)' }}>
+              <Archive size={28} color={'var(--border)'} style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--muted-foreground)' }}>
                 {search || typeFilter !== 'all' ? 'No archived devices match your filters' : 'The archive is empty'}
               </div>
-              <div style={{ fontSize: '0.75rem', marginTop: 4, color: isDark ? 'rgba(240,244,255,0.3)' : 'rgba(18,21,26,0.35)' }}>
+              <div style={{ fontSize: '0.75rem', marginTop: 4, color: 'var(--text-dim)' }}>
                 Nothing has been soft-deleted yet.
               </div>
             </div>
@@ -565,7 +565,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     >
                       {isSelected
                         ? <CheckSquare size={16} color="#EF4444" />
-                        : <Square size={16} color={isDark ? 'rgba(240,244,255,0.25)' : 'rgba(18,21,26,0.25)'} />}
+                        : <Square size={16} color={'var(--text-dim)'} />}
                     </button>
                   )}
 
@@ -579,7 +579,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     {isFlashing ? (
                       <HeartPulse size={16} color="#2FBF71" style={{ animation: 'pulseBeat 0.6s ease-in-out' }} />
                     ) : (
-                      <Icon size={15} color={isDark ? 'rgba(240,244,255,0.4)' : 'rgba(18,21,26,0.4)'} />
+                      <Icon size={15} color={'var(--muted-foreground)'} />
                     )}
                   </div>
 
@@ -594,12 +594,12 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                         fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
                         padding: '1px 6px', borderRadius: 4,
                         background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                        color: isDark ? 'rgba(240,244,255,0.5)' : 'rgba(18,21,26,0.55)',
+                        color: 'var(--muted-foreground)',
                       }}>{device.device_type === 'energy_meter' ? 'Meter' : 'Gateway'}</span>
                     </div>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexWrap: 'wrap',
-                      fontSize: '0.7rem', color: isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)',
+                      fontSize: '0.7rem', color: 'var(--muted-foreground)',
                     }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                         <Clock size={10} /> deleted {timeAgo(device.deleted_at)}

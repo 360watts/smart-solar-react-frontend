@@ -57,7 +57,7 @@
   --cta: #F27521;
   --cta-soft: rgba(242,117,33,0.12);
   --muted: #EEF3F0;
-  --muted-foreground: #1F7A52;
+  --muted-foreground: #4F6B5C;
   --accent: #E9B949;
   --accent-foreground: #12151A;
   --destructive: #DC2626;
@@ -83,7 +83,7 @@
   /* Brand-tinted secondary text — mixed toward the emerald accent rather than a flat grey/opacity.
      Percentages intentionally sum below 100%; color-mix treats the remainder as transparency,
      giving the same ~62%/~38% visual weight as before while adding the brand tint. */
-  --text-dim: #4A9B74;
+  --text-dim: #7C9186;
   --border-strong: rgba(18,21,26,0.16);
   --shadow-card: 0 1px 3px rgba(18,21,26,0.07), 0 12px 30px rgba(18,21,26,0.07);
   --font-display: 'Outfit', 'DM Sans', sans-serif;
@@ -92,12 +92,12 @@
   --chart-pv: #E9B949;
   --chart-load: #3B82F6;
   --chart-battery: #2FBF71;
-  --chart-grid: #1F7A52;
+  --chart-grid: #8B87A8;
   --chart-import: #3B82F6;
   --chart-export: #499761;
   --chart-warning: #F59E0B;
   --chart-danger: #EF4444;
-  --chart-neutral: #1F7A52;
+  --chart-neutral: #8B87A8;
 }
 
 .dark-mode {
@@ -116,7 +116,7 @@
   --cta: #F27521;
   --cta-soft: rgba(242,117,33,0.18);
   --muted: rgba(255,255,255,0.08);
-  --muted-foreground: #8FE0B8;
+  --muted-foreground: #A8C9B8;
   --accent: #E9B949;
   --accent-foreground: #0A0E1A;
   --destructive: #DC2626;
@@ -139,18 +139,18 @@
   --info-soft: rgba(96,165,250,0.16);
   --surface-raised: #111927;
   --surface-muted: #131B2E;
-  --text-dim: #6FD6A3;
+  --text-dim: #7FA694;
   --border-strong: rgba(255,255,255,0.14);
   --shadow-card: 0 2px 12px rgba(0,0,0,0.22), 0 18px 42px rgba(0,0,0,0.32);
   --chart-pv: #F0CB6C;
   --chart-load: #60A5FA;
   --chart-battery: #5BBD79;
-  --chart-grid: #8FE0B8;
+  --chart-grid: #A8A3C7;
   --chart-import: #60A5FA;
   --chart-export: #7CCA94;
   --chart-warning: #FBBF24;
   --chart-danger: #F87171;
-  --chart-neutral: #8FE0B8;
+  --chart-neutral: #A8A3C7;
 }
 
 @layer base {

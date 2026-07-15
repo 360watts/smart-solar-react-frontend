@@ -21,7 +21,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
     { label: 'Grid Out', value: latest.grid_sell_today_kwh, color: '#10b981', bg: '#10b98115', icon: '⬆' },
     { label: 'Batt Chg', value: latest.batt_charge_today_kwh, color: '#8b5cf6', bg: '#8b5cf615', icon: '↑' },
     { label: 'Batt Dchg', value: latest.batt_discharge_today_kwh, color: '#ec4899', bg: '#ec489915', icon: '↓' },
-    { label: 'Consumption', value: latest.load_today_kwh, color: '#1F7A52', bg: '#1F7A5215', icon: '⌂' },
+    { label: 'Consumption', value: latest.load_today_kwh, color: '#8B87A8', bg: '#8B87A815', icon: '⌂' },
   ].filter(e => e.value != null);
 
   if (!items.length) return null;

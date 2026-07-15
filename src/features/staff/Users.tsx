@@ -68,8 +68,8 @@ const Users: React.FC = () => {
     border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
     borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
     text:    'var(--foreground)',
-    textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
-    textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
+    textM:   'var(--muted-foreground)',
+    textD:   'var(--text-dim)',
     accent:  '#2FBF71',
   };
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);

@@ -254,14 +254,14 @@ const Login: React.FC = () => {
                 <span style={{ color: '#F59E0B' }}>With Solar Energy</span>
               </div>
 
-              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#8892A4', maxWidth: 360, lineHeight: 1.6 }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'var(--muted-foreground)', maxWidth: 360, lineHeight: 1.6 }}>
                 Monitor, manage, and optimize your solar energy systems in real-time.
               </p>
             </div>
 
           </div>
 
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#334155' }}>
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--foreground)' }}>
             © 2026 360Watts. All rights reserved.
           </div>
         </div>
@@ -290,7 +290,7 @@ const Login: React.FC = () => {
               <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 700, color: '#F0F4FF', marginBottom: 4 }}>
                 {mode === 'email-verify' ? 'Verify your email' : 'Welcome back'}
               </div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#64748B' }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'var(--muted-foreground)' }}>
                 {mode === 'email-verify' ? 'Enter the code sent to your inbox' : 'Sign in to access your solar dashboard'}
               </div>
             </div>
@@ -346,7 +346,7 @@ const Login: React.FC = () => {
                     Email
                   </label>
                   <div style={{ position: 'relative' }}>
-                    <Mail size={15} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Mail size={15} color="var(--muted-foreground)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <input
                       type="email"
                       value={email}
@@ -369,7 +369,7 @@ const Login: React.FC = () => {
                     Password
                   </label>
                   <div style={{ position: 'relative' }}>
-                    <Lock size={15} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <Lock size={15} color="var(--muted-foreground)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
@@ -387,7 +387,7 @@ const Login: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: 0 }}
+                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', padding: 0 }}
                     >
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -448,7 +448,7 @@ const Login: React.FC = () => {
                   <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#CBD5E1', marginBottom: 4 }}>
                     Enter 6-digit code
                   </label>
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#64748B', marginBottom: 14 }}>
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--muted-foreground)', marginBottom: 14 }}>
                     Sent to {phone}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -486,7 +486,7 @@ const Login: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => { setMode('otp-phone'); setOtp(''); clearError() }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#64748B' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--muted-foreground)' }}
                   >
                     <ArrowLeft size={13} /> Back
                   </button>
@@ -498,7 +498,7 @@ const Login: React.FC = () => {
                       background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
                       display: 'flex', alignItems: 'center', gap: 6,
                       fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-                      color: cooldown > 0 ? '#94a3b8' : '#F59E0B',
+                      color: cooldown > 0 ? 'var(--text-dim)' : '#F59E0B',
                     }}
                   >
                     <RefreshCw size={13} />
@@ -515,7 +515,7 @@ const Login: React.FC = () => {
                   <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>📧</span>
                   <div>
                     <p style={{ margin: 0, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 700, color: '#86efac' }}>Check your email</p>
-                    <p style={{ margin: '4px 0 0', fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>
+                    <p style={{ margin: '4px 0 0', fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
                       A 6-digit verification code was sent to <strong style={{ color: '#CBD5E1' }}>{verifyEmail}</strong>. Enter it below to activate your account.
                     </p>
                   </div>
@@ -557,7 +557,7 @@ const Login: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => { setMode('password'); setVerifyOtpVal(''); clearError() }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#64748B' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--muted-foreground)' }}
                   >
                     <ArrowLeft size={13} /> Back to login
                   </button>
@@ -565,7 +565,7 @@ const Login: React.FC = () => {
                     type="button"
                     onClick={handleResendVerification}
                     disabled={cooldown > 0 || loading}
-                    style={{ background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: cooldown > 0 ? '#94a3b8' : '#22c55e' }}
+                    style={{ background: 'none', border: 'none', cursor: cooldown > 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: cooldown > 0 ? 'var(--text-dim)' : '#22c55e' }}
                   >
                     <RefreshCw size={13} />
                     {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
