@@ -19,14 +19,14 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: '#1A1715',
-      border: '1px solid rgba(0,166,62,0.2)',
+      background: 'var(--card, #1A1715)',
+      border: '1px solid var(--border, rgba(0,166,62,0.2))',
       borderRadius: 8,
       padding: '8px 12px',
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: '0.68rem',
     }}>
-      <p style={{ color: '#7A6A58', marginBottom: 4 }}>{label}</p>
+      <p style={{ color: 'var(--fg-muted, #7A6A58)', marginBottom: 4 }}>{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color }}>
           {p.name}: ₹{Math.abs(p.value).toLocaleString('en-IN')}k
@@ -105,20 +105,20 @@ export function Step4Review({ form }: Props) {
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="year" tick={{ fill: '#7A6A58', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#7A6A58', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border, rgba(255,255,255,0.05))" />
+                <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
+                <ReferenceLine y={0} stroke="var(--border, rgba(255,255,255,0.12))" />
                 {breakEven && (
                   <ReferenceLine
                     x={`Y${breakEven}`}
-                    stroke="#fdc700"
+                    stroke="var(--amber, #fdc700)"
                     strokeDasharray="4 3"
-                    label={{ value: '◆', position: 'insideTopRight', fill: '#fdc700', fontSize: 10 }}
+                    label={{ value: '◆', position: 'insideTopRight', fill: 'var(--amber, #fdc700)', fontSize: 10 }}
                   />
                 )}
-                <Bar dataKey="savings" name="Net savings" fill="#00a63e" radius={[3,3,0,0]} maxBarSize={20} />
+                <Bar dataKey="savings" name="Net savings" fill="var(--green, #00a63e)" radius={[3,3,0,0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -129,16 +129,16 @@ export function Step4Review({ form }: Props) {
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="year" tick={{ fill: '#7A6A58', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#7A6A58', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border, rgba(255,255,255,0.05))" />
+                <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  wrapperStyle={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#7A6A58' }}
+                  wrapperStyle={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: 'var(--fg-muted, #7A6A58)' }}
                   iconType="circle" iconSize={7}
                 />
-                <Area type="monotone" dataKey="noSolar"   name="Without Solar" stroke="#2a4a35" fill="rgba(42,74,53,0.25)"   strokeWidth={1.5} />
-                <Area type="monotone" dataKey="withSolar" name="With Solar"    stroke="#00a63e" fill="rgba(0,166,62,0.12)"  strokeWidth={1.5} />
+                <Area type="monotone" dataKey="noSolar"   name="Without Solar" stroke="var(--fg-muted, #2a4a35)" fill="var(--border, rgba(42,74,53,0.25))"   strokeWidth={1.5} />
+                <Area type="monotone" dataKey="withSolar" name="With Solar"    stroke="var(--green, #00a63e)" fill="var(--green-soft, rgba(0,166,62,0.12))"  strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
