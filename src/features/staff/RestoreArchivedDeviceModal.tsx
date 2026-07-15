@@ -264,7 +264,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
     },
     searchInput: {
       flex: 1, border: 'none', outline: 'none', background: 'transparent',
-      fontSize: '0.825rem', color: isDark ? '#F0F4FF' : '#12151A',
+      fontSize: '0.825rem', color: 'var(--foreground)',
       fontFamily: 'Fira Code, JetBrains Mono, monospace',
     },
     typePill: (active: boolean) => ({
@@ -308,7 +308,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           }}>
             <ShieldAlert size={16} color="#EF4444" />
           </div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: isDark ? '#F0F4FF' : '#12151A' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--foreground)' }}>
             Permanently delete {affected.length} device{affected.length !== 1 ? 's' : ''}?
           </div>
         </div>
@@ -369,7 +369,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               : isConfirmed
                 ? '#2FBF71'
                 : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
-            borderRadius: 8, color: isDark ? '#F0F4FF' : '#12151A',
+            borderRadius: 8, color: 'var(--foreground)',
             outline: 'none', boxSizing: 'border-box',
           }}
         />
@@ -429,7 +429,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
             <div>
               <div id="restore-modal-title" style={{
                 fontSize: '0.9375rem', fontWeight: 700,
-                color: isDark ? '#F0F4FF' : '#12151A',
+                color: 'var(--foreground)',
                 lineHeight: 1.2,
               }}>Restore Archived Device</div>
               <div style={{
@@ -588,7 +588,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                       <span style={{
                         fontFamily: 'Fira Code, JetBrains Mono, monospace',
                         fontSize: '0.825rem', fontWeight: 600, letterSpacing: '0.01em',
-                        color: isDark ? '#F0F4FF' : '#12151A',
+                        color: 'var(--foreground)',
                       }}>{device.device_serial}</span>
                       <span style={{
                         fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',

@@ -96,7 +96,7 @@ export default function CommissioningWizard() {
 
   // ── Tokens ──
   const bg          = isDark ? '#080C14' : '#f0fdf4';
-  const surface     = isDark ? '#0F1623' : '#ffffff';
+  const surface     = 'var(--card)';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';

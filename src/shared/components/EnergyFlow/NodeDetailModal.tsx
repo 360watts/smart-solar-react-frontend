@@ -665,7 +665,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
   const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => {
     const chartText = isDark ? '#AAB4C2' : 'rgba(18,21,26,0.62)';
-    const chartTitle = isDark ? '#F0F4FF' : '#12151A';
+    const chartTitle = 'var(--foreground)';
 
     return {
       responsive: true,

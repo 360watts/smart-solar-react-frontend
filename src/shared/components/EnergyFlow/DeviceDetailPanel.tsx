@@ -167,7 +167,7 @@ export default function DeviceDetailPanel({
     v: r.power_w ?? 0,
   }));
 
-  const bgColor = isDark ? '#0F1623' : '#ffffff';
+  const bgColor = 'var(--card)';
   const borderColor = isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0';
   const textColor = isDark ? '#f1f5f9' : '#0f172a';
   const subTextColor = isDark ? 'var(--text-dim)' : 'var(--muted-foreground)';

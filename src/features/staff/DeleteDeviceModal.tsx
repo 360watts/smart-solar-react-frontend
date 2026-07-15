@@ -198,7 +198,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
         : confirmed
           ? '#2FBF71'
           : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
-      borderRadius: 8, color: isDark ? '#F0F4FF' : '#12151A',
+      borderRadius: 8, color: 'var(--foreground)',
       outline: 'none', boxSizing: 'border-box' as const,
       transition: 'border-color 0.15s',
     },
@@ -245,7 +245,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
             <div>
               <div id="delete-modal-title" style={{
                 fontSize: '0.9375rem', fontWeight: 700,
-                color: isDark ? '#F0F4FF' : '#12151A',
+                color: 'var(--foreground)',
                 lineHeight: 1.2,
               }}>Delete Device</div>
               <div style={{
@@ -310,7 +310,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                   }}>
                     <span style={{
                       fontSize: '0.8125rem', fontWeight: 600,
-                      color: isDark ? '#F0F4FF' : '#12151A',
+                      color: 'var(--foreground)',
                     }}>{label}</span>
                     {recommended && (
                       <span style={{

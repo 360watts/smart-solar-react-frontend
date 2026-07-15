@@ -129,12 +129,12 @@ export default function Sites() {
 
   // ── Design Tokens ──
   // ── Design tokens — matches mobile AppTheme ───────────────────────────────
-  const bg      = isDark ? '#080C14' : '#F4F6F8';
-  const surface = isDark ? '#0F1623' : '#FFFFFF';
+  const bg      = 'var(--background)';
+  const surface = 'var(--card)';
   const cardEl  = isDark ? '#111927' : '#EDF0F4';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
   const borderMuted = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
-  const text    = isDark ? '#F0F4FF' : '#12151A';
+  const text    = 'var(--foreground)';
   const textMute = isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)';
   const textDim  = isDark ? 'rgba(240,244,255,0.32)' : 'rgba(18,21,26,0.32)';
   const accent   = '#2FBF71';

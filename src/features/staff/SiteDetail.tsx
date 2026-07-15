@@ -120,15 +120,15 @@ const blankEqPanel = (): Omit<EqPanel,'id'|'site'> => ({
 });
 
 const eqMkT = (isDark: boolean) => ({
-  surface: isDark ? '#0F1623' : '#FFFFFF',
+  surface: 'var(--card)',
   border:  isDark ? 'rgba(255,255,255,0.08)' : 'var(--border-strong)',
-  text:    isDark ? '#F0F4FF' : '#12151A',
+  text:    'var(--foreground)',
   textM:   isDark ? 'rgba(240,244,255,0.52)' : 'rgba(18,21,26,0.52)',
 });
 const eqInput = (isDark: boolean): React.CSSProperties => ({
   padding:'8px 10px',borderRadius:7,width:'100%',boxSizing:'border-box',
   border:isDark?'1px solid rgba(255,255,255,0.12)':'1px solid var(--border-strong)',
-  background:isDark?'#0F1623':'#FFFFFF',color:isDark?'#F0F4FF':'#12151A',fontSize:'0.875rem',
+  background:'var(--card)',color:'var(--foreground)',fontSize:'0.875rem',
 });
 const eqLabel = (isDark: boolean): React.CSSProperties => ({
   fontSize:'0.8rem',fontWeight:600,
@@ -156,7 +156,7 @@ const EqSectionHeader: React.FC<{icon:React.ReactNode;title:string;count:number;
   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)'}}>
     <div style={{display:'flex',alignItems:'center',gap:10}}>
       <span style={{color:'#22c55e'}}>{icon}</span>
-      <h3 style={{margin:0,fontSize:'1rem',fontWeight:700,color:isDark?'#F0F4FF':'#12151A'}}>{title}</h3>
+      <h3 style={{margin:0,fontSize:'1rem',fontWeight:700,color:'var(--foreground)'}}>{title}</h3>
       <span style={{background:isDark?'rgba(34,197,94,0.15)':'#dcfce7',color:'#16a34a',borderRadius:12,padding:'1px 10px',fontSize:'0.75rem',fontWeight:600}}>{count}</span>
     </div>
     <button onClick={onAdd} className="btn" style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.85rem'}}><Plus size={14}/> Add</button>
@@ -167,8 +167,8 @@ const EqDeleteModal: React.FC<{open:boolean;label:string;onConfirm:()=>void;onCa
   if (!open) return null;
   return ReactDOM.createPortal(
     <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{background:isDark?'#0F1623':'#FFFFFF',borderRadius:12,padding:28,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
-        <h3 style={{margin:'0 0 10px',color:isDark?'#F0F4FF':'#12151A'}}>Delete {label}?</h3>
+      <div style={{background:'var(--card)',borderRadius:12,padding:28,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+        <h3 style={{margin:'0 0 10px',color:'var(--foreground)'}}>Delete {label}?</h3>
         <p style={{margin:'0 0 22px',color:isDark?'rgba(240,244,255,0.52)':'rgba(18,21,26,0.52)',fontSize:'0.9rem'}}>This cannot be undone.</p>
         <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
           <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
@@ -484,7 +484,7 @@ export default function SiteDetail() {
   const [appliancesLoading, setAppliancesLoading] = useState(true);
 
   // ── Design Tokens ──
-  const surface     = isDark ? '#0F1623' : '#ffffff';
+  const surface     = 'var(--card)';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';

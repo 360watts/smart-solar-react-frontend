@@ -15,12 +15,12 @@ import PageHeader from '../../shared/layout/PageHeader';
 // ── Theme ──────────────────────────────────────────────────────────────────────
 
 const mkT = (isDark: boolean) => ({
-  bg:             isDark ? '#080C14' : '#F4F6F8',
-  surface:        isDark ? '#0F1623' : '#FFFFFF',
+  bg:             'var(--background)',
+  surface:        'var(--card)',
   surfaceRaised:  isDark ? '#111927' : '#F8FAFC',
   border:         isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)',
   borderStrong:   isDark ? 'rgba(255,255,255,0.13)' : 'rgba(18,21,26,0.16)',
-  text:           isDark ? '#F0F4FF' : '#12151A',
+  text:           'var(--foreground)',
   textM:          isDark ? '#A8C4DC' : '#374151',
   accent:         '#2FBF71',
   amber:          '#E9B949',
@@ -35,7 +35,7 @@ const inputStyle = (isDark: boolean): React.CSSProperties => ({
   padding: '8px 11px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
   background: isDark ? '#0C1420' : '#FFFFFF',
-  color: isDark ? '#F0F4FF' : '#12151A',
+  color: 'var(--foreground)',
   fontSize: '0.875rem',
   outline: 'none',
   transition: 'border-color 140ms',

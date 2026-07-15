@@ -62,12 +62,12 @@ const Users: React.FC = () => {
   const { isDark } = useTheme();
   // ── Design tokens — mobile AppTheme aligned ──────────────────────────────
   const T = {
-    bg:      isDark ? '#080C14'                      : '#F4F6F8',
-    surface: isDark ? '#0F1623'                      : '#FFFFFF',
+    bg:      'var(--background)',
+    surface: 'var(--card)',
     cardEl:  isDark ? '#111927'                      : '#EDF0F4',
     border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
     borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
-    text:    isDark ? '#F0F4FF'                      : '#12151A',
+    text:    'var(--foreground)',
     textM:   isDark ? 'rgba(240,244,255,0.52)'       : 'rgba(18,21,26,0.52)',
     textD:   isDark ? 'rgba(240,244,255,0.32)'       : 'rgba(18,21,26,0.32)',
     accent:  '#2FBF71',
