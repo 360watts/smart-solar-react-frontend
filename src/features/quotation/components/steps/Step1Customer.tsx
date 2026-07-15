@@ -22,8 +22,6 @@ export function Step1Customer({ form }: Props) {
   const photo      = watch('customer.sitePhotoBase64');
   const sysType    = watch('customer.systemType');
   const custType   = watch('customer.customerType');
-  const custName   = watch('customer.name');
-  const custAddress = watch('customer.address');
 
   function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -113,32 +111,6 @@ export function Step1Customer({ form }: Props) {
               <div className="sq-type-desc">{t.desc}</div>
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Quote snapshot — live summary of what's filled so far */}
-      <div className="sq-snapshot">
-        <div className="sq-snapshot__row">
-          <span className="sq-snapshot__label">Customer</span>
-          <span className="sq-snapshot__value">{custName || '—'}</span>
-        </div>
-        <div className="sq-snapshot__row">
-          <span className="sq-snapshot__label">Site</span>
-          <span className="sq-snapshot__value sq-snapshot__value--address">
-            {custAddress ? custAddress.split('\n')[0] : '—'}
-          </span>
-        </div>
-        <div className="sq-snapshot__row">
-          <span className="sq-snapshot__label">System</span>
-          <span className="sq-snapshot__value">
-            {SYSTEM_TYPES.find(t => t.value === sysType)?.label ?? sysType} · {CUSTOMER_TYPES.find(t => t.value === custType)?.label ?? custType}
-          </span>
-        </div>
-        <div className="sq-snapshot__row">
-          <span className="sq-snapshot__label">Site photo</span>
-          <span className={`sq-snapshot__value ${photo ? 'sq-snapshot__value--live' : ''}`}>
-            {photo ? 'Attached' : 'Not added yet'}
-          </span>
         </div>
       </div>
 
