@@ -72,11 +72,11 @@ const getRelativeTime = (timestamp: string): string => {
 export default function NodeDetailPanel({ node, onClose, isDark }: NodeDetailPanelProps) {
   if (!node) return null;
 
-  const bgColor = isDark ? '#0d1117' : '#ffffff';
-  const surfaceColor = isDark ? '#161b22' : '#f8fafc';
+  const bgColor = 'var(--card)';
+  const surfaceColor = 'var(--card)';
   const borderColor = isDark ? `${node.color}20` : `${node.color}18`;
-  const textPrimary = isDark ? '#f1f5f9' : '#0f172a';
-  const textSecondary = isDark ? '#cbd5e1' : '#475569';
+  const textPrimary = 'var(--foreground)';
+  const textSecondary = 'var(--muted-foreground)';
 
   return (
     <AnimatePresence>

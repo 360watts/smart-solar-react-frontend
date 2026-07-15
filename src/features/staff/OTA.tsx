@@ -244,7 +244,7 @@ const Modal: React.FC<{
       zIndex: 9999, padding: 20,
     }}>
       <div style={{
-        background: isDark ? '#1E293B' : '#FFFFFF',
+        background: 'var(--foreground)',
         borderRadius: 16,
         border: `1px solid ${tok.border(isDark)}`,
         boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
@@ -662,7 +662,7 @@ export const OTA: React.FC = () => {
       />
 
       {loadError === 'warming-up' && (
-        <div style={{ marginBottom: '1rem', padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(251,191,36,0.1)' : '#fffbeb', border: '1px solid rgba(251,191,36,0.4)', color: isDark ? '#fcd34d' : '#92400e', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ marginBottom: '1rem', padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(251,191,36,0.1)' : '#fffbeb', border: '1px solid rgba(251,191,36,0.4)', color: 'var(--warning)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Loader2 size={15} className="ota-spinner" style={{ flexShrink: 0 }} />
           Server is warming up — retrying automatically…
         </div>
@@ -805,7 +805,7 @@ export const OTA: React.FC = () => {
                   <span>{uploadProgress < 100 ? 'Uploading…' : 'Processing…'}</span>
                   <span>{uploadProgress}%</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 999, background: isDark ? '#1E293B' : '#E2E8F0', overflow: 'hidden' }}>
+                <div style={{ height: 6, borderRadius: 999, background: 'var(--muted-foreground)', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%',
                     borderRadius: 999,
@@ -819,7 +819,7 @@ export const OTA: React.FC = () => {
 
             <button type="submit" disabled={uploadProgress !== null} style={{
               ...btnBase,
-              background: uploadProgress !== null ? (isDark ? '#cbd5e1' : '#CBD5E1') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+              background: uploadProgress !== null ? ('var(--muted-foreground)') : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
               color: uploadProgress !== null ? 'var(--muted-foreground)' : 'white',
               boxShadow: uploadProgress !== null ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
               justifyContent: 'center',

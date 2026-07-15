@@ -18,9 +18,9 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({
     return null;
   }
 
-  const bgColor = isDark ? '#450a0a' : '#FEF2F2';
+  const bgColor = 'var(--danger-soft)';
   const borderColor = '#EF4444';
-  const textColor = isDark ? '#fca5a5' : '#991b1b';
+  const textColor = 'var(--destructive)';
 
   return (
     <div

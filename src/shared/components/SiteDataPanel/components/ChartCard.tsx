@@ -47,7 +47,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.92rem',
-              color: isDark ? '#f1f5f9' : '#1e293b', letterSpacing: '-0.01em' }}>
+              color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
               {title}
             </h3>
             {isLive && (
@@ -75,7 +75,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           {subtitle && (
             <p style={{ margin: '2px 0 0', fontSize: '0.72rem',
               fontFamily: 'Poppins, sans-serif', fontWeight: 600,
-              color: isDark ? '#b8cfe8' : '#374151' }}>
+              color: 'var(--muted-foreground)' }}>
               {subtitle}
             </p>
           )}

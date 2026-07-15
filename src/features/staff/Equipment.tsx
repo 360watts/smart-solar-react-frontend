@@ -17,24 +17,24 @@ import PageHeader from '../../shared/layout/PageHeader';
 const mkT = (isDark: boolean) => ({
   bg:             'var(--background)',
   surface:        'var(--card)',
-  surfaceRaised:  isDark ? '#111927' : '#F8FAFC',
+  surfaceRaised:  'var(--card)',
   border:         isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)',
   borderStrong:   isDark ? 'rgba(255,255,255,0.13)' : 'rgba(18,21,26,0.16)',
   text:           'var(--foreground)',
-  textM:          isDark ? '#A8C4DC' : '#374151',
+  textM:          'var(--muted-foreground)',
   accent:         '#2FBF71',
   amber:          '#E9B949',
   overlay:        isDark ? 'rgba(8,12,20,0.82)' : 'rgba(0,0,0,0.50)',
   glass:          isDark ? 'rgba(13,19,32,0.97)' : 'rgba(255,255,255,0.98)',
   glassHL:        isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.9)',
-  inputBg:        isDark ? '#0C1420' : '#FFFFFF',
+  inputBg:        'var(--card)',
   inputBorder:    isDark ? 'rgba(255,255,255,0.12)' : 'var(--border-strong)',
 });
 
 const inputStyle = (isDark: boolean): React.CSSProperties => ({
   padding: '8px 11px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-  background: isDark ? '#0C1420' : '#FFFFFF',
+  background: 'var(--card)',
   color: 'var(--foreground)',
   fontSize: '0.875rem',
   outline: 'none',
@@ -43,7 +43,7 @@ const inputStyle = (isDark: boolean): React.CSSProperties => ({
 
 const labelStyle = (isDark: boolean): React.CSSProperties => ({
   fontSize: '0.75rem', fontWeight: 600,
-  color: isDark ? '#A8C4DC' : '#374151',
+  color: 'var(--muted-foreground)',
   display: 'block', marginBottom: 5,
   fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.01em',
 });

@@ -104,9 +104,9 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const selected = COUNTRIES.find(c => c.dialCode === dialCode) || COUNTRIES[0];
 
   const inputBorder  = isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)';
-  const inputBg      = isDark ? '#2a2a2a' : '#ffffff';
-  const inputColor   = isDark ? '#f3f4f6' : '#111827';
-  const dropBg       = isDark ? '#1e1e1e' : '#ffffff';
+  const inputBg      = 'var(--card)';
+  const inputColor   = 'var(--foreground)';
+  const dropBg       = 'var(--card)';
   const dropBorder   = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)';
   const hoverBg      = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
 
@@ -125,7 +125,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
             padding: '0 10px',
-            background: isDark ? '#333' : '#f9fafb',
+            background: 'var(--card)',
             border: 'none',
             borderRight: inputBorder,
             cursor: disabled ? 'not-allowed' : 'pointer',

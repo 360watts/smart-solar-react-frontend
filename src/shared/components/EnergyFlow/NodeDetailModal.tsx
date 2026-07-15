@@ -691,7 +691,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: isDark ? '#0d1117' : '#ffffff',
+          backgroundColor: 'var(--card)',
           borderColor: `${accentColor}40`,
           borderWidth: 1,
           titleColor: chartTitle,

@@ -226,7 +226,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
       transition: 'opacity 0.2s ease',
     },
     panel: {
-      background: isDark ? '#0C1018' : '#FFFFFF',
+      background: 'var(--card)',
       border: `1px solid ${isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.15)'}`,
       borderRadius: 16,
       width: '100%', maxWidth: 600, maxHeight: '84vh',
@@ -335,7 +335,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
             }}>
               <span style={{
                 fontFamily: 'Fira Code, JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 600,
-                color: isDark ? '#F87171' : '#DC2626',
+                color: 'var(--destructive)',
               }}>{d.device_serial}</span>
               {rowErrors[d.id] && (
                 <span style={{ fontSize: '0.675rem', color: isDark ? 'rgba(240,244,255,0.35)' : 'rgba(18,21,26,0.4)' }}>
@@ -350,7 +350,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           fontSize: '0.75rem', marginBottom: 8, display: 'block',
           color: isDark ? 'rgba(240,244,255,0.45)' : 'rgba(18,21,26,0.5)',
         }}>
-          Type <span style={{ fontFamily: 'Fira Code, JetBrains Mono, monospace', color: isDark ? '#F87171' : '#DC2626' }}>{requiredConfirmText}</span> to confirm
+          Type <span style={{ fontFamily: 'Fira Code, JetBrains Mono, monospace', color: 'var(--destructive)' }}>{requiredConfirmText}</span> to confirm
         </label>
         <input
           autoFocus
@@ -478,7 +478,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
             >
               {allVisibleSelected ? <CheckSquare size={14} color="#EF4444" /> : <Square size={14} />}
             </button>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: isDark ? '#F87171' : '#DC2626' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--destructive)' }}>
               {selectedCount} selected
             </span>
             <button
@@ -666,7 +666,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     border: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.18)'}`,
                     borderTop: 'none',
                     background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.04)',
-                    fontSize: '0.7rem', color: isDark ? '#F87171' : '#DC2626',
+                    fontSize: '0.7rem', color: 'var(--destructive)',
                   }}>
                     <ShieldAlert size={11} style={{ flexShrink: 0 }} /> {rowError}
                   </div>

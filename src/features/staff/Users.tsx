@@ -64,7 +64,7 @@ const Users: React.FC = () => {
   const T = {
     bg:      'var(--background)',
     surface: 'var(--card)',
-    cardEl:  isDark ? '#111927'                      : '#EDF0F4',
+    cardEl:  'var(--card)',
     border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
     borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
     text:    'var(--foreground)',
@@ -484,7 +484,7 @@ const Users: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Account Information
                       </span>
                     </div>
@@ -518,7 +518,7 @@ const Users: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Personal Details
                       </span>
                     </div>
@@ -570,7 +570,7 @@ const Users: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Contact Information
                       </span>
                     </div>
@@ -823,8 +823,8 @@ const Users: React.FC = () => {
                 padding: '8px',
                 border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
                 borderRadius: '6px',
-                background: isDark ? '#1a1a1a' : '#0f172a',
-                color: isDark ? '#e0e0e0' : '#f8fafc',
+                background: 'var(--foreground)',
+                color: 'var(--muted-foreground)',
                 cursor: 'pointer',
                 fontSize: '0.875rem'
               }}
@@ -901,7 +901,7 @@ const Users: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                       Account Information
                     </span>
                   </div>
@@ -991,7 +991,7 @@ const Users: React.FC = () => {
                             animation: 'spin 0.9s linear infinite',
                           }} />
                           <div>
-                            <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                            <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'var(--info)' }}>
                               Waiting for customer to verify…
                             </p>
                             <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: T.textD }}>
@@ -1023,7 +1023,7 @@ const Users: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                       Personal Details
                     </span>
                   </div>
@@ -1075,7 +1075,7 @@ const Users: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                       Contact Information
                     </span>
                   </div>
@@ -1224,7 +1224,7 @@ const Users: React.FC = () => {
                 borderRadius: 8,
                 padding: '12px 14px',
                 fontSize: '0.875rem',
-                color: isDark ? '#fca5a5' : '#991b1b',
+                color: 'var(--destructive)',
               }}>
                 This will permanently delete the user account. Any devices associated with this user will become unassigned.
               </div>

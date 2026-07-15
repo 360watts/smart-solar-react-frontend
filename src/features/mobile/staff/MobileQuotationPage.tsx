@@ -23,10 +23,10 @@ function StatusPill({ status }: { status: string }) {
 
 export default function MobileQuotationPage() {
   const { isDark } = useTheme();
-  const bg = isDark ? '#07090F' : '#F4F7FA';
+  const bg = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text = isDark ? '#F1F5F9' : '#0F172A';
+  const text = 'var(--foreground)';
   const muted = 'var(--muted-foreground)';
   const accent = '#2FBF71';
 
@@ -205,7 +205,7 @@ export default function MobileQuotationPage() {
 
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 }} onClick={() => setDeleteTarget(null)}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', border: `1px solid ${border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 360 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--card)', border: `1px solid ${border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: text, marginBottom: 8 }}>Delete quotation?</div>
             <div style={{ fontSize: '0.82rem', color: muted, lineHeight: 1.5, marginBottom: 16 }}>{deleteTarget.quote_number} for {deleteTarget.customer_name} will be permanently removed.</div>
             <div style={{ display: 'flex', gap: 10 }}>

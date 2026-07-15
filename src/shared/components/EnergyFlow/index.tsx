@@ -222,7 +222,7 @@ function HubNode({ isDark }: { isDark: boolean }) {
       </motion.div>
       <span style={{
         fontSize: 8, fontWeight: 800, textTransform: 'uppercase',
-        letterSpacing: '0.12em', color: isDark ? '#6366f1' : '#4f46e5',
+        letterSpacing: '0.12em', color: 'var(--info)',
       }}>Gateway</span>
     </div>
   );
@@ -360,7 +360,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         }}>{label}</div>
         <div style={{
           fontSize: compact ? 15 : 19, fontWeight: 900,
-          color: isDark ? '#f1f5f9' : '#0f172a',
+          color: 'var(--foreground)',
           letterSpacing: '-0.03em', lineHeight: 1,
           fontVariantNumeric: 'tabular-nums',
           fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
@@ -562,7 +562,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const gridFmt = fmtPower(grid);
 
   const anomalous = nonGridDevices.filter(d => d.is_active && d.latest === null).map(deviceLabel);
-  const bgColor   = isDark ? '#06090f' : '#ffffff';
+  const bgColor   = 'var(--card)';
 
   const handleNodeClick = (nodeData: NodeData) => {
     setSelectedNode(nodeData);
@@ -677,7 +677,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 },
               })} style={{ cursor: 'pointer' }}>
                 <NodeCard label="Solar PV"
-                  icon={<Sun size={22} color={pvActive ? '#f59e0b' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
+                  icon={<Sun size={22} color={pvActive ? '#f59e0b' : 'var(--muted-foreground)'} />}
                   valueStr={pvFmt.valueStr} unit={pvFmt.unit}
                   color="#f59e0b" active={pvActive} isDark={isDark} />
               </div>
@@ -700,7 +700,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 },
               })} style={{ cursor: 'pointer' }}>
                 <NodeCard label="Battery"
-                  icon={<Battery size={22} color={battPresent ? '#0ea5e9' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
+                  icon={<Battery size={22} color={battPresent ? '#0ea5e9' : 'var(--muted-foreground)'} />}
                   valueStr={battFmt.valueStr} unit={battFmt.unit}
                   color="#0ea5e9" active={battPresent}
                   subLabel={(battSoc ?? 0) > 0 ? `${Math.round(battSoc ?? 0)}%${isCharging ? ' ↑' : isDischarging ? ' ↓' : ''}` : undefined}
@@ -724,7 +724,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 },
               })} style={{ cursor: 'pointer' }}>
                 <NodeCard label="Grid"
-                  icon={<Zap size={22} color={gridActive ? gridColor : isDark ? '#cbd5e1' : '#cbd5e1'} />}
+                  icon={<Zap size={22} color={gridActive ? gridColor : 'var(--muted-foreground)'} />}
                   valueStr={gridFmt.valueStr} unit={gridFmt.unit}
                   color={gridColor} active={gridActive}
                   subLabel={isExporting ? '↑ Selling' : isImporting ? '↓ Buying' : undefined}
@@ -762,7 +762,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 inverterPhases: inverterPhases ?? undefined,
               })}>
                 <NodeCard label="Total Load"
-                  icon={<Home size={22} color={totalLoadActive ? '#f87171' : isDark ? '#cbd5e1' : '#cbd5e1'} />}
+                  icon={<Home size={22} color={totalLoadActive ? '#f87171' : 'var(--muted-foreground)'} />}
                   valueStr={totalLoadFmt.valueStr} unit={totalLoadFmt.unit}
                   color="#f87171" active={totalLoadActive} isDark={isDark} />
               </div>

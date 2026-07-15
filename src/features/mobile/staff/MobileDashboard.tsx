@@ -87,10 +87,10 @@ function startOfTodayIST(): string {
 const MobileDashboard: React.FC = () => {
   const { isDark } = useTheme();
 
-  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
 
   const [sites, setSites]         = useState<Site[]>([]);
@@ -457,7 +457,7 @@ const MobileDashboard: React.FC = () => {
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? (isDark ? '#fff' : '#0f172a') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? ('var(--foreground)') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
                             {name}
                           </span>
                         </div>

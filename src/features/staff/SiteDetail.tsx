@@ -191,7 +191,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
   const save=async()=>{setErr(null);const ve=eqValidateInverter(form);if(ve){setErr(ve);return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateInverter(siteId,modal.item.id,p);else await apiService.createInverter(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
   const doDelete=async()=>{if(!del)return;try{await apiService.deleteInverter(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Zap size={17}/>} title="Inverters" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
       {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No inverters" description="Add the inverter from the contract."/></div>:(
@@ -228,7 +228,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
                 <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required placeholder="e.g., INV-2026-0001"/>
                 <EqFormField label="Capacity (kVA)" value={form.capacity_kva} onChange={v=>f('capacity_kva',v)} type="number" isDark={isDark} required placeholder="e.g., 10"/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>DC Input Specs</div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>DC Input Specs</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="Max Input Voltage (V)" value={form.max_input_voltage_v??''} onChange={v=>f('max_input_voltage_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Max Input Current (A)" value={form.max_input_current_a??''} onChange={v=>f('max_input_current_a',v)} type="number" isDark={isDark}/>
@@ -237,7 +237,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
                 <EqFormField label="Operating Min (V)" value={form.operating_voltage_min_v??''} onChange={v=>f('operating_voltage_min_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Operating Max (V)" value={form.operating_voltage_max_v??''} onChange={v=>f('operating_voltage_max_v',v)} type="number" isDark={isDark}/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>Installation</div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>Installation</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="TEDA Scheme" value={form.teda_scheme} onChange={v=>f('teda_scheme',v)} isDark={isDark}/>
                 <EqFormField label="Logger Serial" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
@@ -273,7 +273,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
   const save=async()=>{setErr(null);if(eqIsBlank(form.make)){setErr('Make is required.');return;}if(eqIsBlank(form.serial_number)){setErr('Serial Number is required.');return;}if(eqParsePos(form.capacity_kwh)==null){setErr('Capacity (kWh) must be > 0.');return;}if(eqHasDupSerial(items,form.make,form.serial_number,modal.item?.id)){setErr('Serial must be unique for this make.');return;}setSaving(true);try{const p=eqCleanNulls(form as any);if(modal.item)await apiService.updateBattery(siteId,modal.item.id,p);else await apiService.createBattery(siteId,p);setModal({open:false,item:null});await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Save failed');}finally{setSaving(false);}};
   const doDelete=async()=>{if(!del)return;try{await apiService.deleteBattery(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Battery size={17}/>} title="Batteries" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
       {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No batteries" description="Add the battery from the contract."/></div>:(
@@ -310,7 +310,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
                 <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required/>
                 <EqFormField label="Capacity (kWh)" value={form.capacity_kwh} onChange={v=>f('capacity_kwh',v)} type="number" isDark={isDark} required/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:isDark?'#a5b4fc':'#6366f1',marginTop:4}}>Electrical Specs</div>
+              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>Electrical Specs</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="Nominal Capacity (Ah)" value={form.nominal_capacity_ah??''} onChange={v=>f('nominal_capacity_ah',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Nominal Voltage (V)" value={form.nominal_voltage_v??''} onChange={v=>f('nominal_voltage_v',v)} type="number" isDark={isDark}/>
@@ -349,7 +349,7 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
   const doDelete=async()=>{if(!del)return;try{await apiService.deletePanel(siteId,del.id);setDel(null);await onRefresh();}catch(e){setErr(e instanceof Error?e.message:'Delete failed');}};
   const activeWp=items.filter(p=>p.is_active).reduce((s,p)=>s+eqToPanelWp(p.capacity_wp),0);
   return (
-    <div style={{background:isDark?'#141414':'#ffffff',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
+    <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Sun size={17}/>} title="Solar Panels" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:'var(--muted-foreground)',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
@@ -488,12 +488,12 @@ export default function SiteDetail() {
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
-  const textMain    = isDark ? '#F0F4FF' : '#0f172a';
+  const textMain    = 'var(--foreground)';
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
-  const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
-  const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';
+  const nativeSelectBg = 'var(--foreground)';
+  const nativeSelectFg = 'var(--foreground)';
 
   const palette = {
     ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },

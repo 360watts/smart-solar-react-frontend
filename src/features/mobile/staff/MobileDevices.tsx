@@ -114,8 +114,8 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
     <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', overflow: 'hidden' }}>
       <div style={{ padding: '9px 10px', borderBottom: `1px solid ${border}`, display: 'grid', gap: 8, background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: isDark ? '#CBD5E1' : '#334155', fontSize: '0.72rem' }} />
-          <input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: isDark ? '#CBD5E1' : '#334155', fontSize: '0.72rem' }} />
+          <input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.72rem' }} />
+          <input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.72rem' }} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           <button onClick={() => loadLogs(from || undefined, to || undefined)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: '0.72rem', fontWeight: 700 }}>Fetch</button>
@@ -143,7 +143,7 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
               {entry.log_level.slice(0, 4)}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.68rem', color: isDark ? '#CBD5E1' : '#334155', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{entry.message}</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--muted-foreground)', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{entry.message}</div>
               <div style={{ fontSize: '0.6rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
                 {entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'No timestamp'}
                 {entry.size_bytes ? ` · ${fmtSize(entry.size_bytes)}` : ''}
@@ -164,12 +164,12 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
       </div>
       {viewing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 70, display: 'flex', alignItems: 'flex-end' }} onClick={() => setViewing(null)}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '75dvh', border: `1px solid ${border}`, display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--card)', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '75dvh', border: `1px solid ${border}`, display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewing.name}</div>
               <button onClick={() => setViewing(null)} style={{ width: 32, height: 32, borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
             </div>
-            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontSize: '0.68rem', lineHeight: 1.5, color: isDark ? '#CBD5E1' : '#334155', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{viewing.content}</pre>
+            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontSize: '0.68rem', lineHeight: 1.5, color: 'var(--muted-foreground)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{viewing.content}</pre>
           </div>
         </div>
       )}
@@ -205,10 +205,10 @@ const fmtBytes = (b?: number | null) => {
 const MobileDevices: React.FC = () => {
   const { isDark } = useTheme();
 
-  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 
@@ -697,11 +697,11 @@ const MobileDevices: React.FC = () => {
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'grid', gap: 6 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Assigned User</label>
-                  <input value={editForm.user} onChange={e => setEditForm(prev => ({ ...prev, user: e.target.value }))} placeholder="Username" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                  <input value={editForm.user} onChange={e => setEditForm(prev => ({ ...prev, user: e.target.value }))} placeholder="Username" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
                 <div style={{ display: 'grid', gap: 6 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi SSID</label>
-                  <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                  <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -711,12 +711,12 @@ const MobileDevices: React.FC = () => {
                     </button>
                   </div>
                   {showWifiPassword && (
-                    <input type="password" value={editForm.wifi_password} onChange={e => setEditForm(prev => ({ ...prev, wifi_password: e.target.value }))} placeholder="New Wi-Fi password" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                    <input type="password" value={editForm.wifi_password} onChange={e => setEditForm(prev => ({ ...prev, wifi_password: e.target.value }))} placeholder="New Wi-Fi password" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                   )}
                 </div>
                 <div style={{ display: 'grid', gap: 6 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Config Version ID</label>
-                  <input value={editForm.config_version} onChange={e => setEditForm(prev => ({ ...prev, config_version: e.target.value }))} placeholder="Config version" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#111827' : '#fff', color: text }} />
+                  <input value={editForm.config_version} onChange={e => setEditForm(prev => ({ ...prev, config_version: e.target.value }))} placeholder="Config version" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
                 {editError && <div style={{ fontSize: '0.72rem', color: '#F87171', lineHeight: 1.4 }}>{editError}</div>}
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>

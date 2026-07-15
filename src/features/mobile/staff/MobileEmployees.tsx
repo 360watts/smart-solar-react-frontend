@@ -46,10 +46,10 @@ const MobileEmployees: React.FC = () => {
   const { isDark } = useTheme();
   const { isAdmin } = useAuth();
 
-  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inputBg = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
@@ -333,7 +333,7 @@ const MobileEmployees: React.FC = () => {
       {(modal === 'create' || modal === 'edit') && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'flex-end' }}
           onClick={() => setModal('none')}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', backdropFilter:'blur(20px)', borderRadius:'20px 20px 0 0', padding:'20px 16px 32px', width:'100%', maxHeight:'85dvh', overflowY:'auto', border:`1px solid ${border}` }}
+          <div style={{ background: 'var(--card)', backdropFilter:'blur(20px)', borderRadius:'20px 20px 0 0', padding:'20px 16px 32px', width:'100%', maxHeight:'85dvh', overflowY:'auto', border:`1px solid ${border}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ width:36, height:4, borderRadius:2, background:border, margin:'0 auto 16px' }}/>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
@@ -382,7 +382,7 @@ const MobileEmployees: React.FC = () => {
       {modal === 'delete' && deleteTarget && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 16px' }}
           onClick={() => setModal('none')}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', backdropFilter:'blur(20px)', borderRadius:20, padding:'22px 18px', width:'100%', maxWidth:360, border:`1px solid ${border}` }}
+          <div style={{ background: 'var(--card)', backdropFilter:'blur(20px)', borderRadius:20, padding:'22px 18px', width:'100%', maxWidth:360, border:`1px solid ${border}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'1rem', fontWeight:700, color:text, marginBottom:8, fontFamily:"'Outfit', sans-serif" }}>Remove Employee?</div>
             <div style={{ fontSize:'0.82rem', color:muted, marginBottom:22, fontFamily:"'DM Sans', sans-serif" }}>This will remove <strong style={{ color:text }}>{fullName(deleteTarget)}</strong> from the system.</div>

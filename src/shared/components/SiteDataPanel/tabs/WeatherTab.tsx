@@ -27,7 +27,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
-          padding: 40, textAlign: 'center', color: isDark ? '#b8d0ec' : '#374151',
+          padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
           borderRadius: 16, fontSize: '0.875rem',
           background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
           border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
@@ -55,8 +55,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
-        titleColor: isDark ? '#f1f5f9' : '#111827',
-        bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)',
+        bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'bar'>) => ` ${Number(item.parsed.y).toFixed(1)} W/m²` },
@@ -64,8 +64,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -86,8 +86,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
-        titleColor: isDark ? '#f1f5f9' : '#111827',
-        bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)',
+        bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` ${Number(item.parsed.y).toFixed(2)}°C` },
@@ -95,8 +95,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -106,7 +106,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ ...panelBg, padding: 48, textAlign: 'center', color: isDark ? '#b8d0ec' : '#374151' }}
+        style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--muted-foreground)' }}
       >
         <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
         <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
@@ -127,7 +127,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             { label: 'Hours', value: summary.hours_compared ?? '—', color: '#8b5cf6' },
           ].map(c => (
             <div key={c.label} style={{ padding: '10px 14px', borderRadius: 12, background: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.95)', border: `1px solid ${c.color}30` }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#b8d0ec' : '#374151', fontFamily: 'Poppins, sans-serif', marginBottom: 3 }}>{c.label}</div>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)', fontFamily: 'Poppins, sans-serif', marginBottom: 3 }}>{c.label}</div>
               <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.1rem', color: c.color }}>{c.value}</div>
             </div>
           ))}
@@ -264,7 +264,7 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
             border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
           }}
         >
-          <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: isDark ? '#b8d0ec' : '#374151', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Current Weather
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -304,7 +304,7 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
           style={{
             padding: 24,
             textAlign: 'center',
-            color: isDark ? '#b8d0ec' : '#374151',
+            color: 'var(--muted-foreground)',
             borderRadius: 16,
             background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(249, 250, 251, 0.8)',
             border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,

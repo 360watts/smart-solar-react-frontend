@@ -95,17 +95,17 @@ export default function CommissioningWizard() {
   const [applianceNotes, setApplianceNotes] = useState('');
 
   // ── Tokens ──
-  const bg          = isDark ? '#080C14' : '#f0fdf4';
+  const bg          = 'var(--background)';
   const surface     = 'var(--card)';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
-  const textMain    = isDark ? '#F0F4FF' : '#0f172a';
+  const textMain    = 'var(--foreground)';
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
-  const nativeSelectBg = isDark ? '#0f172a' : '#ffffff';
-  const nativeSelectFg = isDark ? '#e2e8f0' : '#0f172a';
+  const nativeSelectBg = 'var(--foreground)';
+  const nativeSelectFg = 'var(--foreground)';
 
   // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {

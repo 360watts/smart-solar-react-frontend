@@ -55,11 +55,11 @@ const mapLogStatus = (s: string | null): DeviceStatus['status'] => {
 const MobileOTA: React.FC = () => {
   const { isDark } = useTheme();
 
-  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const surface2= isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
   const inp     = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
@@ -517,7 +517,7 @@ const MobileOTA: React.FC = () => {
       {sheet && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'flex-end' }}
           onClick={() => setSheet(false)}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', backdropFilter: 'blur(20px)', borderRadius: '20px 20px 0 0', width: '100%', height: 'min(640px, 91dvh)', display: 'flex', flexDirection: 'column', border: `1px solid ${border}` }}
+          <div style={{ background: 'var(--card)', backdropFilter: 'blur(20px)', borderRadius: '20px 20px 0 0', width: '100%', height: 'min(640px, 91dvh)', display: 'flex', flexDirection: 'column', border: `1px solid ${border}` }}
             onClick={e => e.stopPropagation()}>
 
             <div style={{ padding: '12px 16px 12px', flexShrink: 0, borderBottom: `1px solid ${border}` }}>
@@ -666,7 +666,7 @@ const MobileOTA: React.FC = () => {
               <div style={{ height: 4 }} />
             </div>
 
-            <div style={{ padding: '10px 16px 32px', borderTop: `1px solid ${border}`, flexShrink: 0, background: isDark ? '#0D1117' : '#FFFFFF' }}>
+            <div style={{ padding: '10px 16px 32px', borderTop: `1px solid ${border}`, flexShrink: 0, background: 'var(--card)' }}>
               <button onClick={handleDeploy}
                 disabled={deploying || !deployFWId || deployDevices.size === 0}
                 style={{

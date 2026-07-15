@@ -36,10 +36,10 @@ interface SlaveFormState {
 
 export default function MobileDevicePresets() {
   const { isDark } = useTheme();
-  const bg = isDark ? '#07090F' : '#F4F7FA';
+  const bg = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text = isDark ? '#F1F5F9' : '#0F172A';
+  const text = 'var(--foreground)';
   const muted = 'var(--muted-foreground)';
   const accent = '#2FBF71';
 
@@ -263,7 +263,7 @@ export default function MobileDevicePresets() {
 
       {(creating || editing) && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'flex-end' }} onClick={() => { setCreating(false); setEditing(null); }}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', borderRadius: '20px 20px 0 0', padding: '18px 16px 28px', width: '100%', border: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '18px 16px 28px', width: '100%', border: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: text }}>{creating ? 'New preset' : 'Edit preset'}</div>
               <button onClick={() => { setCreating(false); setEditing(null); }} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
@@ -401,7 +401,7 @@ export default function MobileDevicePresets() {
 
       {selected && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 45, display: 'flex', alignItems: 'flex-end' }} onClick={() => setSelected(null)}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', borderRadius: '20px 20px 0 0', padding: '18px 16px 28px', width: '100%', border: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '18px 16px 28px', width: '100%', border: `1px solid ${border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: text }}>{selected.name}</div>
               <button onClick={() => loadSlaves(selected, true)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -446,7 +446,7 @@ export default function MobileDevicePresets() {
 
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 60 }} onClick={() => setDeleteTarget(null)}>
-          <div style={{ background: isDark ? '#0D1117' : '#FFFFFF', border: `1px solid ${border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 360 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--card)', border: `1px solid ${border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: text, marginBottom: 8 }}>Delete preset?</div>
             <div style={{ fontSize: '0.82rem', color: muted, lineHeight: 1.5, marginBottom: 16 }}>{deleteTarget.name} will be permanently removed.</div>
             <div style={{ display: 'flex', gap: 10 }}>

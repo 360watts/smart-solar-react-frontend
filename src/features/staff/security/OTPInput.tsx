@@ -53,7 +53,7 @@ const OTPInput: React.FC<OTPInputProps> = ({ value, onChange, onComplete, isDark
 
   const tokenBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)';
   const tokenBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-  const tokenText = isDark ? '#F0F4FF' : '#0A0E1A';
+  const tokenText = 'var(--foreground)';
 
   return (
     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>

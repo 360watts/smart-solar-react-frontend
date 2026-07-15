@@ -9,8 +9,8 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
     ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')
     : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)');
   const titleColor = customerMode
-    ? (isDark ? '#F0F7F2' : '#0D2318')
-    : (isDark ? '#F0F4FF' : '#0A0E1A');
+    ? ('var(--success-soft)')
+    : ('var(--foreground)');
   const descColor = customerMode
     ? (isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)')
     : (isDark ? '#8892A4' : 'var(--muted-foreground)');

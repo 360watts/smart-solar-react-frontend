@@ -468,7 +468,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
   };
 
   const modalContainerStyle: React.CSSProperties = {
-    background: isDark ? '#1a1a1a' : '#ffffff',
+    background: 'var(--card)',
     borderRadius: 16,
     boxShadow: isDark 
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)' 
@@ -510,7 +510,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     fontWeight: 700,
     letterSpacing: '0.05em',
     textTransform: 'uppercase' as const,
-    color: isDark ? '#a5b4fc' : '#6366f1',
+    color: 'var(--info)',
   };
 
   const rowSeparatorStyle: React.CSSProperties = {
@@ -534,8 +534,8 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
     padding: '10px 12px',
     borderRadius: 8,
     border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid var(--border-strong)',
-    background: isDark ? '#2a2a2a' : '#ffffff',
-    color: isDark ? '#f3f4f6' : '#111827',
+    background: 'var(--card)',
+    color: 'var(--foreground)',
     fontSize: '0.875rem',
     transition: 'all 0.2s ease',
   };
@@ -575,7 +575,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
               )}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.2, color: isDark ? '#f9fafb' : '#111827' }}>
+              <div style={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.2, color: 'var(--foreground)' }}>
                 {editingSlave
                   ? `Edit Slave: ${editingSlave.deviceName}`
                   : 'Configure New Slave'}
@@ -630,7 +630,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
               }}
             >
               <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: '0.875rem', color: isDark ? '#fca5a5' : '#991b1b' }}>
+              <div style={{ flex: 1, fontSize: '0.875rem', color: 'var(--destructive)' }}>
                 <strong>Error:</strong> {error}
               </div>
               {onClearError && (
@@ -639,7 +639,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: isDark ? '#fca5a5' : '#991b1b',
+                    color: 'var(--destructive)',
                     cursor: 'pointer',
                     padding: 0,
                     flexShrink: 0,
@@ -885,7 +885,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                   borderLeft: editingRegisterAddress !== null ? '4px solid #f59e0b' : undefined,
                 }}
               >
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: 14, color: isDark ? '#f3f4f6' : '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: 14, color: 'var(--foreground)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   {editingRegisterAddress !== null ? (
                     <>
                       <Edit2 size={16} color="#f59e0b" />
@@ -1550,7 +1550,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                           background: isDark ? 'rgba(239, 68, 68, 0.1)' : '#fef2f2',
                           borderLeft: '3px solid #ef4444',
                           borderRadius: 8,
-                          color: isDark ? '#fca5a5' : '#991b1b',
+                          color: 'var(--destructive)',
                           fontSize: '0.8rem',
                           maxHeight: 120,
                           overflowY: 'auto',
@@ -1613,7 +1613,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       marginBottom: 12,
                     }}
                   >
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: isDark ? '#f3f4f6' : '#111827' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--foreground)' }}>
                       Configured Registers ({slaveForm.registers.length}
                       {registerSearch ? ` · ${visibleCount} shown` : ''})
                     </span>
@@ -1663,7 +1663,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       fontSize: '0.8125rem',
                       flexWrap: 'wrap',
                     }}>
-                      <span style={{ color: isDark ? '#a5b4fc' : '#4f46e5', fontWeight: 600, marginRight: 4 }}>
+                      <span style={{ color: 'var(--info)', fontWeight: 600, marginRight: 4 }}>
                         {selectedRegisters.size} selected
                       </span>
                       <button type="button" onClick={() => setSelectedEnabled(true)}
@@ -1700,7 +1700,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                     }}>
                       <thead>
                         <tr style={{
-                          background: isDark ? '#242424' : '#f9fafb',
+                          background: 'var(--card)',
                           position: 'sticky',
                           top: 0,
                           zIndex: 1,
@@ -1764,7 +1764,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                                   style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#6366f1' }}
                                 />
                               </td>
-                              <td style={{ padding: '12px 16px', color: isDark ? '#f3f4f6' : '#111827', fontWeight: 500 }}>{reg.label}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--foreground)', fontWeight: 500 }}>{reg.label}</td>
                               <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: 'var(--muted-foreground)' }}>{reg.address}</td>
                               <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{reg.functionCode || 3}</td>
                               <td style={{ padding: '12px 16px', color: 'var(--muted-foreground)' }}>{getDataTypeName(reg.dataType)}</td>

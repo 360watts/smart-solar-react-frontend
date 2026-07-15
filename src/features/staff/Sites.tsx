@@ -131,7 +131,7 @@ export default function Sites() {
   // ── Design tokens — matches mobile AppTheme ───────────────────────────────
   const bg      = 'var(--background)';
   const surface = 'var(--card)';
-  const cardEl  = isDark ? '#111927' : '#EDF0F4';
+  const cardEl  = 'var(--card)';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
   const borderMuted = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
   const text    = 'var(--foreground)';

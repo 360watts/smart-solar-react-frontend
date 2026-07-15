@@ -323,7 +323,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           <div style={{
             fontFamily: "'DM Sans', sans-serif",
             fontWeight: 700, fontSize: 14,
-            color: isDark ? '#e2e8f0' : '#0f172a',
+            color: 'var(--foreground)',
             letterSpacing: '-0.01em',
           }}>
             360Watts
@@ -349,7 +349,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             padding: '5px 6px', borderRadius: 8,
             border: `1px solid ${sideBorder}`,
             background: isDark ? 'rgba(47,191,113,0.07)' : 'rgba(47,191,113,0.06)',
-            color: isDark ? '#5de8a4' : '#2FBF71',
+            color: 'var(--primary)',
             cursor: 'pointer', display: 'flex', alignItems: 'center',
             transition: 'all 0.15s ease', flexShrink: 0, outline: 'none',
           }}
@@ -365,7 +365,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           style={{
             marginLeft: 'auto', padding: 5, borderRadius: 7, border: 'none',
             background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(0,0,0,0.05)',
-            color: isDark ? '#5de8a4' : '#2FBF71',
+            color: 'var(--primary)',
             cursor: 'pointer', flexShrink: 0, display: 'flex', outline: 'none',
           }}
         >
@@ -554,7 +554,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{
                 fontSize: 12, fontWeight: 600,
-                color: isDark ? '#e2e8f0' : '#0f172a',
+                color: 'var(--foreground)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 fontFamily: "'DM Sans', sans-serif",
               }}>
@@ -571,7 +571,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             <ChevronDown
               size={12}
               style={{
-                color: isDark ? '#5de8a4' : '#2FBF71',
+                color: 'var(--primary)',
                 transform: profileOpen ? 'rotate(180deg)' : 'none',
                 transition: 'transform 0.2s ease',
                 flexShrink: 0,
@@ -638,7 +638,7 @@ const StaffLayout: React.FC = () => {
   }, [desktopCollapsed]);
 
   const desktopSidebarWidth = desktopCollapsed ? STAFF_SIDEBAR_COLLAPSED : STAFF_SIDEBAR_EXPANDED;
-  const pageBg   = isDark ? '#070B1A' : '#F4F6F8';
+  const pageBg   = 'var(--background)';
   const overlayBg = isDark ? 'rgba(0,0,0,0.72)' : 'rgba(7,11,26,0.46)';
 
   return (
@@ -687,7 +687,7 @@ const StaffLayout: React.FC = () => {
           minHeight: '100vh',
           boxSizing: 'border-box',
           overflowX: 'auto',
-          color: isDark ? '#e2e8f0' : '#0f172a',
+          color: 'var(--foreground)',
           fontFamily: "'DM Sans', sans-serif",
           transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1), width 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}

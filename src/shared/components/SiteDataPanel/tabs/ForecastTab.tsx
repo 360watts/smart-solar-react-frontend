@@ -90,14 +90,14 @@ const ChartCard: React.FC<ChartCardProps> = ({
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: isDark ? '#f1f5f9' : '#1e293b' }}>{title}</h3>
+            <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--foreground)' }}>{title}</h3>
             {isLive && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00a63e', border: '1px solid rgba(0,166,62,0.3)', borderRadius: 999, padding: '2px 7px' }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} />Live
               </span>
             )}
           </div>
-          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: isDark ? '#c4daf0' : '#374151' }}>{subtitle}</p>}
+          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: 'var(--muted-foreground)' }}>{subtitle}</p>}
         </div>
         {headerRight && <div style={{ flexShrink: 0 }}>{headerRight}</div>}
       </div>
@@ -207,7 +207,7 @@ const _CAUSE_COLOR: Record<string, string> = {
   minor_underperformance: '#3b82f6',
   normal: '#00a63e',
   satellite_mismatch: '#00a63e',
-  no_telemetry: '#94a3b8',
+  no_telemetry: '#1F7A52',
 };
 
 // ── SatelliteKtDailyChart ─────────────────────────────────────────────────────
@@ -223,15 +223,15 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
       legend: { display: true, position: 'top' as const, labels: { color: '#b8d0ec', font: { size: 11 }, boxWidth: 12 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
       },
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { stacked: true, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { stacked: true, ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 45 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { stacked: true, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -272,7 +272,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
@@ -287,8 +287,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { min: 0, max: 1.4, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -296,7 +296,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
   const labels = daytimeSlots.map((s: any) => s.timestamp?.slice(11) ?? '');
   const barData = {
     labels,
-    datasets: [{ label: 'kt', data: daytimeSlots.map((s: any) => s.kt), backgroundColor: daytimeSlots.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#94a3b8') + 'CC'), borderColor: daytimeSlots.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#94a3b8'), borderWidth: 1, borderRadius: 3 }],
+    datasets: [{ label: 'kt', data: daytimeSlots.map((s: any) => s.kt), backgroundColor: daytimeSlots.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#1F7A52') + 'CC'), borderColor: daytimeSlots.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#1F7A52'), borderWidth: 1, borderRadius: 3 }],
   };
 
   return (
@@ -356,7 +356,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
     >
       <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
       {status && <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />}
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#374151', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem', background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           {value}
@@ -368,7 +368,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
           </motion.div>
         )}
       </div>
-      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#c4daf0' : '#374151' }}>{sub}</div>
+      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)' }}>{sub}</div>
     </motion.div>
   );
 };
@@ -391,7 +391,7 @@ export const PerformanceGauge: React.FC<{ label: string; value: number; max: num
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
-        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: isDark ? '#b8d0ec' : '#374151', marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginTop: 2 }}>{label}</div>
       </div>
     </motion.div>
   );
@@ -430,17 +430,17 @@ export const SatelliteKtCalendarPicker: React.FC<{
   const navBtnStyle: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer', padding: 4,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 6, color: isDark ? '#cbd5e1' : '#475569', transition: 'all 0.15s',
+    borderRadius: 6, color: 'var(--muted-foreground)', transition: 'all 0.15s',
   };
 
   return (
     <div style={containerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#cbd5e1' : '#475569'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
           <ChevronLeft size={15} />
         </button>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>{_MONTH_NAMES[month]} {year}</span>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? '#cbd5e1' : '#475569'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--foreground)' }}>{_MONTH_NAMES[month]} {year}</span>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
           <ChevronRight size={15} />
         </button>
       </div>
@@ -456,7 +456,7 @@ export const SatelliteKtCalendarPicker: React.FC<{
           const selected = ds === selectedDate;
           return (
             <div key={ds} onClick={() => avail && onSelect(ds)}
-              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: selected ? 700 : avail ? 500 : 400, borderRadius: '50%', cursor: avail ? 'pointer' : 'default', color: selected ? '#fff' : avail ? '#00a63e' : (isDark ? '#cbd5e1' : '#cbd5e1'), background: selected ? '#00a63e' : 'transparent', transition: 'all 0.15s', userSelect: 'none' }}
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: selected ? 700 : avail ? 500 : 400, borderRadius: '50%', cursor: avail ? 'pointer' : 'default', color: selected ? '#fff' : avail ? '#00a63e' : ('var(--muted-foreground)'), background: selected ? '#00a63e' : 'transparent', transition: 'all 0.15s', userSelect: 'none' }}
               onMouseEnter={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'rgba(0,166,62,0.15)'; }}
               onMouseLeave={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
@@ -470,7 +470,7 @@ export const SatelliteKtCalendarPicker: React.FC<{
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} /> Has data
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: isDark ? '#cbd5e1' : '#cbd5e1', display: 'inline-block' }} /> No data
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--muted-foreground)', display: 'inline-block' }} /> No data
         </span>
       </div>
     </div>
@@ -499,7 +499,7 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       legend: { display: false },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
@@ -515,8 +515,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { min: 0, max: 1.4, ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 8 }, maxRotation: 60 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { min: 0, max: 1.4, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark, causeFilter]);
@@ -527,7 +527,7 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
 
   const barData = {
     labels: filtered.map((s: any) => s.timestamp?.slice(11, 16) ?? ''),
-    datasets: [{ label: 'kt', data: filtered.map((s: any) => s.kt != null ? s.kt : (s.cause === 'no_telemetry' ? 0.02 : null)), backgroundColor: filtered.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#94a3b8') + 'CC'), borderColor: filtered.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#94a3b8'), borderWidth: 1, borderRadius: 3 }],
+    datasets: [{ label: 'kt', data: filtered.map((s: any) => s.kt != null ? s.kt : (s.cause === 'no_telemetry' ? 0.02 : null)), backgroundColor: filtered.map((s: any) => (_CAUSE_COLOR[s.cause] ?? '#1F7A52') + 'CC'), borderColor: filtered.map((s: any) => _CAUSE_COLOR[s.cause] ?? '#1F7A52'), borderWidth: 1, borderRadius: 3 }],
   };
 
   return (
@@ -728,7 +728,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       <div style={detailCardStyle}>
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: isDark ? '#f1f5f9' : '#111827' }}>
+            <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: 'var(--foreground)' }}>
               {detailView === 'day' ? `${activeDate ?? 'Today'} — 15-min Slot Detail` : 'Monthly — Daily Anomaly Counts'}
             </div>
             <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -746,7 +746,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             {detailView === 'day' && availableDates.length > 0 && (
               <div ref={calendarRef} style={{ position: 'relative' }}>
                 <button onClick={() => setCalendarOpen(o => !o)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 7, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer', border: `1px solid ${calendarOpen ? '#00a63e' : (isDark ? 'rgba(0,166,62,0.35)' : 'rgba(0,166,62,0.3)')}`, background: calendarOpen ? 'rgba(0,166,62,0.12)' : (isDark ? 'rgba(15,23,42,0.9)' : '#fff'), color: isDark ? '#d1fae5' : '#065f46', outline: 'none', transition: 'all 0.15s' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 7, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer', border: `1px solid ${calendarOpen ? '#00a63e' : (isDark ? 'rgba(0,166,62,0.35)' : 'rgba(0,166,62,0.3)')}`, background: calendarOpen ? 'rgba(0,166,62,0.12)' : (isDark ? 'rgba(15,23,42,0.9)' : '#fff'), color: 'var(--success)', outline: 'none', transition: 'all 0.15s' }}>
                   <CalendarDays size={13} />{activeDate ?? 'Select date'}
                 </button>
                 <AnimatePresence>
@@ -831,12 +831,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
+      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   }), [isDark]);
 
@@ -844,12 +844,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
+      tooltip: { backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
     },
   }), [isDark]);
 
@@ -860,7 +860,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? '#c4daf0' : '#374151' }}>
+        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}>
           Performance Summary — Last {daysComputed} days
         </div>
       </div>
@@ -880,7 +880,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
             <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
               {[{ mode: 'mae' as const, label: 'MAE', icon: '📊' }, { mode: 'error' as const, label: 'Error %', icon: '📈' }].map(({ mode, label, icon }) => (
                 <button key={mode} onClick={() => setChartMode(mode)}
-                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? (isDark ? '#d1fae5' : '#065f46') : (isDark ? '#b8d0ec' : '#374151'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? ('var(--success)') : ('var(--muted-foreground)'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
                   {icon} {label}
                 </button>
               ))}
@@ -1070,10 +1070,10 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: 'var(--muted-foreground)', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1082,8 +1082,8 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
       ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1093,10 +1093,10 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: 'var(--muted-foreground)', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
-        titleColor: isDark ? '#f1f5f9' : '#111827', bodyColor: isDark ? '#c4daf0' : '#374151',
+        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1105,9 +1105,9 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: isDark ? '#b8d0ec' : '#374151', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      pct: { type: 'linear', position: 'right', ticks: { color: isDark ? '#f87171' : '#dc2626', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      pct: { type: 'linear', position: 'right', ticks: { color: 'var(--destructive)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -1202,7 +1202,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                     showBands.P10 && { label: 'P10', data: forecastData.map(d => d.p10), borderColor: '#f59e0b', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: false },
                     showBands.P50 && { label: 'P50', data: forecastData.map(d => d.p50), borderColor: '#00a63e', borderWidth: 2.4, tension: 0.3, pointRadius: 0, fill: showBands.P10 ? '-1' : false, backgroundColor: 'rgba(0,166,62,0.08)' },
                     showBands.P90 && { label: 'P90', data: forecastData.map(d => d.p90), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: showBands.P50 ? '-1' : false, backgroundColor: 'rgba(59,130,246,0.06)' },
-                    { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#94a3b8', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
+                    { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#1F7A52', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
                     showBands.GHI && { label: 'GHI', yAxisID: 'ghi', data: forecastData.map(d => d.ghi), borderColor: '#eab308', borderWidth: 1.3, tension: 0.3, pointRadius: 0, fill: true, backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#eab30820'; return makeGradient(chart.ctx, chart.chartArea, '#eab308', 0.15, 0.01); } },
                   ].filter(Boolean) as any[],
                 }}
@@ -1233,7 +1233,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                 setVsActual7d(!vsActual7d);
               }}
               aria-pressed={vsActual7d}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#b8d0ec' : '#374151'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
               <Activity size={12} />Last 7 Days
             </button>
             {(['chart', 'table'] as const).map(mode => (

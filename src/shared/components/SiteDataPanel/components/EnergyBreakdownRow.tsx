@@ -21,7 +21,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
     { label: 'Grid Out', value: latest.grid_sell_today_kwh, color: '#10b981', bg: '#10b98115', icon: '⬆' },
     { label: 'Batt Chg', value: latest.batt_charge_today_kwh, color: '#8b5cf6', bg: '#8b5cf615', icon: '↑' },
     { label: 'Batt Dchg', value: latest.batt_discharge_today_kwh, color: '#ec4899', bg: '#ec489915', icon: '↓' },
-    { label: 'Consumption', value: latest.load_today_kwh, color: '#6b7280', bg: '#6b728015', icon: '⌂' },
+    { label: 'Consumption', value: latest.load_today_kwh, color: '#1F7A52', bg: '#1F7A5215', icon: '⌂' },
   ].filter(e => e.value != null);
 
   if (!items.length) return null;
@@ -70,7 +70,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
             <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', fontWeight: 700 }}>
               {energyDisplay.value}
             </span>
-            <span style={{ fontSize: '0.625rem', color: isDark ? '#a8c4e0' : '#374151', fontWeight: 600 }}>{energyDisplay.unit}</span>
+            <span style={{ fontSize: '0.625rem', color: 'var(--muted-foreground)', fontWeight: 600 }}>{energyDisplay.unit}</span>
           </span>
         </motion.span>
           );
@@ -82,7 +82,7 @@ const EnergyBreakdownRow = ({ latest, isLatestToday }: { latest: any; isLatestTo
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          color: isDark ? '#b8d0ec' : '#475569',
+          color: 'var(--muted-foreground)',
           fontFamily: 'Poppins, sans-serif',
           alignSelf: 'flex-start',
           flexBasis: '100%',

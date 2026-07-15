@@ -20,7 +20,7 @@ export const ForecastTooltip = ({ active, payload, label }: any) => {
         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
         minWidth: 160,
       }}>
-      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: 'var(--foreground)', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
         {label}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -32,13 +32,13 @@ export const ForecastTooltip = ({ active, payload, label }: any) => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#c8daf0' : '#374151' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: 'var(--muted-foreground)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>{entry.name?.split(' ')[0]}</span>
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--foreground)' }}>
                 {Number(entry.value).toFixed(2)} {unit}
               </span>
             </motion.div>
@@ -68,7 +68,7 @@ export const ChartTooltip = ({ active, payload, label, unitResolver }: { active?
         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
         minWidth: 160,
       }}>
-      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
+      <div style={{ fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: 'var(--foreground)', fontSize: '0.875rem', marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(0, 166, 62, 0.2)'}` }}>
         {label}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -82,13 +82,13 @@ export const ChartTooltip = ({ active, payload, label, unitResolver }: { active?
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.05 }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: isDark ? '#c8daf0' : '#374151' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', color: 'var(--muted-foreground)' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color || entry.stroke || entry.fill, flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>{entry.name ?? ''}</span>
               </div>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isDark ? '#f1f5f9' : '#111827' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--foreground)' }}>
                 {val} {unit}
               </span>
             </motion.div>

@@ -34,10 +34,10 @@ const MobileSites: React.FC = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
-  const bg      = isDark ? '#07090F' : '#F4F7FA';
+  const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-  const text    = isDark ? '#F1F5F9' : '#0F172A';
+  const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 

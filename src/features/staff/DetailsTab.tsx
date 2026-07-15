@@ -99,7 +99,7 @@ const useTokens = (isDark: boolean) => ({
   bgCellAlt: isDark ? 'rgba(15, 22, 35, 0.35)' : 'rgba(241, 245, 249, 0.7)',
   border: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.07)',
   borderAccent: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.14)',
-  textPrimary: isDark ? '#F0F4FF' : '#0f172a',
+  textPrimary: 'var(--foreground)',
   textSecondary: 'var(--muted-foreground)',
   textMuted: 'var(--text-dim)',
   shadow: isDark ? '0 4px 24px rgba(0,0,0,0.45)' : '0 4px 20px rgba(0,0,0,0.08)',

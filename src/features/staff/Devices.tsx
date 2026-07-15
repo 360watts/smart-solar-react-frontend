@@ -249,7 +249,7 @@ const Devices: React.FC = () => {
   const T = {
     bg:      'var(--background)',
     surface: 'var(--card)',
-    cardEl:  isDark ? '#111927'                      : '#EDF0F4',
+    cardEl:  'var(--card)',
     border:  'var(--border)',
     borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
     text:    'var(--foreground)',
@@ -1085,7 +1085,7 @@ const Devices: React.FC = () => {
                         fontSize: '12px',
                         background: 'rgba(47,191,113,0.08)',
                         border: '1px solid rgba(47,191,113,0.16)',
-                        color: isDark ? '#cbd5e1' : '#2FBF71',
+                        color: 'var(--primary)',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
@@ -1594,7 +1594,7 @@ const Devices: React.FC = () => {
                   <Link to="/alerts" style={{
                     fontSize: '0.78rem',
                     fontWeight: 600,
-                    color: isDark ? '#93c5fd' : '#2563eb',
+                    color: 'var(--info)',
                     textDecoration: 'none',
                   }}>
                     Open full alerts
@@ -1644,7 +1644,7 @@ const Devices: React.FC = () => {
                             {new Date(alert.timestamp).toLocaleString()}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.83rem', color: isDark ? '#e2e8f0' : '#1f2937', lineHeight: 1.45 }}>
+                        <div style={{ fontSize: '0.83rem', color: 'var(--foreground)', lineHeight: 1.45 }}>
                           {getAlertDisplayMessage(alert)}
                         </div>
                       </div>
@@ -2044,7 +2044,7 @@ const Devices: React.FC = () => {
               </button>
               <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)}
                 title="Pick a date to scan all logs for that day"
-                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1px solid rgba(239,68,68,0.25)', background: T.surface, color: isDark ? '#fca5a5' : '#b91c1c', outline: 'none' }} />
+                style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1px solid rgba(239,68,68,0.25)', background: T.surface, color: 'var(--destructive)', outline: 'none' }} />
               <button onClick={handleScanDay} disabled={scanLoading || !scanDate}
                 title="Scan all log files for the selected date (server-side, no pagination limit)"
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 700, cursor: (scanLoading || !scanDate) ? 'not-allowed' : 'pointer', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.09)', color: '#f87171', opacity: (scanLoading || !scanDate) ? 0.5 : 1, letterSpacing: '0.01em' }}>
@@ -2227,7 +2227,7 @@ const Devices: React.FC = () => {
                 Scrollable body
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
                   {siteError && (
-                    <p style={{ color: isDark ? '#fca5a5' : '#ef4444', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
+                    <p style={{ color: 'var(--destructive)', fontSize: '0.875rem', marginBottom: '1rem' }}>{siteError}</p>
                   )}
 
                   Identification
@@ -2238,7 +2238,7 @@ const Devices: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Identification
                       </span>
                     </div>
@@ -2291,7 +2291,7 @@ const Devices: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Location
                       </span>
                     </div>
@@ -2360,7 +2360,7 @@ const Devices: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                         Panel Configuration
                       </span>
                     </div>
@@ -2452,7 +2452,7 @@ const Devices: React.FC = () => {
                 <div style={{ padding: '0 28px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #06b6d4, #0891b2)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#67e8f9' : '#0891b2' }}>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
                       Deye Cloud
                     </span>
                   </div>
@@ -2623,7 +2623,7 @@ const Devices: React.FC = () => {
                   background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
                   border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb',
                   borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem',
-                  color: isDark ? '#fca5a5' : '#721c24',
+                  color: 'var(--destructive)',
                 }}>
                   <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={15} /> CRITICAL WARNING</strong>
                   <p style={{ margin: '6px 0 0 0' }}>
@@ -3413,7 +3413,7 @@ const Devices: React.FC = () => {
               background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da',
               border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb',
               borderRadius: 8, padding: '12px 14px', fontSize: '0.875rem',
-              color: isDark ? '#fca5a5' : '#721c24',
+              color: 'var(--destructive)',
             }}>
               <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={15} /> CRITICAL WARNING</strong>
               <p style={{ margin: '6px 0 0 0' }}>
@@ -3576,7 +3576,7 @@ const Devices: React.FC = () => {
               background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
               border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
               borderRadius: '8px', padding: '1rem', marginBottom: '1rem',
-              color: isDark ? '#fca5a5' : '#991b1b'
+              color: 'var(--destructive)'
             }}>
               <strong style={{ fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> PERMANENT DELETION</strong>
               <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
@@ -3586,7 +3586,7 @@ const Devices: React.FC = () => {
             <p style={{ marginBottom: '0.5rem' }}>Devices to delete:</p>
             <ul style={{ margin: '0', paddingLeft: '1.5rem', fontSize: '0.9rem', maxHeight: '120px', overflowY: 'auto' }}>
               {bulkDeleteModal.deviceList.map(d => (
-                <li key={d.id} style={{ color: isDark ? '#e0e0e0' : '#2c3e50', fontWeight: '600' }}>{d.device_serial}</li>
+                <li key={d.id} style={{ color: 'var(--muted-foreground)', fontWeight: '600' }}>{d.device_serial}</li>
               ))}
             </ul>
           </div>
@@ -3595,7 +3595,7 @@ const Devices: React.FC = () => {
             <button
               onClick={() => setBulkDeleteModal({ show: false, deviceList: [] })}
               style={{
-                background: isDark ? '#3a3a3a' : '#e0e0e0', color: isDark ? '#e0e0e0' : '#495057',
+                background: 'var(--muted-foreground)', color: 'var(--muted-foreground)',
                 border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
                 fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
               }}

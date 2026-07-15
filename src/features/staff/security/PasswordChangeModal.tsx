@@ -162,7 +162,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
   const modalBorder = isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.2)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
   const inputBorder = isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.22)';
-  const inputText   = isDark ? '#F0F7F2' : '#0D2318';
+  const inputText   = 'var(--success-soft)';
   const labelText   = isDark ? 'rgba(240,247,242,0.5)' : 'rgba(13,35,24,0.5)';
   const buttonBg    = '#2FBF71';
   const buttonHover = '#1A9955';

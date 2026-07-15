@@ -260,7 +260,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               fontFamily: 'Poppins, sans-serif',
-              color: historyResolutionLabel === '5 min' ? '#00a63e' : (isDark ? '#d4e8f8' : '#374151'),
+              color: historyResolutionLabel === '5 min' ? '#00a63e' : ('var(--muted-foreground)'),
               background: historyResolutionLabel === '5 min'
                 ? (isDark ? 'rgba(0,166,62,0.14)' : 'rgba(0,166,62,0.08)')
                 : (isDark ? 'rgba(148,163,184,0.12)' : 'rgba(71,85,105,0.08)'),
@@ -372,7 +372,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               padding: '5px 10px', borderRadius: 8,
               border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
               background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
-              color: vsActual7d ? (isDark ? '#fcd34d' : '#92400e') : (isDark ? '#b8d0ec' : '#374151'),
+              color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'),
               cursor: 'pointer', fontWeight: 700,
               fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
               transition: 'all 0.15s ease',

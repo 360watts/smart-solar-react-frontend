@@ -481,7 +481,7 @@ const Employees: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={handleCancel}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -506,7 +506,7 @@ const Employees: React.FC = () => {
                   {editingEmployee ? <Pencil size={22} color="white" /> : <UserPlus size={22} color="white" />}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>
                     {editingEmployee ? `Edit Employee: ${editingEmployee.first_name} ${editingEmployee.last_name}`.trim() || editingEmployee.email : 'Add New Employee'}
                   </div>
                   <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>
@@ -533,7 +533,7 @@ const Employees: React.FC = () => {
                     border: isDark ? '1px solid rgba(239,68,68,0.28)' : '1px solid #fecaca',
                     borderRadius: 10,
                     padding: '12px 14px',
-                    color: isDark ? '#fca5a5' : '#b91c1c',
+                    color: 'var(--destructive)',
                     fontSize: '0.84rem',
                     fontWeight: 600,
                   }}>
@@ -549,12 +549,12 @@ const Employees: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Account Information</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Account Information</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <input type="text" autoComplete="username" style={{ display: 'none' }} />
                     {creatingEmployee && (
-                      <div style={{ background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)', borderRadius: 8, padding: '10px 14px', fontSize: '0.813rem', color: isDark ? '#6ee7b7' : '#065f46', marginBottom: 8 }}>
+                      <div style={{ background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)', borderRadius: 8, padding: '10px 14px', fontSize: '0.813rem', color: 'var(--success)', marginBottom: 8 }}>
                         Username and password will be auto-generated and sent to the employee's email.
                       </div>
                     )}
@@ -571,7 +571,7 @@ const Employees: React.FC = () => {
                           setCreateForm({...createForm, email: e.target.value});
                         }}
                         required autoComplete="off" placeholder="john.doe@example.com"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       />
                     </div>
                   </div>
@@ -585,7 +585,7 @@ const Employees: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Personal Details</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Personal Details</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -595,7 +595,7 @@ const Employees: React.FC = () => {
                         value={editingEmployee ? editForm.first_name : createForm.first_name}
                         onChange={(e) => editingEmployee ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
                         required autoComplete="off" placeholder="John"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -605,7 +605,7 @@ const Employees: React.FC = () => {
                         value={editingEmployee ? editForm.last_name : createForm.last_name}
                         onChange={(e) => editingEmployee ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
                         required autoComplete="off" placeholder="Doe"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -619,7 +619,7 @@ const Employees: React.FC = () => {
                         style={{
                           padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
                           border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
-                          background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827',
+                          background: 'var(--card)', color: 'var(--foreground)',
                           fontSize: '0.875rem', cursor: 'pointer'
                         }}
                       >
@@ -643,7 +643,7 @@ const Employees: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Contact Information</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Contact Information</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -661,7 +661,7 @@ const Employees: React.FC = () => {
                         value={editingEmployee ? editForm.address : createForm.address}
                         onChange={(e) => editingEmployee ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
                         autoComplete="off" rows={3} placeholder="123 Solar Street..."
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', resize: 'vertical' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem', resize: 'vertical' }}
                       />
                     </div>
                   </div>
@@ -676,8 +676,8 @@ const Employees: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Role &amp; Status</span>
-                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.15)', color: isDark ? '#a5b4fc' : '#4f46e5' }}>Admin only</span>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Role &amp; Status</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.15)', color: 'var(--info)' }}>Admin only</span>
                     </div>
 
                     {/* Active / Inactive toggle */}
@@ -796,7 +796,7 @@ const Employees: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={() => setDeleteConfirmModal({ show: false, employee: null })}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -808,7 +808,7 @@ const Employees: React.FC = () => {
                 <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #dc3545, #c82333)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(220,53,69,0.4)' }}>
                   <AlertTriangle size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Delete Employee</span>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>Delete Employee</span>
               </div>
               <button onClick={() => setDeleteConfirmModal({ show: false, employee: null })} style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', color: 'var(--muted-foreground)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={16} />
@@ -816,9 +816,9 @@ const Employees: React.FC = () => {
             </div>
             <div style={{ padding: '20px 24px' }}>
               <p style={{ color: 'var(--muted-foreground)', lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 12 }}>
-                Are you sure you want to permanently delete <strong style={{ color: isDark ? '#f9fafb' : '#111827' }}>{deleteConfirmModal.employee.first_name} {deleteConfirmModal.employee.last_name || deleteConfirmModal.employee.email}</strong>?
+                Are you sure you want to permanently delete <strong style={{ color: 'var(--foreground)' }}>{deleteConfirmModal.employee.first_name} {deleteConfirmModal.employee.last_name || deleteConfirmModal.employee.email}</strong>?
               </p>
-              <div style={{ background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: isDark ? '#fca5a5' : '#721c24' }}>
+              <div style={{ background: isDark ? 'rgba(220,53,69,0.12)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #f5c6cb', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: 'var(--destructive)' }}>
                 This action cannot be undone.
               </div>
             </div>

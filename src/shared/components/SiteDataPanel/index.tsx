@@ -245,13 +245,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const forecastZoom = useChartZoomState();
   const vsActualZoom = useChartZoomState();
 
-  const tickColor   = isDark ? '#94a3b8' : '#374151';
+  const tickColor   = 'var(--muted-foreground)';
   const gridColor   = isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb';
   const ttBg        = isDark ? 'rgba(15,23,42,0.97)'    : 'rgba(255,255,255,0.97)';
-  const ttTitle     = isDark ? '#f1f5f9' : '#111827';
-  const ttBody      = isDark ? '#94a3b8' : '#374151';
+  const ttTitle     = 'var(--foreground)';
+  const ttBody      = 'var(--muted-foreground)';
   const ttBorder    = isDark ? 'rgba(148,163,184,0.2)'  : 'rgba(0,166,62,0.2)';
-  const legendColor = isDark ? '#cbd5e1' : '#374151';
+  const legendColor = 'var(--muted-foreground)';
 
   const historyChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
@@ -276,8 +276,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: gridColor } },
-      power: { type: 'linear', position: 'left', ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: gridColor } },
-      soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: isDark ? '#86efac' : '#166534', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      power: { type: 'linear', position: 'left', ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: gridColor } },
+      soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: 'var(--success)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -305,8 +305,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: gridColor } },
-      y: { ticks: { color: isDark ? '#cbd5e1' : '#374151', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: gridColor } },
-      delta: { type: 'linear', position: 'right', ticks: { color: isDark ? '#f87171' : '#dc2626', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: gridColor } },
+      delta: { type: 'linear', position: 'right', ticks: { color: 'var(--destructive)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

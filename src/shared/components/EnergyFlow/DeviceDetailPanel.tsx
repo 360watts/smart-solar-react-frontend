@@ -138,7 +138,7 @@ function MetricCard({
         style={{
           fontSize: 14,
           fontWeight: 700,
-          color: isDark ? '#f1f5f9' : '#0f172a',
+          color: 'var(--foreground)',
         }}
       >
         {value}
@@ -169,7 +169,7 @@ export default function DeviceDetailPanel({
 
   const bgColor = 'var(--card)';
   const borderColor = isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0';
-  const textColor = isDark ? '#f1f5f9' : '#0f172a';
+  const textColor = 'var(--foreground)';
   const subTextColor = isDark ? 'var(--text-dim)' : 'var(--muted-foreground)';
 
   return (

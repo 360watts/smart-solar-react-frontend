@@ -675,7 +675,7 @@ const DevicePresets: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={() => { setEditingPreset(null); setCreatingPreset(false); }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -695,7 +695,7 @@ const DevicePresets: React.FC = () => {
                   <Settings size={22} color="white" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>{editingPreset ? `Edit Preset: ${editingPreset.name}` : 'Create New Preset'}</div>
                   <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>{editingPreset ? 'Update gateway configuration preset' : 'Configure a new gateway preset'}</div>
                 </div>
               </div>
@@ -716,7 +716,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Details</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Preset Details</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                     {editingPreset && (
@@ -729,7 +729,7 @@ const DevicePresets: React.FC = () => {
                           required
                           autoComplete="off"
                           readOnly
-                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                         />
                       </div>
                     )}
@@ -742,7 +742,7 @@ const DevicePresets: React.FC = () => {
                         required
                         autoComplete="off"
                         placeholder="e.g., Standard Gateway Config"
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: '1 / -1' }}>
@@ -753,7 +753,7 @@ const DevicePresets: React.FC = () => {
                         autoComplete="off"
                         placeholder="Describe the purpose of this preset..."
                         rows={2}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', resize: 'vertical' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem', resize: 'vertical' }}
                       />
                     </div>
                   </div>
@@ -767,7 +767,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>UART Configuration</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>UART Configuration</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -775,7 +775,7 @@ const DevicePresets: React.FC = () => {
                       <select
                         value={editingPreset ? editForm.baud_rate : createForm.baud_rate}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, baud_rate: parseInt(e.target.value)}) : setCreateForm({...createForm, baud_rate: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       >
                         <option value={9600}>9600</option>
                         <option value={19200}>19200</option>
@@ -789,7 +789,7 @@ const DevicePresets: React.FC = () => {
                       <select
                         value={editingPreset ? editForm.data_bits : createForm.data_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, data_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, data_bits: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       >
                         <option value={7}>7</option>
                         <option value={8}>8</option>
@@ -800,7 +800,7 @@ const DevicePresets: React.FC = () => {
                       <select
                         value={editingPreset ? editForm.stop_bits : createForm.stop_bits}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, stop_bits: parseInt(e.target.value)}) : setCreateForm({...createForm, stop_bits: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       >
                         <option value={1}>1</option>
                         <option value={2}>2</option>
@@ -811,7 +811,7 @@ const DevicePresets: React.FC = () => {
                       <select
                         value={editingPreset ? editForm.parity : createForm.parity}
                         onChange={(e) => editingPreset ? setEditForm({...editForm, parity: parseInt(e.target.value)}) : setCreateForm({...createForm, parity: parseInt(e.target.value)})}
-                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                        style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                       >
                         <option value={0}>None</option>
                         <option value={1}>Odd</option>
@@ -830,7 +830,7 @@ const DevicePresets: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Initial Slave Setup</span>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Initial Slave Setup</span>
                     </div>
                     <p style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginBottom: 16, marginTop: -8 }}>Optionally configure a slave device for this preset immediately.</p>
 
@@ -862,7 +862,7 @@ const DevicePresets: React.FC = () => {
                                 onChange={(e) => setSlaveForm({ ...slaveForm, slave_id: e.target.value })}
                                 required
                                 placeholder="1-247"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -873,7 +873,7 @@ const DevicePresets: React.FC = () => {
                                 onChange={(e) => setSlaveForm({ ...slaveForm, device_name: e.target.value })}
                                 required
                                 placeholder="Device Name"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -883,7 +883,7 @@ const DevicePresets: React.FC = () => {
                                 value={slaveForm.polling_interval_ms}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, polling_interval_ms: parseInt(e.target.value) })}
                                 placeholder="5000"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                               />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -893,7 +893,7 @@ const DevicePresets: React.FC = () => {
                                 value={slaveForm.timeout_ms}
                                 onChange={(e) => setSlaveForm({ ...slaveForm, timeout_ms: parseInt(e.target.value) })}
                                 placeholder="1000"
-                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem' }}
+                                style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem' }}
                               />
                             </div>
                           </div>
@@ -934,7 +934,7 @@ const DevicePresets: React.FC = () => {
                                   placeholder="Search by name or slave ID…"
                                   value={slaveSearch}
                                   onChange={(e) => setSlaveSearch(e.target.value)}
-                                  style={{ width: '100%', marginBottom: '8px', padding: '10px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                                  style={{ width: '100%', marginBottom: '8px', padding: '10px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.875rem', boxSizing: 'border-box' }}
                                 />
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', borderRadius: 8, padding: '8px' }}>
                                   {filtered.length === 0 ? (
@@ -952,7 +952,7 @@ const DevicePresets: React.FC = () => {
                                           }
                                         }}
                                       />
-                                      <span style={{ fontSize: '0.875rem', color: isDark ? '#f3f4f6' : '#111827' }}><strong>{slave.deviceName}</strong> <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
+                                      <span style={{ fontSize: '0.875rem', color: 'var(--foreground)' }}><strong>{slave.deviceName}</strong> <span style={{ color: 'var(--muted-foreground)', fontSize: '0.85em' }}>(Slave ID: {slave.slaveId})</span></span>
                                     </label>
                                   ))}
                                 </div>
@@ -997,7 +997,7 @@ const DevicePresets: React.FC = () => {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                       <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Slave Devices</span>
+                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Preset Slave Devices</span>
                     </div>
                     <div className="card">
                       <div className="card-header">
@@ -1077,7 +1077,7 @@ const DevicePresets: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={() => setSelectedPreset(null)}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -1097,7 +1097,7 @@ const DevicePresets: React.FC = () => {
                   <Eye size={22} color="white" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>{selectedPreset.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>{selectedPreset.name}</div>
                   <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>Configuration details</div>
                 </div>
               </div>
@@ -1116,7 +1116,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>General Settings</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>General Settings</span>
                   </div>
                   <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Config ID:</strong> {selectedPreset.gateway_configuration.general_settings.config_id}</p>
                   <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Schema Version:</strong> {selectedPreset.gateway_configuration.general_settings.schema_version}</p>
@@ -1130,7 +1130,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>UART Configuration</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>UART Configuration</span>
                   </div>
                   <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Baud Rate:</strong> {selectedPreset.gateway_configuration.uart_configuration.baud_rate}</p>
                   <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Data Bits:</strong> {selectedPreset.gateway_configuration.uart_configuration.data_bits}</p>
@@ -1146,7 +1146,7 @@ const DevicePresets: React.FC = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Preset Info</span>
+                  <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Preset Info</span>
                 </div>
                 <p style={{ margin: '6px 0', wordBreak: 'break-word', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Description:</strong> {selectedPreset.description || <em>No description</em>}</p>
                 <p style={{ margin: '6px 0', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}><strong>Slave Devices:</strong> {selectedPreset.slaves_count}</p>
@@ -1176,7 +1176,7 @@ const DevicePresets: React.FC = () => {
           zIndex: 9999, padding: '20px',
         }} onClick={() => setConfiguringSlaves(null)}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
@@ -1196,7 +1196,7 @@ const DevicePresets: React.FC = () => {
                   <Settings size={22} color="white" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>Manage Slave Devices</div>
+                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>Manage Slave Devices</div>
                   <div style={{ fontSize: '0.813rem', color: 'var(--muted-foreground)', marginTop: 2 }}>{configuringSlaves.name}</div>
                 </div>
               </div>
@@ -1208,11 +1208,11 @@ const DevicePresets: React.FC = () => {
             {/* Scrollable body */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
               {error && (
-                <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: isDark ? 'rgba(220,53,69,0.15)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.3)' : '1px solid #f5c6cb', borderRadius: 8, color: isDark ? '#fca5a5' : '#721c24', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
+                <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: isDark ? 'rgba(220,53,69,0.15)' : '#f8d7da', border: isDark ? '1px solid rgba(220,53,69,0.3)' : '1px solid #f5c6cb', borderRadius: 8, color: 'var(--destructive)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
                   <span><strong>Error:</strong> {error}</span>
                   <button
                     onClick={() => setError(null)}
-                    style={{ background: 'none', border: 'none', color: isDark ? '#fca5a5' : '#721c24', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--destructive)', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
                     title="Close error"
                   >
                     ×
@@ -1228,7 +1228,7 @@ const DevicePresets: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: isDark ? '#a5b4fc' : '#6366f1' }}>Slave Devices ({slaves.length}{slaveListSearch ? ` · ${slaves.filter(s => s.deviceName.toLowerCase().includes(slaveListSearch.toLowerCase()) || String(s.slaveId).includes(slaveListSearch)).length} shown` : ''})</span>
+                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>Slave Devices ({slaves.length}{slaveListSearch ? ` · ${slaves.filter(s => s.deviceName.toLowerCase().includes(slaveListSearch.toLowerCase()) || String(s.slaveId).includes(slaveListSearch)).length} shown` : ''})</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <input
@@ -1236,7 +1236,7 @@ const DevicePresets: React.FC = () => {
                       placeholder="Search by name or ID…"
                       value={slaveListSearch}
                       onChange={(e) => setSlaveListSearch(e.target.value)}
-                      style={{ padding: '8px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: isDark ? '#2a2a2a' : '#ffffff', color: isDark ? '#f3f4f6' : '#111827', fontSize: '0.8rem', minWidth: 180, boxSizing: 'border-box' }}
+                      style={{ padding: '8px 12px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)', background: 'var(--card)', color: 'var(--foreground)', fontSize: '0.8rem', minWidth: 180, boxSizing: 'border-box' }}
                     />
                     <button onClick={handleCreateSlave} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', whiteSpace: 'nowrap' }}>Add Slave</button>
                   </div>
@@ -1340,7 +1340,7 @@ const DevicePresets: React.FC = () => {
           padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -1365,7 +1365,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <Trash2 size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>
                   Delete Preset
                 </span>
               </div>
@@ -1399,7 +1399,7 @@ const DevicePresets: React.FC = () => {
                 borderRadius: 8,
                 padding: '12px 14px',
                 fontSize: '0.875rem',
-                color: isDark ? '#fca5a5' : '#991b1b',
+                color: 'var(--destructive)',
               }}>
                 <strong>Warning:</strong> This will permanently delete the preset configuration. Devices using this preset will need to be reconfigured.
               </div>
@@ -1461,7 +1461,7 @@ const DevicePresets: React.FC = () => {
           padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -1486,7 +1486,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <AlertTriangle size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>
                   Remove Slave Device
                 </span>
               </div>
@@ -1520,7 +1520,7 @@ const DevicePresets: React.FC = () => {
                 borderRadius: 8,
                 padding: '12px 14px',
                 fontSize: '0.875rem',
-                color: isDark ? '#fca5a5' : '#991b1b',
+                color: 'var(--destructive)',
               }}>
                 <strong>Warning:</strong> This will remove the slave device configuration and all its register mappings.
               </div>
@@ -1582,7 +1582,7 @@ const DevicePresets: React.FC = () => {
           padding: '20px',
         }}>
           <div style={{
-            background: isDark ? '#1a1a1a' : '#ffffff',
+            background: 'var(--card)',
             borderRadius: 16,
             boxShadow: isDark
               ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
@@ -1607,7 +1607,7 @@ const DevicePresets: React.FC = () => {
                 }}>
                   <CheckCircle2 size={22} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: isDark ? '#f9fafb' : '#111827' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--foreground)' }}>
                   Success
                 </span>
               </div>

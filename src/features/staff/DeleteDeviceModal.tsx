@@ -114,7 +114,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
       transition: 'opacity 0.2s ease',
     },
     panel: {
-      background: isDark ? '#0C1018' : '#FFFFFF',
+      background: 'var(--card)',
       border: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'}`,
       borderRadius: 16,
       width: '100%', maxWidth: 480,
@@ -148,7 +148,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     serialText: {
       fontFamily: 'Fira Code, JetBrains Mono, monospace',
       fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em',
-      color: isDark ? '#F87171' : '#DC2626',
+      color: 'var(--destructive)',
     },
     sectionLabel: {
       fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
@@ -362,7 +362,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
         {/* Confirm + Actions */}
         <div style={S.confirmSection}>
           <label style={S.confirmLabel} htmlFor="confirm-serial-input">
-            Type <span style={{ fontFamily: 'Fira Code, monospace', color: isDark ? '#F87171' : '#DC2626' }}>{requiredText}</span> to confirm
+            Type <span style={{ fontFamily: 'Fira Code, monospace', color: 'var(--destructive)' }}>{requiredText}</span> to confirm
           </label>
           <input
             id="confirm-serial-input"
