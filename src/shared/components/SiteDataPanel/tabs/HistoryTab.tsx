@@ -32,8 +32,8 @@ const VS_ACTUAL_SERIES = [
 
 const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Inv Out (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
-  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
+  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'var(--muted)';
+  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
 
   return (
     <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'var(--border-strong)'}` }}>
@@ -69,8 +69,8 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
 
 const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : '#f9fafb';
-  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid #f3f4f6';
+  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'var(--muted)';
+  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
 
   return (
     <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'var(--border-strong)'}` }}>

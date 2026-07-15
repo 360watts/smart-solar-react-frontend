@@ -1060,7 +1060,7 @@ const DevicePresets: React.FC = () => {
               borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>{editingPreset ? 'Save' : 'Create'}</button>
             </div>
           </div>
@@ -1160,7 +1160,7 @@ const DevicePresets: React.FC = () => {
               borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
         </div>,
@@ -1305,7 +1305,7 @@ const DevicePresets: React.FC = () => {
               borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCancelSlaveConfig} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={handleCancelSlaveConfig} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
           </div>
         </div>,
@@ -1413,7 +1413,7 @@ const DevicePresets: React.FC = () => {
                   padding: '10px 18px',
                   borderRadius: 8,
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  background: 'var(--muted)',
                   color: 'var(--muted-foreground)',
                   fontSize: '0.875rem',
                   fontWeight: 600,
@@ -1534,7 +1534,7 @@ const DevicePresets: React.FC = () => {
                   padding: '10px 18px',
                   borderRadius: 8,
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  background: 'var(--muted)',
                   color: 'var(--muted-foreground)',
                   fontSize: '0.875rem',
                   fontWeight: 600,

@@ -206,7 +206,7 @@ const MobileSites: React.FC = () => {
             return (
               <div key={site.site_id} style={{ background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16, overflow: 'hidden' }}>
                 <div style={{ display: 'flex' }}>
-                  <div style={{ width: 4, flexShrink: 0, background: gwOnline ? sc : '#334155' }} />
+                  <div style={{ width: 4, flexShrink: 0, background: gwOnline ? sc : 'var(--muted-foreground)' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <button
                       onClick={() => toggle(site.site_id)}

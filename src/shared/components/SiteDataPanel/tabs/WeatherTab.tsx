@@ -64,8 +64,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'var(--border)' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { color: 'var(--border)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -95,8 +95,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'var(--border)' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: 'var(--border)' } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

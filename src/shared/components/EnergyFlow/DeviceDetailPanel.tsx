@@ -52,7 +52,7 @@ function getOnlineStatus(latest: SmartDeviceNode['latest']): 'online' | 'offline
 const STATUS_COLOR: Record<string, string> = {
   online: '#19AC24',
   offline: '#EF4444',
-  unknown: '#94a3b8',
+  unknown: 'var(--muted-foreground)',
 };
 
 function StatusBadge({ status }: { status: 'online' | 'offline' | 'unknown' }) {

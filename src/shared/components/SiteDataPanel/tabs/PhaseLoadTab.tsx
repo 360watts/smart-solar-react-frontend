@@ -825,7 +825,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
   const loadInfoChips = useMemo(() => {
     const activeSource = loadSourceView === 'total' ? 'All sources' : LOAD_SOURCE_META[loadSourceView].label;
     return [
-      { label: 'Source', value: activeSource, color: loadSourceView === 'total' ? '#0f172a' : LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color },
+      { label: 'Source', value: activeSource, color: loadSourceView === 'total' ? 'var(--foreground)' : LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color },
       { label: 'Timezone', value: 'IST', color: '#14b8a6' },
     ];
   }, [loadSourceView]);

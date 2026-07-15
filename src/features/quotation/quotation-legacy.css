@@ -7,7 +7,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: var(--foreground);
 }
 
 .quotation-stepper {
@@ -134,7 +134,7 @@
 .quotation-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--foreground);
   line-height: 1.2;
 }
 
@@ -152,7 +152,7 @@
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.12);
   background: transparent;
-  color: #374151;
+  color: var(--muted-foreground);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;

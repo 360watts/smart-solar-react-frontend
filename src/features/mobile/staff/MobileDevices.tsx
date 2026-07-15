@@ -469,7 +469,7 @@ const MobileDevices: React.FC = () => {
             const health = device.heartbeat_health;
             const uptime = fmtUptime(device.uptime_seconds);
             const freeMem = fmtBytes(device.free_memory_bytes);
-            const onlineColor = device.is_online ? '#2FBF71' : '#475569';
+            const onlineColor = device.is_online ? '#2FBF71' : 'var(--muted-foreground)';
             const alertsMuted = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
 
             return (
@@ -479,7 +479,7 @@ const MobileDevices: React.FC = () => {
                   style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}
                 >
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: device.is_online ? 'rgba(47,191,113,0.12)' : 'rgba(71,85,105,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${device.is_online ? 'rgba(47,191,113,0.25)' : 'rgba(71,85,105,0.2)'}` }}>
-                    {device.is_online ? <Wifi size={16} color="#2FBF71" /> : <WifiOff size={16} color="#475569" />}
+                    {device.is_online ? <Wifi size={16} color="#2FBF71" /> : <WifiOff size={16} color="var(--muted-foreground)" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.875rem', fontWeight: 700, color: text, marginBottom: 3 }}>{device.device_serial}</div>

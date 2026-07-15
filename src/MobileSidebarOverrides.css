@@ -19,7 +19,7 @@
     top: 12px !important;
     left: 12px !important;
     z-index: 1100 !important;
-    background: var(--sidebar-bg, #0f172a) !important;
+    background: var(--sidebar-bg) !important;
     border: 1px solid rgba(255,255,255,0.12) !important;
     border-radius: 8px !important;
     padding: 8px 10px !important;
@@ -60,7 +60,7 @@
     bottom: 0 !important;
     height: 100dvh !important;
     width: 270px !important;
-    background: var(--sidebar-bg, #0f172a) !important;
+    background: var(--sidebar-bg) !important;
     box-shadow: 4px 0 24px rgba(0,0,0,0.5) !important;
     border-right: 1px solid rgba(255,255,255,0.1) !important;
     border-top: none !important;

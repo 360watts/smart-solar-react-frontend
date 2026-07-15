@@ -246,7 +246,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const vsActualZoom = useChartZoomState();
 
   const tickColor   = 'var(--muted-foreground)';
-  const gridColor   = isDark ? 'rgba(148,163,184,0.12)' : '#e5e7eb';
+  const gridColor   = 'var(--border)';
   const ttBg        = isDark ? 'rgba(15,23,42,0.97)'    : 'rgba(255,255,255,0.97)';
   const ttTitle     = 'var(--foreground)';
   const ttBody      = 'var(--muted-foreground)';

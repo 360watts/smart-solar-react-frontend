@@ -111,7 +111,7 @@ const STAFF_STYLES = `
 
   /* Light mode */
   body:not(.dark-mode) .staff-nav-link { color: rgba(51,65,85,0.75); }
-  body:not(.dark-mode) .staff-nav-link:hover { color: #0f172a; background: rgba(47,191,113,0.08); }
+  body:not(.dark-mode) .staff-nav-link:hover { color: var(--foreground); background: rgba(47,191,113,0.08); }
   body:not(.dark-mode) .staff-nav-link.active { color: #2FBF71; background: rgba(47,191,113,0.10); }
   body:not(.dark-mode) .staff-nav-link.active::before { background: #2FBF71; }
 
@@ -159,7 +159,7 @@ const STAFF_STYLES = `
     color: #ff9dac;
   }
   body:not(.dark-mode) .staff-btn { color: rgba(51,65,85,0.75); }
-  body:not(.dark-mode) .staff-btn:hover { background: rgba(47,191,113,0.08); color: #0f172a; }
+  body:not(.dark-mode) .staff-btn:hover { background: rgba(47,191,113,0.08); color: var(--foreground); }
   body:not(.dark-mode) .staff-btn.danger { color: #dc2626; }
   body:not(.dark-mode) .staff-btn.danger:hover { background: rgba(239,68,68,0.08); color: #b91c1c; }
 

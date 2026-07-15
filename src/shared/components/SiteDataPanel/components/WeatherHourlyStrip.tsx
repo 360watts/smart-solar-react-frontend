@@ -66,12 +66,12 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
             const humPct = humidity != null ? Math.min(100, humidity) : null;
             const isNow = i === 0;
             const wi = getWeatherIcon(cloud, ghi, precip);
-            const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : '#d1d5db';
-            const humColor = humidity == null ? '#d1d5db'
+            const ghiColor = ghi > 600 ? '#F07522' : ghi > 200 ? '#f59e0b' : 'var(--muted-foreground)';
+            const humColor = humidity == null ? 'var(--muted-foreground)'
               : humidity > 80 ? '#3b82f6'
               : humidity > 50 ? '#60a5fa'
               : '#93c5fd';
-            const precipColor = precip == null ? '#d1d5db'
+            const precipColor = precip == null ? 'var(--muted-foreground)'
               : precip > 60 ? '#1d4ed8'
               : precip > 30 ? '#3b82f6'
               : '#93c5fd';

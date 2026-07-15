@@ -108,7 +108,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   const inputColor   = 'var(--foreground)';
   const dropBg       = 'var(--card)';
   const dropBorder   = isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)';
-  const hoverBg      = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
+  const hoverBg      = 'var(--muted)';
 
   const wrapStyle: React.CSSProperties = inlineStyle
     ? { display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: inputBorder, width: '100%', boxSizing: 'border-box' as const }

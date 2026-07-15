@@ -2784,7 +2784,7 @@ const Devices: React.FC = () => {
                   const lineBg = isError ? 'rgba(248,113,113,0.07)' : 'transparent';
                   return (
                     <div key={i} style={{ display: 'flex', gap: 12, padding: '3px 16px', background: lineBg, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                      <span style={{ color: '#374151', flexShrink: 0, fontSize: '0.7rem', minWidth: 32, textAlign: 'right', userSelect: 'none' }}>{i + 1}</span>
+                      <span style={{ color: 'var(--muted-foreground)', flexShrink: 0, fontSize: '0.7rem', minWidth: 32, textAlign: 'right', userSelect: 'none' }}>{i + 1}</span>
                       <span style={{ color: lineColor, wordBreak: 'break-all' }}>{line}</span>
                     </div>
                   );

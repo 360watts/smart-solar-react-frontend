@@ -1040,7 +1040,7 @@ export const OTA: React.FC = () => {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={handleDeployClick} disabled={isDeploying} style={{
               ...btnBase,
-              background: isDeploying ? '#374151' : 'linear-gradient(135deg, #F59E0B, #D97706)',
+              background: isDeploying ? 'var(--muted)' : 'linear-gradient(135deg, #F59E0B, #D97706)',
               color: isDeploying ? sub : 'white',
               boxShadow: isDeploying ? 'none' : '0 4px 14px rgba(245,158,11,0.4)',
               cursor: isDeploying ? 'not-allowed' : 'pointer',

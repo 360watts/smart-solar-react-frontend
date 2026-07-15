@@ -348,7 +348,7 @@
 .portal-modal-title {
   font-weight: 700;
   font-size: 1.125rem;
-  color: var(--text-primary, #111827);
+  color: var(--text-primary);
 }
 
 .portal-modal-close-btn {
@@ -403,7 +403,7 @@
 
 .portal-modal-btn-cancel {
   border: 1px solid var(--border-color);
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-secondary);
   color: var(--text-secondary);
 }
 

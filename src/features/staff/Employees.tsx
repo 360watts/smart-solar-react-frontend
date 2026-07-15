@@ -698,7 +698,7 @@ const Employees: React.FC = () => {
                                 : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'var(--border-strong)'}`,
                               background: editForm.is_active === val
                                 ? (green ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)')
-                                : (isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb'),
+                                : ('var(--muted)'),
                               color: editForm.is_active === val
                                 ? (green ? '#10b981' : '#ef4444')
                                 : ('var(--muted-foreground)'),
@@ -733,7 +733,7 @@ const Employees: React.FC = () => {
                                   : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'var(--border-strong)'}`,
                                 background: selected
                                   ? 'rgba(99,102,241,0.15)'
-                                  : (isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb'),
+                                  : ('var(--muted)'),
                                 color: selected ? '#6366f1' : ('var(--muted-foreground)'),
                               }}
                             >
@@ -766,7 +766,7 @@ const Employees: React.FC = () => {
                 <button type="button" onClick={handleCancel} style={{
                   padding: '10px 20px', borderRadius: 8,
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  background: 'var(--muted)',
                   color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
                 }}>Cancel</button>
                 <button type="submit" disabled={creatingLoading || savingLoading} style={{
@@ -830,7 +830,7 @@ const Employees: React.FC = () => {
                   padding: '10px 18px',
                   borderRadius: 8,
                   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+                  background: 'var(--muted)',
                   color: 'var(--muted-foreground)',
                   fontSize: '0.875rem',
                   fontWeight: 600,

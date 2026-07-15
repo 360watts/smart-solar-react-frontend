@@ -2740,7 +2740,7 @@ body.dark-mode .sidebar {
   border-right: 1px solid rgba(255,255,255,0.06) !important;
 }
 
-body.dark-mode .sidebar-link       { color: #8892A4 !important; }
+body.dark-mode .sidebar-link       { color: var(--muted-foreground) !important; }
 
 body.dark-mode .sidebar-link:hover {
   background: rgba(34,197,94,0.08) !important;
@@ -2754,11 +2754,11 @@ body.dark-mode .sidebar-nav li.active .sidebar-link {
 
 body.dark-mode .user-name     { color: #F0F4FF !important; }
 
-body.dark-mode .user-role     { color: #8892A4 !important; }
+body.dark-mode .user-role     { color: var(--muted-foreground) !important; }
 
 body.dark-mode .logo-text h2  { color: #F0F4FF !important; }
 
-body.dark-mode .logo-subtitle { color: #8892A4 !important; }
+body.dark-mode .logo-subtitle { color: var(--muted-foreground) !important; }
 
 body.dark-mode .theme-toggle-row {
   background: rgba(34,197,94,0.05) !important;
@@ -2771,7 +2771,7 @@ body.dark-mode .table          { color: #E2E8F0 !important; }
 
 body.dark-mode .table thead th {
   background: rgba(15,22,35,0.95) !important;
-  color: #8892A4 !important;
+  color: var(--muted-foreground) !important;
   border-bottom-color: rgba(255,255,255,0.07) !important;
 }
 
@@ -2780,7 +2780,7 @@ body.dark-mode .table tbody tr:hover {
   box-shadow: inset 3px 0 0 #22C55E !important;
 }
 
-body.dark-mode .table tbody td { color: #8892A4 !important; }
+body.dark-mode .table tbody td { color: var(--muted-foreground) !important; }
 
 /* Modal */
 
@@ -2804,7 +2804,7 @@ body.dark-mode .modal-reboot-note {
 
 body.dark-mode .modal-reboot-message { color: #CBD5E1 !important; }
 
-body.dark-mode .modal-consequences-list { color: #8892A4 !important; }
+body.dark-mode .modal-consequences-list { color: var(--muted-foreground) !important; }
 
 body.dark-mode .btn-secondary {
   background: rgba(255,255,255,0.06) !important;
@@ -3099,7 +3099,7 @@ body.dark-mode .toast--info    { background: rgba(47, 191, 113, 0.12) !important
 body.dark-mode .btn-secondary {
   background: rgba(255,255,255,0.05) !important;
   border-color: rgba(255,255,255,0.1) !important;
-  color: #8892A4 !important;
+  color: var(--muted-foreground) !important;
 }
 
 body.dark-mode .btn-secondary:hover {
@@ -3310,7 +3310,7 @@ svg path,
   top: 12px !important;
   left: 12px !important;
   z-index: 1100 !important;
-  background: var(--sidebar-bg, #0f172a) !important;
+  background: var(--sidebar-bg) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
   border-radius: 8px !important;
   padding: 8px 10px !important;
@@ -3736,7 +3736,7 @@ body.dark-mode .portal-modal-container {
 }
 
 body.dark-mode .portal-modal-title {
-  color: #f9fafb;
+  color: var(--foreground);
 }
 
 body.dark-mode .portal-modal-close-btn {

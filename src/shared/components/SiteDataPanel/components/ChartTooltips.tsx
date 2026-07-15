@@ -100,7 +100,7 @@ export const ChartTooltip = ({ active, payload, label, unitResolver }: { active?
 };
 
 export const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
-  night: { bg: '#1e293b1a', color: '#94a3b8' },
+  night: { bg: '#1e293b1a', color: '#b8d0ec' },
   ramp: { bg: '#f59e0b18', color: '#d97706' },
   midday: { bg: '#F0752218', color: '#c2410c' },
 };

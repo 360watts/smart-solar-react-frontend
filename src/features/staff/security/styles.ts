@@ -13,7 +13,7 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
     : ('var(--foreground)');
   const descColor = customerMode
     ? (isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)')
-    : (isDark ? '#8892A4' : 'var(--muted-foreground)');
+    : ('var(--muted-foreground)');
   const font = customerMode ? '"DM Sans", system-ui, sans-serif' : "'Outfit', sans-serif";
 
   return {

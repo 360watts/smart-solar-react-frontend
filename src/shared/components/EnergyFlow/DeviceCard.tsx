@@ -18,7 +18,7 @@ export interface NodeCardProps {
 const STATUS_BG: Record<DeviceStatus, string> = {
   online:  '#16a34a',
   offline: '#dc2626',
-  unknown: '#64748b',
+  unknown: 'var(--muted-foreground)',
 };
 
 export function NodeCard({
