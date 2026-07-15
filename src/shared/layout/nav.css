@@ -1,0 +1,112 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── nav ── */
+.nav-history-indicator {
+  position: fixed;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  backdrop-filter: blur(12px);
+  z-index: 999;
+  max-width: 200px;
+  box-shadow: var(--shadow-md);
+}
+
+.nav-history-item {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav-history-item:last-child {
+  border-bottom: none;
+}
+
+.nav-history-item:hover {
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.nav-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(8px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast);
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.nav-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-right: 6px solid var(--bg-secondary);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.nav-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 3px;
+  background: var(--primary-gradient);
+  border-radius: 0 0 3px 0;
+  width: 100%;
+  opacity: 0;
+  transform: scaleY(0);
+  transition: all var(--transition-normal);
+  transform-origin: top;
+}
+
+@media (max-width: 768px) {
+.nav-history-indicator {
+    display: none;
+  }
+}
+
+.nav-tooltip {
+  position: absolute;
+  left: 110%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(47, 191, 113, 0.3);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), var(--glow-primary);
+  animation: tooltipIn 0.2s ease;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.nav-tooltip {
+  background: rgba(10, 36, 24, 0.95) !important;
+  border-color: rgba(47, 191, 113, 0.3) !important;
+  color: #f0fdf4 !important;
+}

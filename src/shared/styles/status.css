@@ -1,0 +1,230 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── status ── */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.status-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-online,
+.status-indicator.status-online {
+  background: var(--success-bg);
+  color: var(--success-color);
+}
+
+.status-online::before {
+  background: var(--success-color);
+}
+
+.status-offline,
+.status-indicator.status-offline {
+  background: var(--danger-bg);
+  color: var(--danger-color);
+}
+
+.status-offline::before {
+  background: var(--danger-color);
+  animation: none;
+}
+
+.status-warning,
+.status-indicator.status-warning {
+  background: var(--warning-bg);
+  color: var(--warning-color);
+}
+
+.status-warning::before {
+  background: var(--warning-color);
+}
+
+.status-critical,
+.status-indicator.status-critical {
+  background: var(--danger-bg);
+  color: var(--danger-color);
+}
+
+.status-critical::before {
+  background: var(--danger-color);
+  animation: blink 1s infinite;
+}
+
+.status-info,
+.status-indicator.status-info {
+  background: var(--info-bg);
+  color: var(--info-color);
+}
+
+.status-info::before {
+  background: var(--info-color);
+}
+
+.status-text-enabled {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.status-text-disabled {
+  color: var(--danger-color);
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 500;
+}
+
+.status-badge-success {
+  background: var(--success-bg);
+  color: var(--success-color);
+}
+
+.status-badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger-color);
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-online,
+.status-indicator.status-online {
+  background: rgba(72, 187, 120, 0.15);
+  color: var(--success-color);
+}
+
+.status-online::before {
+  background: var(--success-color);
+}
+
+.status-offline,
+.status-indicator.status-offline {
+  background: rgba(245, 101, 101, 0.15);
+  color: var(--danger-color);
+}
+
+.status-offline::before {
+  background: var(--danger-color);
+  animation: none;
+}
+
+.status-warning,
+.status-indicator.status-warning {
+  background: rgba(237, 137, 54, 0.15);
+  color: var(--warning-color);
+}
+
+.status-warning::before {
+  background: var(--warning-color);
+}
+
+.status-critical,
+.status-indicator.status-critical {
+  background: rgba(245, 101, 101, 0.15);
+  color: var(--danger-color);
+}
+
+.status-critical::before {
+  background: var(--danger-color);
+  animation: blink 1s infinite;
+}
+
+.status-info,
+.status-indicator.status-info {
+  background: rgba(66, 153, 225, 0.15);
+  color: var(--info-color);
+}
+
+.status-info::before {
+  background: var(--info-color);
+}
+
+.status-indicator.status-online::before {
+  animation: pingPulse 2.2s ease infinite;
+}
+
+.status-indicator.status-critical::before {
+  animation: criticalBlink 0.9s ease infinite;
+  box-shadow: 0 0 6px var(--danger-color);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-family: 'Poppins', sans-serif;
+}
+
+.status-pill--online   { color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); }
+
+.status-pill--offline  { color: var(--muted-foreground); background: rgba(100, 116, 139, 0.10); border: 1px solid rgba(100, 116, 139, 0.18); }
+
+.status-pill--warning  { color: #f59e0b; background: rgba(245, 158, 11, 0.12);  border: 1px solid rgba(245, 158, 11, 0.25); }
+
+.status-pill--critical,
+.status-pill--error    { color: #ef4444; background: rgba(239, 68, 68, 0.12);   border: 1px solid rgba(239, 68, 68, 0.25); }
+
+.status-pill--info     { color: #3b82f6; background: rgba(59, 130, 246, 0.12);  border: 1px solid rgba(59, 130, 246, 0.25); }
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+  position: relative;
+}
+
+.status-dot--pulse::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  animation: ring-pulse 2.2s ease-out infinite;
+}

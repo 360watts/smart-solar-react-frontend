@@ -1,0 +1,103 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── preset ── */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.preset-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.preset-card:hover { box-shadow: 0 0 0 2px rgba(47,191,113,0.35), var(--shadow-md); border-color: rgba(47,191,113,0.35); }
+
+.preset-card-title { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; line-height: 1.3; }
+
+.preset-card-desc  { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.preset-card-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; padding-top: var(--space-2); border-top: 1px solid var(--border-color); }
+
+.preset-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 0.75rem; font-weight: 600;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.preset-card-actions { display: flex; gap: var(--space-2); margin-top: auto; }
+
+.preset-card-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px 10px; border-radius: var(--radius-md);
+  font-size: 0.8125rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.preset-card-btn:hover               { background: var(--bg-tertiary); color: var(--text-primary); }
+
+.preset-card-btn-view:hover          { color: var(--text-secondary); background: var(--bg-tertiary); }
+
+.preset-card-btn-configure:hover     { background: rgba(47,191,113,0.1); color: #2FBF71; border-color: rgba(47,191,113,0.3); }
+
+.preset-card-btn-edit:hover          { background: rgba(59,130,246,0.1); color: #3b82f6; border-color: rgba(59,130,246,0.3); }
+
+.preset-card-btn-delete:hover        { background: rgba(239,68,68,0.1); color: var(--danger-color); border-color: rgba(239,68,68,0.3); }
+
+@media (max-width: 640px) {
+.preset-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+.preset-card {
+    border-radius: 12px;
+    padding: 12px;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  }
+.preset-card:hover {
+    transform: none;
+  }
+.preset-card-title {
+    font-size: 0.92rem;
+  }
+.preset-card-desc {
+    font-size: 0.76rem;
+  }
+.preset-card-chips {
+    gap: 6px;
+  }
+.preset-chip {
+    min-height: 28px;
+    font-size: 0.68rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+.preset-card-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+.preset-card-btn {
+    min-height: 38px;
+    padding: 8px 6px;
+    border-radius: 9px;
+    font-size: 0.68rem;
+  }
+}

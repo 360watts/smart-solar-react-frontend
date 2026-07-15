@@ -1,0 +1,189 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── profile ── */
+.profile-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  text-align: center;
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-8);
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-full);
+  background: var(--primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-5);
+  font-size: var(--font-4xl);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(47, 191, 113, 0.3);
+}
+
+.profile-name {
+  font-size: var(--font-2xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-2) 0;
+  color: var(--text-primary);
+}
+
+.profile-email {
+  color: var(--text-tertiary);
+  margin: 0;
+  font-size: var(--font-base);
+}
+
+.profile-section {
+  margin-bottom: var(--space-8);
+}
+
+.profile-section h3 {
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-5);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  font-weight: 600;
+}
+
+.profile-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  text-align: center;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 30px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-full);
+  background: var(--primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 2.5rem;
+  color: var(--primary-foreground);
+  font-weight: 700;
+}
+
+.profile-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+}
+
+.profile-email {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.profile-section {
+  margin-bottom: 30px;
+}
+
+.profile-section h3 {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.profile-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.profile-table .profile-label-cell {
+  width: 140px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+.profile-table .profile-label-cell {
+    width: auto;
+    display: block;
+    padding-bottom: 0 !important;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+.profile-table td {
+    display: block;
+    width: 100%;
+    padding-top: 4px !important;
+    padding-bottom: 10px !important;
+  }
+.profile-table tr {
+    display: block;
+    border-bottom: 1px solid var(--border-color);
+    padding: 6px 0;
+  }
+.profile-table tr:last-child {
+    border-bottom: none;
+  }
+}
+
+.profile-hero-banner {
+  height: 72px;
+  background: linear-gradient(135deg, rgba(47,191,113,0.12) 0%, rgba(47,191,113,0.08) 100%);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.profile-hero-body { padding: 0 var(--space-6) var(--space-6); margin-top: -36px; }
+
+.profile-hero-row  { display: flex; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-2); }
+
+.profile-hero-name { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; line-height: 1.2; }
+
+.profile-hero-meta { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+}
+
+.profile-info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background 0.15s;
+}
+
+.profile-info-row:hover { background: var(--bg-tertiary); }
+
+.profile-info-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: var(--primary-color);
+}
+
+.profile-info-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
+
+.profile-info-value { font-size: 0.875rem; color: var(--text-primary); font-weight: 500; }

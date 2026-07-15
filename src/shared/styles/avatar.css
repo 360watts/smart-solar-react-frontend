@@ -1,0 +1,22 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── avatar ── */
+.avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  color: var(--primary-foreground);
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+.avatar-initials-sm { width: 32px; height: 32px; font-size: 0.75rem; }
+
+.avatar-initials-md { width: 40px; height: 40px; font-size: 0.875rem; }
+
+.avatar-initials-lg { width: 72px; height: 72px; font-size: 1.625rem; border: 4px solid var(--bg-primary); box-shadow: 0 4px 20px rgba(0,0,0,0.25); }

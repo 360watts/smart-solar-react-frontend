@@ -1,0 +1,111 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── search ── */
+.search-input {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  width: 240px;
+  transition: all var(--transition-normal);
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--border-focus);
+  width: 300px;
+}
+
+@media (max-width: 768px) {
+.search-input {
+    width: 100%;
+  }
+.search-input:focus {
+    width: 100%;
+  }
+}
+
+.search-input {
+  padding: 10px 16px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text-primary);
+  width: 220px;
+  transition: all var(--transition-normal);
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.2);
+  width: 280px;
+}
+
+@media (max-width: 768px) {
+.search-input {
+    width: 100%;
+  }
+.search-input:focus {
+    width: 100%;
+  }
+}
+
+.search-input {
+  background: rgba(12, 18, 36, 0.85);
+  border: 1px solid rgba(47, 191, 113, 0.18);
+  transition: all 0.35s var(--transition-smooth);
+}
+
+.search-input:focus {
+  border-color: rgba(47, 191, 113, 0.55);
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.12), 0 0 20px rgba(47, 191, 113, 0.08);
+  width: 320px;
+  background: rgba(18, 26, 48, 0.95);
+}
+
+.search-input {
+  border: 1px solid rgba(47, 191, 113, 0.18);
+}
+
+.search-input:focus {
+  border-color: rgba(47, 191, 113, 0.55);
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.1), 0 0 20px rgba(47, 191, 113, 0.07);
+  background: rgba(8, 22, 12, 0.95);
+}
+
+.search-input {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.search-input::placeholder { color: var(--text-dim); }
+
+.search-input:focus {
+  background: #ffffff !important;
+  border-color: rgba(47, 191, 113, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.08) !important;
+  width: 300px;
+}
+
+@media (max-width: 768px) {
+.search-input,
+  .search-input:focus {
+    width: 100% !important;
+  }
+}

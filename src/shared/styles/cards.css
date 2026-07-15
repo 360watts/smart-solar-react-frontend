@@ -1,0 +1,257 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── card ── */
+.card {
+  background: var(--bg-card);
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  padding: var(--space-6);
+  margin: var(--space-5) 0;
+  transition: background 150ms ease, box-shadow 150ms ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.07);
+}
+
+.card::before {
+  display: none;
+}
+
+.card.interactive:hover {
+  background: var(--card-elevated, #EDF0F4);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.card-header h2,
+.card-header h3 {
+  margin: 0;
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+.card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+.card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+.card {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  padding: 24px;
+  margin: 20px 0;
+  transition: background 150ms ease, box-shadow 150ms ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+}
+
+.card::before {
+  display: none;
+}
+
+.card.interactive:hover {
+  background: var(--card-elevated, #EDF0F4);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.card-header h2,
+.card-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+.card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+.card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+.card {
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.card .audit-trail {
+  margin-top: var(--space-4);
+  padding: var(--space-2);
+}
+
+.card {
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.card.interactive:hover {
+  background: var(--card-elevated, #EDF0F4);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.card::before { display: none; }
+
+.card.interactive:hover {
+  background: var(--card-elevated, #EDF0F4);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.card::before {
+  background: linear-gradient(90deg, transparent, rgba(47, 191, 113, 0.45), rgba(240, 117, 34, 0.35), transparent);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+  color: var(--text-primary);
+}
+
+.card.interactive:hover {
+  background: var(--card-elevated, #EDF0F4);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.card::before { display: none; }
+
+.card h2, .card h3 { color: var(--text-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+.card-3d:hover {
+    transform: none;
+  }
+}
+
+.card-3d {
+  perspective: 1000px;
+  transition: transform 0.25s ease;
+}
+
+.card-3d:hover {
+  transform: rotateX(2deg) rotateY(2deg);
+}
+
+@media (max-width: 480px) {
+.card {
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (max-width: 768px) {
+.card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+.card-actions {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* ── bento ── */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.bento-1x1 { grid-column: span 3; }
+
+.bento-2x1 { grid-column: span 6; }
+
+.bento-3x1 { grid-column: span 9; }
+
+.bento-4x1 { grid-column: span 12; }
+
+.bento-2x2 { grid-column: span 6; grid-row: span 2; }
+
+.bento-hero { grid-column: span 8; }
+
+@media (max-width: 1200px) {
+.bento-1x1 { grid-column: span 6; }
+.bento-hero { grid-column: span 12; }
+.bento-2x2 { grid-column: span 12; grid-row: span 1; }
+}
+
+@media (max-width: 768px) {
+.bento-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+.bento-1x1, .bento-2x1, .bento-3x1, .bento-4x1,
+  .bento-2x2, .bento-hero { grid-column: span 1; grid-row: span 1; }
+}
+
+.bento-grid > .card:nth-child(1) { animation-delay: 0.00s; }
+
+.bento-grid > .card:nth-child(2) { animation-delay: 0.06s; }
+
+.bento-grid > .card:nth-child(3) { animation-delay: 0.12s; }
+
+.bento-grid > .card:nth-child(4) { animation-delay: 0.18s; }
+
+.bento-grid > .card:nth-child(5) { animation-delay: 0.24s; }
+
+.bento-grid > .card:nth-child(6) { animation-delay: 0.30s; }
+
+.bento-grid > .card:nth-child(7) { animation-delay: 0.36s; }
+
+.bento-grid > .card:nth-child(8) { animation-delay: 0.42s; }
+
+.bento-side { grid-column: span 4; }
+
+@media (max-width: 1200px) {
+.bento-side { grid-column: span 12; }
+}
+
+@media (max-width: 768px)  {
+.bento-side { grid-column: span 1; }
+}

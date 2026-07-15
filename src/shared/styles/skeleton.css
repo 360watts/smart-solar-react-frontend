@@ -1,0 +1,142 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── skeleton ── */
+.skeleton-loader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeleton-line {
+  background: linear-gradient(
+    90deg,
+    rgba(18, 21, 26, 0.06) 0%,
+    rgba(18, 21, 26, 0.10) 50%,
+    rgba(18, 21, 26, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerLoading 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  padding: var(--space-6) !important;
+}
+
+.skeleton-card .skeleton-line {
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-card .skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-loading {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6);
+  margin: var(--space-6) 0;
+}
+
+.skeleton-dashboard {
+  animation: fadeIn 0.3s ease;
+}
+
+.skeleton-dashboard .skeleton-line:first-child {
+  height: 32px !important;
+  width: 40%;
+  margin-bottom: var(--space-8);
+}
+
+.skeleton-row {
+  animation: fadeIn 0.3s ease;
+}
+
+.skeleton-row td {
+  padding: var(--space-4) var(--space-5);
+}
+
+.skeleton-row .skeleton-line {
+  height: 16px !important;
+}
+
+.skeleton-text {
+  height: 16px;
+}
+
+.skeleton-heading {
+  height: 24px;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 100px;
+}
+
+.skeleton-table-cell {
+  height: 16px;
+  width: 100%;
+}
+
+.skeleton-lines-3 {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-lines-3 .skeleton-line {
+  height: 16px;
+}
+
+.skeleton-lines-3 .skeleton-line:last-child {
+  width: 80%;
+}
+
+.skeleton {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-text   { height: 0.875rem; width: 100%; margin-bottom: 0.45rem; border-radius: 4px; }
+
+.skeleton-title  { height: 1.4rem;   width: 45%;  margin-bottom: 0.75rem; border-radius: 4px; }
+
+.skeleton-kpi    { height: 2.4rem;   width: 5rem; border-radius: 6px; }
+
+.skeleton-circle { border-radius: 50%; }
+
+.skeleton-chart  { height: 180px; border-radius: 10px; }
+
+.skeleton-line {
+  animation: shimmerLoading 2s infinite, skeleton-pulse 2.5s ease-in-out infinite;
+}

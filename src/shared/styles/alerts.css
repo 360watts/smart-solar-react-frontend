@@ -1,0 +1,261 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── alert ── */
+.alert-item {
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin: var(--space-3) 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.alert-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.alert-item:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.alert-item.status-critical::before {
+  background: var(--danger-color);
+}
+
+.alert-item.status-warning::before {
+  background: var(--warning-color);
+}
+
+.alert-item.status-info::before {
+  background: var(--info-color);
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.alert-icon {
+  font-size: var(--font-xl);
+  margin-right: var(--space-3);
+}
+
+.alert-type {
+  font-weight: 600;
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.alert-device {
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+}
+
+.alert-time {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.alert-message {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  margin: var(--space-3) 0;
+  line-height: var(--leading-relaxed);
+}
+
+.alert-status {
+  font-size: var(--font-sm);
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.alert-preview {
+  margin-top: var(--space-3);
+}
+
+.alert-item-mini {
+  font-size: var(--font-sm);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.alert-item-mini:last-child {
+  border-bottom: none;
+}
+
+.alert-item {
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin: 12px 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.alert-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.alert-item:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-md);
+}
+
+.alert-item.status-critical::before {
+  background: var(--danger-color);
+}
+
+.alert-item.status-warning::before {
+  background: var(--warning-color);
+}
+
+.alert-item.status-info::before {
+  background: var(--info-color);
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.alert-icon {
+  font-size: 1.5rem;
+  margin-right: 12px;
+}
+
+.alert-type {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alert-device {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.alert-time {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.alert-message {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.alert-status {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.alert-preview {
+  margin-top: 12px;
+}
+
+.alert-item-mini {
+  font-size: 0.9rem;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.alert-item-mini:last-child {
+  border-bottom: none;
+}
+
+.alert {
+  padding: var(--space-4);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideDown 0.3s ease-out;
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--success-color);
+  color: var(--success-color);
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+.alert-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0;
+  margin-left: var(--space-4);
+}
+
+.alert-close:hover {
+  opacity: 0.7;
+}
+
+.alert-item:hover {
+  transform: translateX(5px);
+  box-shadow: var(--shadow-md), inset -3px 0 0 var(--warning-color);
+}
+
+.alert-item.status-critical::before { background: var(--danger-color); box-shadow: 0 0 8px var(--danger-color); }
+
+.alert-item.status-warning::before  { background: var(--warning-color); box-shadow: 0 0 8px var(--warning-color); }
+
+.alert-item.status-info::before     { background: var(--info-color); box-shadow: 0 0 8px var(--info-color); }
+
+.alert-item {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(47, 191, 113, 0.08);
+}
+
+@media (max-width: 480px) {
+.alert-card, .forecast-card {
+    padding: 12px !important;
+  }
+}

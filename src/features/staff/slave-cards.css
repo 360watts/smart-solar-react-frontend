@@ -1,0 +1,131 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── slave ── */
+.slave-config-modal {
+  max-width: 1200px;
+}
+
+.slave-config-modal .modal-body {
+  overflow-x: auto;
+}
+
+.slave-config-modal .form-grid {
+  align-items: start;
+}
+
+.slave-config-modal .form-grid .form-group {
+  margin: 0;
+}
+
+.slave-config-modal .form-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.slave-config-modal .form-group-btn {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.slave-config-modal .registers-table {
+  min-width: 720px;
+}
+
+.slave-config-modal .modal-footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1024px) {
+.slave-config-modal .form-grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.slave-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slave-option-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.slave-option-header {
+  padding: 12px 16px;
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+}
+
+.slave-option-content {
+  padding: 16px;
+  color: var(--text-secondary);
+}
+
+.slave-option-content.active {
+  background: rgba(47, 191, 113, 0.03);
+}
+
+.slave-option-card {
+  background: rgba(240, 253, 244, 0.4) !important;
+  border-color: rgba(47, 191, 113, 0.1) !important;
+}
+
+.slave-option-header {
+  background: rgba(240, 253, 244, 0.7) !important;
+  border-bottom-color: rgba(47, 191, 113, 0.08) !important;
+}
+
+.slave-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.slave-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.slave-card:hover { box-shadow: var(--shadow-md); }
+
+.slave-card-name  { font-size: 0.9375rem; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
+
+.slave-card-id    { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+
+.slave-card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+
+.slave-stat       { background: var(--bg-tertiary); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.75rem; }
+
+.slave-stat-label { color: var(--text-muted); font-weight: 500; margin-bottom: 2px; }
+
+.slave-stat-value { color: var(--text-primary); font-weight: 700; }
+
+.slave-card-actions { display: flex; gap: var(--space-2); margin-top: auto; }
+
+.slave-card-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px 10px; border-radius: var(--radius-md);
+  font-size: 0.8125rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.slave-card-btn-edit:hover   { background: rgba(47,191,113,0.1); color: #2FBF71; border-color: rgba(47,191,113,0.3); }
+
+.slave-card-btn-delete:hover { background: rgba(239,68,68,0.1); color: var(--danger-color); border-color: rgba(239,68,68,0.3); }

@@ -1,0 +1,21 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── staff ── */
+.staff-main,
+.staff-main * {
+  font-family: 'Fira Sans', 'DM Sans', -apple-system, sans-serif;
+}
+
+.staff-data,
+.staff-main .device-serial,
+.staff-main .signal-value,
+.staff-main .timestamp,
+.staff-main .metric-value,
+.staff-main code,
+.staff-main pre {
+  font-family: 'Fira Code', 'JetBrains Mono', 'Monaco', monospace !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}

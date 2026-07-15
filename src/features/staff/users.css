@@ -1,0 +1,140 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── user ── */
+.user-info {
+  padding: var(--space-4);
+  margin: 0 var(--space-3) var(--space-5);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
+}
+
+.user-info:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.user-name {
+  margin: 0;
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-email {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+}
+
+.user-role {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--primary-gradient);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--primary-foreground);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.user-info-card {
+  background: var(--primary-gradient);
+  color: var(--primary-foreground);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  box-shadow: 0 12px 40px rgba(47, 191, 113, 0.3);
+}
+
+.user-details p,
+.user-stats p {
+  margin: var(--space-2) 0;
+  font-size: var(--font-base);
+  opacity: 0.95;
+}
+
+.user-stats {
+  text-align: right;
+  background: rgba(255, 255, 255, 0.12);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 768px) {
+.user-info-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+.user-stats {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+.user-info-card {
+  background: var(--primary-gradient);
+  color: var(--primary-foreground);
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  box-shadow: 0 10px 30px rgba(47, 191, 113, 0.3);
+}
+
+.user-details p,
+.user-stats p {
+  margin: 10px 0;
+  font-size: 1.05rem;
+}
+
+.user-stats {
+  text-align: right;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px 24px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 768px) {
+.user-info-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+.user-stats {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+.user-info-card {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #0891b2 100%);
+  box-shadow: 0 16px 48px rgba(79, 70, 229, 0.4), var(--glow-primary);
+}
+
+.user-info-card {
+  background: linear-gradient(135deg, #007a55 0%, #00a63e 40%, #d96b1e 100%);
+  box-shadow: 0 16px 48px rgba(0, 122, 85, 0.4), var(--glow-primary);
+}
+
+.user-info-card { background: linear-gradient(135deg, #007a55 0%, #00a63e 45%, #d96b1e 100%) !important; }

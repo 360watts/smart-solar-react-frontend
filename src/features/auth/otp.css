@@ -1,0 +1,86 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── otp ── */
+.otp-info {
+  text-align: center;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.otp-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.otp-boxes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.otp-box {
+  width: 44px;
+  height: 52px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  caret-color: transparent;
+}
+
+.otp-box:focus {
+  border-color: var(--accent-primary, #2FBF71);
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.18);
+}
+
+.otp-box--filled {
+  border-color: rgba(47, 191, 113, 0.5);
+  background: rgba(47, 191, 113, 0.06);
+}
+
+.otp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.otp-back-btn,
+.otp-resend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.otp-back-btn {
+  color: var(--text-muted);
+}
+
+.otp-back-btn:hover:not(:disabled) { color: var(--text-primary); }
+
+.otp-resend-btn {
+  color: var(--accent-primary, #2FBF71);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.otp-resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.otp-resend-btn:hover:not(:disabled) { opacity: 0.8; }

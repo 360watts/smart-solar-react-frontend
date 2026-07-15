@@ -1,0 +1,26 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── particle ── */
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  opacity: 0.2;
+  animation: floatParticle 20s infinite;
+}
+
+.particle-1 { top: 20%; left: 10%; animation-delay: 0s; }
+
+.particle-2 { top: 60%; left: 20%; animation-delay: 2s; animation-duration: 22s; }
+
+.particle-3 { top: 40%; right: 15%; animation-delay: 4s; animation-duration: 18s; }
+
+.particle-4 { top: 80%; right: 25%; animation-delay: 1s; animation-duration: 25s; }
+
+.particle-5 { top: 30%; left: 70%; animation-delay: 3s; animation-duration: 20s; }
+
+.particle-6 { top: 70%; left: 50%; animation-delay: 5s; animation-duration: 17s; }

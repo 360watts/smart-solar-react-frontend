@@ -1,0 +1,137 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── firmware ── */
+.firmware-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.firmware-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: var(--space-4);
+  transition: all var(--transition-fast);
+}
+
+.firmware-item.active {
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.firmware-item:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border-hover);
+}
+
+.firmware-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.firmware-item .filename {
+  flex: 1;
+  color: var(--text-primary);
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: var(--font-sm);
+}
+
+.firmware-item .size {
+  color: var(--text-tertiary);
+  font-size: var(--font-sm);
+}
+
+.firmware-item .description {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  margin: var(--space-2) 0 0 0;
+  line-height: var(--leading-snug);
+}
+
+.firmware-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-3);
+  font-size: var(--font-xs);
+}
+
+.firmware-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.firmware-actions .btn {
+  min-width: 90px;
+}
+
+@media (max-width: 768px) {
+.firmware-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+.firmware-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
+/* ── ota ── */
+.ota-file-input {
+  padding: 0;
+  color: var(--text-secondary);
+}
+
+.ota-file-input::file-selector-button {
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  border: 1px solid var(--primary-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+
+.ota-file-input::file-selector-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-primary);
+  filter: brightness(1.05);
+}
+
+.ota-file-input::file-selector-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.ota-file-input::-webkit-file-upload-button {
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  border: 1px solid var(--primary-dark);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+
+.ota-file-input::-webkit-file-upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-primary);
+  filter: brightness(1.05);
+}
+
+.ota-file-input::-webkit-file-upload-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}

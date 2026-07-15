@@ -1,0 +1,92 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── admin ── */
+.admin-container {
+  padding: var(--space-8);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-header h1 {
+  font-size: var(--font-3xl);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: var(--space-6);
+}
+
+.admin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: var(--space-6);
+  backdrop-filter: blur(8px);
+  transition: all var(--transition-fast);
+}
+
+.admin-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-glass-hover);
+}
+
+.admin-card h2 {
+  font-size: var(--font-xl);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-card h4 {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  margin: var(--space-4) 0 var(--space-2) 0;
+}
+
+@media (max-width: 768px) {
+.admin-grid {
+    grid-template-columns: 1fr;
+  }
+.admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+}
+
+.admin-card { background: rgba(255, 255, 255, 0.88); border: 1px solid rgba(47, 191, 113, 0.1); }
+
+@media (max-width: 900px) {
+.admin-container {
+    padding: 1.25rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+.admin-container {
+    padding: 1rem !important;
+  }
+.admin-header {
+    margin-bottom: 1.25rem !important;
+    gap: 0.75rem !important;
+  }
+}

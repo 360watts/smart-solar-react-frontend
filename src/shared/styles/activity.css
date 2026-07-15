@@ -1,0 +1,89 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── activity ── */
+.activity-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  margin-bottom: var(--space-3);
+  gap: var(--space-4);
+  transition: all var(--transition-normal);
+}
+
+.activity-item:hover {
+  background: var(--bg-glass-hover);
+  transform: translateX(4px);
+}
+
+.activity-icon {
+  font-size: var(--font-xl);
+  min-width: 36px;
+  text-align: center;
+}
+
+.activity-text {
+  flex: 1;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.activity-time {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.activity-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-glass);
+  margin-bottom: 10px;
+  gap: 14px;
+  transition: all var(--transition-normal);
+}
+
+.activity-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+.activity-icon {
+  font-size: 1.6rem;
+  min-width: 36px;
+  text-align: center;
+}
+
+.activity-text {
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.activity-time {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.activity-item { border-bottom: 1px solid rgba(47, 191, 113, 0.06); }
+
+.activity-text { color: #4a5565; }
+
+.activity-time { color: var(--text-dim); }

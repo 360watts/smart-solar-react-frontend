@@ -1,0 +1,338 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── btn ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--primary-gradient);
+  border: none;
+  color: var(--primary-foreground);
+  padding: var(--space-3) var(--space-6);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  box-shadow: 
+    0 8px 20px rgba(47, 191, 113, 0.35),
+    0 0 0 0 rgba(47, 191, 113, 0);
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.btn:hover {
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.25), 0 6px 20px rgba(47, 191, 113, 0.35);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-small {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-xs);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.15) 0%, rgba(100, 116, 139, 0.15) 100%);
+  border: 2px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.25) 0%, rgba(100, 116, 139, 0.25) 100%);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.15);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover {
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.4);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  font-size: var(--font-sm);
+}
+
+.btn-icon-danger {
+  color: var(--danger-color);
+}
+
+.btn-icon-danger:hover {
+  background: var(--danger-bg);
+}
+
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-sm);
+}
+
+.btn-primary {
+  background: var(--primary-gradient);
+  color: var(--primary-foreground);
+  border: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary-gradient);
+  border: none;
+  color: var(--primary-foreground);
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+  box-shadow: 0 4px 12px rgba(47, 191, 113, 0.3);
+  text-decoration: none;
+}
+
+.btn:hover {
+  box-shadow: 0 0 0 3px rgba(47, 191, 113, 0.25), 0 6px 20px rgba(47, 191, 113, 0.35);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-secondary {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #f56565 0%, #c53030 100%);
+  box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+.btn-danger:hover {
+  box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.btn-success:hover {
+  box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.3px;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+
+.btn:hover::after {
+  left: 130%;
+}
+
+.btn:hover {
+  box-shadow: 0 0 0 3px rgba(47,191,113,0.2), 0 6px 18px rgba(47,191,113,0.3);
+}
+
+.btn:active {
+  opacity: 0.92;
+  transition: opacity 0.08s ease;
+}
+
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success):not(.btn-primary) {
+  background: linear-gradient(135deg, #2FBF71, #8b5cf6, #a78bfa, #2FBF71);
+  background-size: 300% 100%;
+  animation: btnGradient 5s ease infinite;
+}
+
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success):not(.btn-primary):hover {
+  box-shadow: 0 14px 32px rgba(47, 191, 113, 0.55), var(--glow-primary);
+}
+
+.btn-danger:hover   { box-shadow: 0 12px 28px rgba(239, 68, 68, 0.5), var(--glow-danger); }
+
+.btn-success:hover  { box-shadow: 0 12px 28px rgba(16, 185, 129, 0.5), var(--glow-success); }
+
+.btn-primary:hover  { box-shadow: 0 12px 28px rgba(47, 191, 113, 0.5), var(--glow-primary); }
+
+.btn-secondary {
+  position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--primary-color), var(--cyan-dark), var(--secondary-color));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.btn-secondary:hover::before { opacity: 1; }
+
+.btn-secondary:hover {
+  border-color: transparent;
+  background: rgba(30, 41, 59, 0.95);
+  box-shadow: 0 8px 20px rgba(47, 191, 113, 0.2);
+}
+
+.btn-icon:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px rgba(47, 191, 113, 0.12);
+}
+
+.btn-icon-danger:hover {
+  background: var(--danger-bg);
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.1);
+}
+
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success):not(.btn-primary) {
+  background: linear-gradient(135deg, #00a63e, #007a55, #4ade80, #00a63e);
+  background-size: 300% 100%;
+  animation: btnGradient 5s ease infinite;
+}
+
+.btn:not(.btn-secondary):not(.btn-danger):not(.btn-success):not(.btn-primary):hover {
+  box-shadow: 0 14px 32px rgba(47, 191, 113, 0.55), var(--glow-primary);
+}
+
+.btn-primary:hover  { box-shadow: 0 12px 28px rgba(47, 191, 113, 0.5), var(--glow-primary); }
+
+.btn-secondary:hover {
+  box-shadow: 0 8px 20px rgba(47, 191, 113, 0.2);
+}
+
+.btn-secondary::before {
+  background: linear-gradient(135deg, var(--brand-green), var(--brand-orange-dark), var(--brand-green-dark));
+}
+
+.btn-icon:hover { box-shadow: 0 0 0 6px rgba(47, 191, 113, 0.12); }
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(47, 191, 113, 0.2);
+  color: #007a55;
+}
+
+.btn-secondary:hover {
+  background: #ffffff;
+  border-color: rgba(47, 191, 113, 0.4);
+  color: #00a63e;
+  box-shadow: 0 4px 14px rgba(47, 191, 113, 0.12) !important;
+}
+
+.btn-secondary::before { opacity: 0 !important; }
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--primary-gradient);
+  color: var(--primary-foreground);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+.btn-primary:active,
+  .auth-button:active {
+    transform: none;
+  }
+}
+
+.btn-primary:active:not(:disabled),
+.auth-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+.btn-group {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

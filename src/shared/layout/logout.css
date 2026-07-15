@@ -1,0 +1,80 @@
+/* Extracted from src/App.css during CSS-unification Phase 2.
+   Same selectors, same values — reorganized by feature, not rewritten.
+   Tokens still come from src/index.css / src/styles/glass-tokens.css. */
+
+/* ── logout ── */
+.logout-button {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15));
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 11px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  transition: all var(--transition-normal);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.logout-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left var(--transition-smooth);
+}
+
+.logout-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.25));
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.5);
+
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+}
+
+.logout-button:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.logout-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.logout-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logout-button svg {
+  transition: transform var(--transition-normal);
+}
+
+.logout-button:hover svg {
+  transform: translateX(-2px);
+}
+
+@media (max-width: 1024px) {
+.logout-button span {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+.logout-button span {
+    display: none;
+  }
+}
+
+.logout-button:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3), var(--glow-danger);
+}
