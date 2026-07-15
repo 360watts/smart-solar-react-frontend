@@ -42,7 +42,7 @@ export function LiveSummaryRail({ form, quoteNumber, collapsed, onToggleCollapse
     { label: 'Customer', value: custName || '—' },
     { label: 'Site', value: custAddress ? custAddress.split('\n')[0] : '—' },
     { label: 'System', value: systemKw > 0 ? `${systemKw.toFixed(1)} kWp · ${SYSTEM_TYPE_LABEL[sysType] ?? sysType}` : '—' },
-    { label: 'Net Investment', value: safeInvestment > 0 ? formatINR(safeInvestment) : '—' },
+    { label: 'Net Investment', value: safeInvestment > 0 ? formatINR(safeInvestment) : '—', highlight: true },
     { label: 'ROI / Payback', value: roi ? `${roi.roiPercent.toFixed(1)}% · ${roi.paybackYears}y ${roi.paybackMonths}m` : '—' },
   ];
 
@@ -67,7 +67,7 @@ export function LiveSummaryRail({ form, quoteNumber, collapsed, onToggleCollapse
         {rows.map(r => (
           <div key={r.label} className="sq-rail__row">
             <span className="sq-rail__label">{r.label}</span>
-            <span className="sq-rail__value">{r.value}</span>
+            <span className={r.highlight ? 'sq-rail__value sq-rail__value--highlight' : 'sq-rail__value'}>{r.value}</span>
           </div>
         ))}
       </div>

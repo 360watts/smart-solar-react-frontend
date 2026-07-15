@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { useFieldArray, useWatch, UseFormReturn } from 'react-hook-form';
-import { Plus, Trash2, Activity, TrendingUp, Zap, Sun, CarFront, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import { useFieldArray, UseFormReturn } from 'react-hook-form';
+import { Plus, Trash2, ToggleLeft, ToggleRight, Search, ChevronDown, ChevronUp, Sun, Boxes, Wrench, PackagePlus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { calcEbBill, calcEvSizing, calcBomBaseCost, calcBomRow, calcBomTotals, calcSubsidy, formatINR } from '../../utils/roiCalculator';
+import { calcBomBaseCost, calcBomRow, calcBomTotals, calcEbBill, calcSubsidy, formatINR } from '../../utils/roiCalculator';
 import { apiService } from '../../../../services/api';
 import type { ProductCatalogItem } from '../../../../services/api';
 import type { QuotationData, BomRow } from '../../types/quotation';
 
-interface Props {
-  form: UseFormReturn<QuotationData>;
-  autofillBomQuantities: () => void;
-}
+interface Props { form: UseFormReturn<QuotationData> }
 
-// ── Copied verbatim from Step3Bom.tsx lines 12-25 ──
 const DEFAULT_ROWS: Omit<BomRow, 'id'>[] = [
   { item: 'Panels',             brand: '',          description: '615Wp TOPCon',                qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 5,  priceSource: 'manual', priceUnit: 'Wp' },
   { item: 'Inverter',           brand: '',          description: '12kW 3-ph String',             qty: 1,  unitPrice: 0, marginPct: 20,  gstPct: 5  },
@@ -31,10 +27,6 @@ const DEFAULT_ROWS: Omit<BomRow, 'id'>[] = [
 export function newRows(): BomRow[] {
   return DEFAULT_ROWS.map(r => ({ ...r, id: uuid() }));
 }
-
-// ── Copied verbatim from Step3Bom.tsx lines 33-194:
-//    CatalogCategory type, ITEM_TO_CATEGORY, CATEGORY_LABEL,
-//    CatalogSelectorProps, isRowUntouched(), matchesCatalogItem(), CatalogSelector() ──
 
 // ── Row item name → catalog category mapping ──────────────────────────────
 
@@ -74,6 +66,48 @@ const CATEGORY_LABEL: Record<CatalogCategory, string> = {
   installation: 'Installation',
   iot:          'IoT Hub',
 };
+
+// ── Row grouping for navigability — items are grouped by what a rep is
+//    actually deciding, not by table position, so the BOM reads as three
+//    scannable decisions (what generates, what carries it, what's charged
+//    for on top) instead of one flat 12-row list. ──
+type BomSection = 'generation' | 'bos' | 'services' | 'custom';
+
+const SECTION_ORDER: BomSection[] = ['generation', 'bos', 'services', 'custom'];
+
+const SECTION_LABEL: Record<BomSection, string> = {
+  generation: 'Generation',
+  bos:        'Balance of System',
+  services:   'Services & Add-ons',
+  custom:     'Custom Additions',
+};
+
+// Plain-language sense of what each group covers, shown under the section
+// label so a rep unfamiliar with the standard BOM can still place a row.
+const SECTION_HINT: Record<BomSection, string> = {
+  generation: 'What makes the power',
+  bos:        'What carries and protects it',
+  services:   'What gets it installed and running',
+  custom:     'Anything else for this quote',
+};
+
+const SECTION_ICON: Record<BomSection, typeof Sun> = {
+  generation: Sun,
+  bos:        Boxes,
+  services:   Wrench,
+  custom:     PackagePlus,
+};
+
+const CATEGORY_TO_SECTION: Record<CatalogCategory, BomSection> = {
+  panels: 'generation', inverters: 'generation', batteries: 'generation',
+  dcdb: 'bos', acdb: 'bos', mounting: 'bos', earthing: 'bos', lightning: 'bos', mc4: 'bos', wiring: 'bos',
+  accessories: 'services', installation: 'services', iot: 'services',
+};
+
+function sectionForRow(row: BomRow): BomSection {
+  const category = ITEM_TO_CATEGORY[row.item.toLowerCase()];
+  return category ? CATEGORY_TO_SECTION[category] : 'custom';
+}
 
 // ── Generic catalog selector ──────────────────────────────────────────────
 
@@ -201,10 +235,11 @@ function CatalogSelector({ category, onSelect, autoPickFn, currentRow }: Catalog
   );
 }
 
-// ── Copied verbatim from Step3Bom.tsx lines 198-544: BomTable() ──
+// ── BomTable ───────────────────────────────────────────────────────────────
 
 function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFormReturn<QuotationData> }) {
   const { register, watch, control, setValue } = form;
+  const [openCatalogId, setOpenCatalogId] = useState<string | null>(null);
   const ebBill = watch('ebBill');
   const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
   const systemKw = recommendedSystemKw;
@@ -345,79 +380,147 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
     return inStock(items)[0] ?? items[0];
   }
 
-  // Categories that have catalog entries — drives which selectors to show
-  const CATALOG_CATEGORIES: CatalogCategory[] = [
-    'panels', 'inverters', 'dcdb', 'acdb', 'mounting',
-    'earthing', 'lightning', 'mc4', 'wiring', 'accessories', 'installation', 'iot',
-  ];
+  // Group rows by section while preserving each row's real field-array index
+  // (register() paths and remove() must reference the row's actual position,
+  // not its position within the group).
+  type IndexedRow = { idx: number; field: BomRow };
+  const sections: Record<BomSection, IndexedRow[]> = { generation: [], bos: [], services: [], custom: [] };
+  (fields as unknown as BomRow[]).forEach((field, idx) => {
+    const liveRow = liveRows[idx] ?? field;
+    sections[sectionForRow(liveRow)].push({ idx, field });
+  });
+
+  function autoPickFnFor(category: CatalogCategory) {
+    if (category === 'panels') return pickBestPanel;
+    if (category === 'inverters') return pickBestInverter;
+    if (category === 'dcdb') return (items: ProductCatalogItem[]) => pickBomsBySize(items, false);
+    if (category === 'acdb') return (items: ProductCatalogItem[]) => pickBomsBySize(items, systemType === 'HYBRID');
+    return pickFirstInStock;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* Catalog selectors — 2-column grid */}
-      <div className="sq-catalog-grid">
-        {CATALOG_CATEGORIES.map(cat => (
-          <CatalogSelector
-            key={cat}
-            category={cat}
-            onSelect={item => applyFromCatalog(cat, item)}
-            currentRow={liveRows.find(row => ITEM_TO_CATEGORY[row.item.toLowerCase()] === cat) ?? null}
-            autoPickFn={
-              cat === 'panels'    ? pickBestPanel    :
-              cat === 'inverters' ? pickBestInverter  :
-              cat === 'dcdb'      ? (items) => pickBomsBySize(items, false) :
-              cat === 'acdb'      ? (items) => pickBomsBySize(items, systemType === 'HYBRID') :
-              pickFirstInStock
-            }
-          />
-        ))}
-      </div>
-
       <div className="sq-table-wrap">
-        <table className="sq-table">
+        <table className="sq-table sq-bom-table">
           <thead>
             <tr>
-              <th style={{ width: 110 }}>Item</th>
+              <th style={{ width: 130 }}>Item</th>
               <th style={{ width: 90 }}>Brand</th>
               <th style={{ width: 140 }}>Description</th>
-              <th className="right" style={{ width: 52 }}>Qty</th>
-              <th className="right" style={{ width: 96 }}>Rate ₹</th>
-              <th className="right" style={{ width: 96 }}>Base ₹</th>
-              <th className="right" style={{ width: 62 }}>Mgn%</th>
-              <th className="right" style={{ width: 52 }}>GST%</th>
-              <th className="right" style={{ width: 100 }}>Final ₹</th>
+              <th className="right" style={{ width: 52 }} title="How many">Qty</th>
+              <th className="right" style={{ width: 96 }} title="Price per unit, before margin and GST">Unit Rate</th>
+              <th className="right" style={{ width: 96 }} title="Qty × Unit Rate — what this line costs 360Watts">Base Cost</th>
+              <th className="right" style={{ width: 62 }} title="Markup added over base cost">Margin %</th>
+              <th className="right" style={{ width: 52 }} title="Tax applied after margin">GST %</th>
+              <th className="right" style={{ width: 108 }} title="What the customer pays for this line, after margin and GST">Customer Price</th>
               <th style={{ width: 28 }} />
             </tr>
           </thead>
-          <tbody>
-            {(fields as unknown as BomRow[]).map((field, idx) => {
-              const liveRow: BomRow = liveRows[idx] ?? field;
-              const baseCost = calcBomBaseCost(liveRow, systemKw);
-              const finalCost = calcBomRow(liveRow, systemKw);
-              return (
-                <tr key={field.id}>
-                  <td><input className="sq-bom-input" style={{ minWidth: 80 }} {...register(`${prefix}.rows.${idx}.item`)} /></td>
-                  <td><input className="sq-bom-input" style={{ minWidth: 60 }} {...register(`${prefix}.rows.${idx}.brand`)} /></td>
-                  <td><input className="sq-bom-input" style={{ minWidth: 100 }} {...register(`${prefix}.rows.${idx}.description`)} /></td>
-                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
-                  <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg, #0f172a)' : 'var(--muted-foreground)', paddingRight: 8 }}>
-                    {baseCost > 0 ? formatINR(baseCost) : '—'}
-                  </td>
-                  <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
-                  <td><input type="number" min={0} max={28} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} /></td>
-                  <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: finalCost > 0 ? 'var(--fg, #0f172a)' : 'var(--muted-foreground)', paddingRight: 8 }}>
-                    {finalCost > 0 ? formatINR(finalCost) : '—'}
-                  </td>
-                  <td style={{ paddingRight: 6 }}>
-                    <button type="button" className="sq-icon-btn" onClick={() => remove(idx)}>
-                      <Trash2 style={{ width: 11, height: 11 }} />
-                    </button>
+          {SECTION_ORDER.map(sectionKey => {
+            const rows = sections[sectionKey];
+            if (!rows.length) return null;
+            const sectionTotal = rows.reduce((s, { idx, field }) => s + calcBomRow(liveRows[idx] ?? field, systemKw), 0);
+            const SectionIcon = SECTION_ICON[sectionKey];
+            return (
+              <tbody key={sectionKey} className="sq-bom-section">
+                <tr className="sq-bom-section-row">
+                  <td colSpan={10}>
+                    <div className="sq-bom-section-head">
+                      <SectionIcon className="sq-bom-section-icon" style={{ width: 14, height: 14 }} />
+                      <div className="sq-bom-section-titles">
+                        <span className="sq-bom-section-label">{SECTION_LABEL[sectionKey]}</span>
+                        <span className="sq-bom-section-hint">{SECTION_HINT[sectionKey]}</span>
+                      </div>
+                      <span className="sq-bom-section-count">{rows.length} item{rows.length !== 1 ? 's' : ''}</span>
+                      <span className="sq-bom-section-subtotal">{formatINR(sectionTotal)}</span>
+                    </div>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
+                {rows.map(({ idx, field }) => {
+                  const liveRow: BomRow = liveRows[idx] ?? field;
+                  const baseCost = calcBomBaseCost(liveRow, systemKw);
+                  const finalCost = calcBomRow(liveRow, systemKw);
+                  const category = ITEM_TO_CATEGORY[liveRow.item.toLowerCase()];
+                  const isCatalogOpen = openCatalogId === field.id;
+                  return (
+                    <Fragment key={field.id}>
+                      <tr>
+                        <td>
+                          <div className="sq-bom-item-cell">
+                            <input className="sq-bom-input" style={{ minWidth: 68 }} {...register(`${prefix}.rows.${idx}.item`)} />
+                            {category && (
+                              <button
+                                type="button"
+                                className="sq-icon-btn sq-bom-catalog-toggle"
+                                title={isCatalogOpen ? 'Hide catalog picker' : 'Choose from catalog'}
+                                onClick={() => setOpenCatalogId(isCatalogOpen ? null : field.id)}
+                              >
+                                <Search style={{ width: 11, height: 11 }} />
+                                {isCatalogOpen ? <ChevronUp style={{ width: 10, height: 10 }} /> : <ChevronDown style={{ width: 10, height: 10 }} />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td><input className="sq-bom-input" style={{ minWidth: 60 }} {...register(`${prefix}.rows.${idx}.brand`)} /></td>
+                        <td><input className="sq-bom-input" style={{ minWidth: 100 }} {...register(`${prefix}.rows.${idx}.description`)} /></td>
+                        <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
+                        <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg)' : 'var(--muted-foreground)', paddingRight: 8 }}>
+                          {baseCost > 0 ? formatINR(baseCost) : '—'}
+                        </td>
+                        <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
+                        <td><input type="number" min={0} max={28} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} /></td>
+                        <td style={{ paddingRight: 8 }}>
+                          {finalCost > 0 ? (
+                            <div className="sq-bom-price-cell">
+                              {/* Composition bar: base cost vs. margin+GST markup, so a rep can
+                                  see at a glance how much of the price is markup without reading
+                                  four separate numbers. */}
+                              <span
+                                className="sq-bom-price-bar"
+                                title={`${formatINR(baseCost)} base · ${formatINR(finalCost - baseCost)} margin + GST`}
+                              >
+                                <span
+                                  className="sq-bom-price-bar__base"
+                                  style={{ width: `${Math.min(100, (baseCost / finalCost) * 100)}%` }}
+                                />
+                              </span>
+                              <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--fg)' }}>
+                                {formatINR(finalCost)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ paddingRight: 6 }}>
+                          <button type="button" className="sq-icon-btn" onClick={() => remove(idx)} title="Remove row">
+                            <Trash2 style={{ width: 11, height: 11 }} />
+                          </button>
+                        </td>
+                      </tr>
+                      {/* Catalog picker stays mounted whenever a row matches a category — even
+                          while hidden — so its auto-pick-best-match effect still runs on load.
+                          Only visibility toggles; the component itself never unmounts. */}
+                      {category && (
+                        <tr className="sq-bom-catalog-row" style={{ display: isCatalogOpen ? 'table-row' : 'none' }}>
+                          <td colSpan={10}>
+                            <CatalogSelector
+                              category={category}
+                              onSelect={item => { applyFromCatalog(category, item); setOpenCatalogId(null); }}
+                              currentRow={liveRow}
+                              autoPickFn={autoPickFnFor(category)}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            );
+          })}
           <tfoot>
             {/* Column-aligned totals row */}
             <tr style={{ borderTop: '1px solid var(--line-2, rgba(0,0,0,0.1))' }}>
@@ -477,7 +580,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
         onClick={() => append({ id: uuid(), item: '', brand: '', description: '', qty: 1, unitPrice: 0, marginPct: 20, gstPct: 18 })}
       >
         <Plus style={{ width: 11, height: 11 }} />
-        Add Row
+        Add Custom Item
       </button>
 
       {/* Options row */}
@@ -526,7 +629,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
       {/* Notes row */}
       <div className="sq-grid-2">
         <div className="sq-field">
-          <label className="sq-label">Not Included</label>
+          <label className="sq-label">What's Not Included</label>
           <textarea
             className="sq-textarea"
             rows={3}
@@ -534,9 +637,10 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             style={{ fontSize: '0.78rem' }}
             {...register(`${prefix}.notIncluded`)}
           />
+          <p className="sq-hint">Printed on the proposal so the customer knows what's out of scope</p>
         </div>
         <div className="sq-field">
-          <label className="sq-label">Factors Note</label>
+          <label className="sq-label">Notes for This Quote</label>
           <textarea
             className="sq-textarea"
             rows={3}
@@ -544,6 +648,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             style={{ fontSize: '0.78rem' }}
             {...register(`${prefix}.factorsNote`)}
           />
+          <p className="sq-hint">Any assumptions or context worth flagging to the customer</p>
         </div>
       </div>
 
@@ -551,333 +656,9 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
   );
 }
 
-// ── Renamed from Step2EbBill.tsx's `Step2EbBill` function (lines 9-311), body unchanged ──
-function ConsumptionSizingSection({ form }: { form: UseFormReturn<QuotationData> }) {
-  const { register, watch, control, setValue } = form;
-  const [showEvModal, setShowEvModal] = useState(false);
-  const { fields, append, remove } = useFieldArray({ control, name: 'ebBill.readings' });
-  const psh       = useWatch({ control, name: 'ebBill.peakSunHours' });
-  const pf        = useWatch({ control, name: 'ebBill.powerFactor' });
-  const dcAcRatio = useWatch({ control, name: 'ebBill.dcAcRatio' });
-  const phase     = useWatch({ control, name: 'ebBill.phase' });
-  const readings  = useWatch({ control, name: 'ebBill.readings' });
-  const evSizing  = useWatch({ control, name: 'ebBill.evSizing' });
-  const ebBillData = { peakSunHours: psh, powerFactor: pf, dcAcRatio, phase, readings: readings ?? [], evSizing };
-  const calc = calcEbBill(ebBillData);
-  const evCalc = calcEvSizing(ebBillData);
-
-  const METRICS = [
-    { key: 'avgBimonthlyKwh',       label: 'Avg Bi-monthly', sub: `${calc.avgDailyKwh.toFixed(1)} kWh/day`, unit: 'kWh', val: Math.round(calc.avgBimonthlyKwh), Icon: Activity,  color: 'var(--blue, #3b82f6)'    },
-    { key: 'tangedcoBill',           label: 'TANGEDCO Bill',  sub: 'bi-monthly avg',                          unit: '',    val: formatINR(calc.tangedcoBill),       Icon: TrendingUp, color: 'var(--amber, #f59e0b)'  },
-    { key: 'annualSaving',           label: 'Annual Saving',  sub: 'estimated / year',                        unit: '',    val: formatINR(calc.annualSaving),        Icon: Zap,        color: 'var(--green, #00a63e)'   },
-    { key: 'recommendedSystemKw',    label: 'System Size',    sub: `${isNaN(calc.exactDcKw) ? 0 : calc.exactDcKw} kWp DC raw · ${isNaN(calc.exactAcKw) ? 0 : calc.exactAcKw} kW AC raw`,  unit: 'kWp', val: isNaN(calc.recommendedSystemKw) ? 0 : calc.recommendedSystemKw, Icon: Sun, color: 'var(--green, #00a63e)' },
-    {
-      key: 'evSystemKw',
-      label: evCalc ? 'EV System Size' : 'Future Expansion',
-      sub: evCalc
-        ? `+${evCalc.extraDailyKwh} kWh/day EV · ${evCalc.exactDcKw} kWp DC total`
-        : 'Add EV load when expansion is needed',
-      unit: evCalc ? 'kWp' : '',
-      val: evCalc ? evCalc.recommendedSystemKw : '',
-      Icon: evCalc ? CarFront : Plus,
-      color: 'var(--green, #00a63e)',
-      interactive: true,
-    },
-  ] as const;
-
-  function clearEvSizing() {
-    setValue('ebBill.evSizing', {
-      modelName: '',
-      batteryCapacityKwh: 0,
-      fullChargesPerWeek: 0,
-      halfChargesPerWeek: 0,
-    });
-  }
-
-  return (
-    <div className="sq-stack">
-
-      {/* Readings table */}
-      <div className="sq-field">
-        <label className="sq-label" style={{ marginBottom: 10 }}>EB Bill Readings — Bi-monthly</label>
-        <div className="sq-table-wrap">
-          <table className="sq-table">
-            <thead>
-              <tr>
-                <th>Period</th>
-                <th className="right">Units (kWh)</th>
-                <th className="right">Bill Amount (₹)</th>
-                <th style={{ width: 36 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field, idx) => (
-                <tr key={field.id}>
-                  <td style={{ padding: '5px 8px' }}>
-                    <input
-                      className="sq-bom-input"
-                      style={{ fontFamily: 'var(--sq-sans)', fontSize: '0.82rem' }}
-                      placeholder="May 2026"
-                      {...register(`ebBill.readings.${idx}.period`)}
-                    />
-                  </td>
-                  <td style={{ padding: '5px 8px' }}>
-                    <input
-                      type="number" min={0}
-                      className="sq-bom-input mono"
-                      placeholder="0"
-                      {...register(`ebBill.readings.${idx}.units`, { valueAsNumber: true })}
-                    />
-                  </td>
-                  <td style={{ padding: '5px 8px' }}>
-                    <input
-                      type="number" min={0}
-                      className="sq-bom-input mono"
-                      placeholder="0"
-                      {...register(`ebBill.readings.${idx}.billAmount`, { valueAsNumber: true })}
-                    />
-                  </td>
-                  <td style={{ padding: '5px 8px', textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      className="sq-icon-btn"
-                      onClick={() => remove(idx)}
-                      disabled={fields.length <= 1}
-                      style={{ opacity: fields.length <= 1 ? 0.3 : 1 }}
-                    >
-                      <Trash2 style={{ width: 12, height: 12 }} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {fields.length < 6 && (
-          <button
-            type="button"
-            className="sq-add-btn"
-            onClick={() => append({ period: '', units: 0, billAmount: 0 })}
-          >
-            <Plus style={{ width: 11, height: 11 }} />
-            Add Reading
-          </button>
-        )}
-      </div>
-
-      {/* Live metric cards */}
-      <div className="sq-metrics">
-        {METRICS.map(m => {
-          const content = (
-            <>
-              <div className="sq-metric-icon">
-                <m.Icon style={{ width: 13, height: 13 }} />
-              </div>
-              <div className="sq-metric-label">{m.label}</div>
-              <div className="sq-metric-value">
-                {m.val}
-                {m.unit && (
-                  <span style={{ fontSize: '0.62rem', fontWeight: 400, marginLeft: 4, color: 'var(--sq-muted)' }}>
-                    {m.unit}
-                  </span>
-                )}
-              </div>
-              <div className="sq-metric-sub">{m.sub}</div>
-            </>
-          );
-
-          if ('interactive' in m && m.interactive) {
-            return (
-              <button
-                key={m.key}
-                type="button"
-                className="sq-metric sq-metric--interactive sq-metric--ev"
-                style={{ '--c': m.color } as React.CSSProperties}
-                onClick={() => setShowEvModal(true)}
-              >
-                {content}
-              </button>
-            );
-          }
-
-          return (
-            <div key={m.key} className="sq-metric" style={{ '--c': m.color } as React.CSSProperties}>
-              {content}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Phase selection */}
-      <div className="sq-field" style={{ marginBottom: 4 }}>
-        <label className="sq-label">Supply Phase</label>
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          {(['single', 'three'] as const).map(p => (
-            <label
-              key={p}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                padding: '6px 14px',
-                borderRadius: 8,
-                border: `1px solid ${watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--line-2, rgba(0,0,0,0.14))'}`,
-                background: watch('ebBill.phase') === p ? 'var(--green-soft, rgba(0,166,62,0.08))' : 'var(--card, #ffffff)',
-                fontSize: '0.75rem',
-                fontFamily: 'var(--mono)',
-                color: watch('ebBill.phase') === p ? 'var(--green, #00a63e)' : 'var(--muted-foreground)',
-                transition: 'all 0.15s',
-              }}
-            >
-              <input type="radio" value={p} {...register('ebBill.phase')} style={{ display: 'none' }} />
-              {p === 'single' ? 'Single Phase' : 'Three Phase'}
-            </label>
-          ))}
-        </div>
-        <p className="sq-hint">Determines inverter type and DCDB/ACDB selection</p>
-      </div>
-
-      {/* PSH + DC/AC ratio */}
-      <div className="sq-grid-3">
-        <div className="sq-field">
-          <label className="sq-label">Peak Sun Hours (h/day)</label>
-          <input
-            type="number" step="0.1" min={1} max={8}
-            className="sq-input sq-input-mono"
-            {...register('ebBill.peakSunHours', { valueAsNumber: true })}
-          />
-          <p className="sq-hint">Default 4.5 h — Coimbatore avg</p>
-        </div>
-        <div className="sq-field">
-          <label className="sq-label">DC/AC Ratio</label>
-          <input
-            type="number" step="0.05" min={0.8} max={2}
-            className="sq-input sq-input-mono"
-            {...register('ebBill.dcAcRatio', { valueAsNumber: true })}
-          />
-          <p className="sq-hint">1.1 normal · 1.25 with EV</p>
-        </div>
-        <div className="sq-field">
-          <label className="sq-label">Power Factor (PF)</label>
-          <input
-            type="number" step="0.01" min={0.5} max={1}
-            className="sq-input sq-input-mono"
-            {...register('ebBill.powerFactor', { valueAsNumber: true })}
-          />
-          <p className="sq-hint">1.0 for resistive loads (default)</p>
-        </div>
-      </div>
-
-      {showEvModal && (
-        <div className="sq-modal-backdrop" onClick={() => setShowEvModal(false)}>
-          <div className="sq-modal sq-ev-modal" onClick={e => e.stopPropagation()}>
-            <div className="sq-ev-modal__header">
-              <div>
-                <h3 className="sq-modal-title" style={{ marginBottom: 6 }}>EV Load Sizing</h3>
-                <p className="sq-modal-body" style={{ marginBottom: 0 }}>
-                  Add charging demand from the workbook inputs to preview a separate EV-inclusive system size.
-                </p>
-              </div>
-              <button type="button" className="sq-ev-modal__close" onClick={() => setShowEvModal(false)}>
-                <X style={{ width: 16, height: 16 }} />
-              </button>
-            </div>
-
-            <div className="sq-ev-grid">
-              <div className="sq-field">
-                <label className="sq-label">EV Model</label>
-                <input
-                  className="sq-input"
-                  placeholder="TATA Nexon"
-                  {...register('ebBill.evSizing.modelName')}
-                />
-              </div>
-              <div className="sq-field">
-                <label className="sq-label">Battery Capacity (kWh)</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  className="sq-input sq-input-mono"
-                  {...register('ebBill.evSizing.batteryCapacityKwh', { valueAsNumber: true })}
-                />
-              </div>
-              <div className="sq-field">
-                <label className="sq-label">Full Charges / Week</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.5"
-                  className="sq-input sq-input-mono"
-                  {...register('ebBill.evSizing.fullChargesPerWeek', { valueAsNumber: true })}
-                />
-              </div>
-              <div className="sq-field">
-                <label className="sq-label">Half Charges / Week</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.5"
-                  className="sq-input sq-input-mono"
-                  {...register('ebBill.evSizing.halfChargesPerWeek', { valueAsNumber: true })}
-                />
-              </div>
-            </div>
-
-            <div className="sq-ev-preview">
-              <div className="sq-ev-preview__row">
-                <span>Extra EV load</span>
-                <strong>{evCalc ? `${evCalc.extraDailyKwh} kWh/day` : 'Enter EV details'}</strong>
-              </div>
-              <div className="sq-ev-preview__row">
-                <span>EV system size</span>
-                <strong>{evCalc ? `${evCalc.recommendedSystemKw} kWp` : 'Optional add-on'}</strong>
-              </div>
-              {evCalc && (
-                <div className="sq-ev-preview__row">
-                  <span>Raw DC / AC total</span>
-                  <strong>{`${evCalc.exactDcKw} kWp · ${evCalc.exactAcKw} kW`}</strong>
-                </div>
-              )}
-            </div>
-
-            <div className="sq-modal-actions">
-              <button type="button" className="sq-btn-secondary" onClick={clearEvSizing}>
-                Clear
-              </button>
-              <button type="button" className="sq-btn-primary" onClick={() => setShowEvModal(false)}>
-                Use EV Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-export function StepSizingBom({ form, autofillBomQuantities }: Props) {
+export function StepBom({ form }: Props) {
   const { watch, setValue } = form;
   const hasOptionB = watch('optionB') !== null;
-
-  // Debounced live autofill — fires 600ms after any sizing-relevant field settles,
-  // replacing the old step-leave-triggered call now that sizing and BoM share one step.
-  const ebBillWatch = useWatch({ control: form.control, name: 'ebBill' });
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const isFirstRun = useRef(true);
-  useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
-      return;
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { autofillBomQuantities(); }, 600);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    ebBillWatch?.readings, ebBillWatch?.peakSunHours, ebBillWatch?.powerFactor,
-    ebBillWatch?.dcAcRatio, ebBillWatch?.phase,
-  ]);
 
   function toggleOptionB() {
     if (hasOptionB) {
@@ -897,15 +678,6 @@ export function StepSizingBom({ form, autofillBomQuantities }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-      <div>
-        <div className="sq-section-title">Consumption &amp; Sizing</div>
-        <ConsumptionSizingSection form={form} />
-      </div>
-
-      <div className="sq-step-divider">
-        <span className="sq-step-divider__label">Bill of Materials</span>
-      </div>
-
       <div>
         <div className="sq-section-title">
           Option A

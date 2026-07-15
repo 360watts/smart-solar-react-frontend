@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import MobileDevices from '../mobile/staff/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import ReactDOM from 'react-dom';
@@ -242,6 +242,16 @@ const groupScanResults = (
   return Array.from(groups.values()).sort((a, b) => b.count - a.count);
 };
 
+// Parses the backend's "Request was throttled. Expected available in N seconds." message
+// so the poll can skip ticks until then instead of retrying every cycle and re-triggering
+// the same throttle window.
+function throttleBackoffMs(err: unknown): number | null {
+  const message = err instanceof Error ? err.message : '';
+  const match = message.match(/throttled.*?(\d+)\s*seconds?/i);
+  if (!match) return null;
+  return (parseInt(match[1], 10) + 1) * 1000; // +1s buffer past the backend's own estimate
+}
+
 const Devices: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
@@ -351,6 +361,11 @@ const Devices: React.FC = () => {
   const [modalDevice, setModalDevice] = useState<Device | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
 
+  // Shared throttle backoff for the silent heartbeat poll below — a 429 sets this to the
+  // moment the backend says it'll accept requests again, so the poll skips ticks instead of
+  // immediately retrying and re-triggering the same throttle every cycle.
+  const pollBackoffUntilRef = useRef<number>(0);
+
   const fetchDevices = useCallback(async (page: number = 1, search: string = '', silent: boolean = false) => {
     try {
       if (!silent) setLoading(true);
@@ -389,6 +404,8 @@ const Devices: React.FC = () => {
       
       if (!silent) setLoading(false);
     } catch (err) {
+      const backoff = throttleBackoffMs(err);
+      if (backoff) pollBackoffUntilRef.current = Math.max(pollBackoffUntilRef.current, Date.now() + backoff);
       setError(err instanceof Error ? err.message : 'An error occurred');
       if (!silent) setLoading(false);
     }
@@ -424,6 +441,8 @@ const Devices: React.FC = () => {
       setDeviceAlerts(Array.isArray(data) ? data : []);
       if (!silent) setError(null);
     } catch (err) {
+      const backoff = throttleBackoffMs(err);
+      if (backoff) pollBackoffUntilRef.current = Math.max(pollBackoffUntilRef.current, Date.now() + backoff);
       console.error('Failed to fetch alerts for devices view:', err);
       if (!silent) setError('Failed to load alerts');
     } finally {
@@ -641,11 +660,14 @@ const Devices: React.FC = () => {
   }, [currentPage, searchTerm, pageSize, fetchDevices]);
 
   // Heartbeat/status auto-refresh so UI reflects new device heartbeats without user action.
+  // Skips a tick entirely while pollBackoffUntilRef is in the future (set by a 429 above) so
+  // a throttled request doesn't just get retried every cycle and re-trigger the same window.
   useEffect(() => {
     const intervalId = window.setInterval(() => {
+      if (Date.now() < pollBackoffUntilRef.current) return;
       fetchDevices(currentPage, searchTerm, true);
       fetchAlerts(true);
-    }, 15000);
+    }, 30000);
     return () => window.clearInterval(intervalId);
   }, [currentPage, searchTerm, fetchDevices, fetchAlerts]);
   

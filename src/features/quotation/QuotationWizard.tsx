@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Loader2, Save, Eye } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, FileText, User, Zap, Package, Loader2, Save, Eye } from 'lucide-react';
 import { Step1Customer } from './components/steps/Step1Customer';
-import { StepSizingBom, newRows } from './components/steps/StepSizingBom';
+import { StepSizing } from './components/steps/StepSizing';
+import { StepBom, newRows } from './components/steps/StepBom';
 import { Step4Review } from './components/steps/Step4Review';
 import { LiveSummaryRail } from './components/LiveSummaryRail';
 import { PdfPreviewModal } from './components/PdfPreviewModal';
@@ -118,8 +119,9 @@ function SharePanel({ quoteNumber, customerPhone, getFormData }: SharePanelProps
 
 const STEPS = [
   { id: 1, num: 'I',   label: 'Customer & Site',   desc: 'Customer details and site photo',      icon: User },
-  { id: 2, num: 'II',  label: 'Sizing & BoM',       desc: 'Consumption, system size & pricing',   icon: Zap },
-  { id: 3, num: 'III', label: 'Review & Generate',  desc: 'ROI analysis and PDF download',         icon: FileText },
+  { id: 2, num: 'II',  label: 'Sizing',             desc: 'Consumption & system size',             icon: Zap },
+  { id: 3, num: 'III', label: 'Bill of Materials',  desc: 'Equipment and pricing',                  icon: Package },
+  { id: 4, num: 'IV',  label: 'Review & Generate',  desc: 'ROI analysis and PDF download',          icon: FileText },
 ];
 
 const DEFAULT_NOT_INCLUDED =
@@ -393,8 +395,9 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
                 transition={{ duration: 0.26, ease: [0.4, 0, 0.2, 1] }}
               >
                 {step === 1 && <Step1Customer form={form} />}
-                {step === 2 && <StepSizingBom form={form} autofillBomQuantities={autofillBomQuantities} />}
-                {step === 3 && (
+                {step === 2 && <StepSizing form={form} autofillBomQuantities={autofillBomQuantities} />}
+                {step === 3 && <StepBom form={form} />}
+                {step === 4 && (
                   <>
                     <Step4Review form={form} />
                     {savedPublicId && quoteNumber && (
@@ -436,7 +439,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
               {saving ? 'Saving…' : lastSavedAt ? `Saved ${formatRelativeTime(lastSavedAt)}` : 'Save Draft'}
             </button>
 
-            {step < 3 ? (
+            {step < 4 ? (
               <button type="button" onClick={() => void next()} className="sq-btn-primary">
                 Continue
                 <ChevronRight style={{ width: 15, height: 15 }} />
