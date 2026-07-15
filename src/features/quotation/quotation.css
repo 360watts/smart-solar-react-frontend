@@ -190,6 +190,7 @@
   .sq-body-split { grid-template-columns: 1fr; }
   .sq-rail { border-left: none; border-top: 1px solid var(--line, rgba(0,0,0,0.08)); }
   .sq-rail--collapsed { display: none; }
+  .sq-rail__toggle { display: none; }
 }
 
 /* ── Live summary rail ─────────────────────────────────────── */

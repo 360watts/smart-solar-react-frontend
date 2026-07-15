@@ -864,7 +864,12 @@ export function StepSizingBom({ form, autofillBomQuantities }: Props) {
   // replacing the old step-leave-triggered call now that sizing and BoM share one step.
   const ebBillWatch = useWatch({ control: form.control, name: 'ebBill' });
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirstRun = useRef(true);
   useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { autofillBomQuantities(); }, 600);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
