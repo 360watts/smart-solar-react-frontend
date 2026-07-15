@@ -6,6 +6,8 @@
 /* Map project's dark-mode body class to Tailwind dark: variant */
 @custom-variant dark (&:is(.dark-mode *));
 
+@import "./styles/glass-tokens.css";
+
 /* ─────────────────────────────────────────────────────────────────────────────
    Magic MCP / shadcn-style CSS tokens (Tailwind v4)
    These power classes like: bg-background, text-muted-foreground, border-border.
@@ -52,6 +54,8 @@
   --text-inverse: #0A0E1A;
   --secondary: #E9B949;
   --secondary-foreground: #12151A;
+  --cta: #F27521;
+  --cta-soft: rgba(242,117,33,0.12);
   --muted: #EEF3F0;
   --muted-foreground: color-mix(in srgb, #12151A 52%, #2FBF71 10%);
   --accent: #E9B949;
@@ -109,6 +113,8 @@
   --text-inverse: #0A0E1A;
   --secondary: #E9B949;
   --secondary-foreground: #0A0E1A;
+  --cta: #F27521;
+  --cta-soft: rgba(242,117,33,0.18);
   --muted: rgba(255,255,255,0.08);
   --muted-foreground: color-mix(in srgb, #F0F4FF 52%, #2FBF71 10%);
   --accent: #E9B949;

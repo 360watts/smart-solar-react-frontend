@@ -1,0 +1,67 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Legacy-compat token shim.
+
+   App.css and quotation.css were built against a short-name token set
+   (--bg, --fg, --green, --orange, ...) that used to be defined with its own
+   hardcoded hex values, duplicating the real design system in index.css.
+   This file aliases those short names onto the real tokens instead, so the
+   ~9,000 lines of App.css and quotation.css that already reference them keep
+   working unchanged while actually drawing from one source of truth.
+
+   Do not add new literal color values here — add them to index.css's
+   :root/.dark-mode blocks and alias them here if a short name is needed.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg: var(--background);
+  --bg-2: #ffffff;
+  --card-2: var(--surface-muted);
+  --line: var(--border);
+  --line-2: var(--border-strong);
+  --fg: var(--foreground);
+  --fg-dim: var(--text-dim);
+  --fg-muted: var(--muted-foreground);
+  --green: var(--primary);
+  --green-soft: var(--primary-soft);
+  --orange: var(--cta);
+  --orange-soft: var(--cta-soft);
+  --blue: var(--info);
+  --blue-soft: var(--info-soft);
+  --violet: #8b5cf6;
+  --red: var(--destructive);
+  --amber: var(--warning);
+  --mono: var(--font-mono);
+  --sans: var(--font-body);
+  --display: var(--font-display);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+}
+
+.dark-mode {
+  --bg: var(--background);
+  --bg-2: #0F1623;
+  --card-2: var(--surface-muted);
+  --line: var(--border);
+  --line-2: var(--border-strong);
+  --fg: var(--foreground);
+  --fg-dim: var(--text-dim);
+  --fg-muted: var(--muted-foreground);
+  --green: var(--primary);
+  --green-soft: var(--primary-soft);
+  --orange: var(--cta);
+  --orange-soft: var(--cta-soft);
+  --blue: var(--info);
+  --blue-soft: var(--info-soft);
+  --violet: #a78bfa;
+  --red: var(--destructive);
+  --amber: var(--warning);
+  --mono: var(--font-mono);
+  --sans: var(--font-body);
+  --display: var(--font-display);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+}
