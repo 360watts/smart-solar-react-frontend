@@ -434,15 +434,56 @@ class ApiService {
   // same throttle window and the backend never gets a chance to recover.
   private throttleCooldowns = new Map<string, number>();
 
+  // Rolling log of every request attempt (sent, cooldown-blocked, or throttled), kept for
+  // root-causing 429s — when one hits, we dump the actual request pattern that led to it
+  // instead of guessing. Capped so it can't leak memory in a long-lived session.
+  private requestLog: { t: number; endpoint: string; method: string; outcome: 'sent' | 'cooldown-blocked' | '429' }[] = [];
+  private static readonly REQUEST_LOG_MAX = 200;
+
+  private logRequest(entry: { endpoint: string; method: string; outcome: 'sent' | 'cooldown-blocked' | '429' }) {
+    this.requestLog.push({ t: Date.now(), ...entry });
+    if (this.requestLog.length > ApiService.REQUEST_LOG_MAX) this.requestLog.shift();
+  }
+
+  /** Dumps the request log to the console — call `apiService.debugRequestLog()` from
+   * devtools any time, or it auto-fires on every 429 / cooldown-block. */
+  debugRequestLog(windowMs = 90_000) {
+    const cutoff = Date.now() - windowMs;
+    const recent = this.requestLog.filter(r => r.t >= cutoff);
+    console.group(`%cAPI request log — last ${windowMs / 1000}s (${recent.length} entries)`, 'color:#F27521;font-weight:bold');
+    const first = recent[0]?.t ?? Date.now();
+    recent.forEach(r => {
+      const dt = ((r.t - first) / 1000).toFixed(2);
+      const tag = r.outcome === '429' ? '🔴 429' : r.outcome === 'cooldown-blocked' ? '🟡 blocked' : '🟢 sent';
+      console.log(`+${dt}s  ${tag}  ${r.method} ${r.endpoint}`);
+    });
+    // Surface bursts: any 500ms window with >3 requests is almost certainly the culprit.
+    const byHalfSecond = new Map<number, number>();
+    recent.forEach(r => {
+      const bucket = Math.floor(r.t / 500);
+      byHalfSecond.set(bucket, (byHalfSecond.get(bucket) ?? 0) + 1);
+    });
+    const worst = [...byHalfSecond.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (worst && worst[1] > 3) {
+      console.warn(`Burst detected: ${worst[1]} requests within the same 500ms window (bucket ${worst[0]}).`);
+    }
+    console.groupEnd();
+  }
+
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const method = options.method ?? 'GET';
     // Keyed on path only, not the full querystring — polling with a changing page/search
     // param would otherwise mint a fresh cooldown key every tick and never actually cool down.
     const cooldownKey = endpoint.split('?')[0];
     const cooldownUntil = this.throttleCooldowns.get(cooldownKey);
     if (cooldownUntil && Date.now() < cooldownUntil) {
+      this.logRequest({ endpoint, method, outcome: 'cooldown-blocked' });
+      console.warn(`[api] blocked by cooldown: ${method} ${endpoint} (${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
+      this.debugRequestLog();
       throw new Error('Request was throttled. Expected available in ' +
         Math.ceil((cooldownUntil - Date.now()) / 1000) + ' seconds.');
     }
+    this.logRequest({ endpoint, method, outcome: 'sent' });
 
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
@@ -503,6 +544,9 @@ class ApiService {
         const match = message.match(/(\d+)\s*seconds?/i);
         const waitSeconds = retryAfterHeader || (match ? Number(match[1]) : 10);
         this.throttleCooldowns.set(cooldownKey, Date.now() + (waitSeconds + 1) * 1000);
+        this.logRequest({ endpoint, method, outcome: '429' });
+        console.error(`[api] 429 THROTTLED: ${method} ${endpoint} — retry in ${waitSeconds}s`);
+        this.debugRequestLog();
       }
       throw new Error(message);
     }
@@ -2000,6 +2044,11 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+// Dev convenience: `apiService.debugRequestLog()` from devtools any time, without an import.
+if (import.meta.env.DEV) {
+  (window as any).apiService = apiService;
+}
 
 // ─── Savings & ROI ───────────────────────────────────────────────────────────
 
