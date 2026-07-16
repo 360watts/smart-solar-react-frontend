@@ -429,7 +429,18 @@ class ApiService {
     return this.request(endpoint, options);
   }
 
+  // Per-endpoint 429 cooldown shared by every caller (pollers, retries, etc.) that routes
+  // through request() — without this, each caller's own setInterval keeps retrying into the
+  // same throttle window and the backend never gets a chance to recover.
+  private throttleCooldowns = new Map<string, number>();
+
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const cooldownUntil = this.throttleCooldowns.get(endpoint);
+    if (cooldownUntil && Date.now() < cooldownUntil) {
+      throw new Error('Request was throttled. Expected available in ' +
+        Math.ceil((cooldownUntil - Date.now()) / 1000) + ' seconds.');
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
     let headers = this.getAuthHeaders();
 
@@ -484,6 +495,12 @@ class ApiService {
 
     if (!response.ok) {
       const message = await this.parseErrorResponse(response);
+      if (response.status === 429) {
+        const retryAfterHeader = Number(response.headers.get('Retry-After'));
+        const match = message.match(/(\d+)\s*seconds?/i);
+        const waitSeconds = retryAfterHeader || (match ? Number(match[1]) : 10);
+        this.throttleCooldowns.set(endpoint, Date.now() + (waitSeconds + 1) * 1000);
+      }
       throw new Error(message);
     }
 
