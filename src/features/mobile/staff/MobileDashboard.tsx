@@ -247,8 +247,8 @@ const MobileDashboard: React.FC = () => {
       tooltip: { callbacks: { label: (c: any) => ` ${c.dataset.label}: ${c.parsed.y} kW` } },
     },
     scales: {
-      x: { ticks: { font: { size: 10 }, maxTicksLimit: 6, maxRotation: 0, color: muted }, grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' } },
-      y: { ticks: { font: { size: 10 }, callback: (v: any) => `${v}kW`, color: muted }, grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' } },
+      x: { ticks: { font: { size: 10 }, maxTicksLimit: 6, maxRotation: 0, color: muted }, grid: { display: false } },
+      y: { ticks: { font: { size: 10 }, callback: (v: any) => `${v}kW`, color: muted }, grid: { display: false } },
     },
   }), [isDark, muted]);
 

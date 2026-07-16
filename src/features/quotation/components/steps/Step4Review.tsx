@@ -1,7 +1,7 @@
 import { UseFormReturn } from 'react-hook-form';
 import {
   BarChart, Bar, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, Tooltip, Legend,
   ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 import { calcBomTotals, calcEbBill, calcROI, formatINR } from '../../utils/roiCalculator';
@@ -105,7 +105,6 @@ export function Step4Review({ form }: Props) {
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border, rgba(255,255,255,0.05))" />
                 <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
@@ -129,7 +128,6 @@ export function Step4Review({ form }: Props) {
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border, rgba(255,255,255,0.05))" />
                 <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />

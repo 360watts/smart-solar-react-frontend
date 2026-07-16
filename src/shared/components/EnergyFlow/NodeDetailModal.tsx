@@ -684,7 +684,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         y: {
           display: fullscreen,
           ticks: { color: chartText, font: { size: 9 }, callback: (v: unknown) => `${Number(v).toFixed(1)}` },
-          grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+          grid: { display: false },
           border: { display: false },
         },
       },
