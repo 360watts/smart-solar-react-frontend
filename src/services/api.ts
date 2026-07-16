@@ -1001,11 +1001,10 @@ class ApiService {
   async getPhaseLoad(siteId: string, hours: number = 24, aggregate: string = 'hourly'): Promise<any[]> {
     const enc = encodeURIComponent(siteId);
     const cacheKey = `phase_load_${siteId}_${hours}_${aggregate}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${enc}/phase-load/?hours=${hours}&aggregate=${aggregate}`);
-    cacheService.set(cacheKey, data, 5 * 60 * 1000);
-    return data;
+    // dedup (not a plain get/set check) — SiteDataPanel fires this from two separate
+    // effects on mount with identical params; a plain cache check lets both fire before
+    // either resolves and populates it, so this needs to share the in-flight promise.
+    return cacheService.dedup(cacheKey, () => this.request(`/sites/${enc}/phase-load/?hours=${hours}&aggregate=${aggregate}`), 5 * 60 * 1000);
   }
 
   async getForecastAccuracy(siteId: string, days: number = 30): Promise<any> {

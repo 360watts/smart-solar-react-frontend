@@ -214,6 +214,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const analyticsStaleRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
+  const analyticsLoadedRef = useRef<{ weatherForecast: boolean; phaseLoad: boolean }>({ weatherForecast: false, phaseLoad: false });
   const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
   const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
     PV: true,
@@ -476,25 +477,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         smartDevices: Array.isArray(devices) ? devices : [],
         lastUpdated: new Date(),
       }});
-
-      // Fire analytics after primary data renders.
-      // analyticsStaleRef is set to true by the useEffect cleanup (below fetchAll
-      // call site) when siteId changes or the component unmounts, preventing stale
-      // state updates on an unmounted/switched component.
-      Promise.allSettled([
-        apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw'),
-        apiService.getForecastAccuracy(siteId, 30),
-        apiService.getLoadForecast(siteId, 7),
-        apiService.getWeatherAccuracy(siteId, 7),
-        apiService.getLoadForecastAccuracy(siteId, 7),
-      ]).then(([pl, fa, lf, wa, lfa]) => {
-        if (analyticsStaleRef.current) return;
-        if (pl.status === 'fulfilled') setPhaseLoad(Array.isArray(pl.value) ? pl.value : []);
-        if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
-        if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);
-        if (wa.status === 'fulfilled') setWeatherAccuracy(wa.value ?? null);
-        if (lfa.status === 'fulfilled') setLoadForecastAccuracy(lfa.value ?? null);
-      });
+      // phaseLoad/forecastAccuracy/loadForecast/weatherAccuracy/loadForecastAccuracy used
+      // to fire here eagerly on every mount regardless of which tab was open — 5 more
+      // requests piled onto the primary burst for data only the Weather/Forecast/
+      // Phase-Load tabs need. Now lazy-loaded per-tab below (see activeTab effect).
     } catch (err) {
       dispatchFetch({ type: 'FETCH_ERROR', error: err instanceof Error ? err.message : 'Failed to load site data' });
     } finally {
@@ -582,10 +568,48 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [dateRange]);
 
   useEffect(() => {
+    // Only needed by the Phase-Load tab — skip firing on every mount/hours-change
+    // while some other tab is open, so it doesn't pile onto the initial burst.
+    if (activeTab !== 'phase-load') return;
     apiService.getPhaseLoad(siteId, phaseLoadHours, 'raw')
       .then(data => setPhaseLoad(Array.isArray(data) ? data : []))
       .catch(() => {});
-  }, [siteId, phaseLoadHours]);
+  }, [siteId, phaseLoadHours, activeTab]);
+
+  // Lazy-load the remaining tab-specific analytics only once their tab is opened,
+  // instead of eagerly firing all of them on every mount — these fed the Weather/
+  // Forecast/Phase-Load tabs but used to fire regardless of which tab was active,
+  // adding 4 more requests to the initial page-load burst for data most visits
+  // never even look at.
+  useEffect(() => {
+    analyticsLoadedRef.current = { weatherForecast: false, phaseLoad: false };
+  }, [siteId]);
+
+  useEffect(() => {
+    if (!siteId) return;
+    if ((activeTab === 'weather' || activeTab === 'forecast') && !analyticsLoadedRef.current.weatherForecast) {
+      analyticsLoadedRef.current.weatherForecast = true;
+      Promise.allSettled([
+        apiService.getForecastAccuracy(siteId, 30),
+        apiService.getWeatherAccuracy(siteId, 7),
+      ]).then(([fa, wa]) => {
+        if (analyticsStaleRef.current) return;
+        if (fa.status === 'fulfilled') setForecastAccuracy(fa.value ?? null);
+        if (wa.status === 'fulfilled') setWeatherAccuracy(wa.value ?? null);
+      });
+    }
+    if (activeTab === 'phase-load' && !analyticsLoadedRef.current.phaseLoad) {
+      analyticsLoadedRef.current.phaseLoad = true;
+      Promise.allSettled([
+        apiService.getLoadForecast(siteId, 7),
+        apiService.getLoadForecastAccuracy(siteId, 7),
+      ]).then(([lf, lfa]) => {
+        if (analyticsStaleRef.current) return;
+        if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);
+        if (lfa.status === 'fulfilled') setLoadForecastAccuracy(lfa.value ?? null);
+      });
+    }
+  }, [activeTab, siteId]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const latest = latestLiveTelemetry ?? (telemetry.length > 0 ? telemetry[telemetry.length - 1] : null);
