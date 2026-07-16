@@ -435,7 +435,10 @@ class ApiService {
   private throttleCooldowns = new Map<string, number>();
 
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const cooldownUntil = this.throttleCooldowns.get(endpoint);
+    // Keyed on path only, not the full querystring — polling with a changing page/search
+    // param would otherwise mint a fresh cooldown key every tick and never actually cool down.
+    const cooldownKey = endpoint.split('?')[0];
+    const cooldownUntil = this.throttleCooldowns.get(cooldownKey);
     if (cooldownUntil && Date.now() < cooldownUntil) {
       throw new Error('Request was throttled. Expected available in ' +
         Math.ceil((cooldownUntil - Date.now()) / 1000) + ' seconds.');
@@ -499,7 +502,7 @@ class ApiService {
         const retryAfterHeader = Number(response.headers.get('Retry-After'));
         const match = message.match(/(\d+)\s*seconds?/i);
         const waitSeconds = retryAfterHeader || (match ? Number(match[1]) : 10);
-        this.throttleCooldowns.set(endpoint, Date.now() + (waitSeconds + 1) * 1000);
+        this.throttleCooldowns.set(cooldownKey, Date.now() + (waitSeconds + 1) * 1000);
       }
       throw new Error(message);
     }
