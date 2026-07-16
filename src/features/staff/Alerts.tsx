@@ -20,7 +20,6 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
@@ -1712,7 +1711,6 @@ const Alerts: React.FC = () => {
                             onMouseMove={handleChartHover}
                             onClick={handleChartHover}
                           >
-                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
                               stroke={sub}
@@ -1722,7 +1720,7 @@ const Alerts: React.FC = () => {
                             <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
                              <Tooltip
                                contentStyle={{
-                                 backgroundColor: tok.bgCard(isDark),
+                                 backgroundColor: 'var(--popover)',
                                  border: `1px solid ${bdr}`,
                                  borderRadius: 12,
                                  color: txt,
@@ -1762,7 +1760,6 @@ const Alerts: React.FC = () => {
                             onMouseMove={handleChartHover}
                             onClick={handleChartHover}
                           >
-                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
                               stroke={sub}
@@ -1772,7 +1769,7 @@ const Alerts: React.FC = () => {
                             <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: tok.bgCard(isDark),
+                                backgroundColor: 'var(--popover)',
                                 border: `1px solid ${bdr}`,
                                 borderRadius: 8,
                                 color: txt,
@@ -1801,7 +1798,6 @@ const Alerts: React.FC = () => {
                             onMouseMove={handleChartHover}
                             onClick={handleChartHover}
                           >
-                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
                               stroke={sub}
@@ -1811,7 +1807,7 @@ const Alerts: React.FC = () => {
                             <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: tok.bgCard(isDark),
+                                backgroundColor: 'var(--popover)',
                                 border: `1px solid ${bdr}`,
                                 borderRadius: 8,
                                 color: txt,
@@ -1840,7 +1836,6 @@ const Alerts: React.FC = () => {
                             onMouseMove={handleChartHover}
                             onClick={handleChartHover}
                           >
-                            <CartesianGrid strokeDasharray="3 3" stroke={bdr} />
                             <XAxis
                               dataKey="dateShort"
                               stroke={sub}
@@ -1850,7 +1845,7 @@ const Alerts: React.FC = () => {
                             <YAxis stroke={sub} fontSize={12} tick={{ fill: sub }} />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: tok.bgCard(isDark),
+                                backgroundColor: 'var(--popover)',
                                 border: `1px solid ${bdr}`,
                                 borderRadius: 8,
                                 color: txt,

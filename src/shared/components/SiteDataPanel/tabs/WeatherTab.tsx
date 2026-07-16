@@ -54,7 +54,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
@@ -64,8 +64,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'var(--border)' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { color: 'var(--border)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -85,7 +85,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 8,
@@ -95,8 +95,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { color: 'var(--border)' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { color: 'var(--border)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

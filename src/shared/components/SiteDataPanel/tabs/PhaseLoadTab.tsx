@@ -322,7 +322,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
@@ -332,8 +332,8 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(3) }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(3) }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -342,7 +342,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.97)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
@@ -352,8 +352,8 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -977,7 +977,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         },
       },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1002,7 +1002,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           padding: { top: 10, bottom: 0 },
         },
         ticks: { color: 'var(--muted-foreground)', font: { family: 'Inter, sans-serif', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+        grid: { display: false },
       },
       y: {
         title: {
@@ -1017,7 +1017,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           font: { family: 'JetBrains Mono, monospace', size: 11 },
           callback: (v: any) => loadChartCumulative ? Number(v).toFixed(1) : (loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1)),
         },
-        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+        grid: { display: false },
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1029,7 +1029,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1038,8 +1038,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       zoom: createDragZoomPlugins(() => loadForecastChartZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { display: false } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -1058,7 +1058,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         },
       },
       tooltip: {
-        backgroundColor: isDark ? 'rgba(30,41,59,0.97)' : 'rgba(255,255,255,0.97)',
+        backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: isDark ? 'rgba(0,166,62,0.3)' : 'rgba(0,166,62,0.2)',
@@ -1075,9 +1075,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       x: {
         offset: true,
         ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, padding: 8 },
-        grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
+        grid: { display: false },
       },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' } },
+      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

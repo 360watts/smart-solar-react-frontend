@@ -32,7 +32,7 @@ const VS_ACTUAL_SERIES = [
 
 const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Inv Out (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'var(--muted)';
+  const theadBg = 'var(--popover)';
   const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
 
   return (
@@ -69,7 +69,7 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
 
 const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
   const { isDark } = useTheme();
-  const theadBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'var(--muted)';
+  const theadBg = 'var(--popover)';
   const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
 
   return (

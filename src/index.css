@@ -47,7 +47,9 @@
   --foreground: #12151A;
   --card: #FFFFFF;
   --card-foreground: #12151A;
-  --popover: #FFFFFF;
+  /* Deliberately distinct from --card — tooltips/popovers float over cards of the
+     same white, and an identical background made them read as invisible. */
+  --popover: #F2F5F1;
   --popover-foreground: #12151A;
   --primary: #2FBF71;
   --primary-foreground: #0A0E1A;
@@ -106,7 +108,9 @@
   --foreground: #F0F4FF;
   --card: #0F1623;
   --card-foreground: #F0F4FF;
-  --popover: #0F1623;
+  /* Deliberately distinct from --card — tooltips/popovers float over cards of the
+     same navy, and an identical background made them read as invisible. */
+  --popover: #1B2536;
   --popover-foreground: #F0F4FF;
   --primary: #2FBF71;
   --primary-foreground: #0A0E1A;

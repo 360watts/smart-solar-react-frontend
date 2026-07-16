@@ -168,6 +168,7 @@ export default function DeviceDetailPanel({
   }));
 
   const bgColor = 'var(--card)';
+  const tooltipBgColor = 'var(--popover)';
   const borderColor = isDark ? 'rgba(148,163,184,0.11)' : '#e2e8f0';
   const textColor = 'var(--foreground)';
   const subTextColor = isDark ? 'var(--text-dim)' : 'var(--muted-foreground)';
@@ -341,7 +342,7 @@ export default function DeviceDetailPanel({
                         </defs>
                         <Tooltip
                           contentStyle={{
-                            background: bgColor,
+                            background: tooltipBgColor,
                             border: `1px solid ${borderColor}`,
                             borderRadius: 6,
                             fontSize: 11,
