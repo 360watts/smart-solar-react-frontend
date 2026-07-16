@@ -912,7 +912,10 @@ class ApiService {
 
   async getSmartDevices(siteId: string): Promise<any[]> {
     try {
-      const data = await this.request(`/sites/${siteId}/smart-devices/`);
+      // Unlike getSiteTelemetry/getPhaseLoad, this had no cache/dedup at all — two
+      // callers firing within the same tick (e.g. StrictMode's double mount-effect
+      // invoke in dev) produced two genuine concurrent network requests.
+      const data = await cacheService.dedup(`smart_devices_${siteId}`, () => this.request(`/sites/${siteId}/smart-devices/`), 30 * 1000);
       return data ?? [];
     } catch (error) {
       console.warn('getSmartDevices error:', error);
@@ -952,7 +955,7 @@ class ApiService {
 
   async getLatestEnergyMeter(siteId: string): Promise<CtMeterReading | null> {
     try {
-      return await this.request(`/sites/${siteId}/energy-meter/latest/`);
+      return await cacheService.dedup(`energy_meter_latest_${siteId}`, () => this.request(`/sites/${siteId}/energy-meter/latest/`), 15 * 1000);
     } catch {
       return null;
     }
@@ -970,7 +973,7 @@ class ApiService {
 
   async getGatewayStatus(siteId: string): Promise<{ is_online: boolean; last_heartbeat: string | null; age_seconds: number | null; serial: string | null } | null> {
     try {
-      return await this.request(`/sites/${siteId}/gateway-status/`);
+      return await cacheService.dedup(`gateway_status_${siteId}`, () => this.request(`/sites/${siteId}/gateway-status/`), 15 * 1000);
     } catch {
       return null;
     }
