@@ -121,22 +121,21 @@ const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
 // ── ForecastTable ──────────────────────────────────────────────────────────────
 
 export const ForecastTable = ({ data }: { data: any[] }) => {
-  const isDark = false; // handled via CSS vars
-  const theadBg = 'rgba(15, 23, 42, 0.95)';
-  const rowBorder = '1px solid rgba(148, 163, 184, 0.1)';
+  const theadBg = 'var(--card)';
+  const rowBorder = '1px solid var(--border)';
 
   return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid rgba(148, 163, 184, 0.15)` }}>
+    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid var(--border)` }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
         <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
           <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Time</th>
-            <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Regime</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>P10 ↓</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>P50</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>P90 ↑</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Physics</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>GHI W/m²</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Regime</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: `2px solid var(--border)` }}>P10 ↓</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid var(--border)` }}>P50</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid var(--border)` }}>P90 ↑</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Physics</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: `2px solid var(--border)` }}>GHI W/m²</th>
           </tr>
         </thead>
         <tbody>
@@ -172,16 +171,16 @@ export const ForecastTable = ({ data }: { data: any[] }) => {
 // ── VsActualTable ──────────────────────────────────────────────────────────────
 
 const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
-  const rowBorder = '1px solid rgba(148, 163, 184, 0.1)';
+  const rowBorder = '1px solid var(--border)';
   return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid rgba(148, 163, 184, 0.15)` }}>
+    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid var(--border)` }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
-        <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', zIndex: 1 }}>
+        <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
           <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Time</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Actual PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>P50 Forecast (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid rgba(148, 163, 184, 0.2)` }}>Δ %</th>
+            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid var(--border)` }}>Actual PV (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid var(--border)` }}>P50 Forecast (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Δ %</th>
           </tr>
         </thead>
         <tbody>
