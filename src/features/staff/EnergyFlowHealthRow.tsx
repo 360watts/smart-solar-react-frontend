@@ -99,9 +99,12 @@ function useLiveTelemetry(siteId: string) {
         if (r.timestamp) setAge(new Date(r.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }));
       } catch { /* silent */ }
     };
-    go();
+    // This row renders inside SiteDataPanel's default Overview tab, mounting in the
+    // same commit as SiteDataPanel's own ~9-request fetchAll burst — stagger the first
+    // fetch so it doesn't pile onto that.
+    const kickoff = setTimeout(go, 1300);
     const iv = setInterval(go, 30_000);
-    return () => { cancelled = true; clearInterval(iv); };
+    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
   return { values, age };
 }
@@ -505,9 +508,13 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
   useEffect(() => {
     if (!siteId) return;
     setHealthLoading(true);
-    apiService.getSiteHardwareHealth(siteId)
-      .then(d => { setHealthData(d); setHealthLoading(false); })
-      .catch(() => setHealthLoading(false));
+    // Staggered for the same reason as useLiveTelemetry's fetch above.
+    const kickoff = setTimeout(() => {
+      apiService.getSiteHardwareHealth(siteId)
+        .then(d => { setHealthData(d); setHealthLoading(false); })
+        .catch(() => setHealthLoading(false));
+    }, 1500);
+    return () => clearTimeout(kickoff);
   }, [siteId]);
 
   const fmtKw  = (v:number|null) => v != null ? `${Math.abs(v).toFixed(1)}` : '—';
