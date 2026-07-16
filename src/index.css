@@ -88,6 +88,8 @@
   --text-dim: #7C9186;
   --border-strong: rgba(18,21,26,0.16);
   --shadow-card: 0 1px 3px rgba(18,21,26,0.07), 0 12px 30px rgba(18,21,26,0.07);
+  --shadow-tooltip: 0 2px 6px rgba(18,21,26,0.06), 0 12px 28px rgba(18,21,26,0.10);
+  --tooltip-border: rgba(18,21,26,0.16);
   --font-display: 'Outfit', 'DM Sans', sans-serif;
   --font-body: 'DM Sans', 'Fira Sans', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -146,6 +148,8 @@
   --text-dim: #7FA694;
   --border-strong: rgba(255,255,255,0.14);
   --shadow-card: 0 2px 12px rgba(0,0,0,0.22), 0 18px 42px rgba(0,0,0,0.32);
+  --shadow-tooltip: 0 2px 8px rgba(0,0,0,0.35), 0 16px 36px rgba(0,0,0,0.5);
+  --tooltip-border: rgba(255,255,255,0.1);
   --chart-pv: #F0CB6C;
   --chart-load: #60A5FA;
   --chart-battery: #5BBD79;

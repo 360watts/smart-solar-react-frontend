@@ -343,10 +343,14 @@ export default function DeviceDetailPanel({
                         <Tooltip
                           contentStyle={{
                             background: tooltipBgColor,
-                            border: `1px solid ${borderColor}`,
-                            borderRadius: 6,
+                            border: '1px solid var(--tooltip-border)',
+                            borderRadius: 10,
+                            padding: '8px 12px',
                             fontSize: 11,
                             color: textColor,
+                            boxShadow: 'var(--shadow-tooltip)',
+                            backdropFilter: 'blur(8px)',
+                            WebkitBackdropFilter: 'blur(8px)',
                           }}
                           formatter={(value: unknown) => {
                             const displayValue = value != null ? `${value} W` : 'N/A';

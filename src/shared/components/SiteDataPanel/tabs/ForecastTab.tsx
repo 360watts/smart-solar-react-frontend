@@ -223,7 +223,8 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
       },
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
@@ -272,7 +273,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
           title: (items: any[]) => items[0]?.label ?? '',
@@ -499,7 +501,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
           title: (items: any[]) => items[0]?.label ?? '',
@@ -830,7 +833,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
+      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
@@ -843,7 +846,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
+      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
@@ -1073,7 +1076,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
+        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} ${unit}`; } },
@@ -1096,7 +1099,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1, padding: 12, cornerRadius: 12,
+        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },

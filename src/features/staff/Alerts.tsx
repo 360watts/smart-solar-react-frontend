@@ -1721,13 +1721,13 @@ const Alerts: React.FC = () => {
                              <Tooltip
                                contentStyle={{
                                  backgroundColor: 'var(--popover)',
-                                 border: `1px solid ${bdr}`,
-                                 borderRadius: 12,
+                                 border: '1px solid var(--tooltip-border)',
+                                 borderRadius: 10,
                                  color: txt,
                                  padding: '12px 16px',
-                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                 backdropFilter: isDark ? 'blur(4px)' : 'none',
-                                 WebkitBackdropFilter: isDark ? 'blur(4px)' : 'none',
+                                 boxShadow: 'var(--shadow-tooltip)',
+                                 backdropFilter: 'blur(8px)',
+                                 WebkitBackdropFilter: 'blur(8px)',
                                }}
                                labelStyle={{ 
                                  color: txt,
@@ -1770,9 +1770,13 @@ const Alerts: React.FC = () => {
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: 'var(--popover)',
-                                border: `1px solid ${bdr}`,
-                                borderRadius: 8,
+                                border: '1px solid var(--tooltip-border)',
+                                borderRadius: 10,
                                 color: txt,
+                                padding: '10px 14px',
+                                boxShadow: 'var(--shadow-tooltip)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
                               }}
                               labelStyle={{ color: txt }}
                                 formatter={(value: number | undefined, name: string | undefined) => {
@@ -1808,9 +1812,13 @@ const Alerts: React.FC = () => {
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: 'var(--popover)',
-                                border: `1px solid ${bdr}`,
-                                borderRadius: 8,
+                                border: '1px solid var(--tooltip-border)',
+                                borderRadius: 10,
                                 color: txt,
+                                padding: '10px 14px',
+                                boxShadow: 'var(--shadow-tooltip)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
                               }}
                               labelStyle={{ color: txt }}
                                 formatter={(value: number | undefined, name: string | undefined) => {
@@ -1846,9 +1854,13 @@ const Alerts: React.FC = () => {
                             <Tooltip
                               contentStyle={{
                                 backgroundColor: 'var(--popover)',
-                                border: `1px solid ${bdr}`,
-                                borderRadius: 8,
+                                border: '1px solid var(--tooltip-border)',
+                                borderRadius: 10,
                                 color: txt,
+                                padding: '10px 14px',
+                                boxShadow: 'var(--shadow-tooltip)',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
                               }}
                               labelStyle={{ color: txt }}
                                 formatter={(value: number | undefined, name: string | undefined) => {

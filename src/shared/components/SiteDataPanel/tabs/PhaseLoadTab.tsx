@@ -325,7 +325,8 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(3)} kW` },
       },
@@ -345,7 +346,8 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1, padding: 10, cornerRadius: 10,
+        borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
       },
@@ -979,7 +981,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 10,
+        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
           title: (items: TooltipItem<'line'>[]) => {
@@ -1031,7 +1034,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       tooltip: {
         backgroundColor: 'var(--popover)',
         titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
-        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1, padding: 12, cornerRadius: 10,
+        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
       },
@@ -1062,7 +1066,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         titleColor: 'var(--foreground)',
         bodyColor: 'var(--muted-foreground)',
         borderColor: isDark ? 'rgba(0,166,62,0.3)' : 'rgba(0,166,62,0.2)',
-        borderWidth: 1, padding: 12, cornerRadius: 10,
+        borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
           label: (item: TooltipItem<'line'>) =>
