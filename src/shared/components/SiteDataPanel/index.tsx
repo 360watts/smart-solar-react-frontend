@@ -28,6 +28,7 @@ ChartJS.register(
 import { Home, CloudSun, TrendingUp, Sun, Activity, RefreshCw, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../../../services/api';
+import { resolveCssVar } from '../../lib/resolveCssVar';
 import { cacheService } from '../../../services/cacheService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../../app/constants';
@@ -245,13 +246,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const forecastZoom = useChartZoomState();
   const vsActualZoom = useChartZoomState();
 
-  const tickColor   = 'var(--muted-foreground)';
-  const gridColor   = 'var(--border)';
-  const ttBg        = 'var(--popover)';
-  const ttTitle     = 'var(--foreground)';
-  const ttBody      = 'var(--muted-foreground)';
+  // Chart.js draws on canvas, whose fillStyle can't resolve CSS var() — must be literal
+  // computed colors, re-read whenever the theme flips (isDark drives the re-render).
+  const tickColor   = resolveCssVar('--muted-foreground');
+  const gridColor   = resolveCssVar('--border');
+  const ttBg        = resolveCssVar('--popover');
+  const ttTitle     = resolveCssVar('--foreground');
+  const ttBody      = resolveCssVar('--muted-foreground');
   const ttBorder    = isDark ? 'rgba(148,163,184,0.2)'  : 'rgba(0,166,62,0.2)';
-  const legendColor = 'var(--muted-foreground)';
+  const legendColor = resolveCssVar('--muted-foreground');
 
   const historyChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
@@ -276,8 +279,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      power: { type: 'linear', position: 'left', ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
-      soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: 'var(--success)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      power: { type: 'linear', position: 'left', ticks: { color: tickColor, font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: resolveCssVar('--success'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -305,8 +308,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
-      delta: { type: 'linear', position: 'right', ticks: { color: 'var(--destructive)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      y: { ticks: { color: tickColor, font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      delta: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -332,18 +335,23 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       const status = await apiService.getGatewayStatus(siteId);
       if (!cancelled) setGatewayOnline(status?.is_online ?? null);
     };
-    poll();
+    // Stagger behind fetchAll's initial burst (forecast/weather/smartDevices/telemetry)
+    // rather than firing in the same tick — the two together were enough concurrent
+    // requests on mount to trip the backend's throttle.
+    const kickoff = setTimeout(poll, 800);
     const iv = setInterval(poll, 60_000);
-    return () => { cancelled = true; clearInterval(iv); };
+    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
 
   useEffect(() => {
     let cancelled = false;
     if (!siteId) return;
-    apiService.getLatestEnergyMeter(siteId)
-      .then(data => { if (!cancelled) setCtLatest(data ?? null); })
-      .catch(() => { if (!cancelled) setCtLatest(null); });
-    return () => { cancelled = true; };
+    const kickoff = setTimeout(() => {
+      apiService.getLatestEnergyMeter(siteId)
+        .then(data => { if (!cancelled) setCtLatest(data ?? null); })
+        .catch(() => { if (!cancelled) setCtLatest(null); });
+    }, 800);
+    return () => { cancelled = true; clearTimeout(kickoff); };
   }, [siteId]);
 
   const refreshVsActualData = useCallback(async () => {

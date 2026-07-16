@@ -942,7 +942,14 @@ class ApiService {
     const url = `/sites/${siteId}/telemetry/${query.toString() ? '?' + query.toString() : ''}`;
     // 55-second TTL: slightly under the 60-second auto-refresh interval so the
     // next poll always fetches fresh data rather than hitting a same-age cache.
-    const cacheKey = `telemetry_${siteId}_${query.toString()}`;
+    // Round end_date to the nearest 5s for the cache key only (not the request itself) —
+    // React StrictMode double-invokes mount effects in dev, firing this twice a few ms
+    // apart with a millisecond-precision `now`, which produced two different cache keys
+    // and defeated dedup entirely.
+    const roundedEnd = params?.end_date
+      ? new Date(Math.round(new Date(params.end_date).getTime() / 5000) * 5000).toISOString()
+      : '';
+    const cacheKey = `telemetry_${siteId}_${params?.start_date ?? ''}_${roundedEnd}_${params?.days ?? ''}_${params?.aggregate ?? ''}`;
     return cacheService.dedup(cacheKey, () => this.request(url), 55 * 1000);
   }
 
