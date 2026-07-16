@@ -8,6 +8,7 @@ import { CloudSun, BarChart2, Target } from 'lucide-react';
 import { Line as CJLine, Bar as CJBar } from 'react-chartjs-2';
 import { type ChartOptions, type TooltipItem } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
+import { resolveCssVar } from '../../../lib/resolveCssVar';
 import ChartCard from '../components/ChartCard';
 import WeatherHourlyStrip from '../components/WeatherHourlyStrip';
 
@@ -54,9 +55,9 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)',
-        bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'),
+        bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -65,8 +66,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 } }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 11 } }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -86,9 +87,9 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)',
-        bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'),
+        bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -97,8 +98,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 11 }, callback: (v: any) => `${v}°` }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

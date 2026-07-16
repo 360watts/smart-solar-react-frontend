@@ -8,6 +8,7 @@ import {
   Tooltip as CJTooltip, Legend as CJLegend,
 } from 'chart.js';
 import { Line as CJLine } from 'react-chartjs-2';
+import { resolveCssVar } from '../../lib/resolveCssVar';
 import ZoomPlugin from 'chartjs-plugin-zoom';
 import { SmartDeviceNode, InverterPhases } from './types';
 import { apiService, CtMeterReading } from '../../../services/api';
@@ -665,7 +666,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
   const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => {
     const chartText = isDark ? '#AAB4C2' : 'rgba(18,21,26,0.62)';
-    const chartTitle = 'var(--foreground)';
+    const chartTitle = resolveCssVar('--foreground');
 
     return {
       responsive: true,
@@ -691,7 +692,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'var(--card)',
+          backgroundColor: resolveCssVar('--popover'),
           borderColor: `${accentColor}40`,
           borderWidth: 1,
           titleColor: chartTitle,

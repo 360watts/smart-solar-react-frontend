@@ -10,6 +10,7 @@ import { Sun, Target, Satellite, BarChart2, TrendingUp, Activity, ChevronLeft, C
 import { Line as CJLine, Bar as CJBar } from 'react-chartjs-2';
 import { type ChartOptions, type TooltipItem } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
+import { resolveCssVar } from '../../../lib/resolveCssVar';
 import { apiService } from '../../../../services/api';
 import { cacheService } from '../../../../services/cacheService';
 import { IST_TIMEZONE } from '../../../../app/constants';
@@ -221,8 +222,8 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
     plugins: {
       legend: { display: true, position: 'top' as const, labels: { color: '#b8d0ec', font: { size: 11 }, boxWidth: 12 } },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -230,8 +231,8 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { stacked: true, ticks: { color: 'var(--muted-foreground)', font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
-      y: { stacked: true, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { display: false } },
+      x: { stacked: true, ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
+      y: { stacked: true, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -271,8 +272,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -288,8 +289,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
-      y: { min: 0, max: 1.4, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
+      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -499,8 +500,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -517,8 +518,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
       zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
-      y: { min: 0, max: 1.4, ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
+      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark, causeFilter]);
@@ -833,12 +834,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
+      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -846,12 +847,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: 'var(--popover)', titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)', borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
+      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -1072,10 +1073,10 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: 'var(--muted-foreground)', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1084,8 +1085,8 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
       ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1095,10 +1096,10 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: 'var(--muted-foreground)', font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
-        backgroundColor: 'var(--popover)',
-        titleColor: 'var(--foreground)', bodyColor: 'var(--muted-foreground)',
+        backgroundColor: resolveCssVar('--popover'),
+        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
@@ -1107,9 +1108,9 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
       zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
-      x: { ticks: { color: 'var(--muted-foreground)', font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: 'var(--muted-foreground)', font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
-      pct: { type: 'linear', position: 'right', ticks: { color: 'var(--destructive)', font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
+      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      pct: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);

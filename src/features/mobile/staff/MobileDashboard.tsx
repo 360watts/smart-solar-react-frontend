@@ -7,6 +7,7 @@ import {
   Activity, BarChart3, Search, Menu,
 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { resolveCssVar } from '../../../shared/lib/resolveCssVar';
 import { IST_TIMEZONE } from '../../../app/constants';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -91,7 +92,9 @@ const MobileDashboard: React.FC = () => {
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = 'var(--foreground)';
-  const muted   = 'var(--muted-foreground)';
+  // Feeds Chart.js ticks/legend below, which draws on canvas and can't resolve CSS var() —
+  // needs the literal computed color.
+  const muted   = resolveCssVar('--muted-foreground');
 
   const [sites, setSites]         = useState<Site[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
