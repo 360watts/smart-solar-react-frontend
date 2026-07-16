@@ -594,9 +594,14 @@ export default function SiteDetail() {
         if (mounted) setAppliancesLoading(false);
       }
     };
-    loadAppliances();
+    // This page's own refresh() plus SiteDataPanel (its child) mounting in the same
+    // commit already fire ~10 concurrent requests — staggering the non-critical ones
+    // behind a short delay keeps this page from adding to that burst and tripping the
+    // backend's throttle.
+    const kickoff = setTimeout(loadAppliances, 900);
     return () => {
       mounted = false;
+      clearTimeout(kickoff);
     };
   }, [siteId]);
 
@@ -619,9 +624,12 @@ export default function SiteDetail() {
         if (mounted) setUsersBusy(false);
       }
     };
-    loadUsers();
+    // Staggered for the same reason as loadAppliances above — owner list is only
+    // needed if the user opens the edit form, not for first paint.
+    const kickoff = setTimeout(loadUsers, 1100);
     return () => {
       mounted = false;
+      clearTimeout(kickoff);
     };
   }, [user]);
 
