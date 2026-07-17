@@ -498,12 +498,25 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [ctReading, setCtReading] = useState<CtMeterReading | null>(externalCtReading ?? null);
+
+  // Discard readings older than 15 minutes — device is offline. Applied to both
+  // the self-fetch path below and any externally-provided ctReading, so a stale
+  // reading never displays regardless of who fetched it.
+  const freshOrNull = (data: CtMeterReading | null | undefined): CtMeterReading | null => {
+    if (!data) return null;
+    if (data.timestamp) {
+      const ageMs = Date.now() - new Date(data.timestamp).getTime();
+      if (ageMs > 15 * 60 * 1000) return null;
+    }
+    return data;
+  };
+
+  const [ctReading, setCtReading] = useState<CtMeterReading | null>(freshOrNull(externalCtReading) ?? null);
 
   useEffect(() => {
     // If ctReading provided by parent (e.g., from SiteDataPanel), skip independent polling
     if (externalCtReading !== undefined) {
-      setCtReading(externalCtReading);
+      setCtReading(freshOrNull(externalCtReading));
       return;
     }
     if (!siteId) return;
@@ -511,12 +524,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     const fetch = async () => {
       const data = await apiService.getLatestEnergyMeter(siteId);
       if (cancelled) return;
-      // Discard readings older than 15 minutes — device is offline
-      if (data?.timestamp) {
-        const ageMs = Date.now() - new Date(data.timestamp).getTime();
-        if (ageMs > 15 * 60 * 1000) { setCtReading(null); return; }
-      }
-      setCtReading(data);
+      setCtReading(freshOrNull(data));
     };
     fetch();
     const interval = setInterval(fetch, 30_000);

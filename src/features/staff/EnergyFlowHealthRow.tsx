@@ -496,9 +496,9 @@ function Skeleton({ B }: { B:ReturnType<typeof mkB> }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; }
+interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; }
 
-export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
+export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading }: Props) {
   const { isDark } = useTheme();
   const B = mkB(isDark);
   const { values, age } = useLiveTelemetry(siteId);
@@ -601,6 +601,7 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [] }: Props) {
                 gridKw={values.gridKw} battKw={values.battKw}
                 battSoc={values.battSoc} siteId={siteId}
                 smartDevices={smartDevices}
+                ctReading={ctReading}
               />
             </div>
           </div>

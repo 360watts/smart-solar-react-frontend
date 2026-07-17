@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -604,32 +604,25 @@ export default function SiteDetail() {
     };
   }, [siteId]);
 
-  useEffect(() => {
-    // Only load users if user is staff — prevents 403 errors from non-staff users
-    if (!user?.is_staff) {
+  // The owner dropdown this list feeds is disabled until editingDetails is true
+  // (see the "Owner User" <select>), so there's no reason to fetch it on every
+  // mount — load it lazily the moment the user actually opens the edit form
+  // (see the "Edit" button's onClick below), not unconditionally after mount.
+  const usersLoadedRef = useRef(false);
+  const loadOwnerUsers = useCallback(async () => {
+    if (!user?.is_staff || usersLoadedRef.current) return;
+    usersLoadedRef.current = true;
+    setUsersBusy(true);
+    try {
+      const response = await apiService.getUsers();
+      const users = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : [];
+      setOwnerUsers(users);
+    } catch {
       setOwnerUsers([]);
-      return;
+      usersLoadedRef.current = false; // allow retry on next edit-open
+    } finally {
+      setUsersBusy(false);
     }
-    let mounted = true;
-    const loadUsers = async () => {
-      setUsersBusy(true);
-      try {
-        const response = await apiService.getUsers();
-        const users = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : [];
-        if (mounted) setOwnerUsers(users);
-      } catch {
-        if (mounted) setOwnerUsers([]);
-      } finally {
-        if (mounted) setUsersBusy(false);
-      }
-    };
-    // Staggered for the same reason as loadAppliances above — owner list is only
-    // needed if the user opens the edit form, not for first paint.
-    const kickoff = setTimeout(loadUsers, 1100);
-    return () => {
-      mounted = false;
-      clearTimeout(kickoff);
-    };
   }, [user]);
 
   // Load available devices and sites when gateway tab is opened
@@ -1039,7 +1032,7 @@ export default function SiteDetail() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
                     <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>General Configuration</h2>
                     {!editingDetails ? (
-                      <button type="button" disabled={busy} onClick={() => setEditingDetails(true)} style={buttonStyle(true)}>
+                      <button type="button" disabled={busy} onClick={() => { setEditingDetails(true); loadOwnerUsers(); }} style={buttonStyle(true)}>
                         <Settings size={14} /> Edit Details
                       </button>
                     ) : (

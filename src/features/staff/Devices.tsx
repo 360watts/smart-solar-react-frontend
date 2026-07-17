@@ -637,7 +637,12 @@ const Devices: React.FC = () => {
   }, [fetchDeviceLogFiles, presets]);
 
   useEffect(() => {
-    fetchUsers();
+    // fetchUsers() intentionally NOT called here: its only consumer (the inline
+    // create/edit form driven by editingDevice/creatingDevice, ~line 1017) is
+    // unreachable — nothing in this file ever sets editingDevice to a device or
+    // creatingDevice to true (the live edit flow is handleEdit -> EditDeviceModal,
+    // which doesn't use a users list at all). Fetching the full user list on every
+    // Devices page mount for a UI path that can never render was pure waste.
     fetchPresets();
     fetchAlerts();
   }, [fetchAlerts]);

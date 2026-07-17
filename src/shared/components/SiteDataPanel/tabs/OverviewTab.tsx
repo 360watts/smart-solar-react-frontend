@@ -51,6 +51,7 @@ interface OverviewTabProps {
   deyeCloudAgeMs: number | null;
   ctStale: boolean;
   ctAgeMs: number | null;
+  ctLatest: any | null;
   // Battery
   batDataStale: boolean;
   batDataAgeLabel: string | null;
@@ -100,6 +101,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   deyeCloudAgeMs,
   ctStale,
   ctAgeMs,
+  ctLatest,
   batDataStale,
   batDataAgeLabel,
   batVoltage,
@@ -219,7 +221,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {/* ── Solar Observatory — flow + health 50/50 ── */}
       <div style={{ marginBottom: 20 }}>
-        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} />
+        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} />
       </div>
 
       {/* ── KPI Cards ── */}

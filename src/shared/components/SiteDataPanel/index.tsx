@@ -152,7 +152,8 @@ const FETCH_INITIAL: FetchState = {
 
 type FetchAction =
   | { type: 'FETCH_START' }
-  | { type: 'FETCH_SUCCESS'; payload: Pick<FetchState, 'telemetry' | 'forecast' | 'weather' | 'smartDevices' | 'lastUpdated'> }
+  | { type: 'FETCH_SUCCESS'; payload: Pick<FetchState, 'telemetry' | 'forecast' | 'lastUpdated'> }
+  | { type: 'OVERVIEW_SUCCESS'; payload: Pick<FetchState, 'weather' | 'smartDevices'> }
   | { type: 'FETCH_ERROR'; error: string }
   | { type: 'HISTORY_ERROR'; error: string | null }
   | { type: 'HISTORY_APPEND'; rows: any[] }
@@ -165,6 +166,9 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
       return { ...state, loading: true, error: null };
     case 'FETCH_SUCCESS':
       return { ...state, ...action.payload, loading: false, error: null, secondsSinceUpdate: 0 };
+    case 'OVERVIEW_SUCCESS':
+      // Independent of the main telemetry/forecast fetch cycle — doesn't touch loading/error.
+      return { ...state, ...action.payload };
     case 'FETCH_ERROR':
       return { ...state, loading: false, error: action.error };
     case 'HISTORY_APPEND': {
@@ -333,26 +337,41 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     let cancelled = false;
     const poll = async () => {
       if (document.hidden) return;
-      const status = await apiService.getGatewayStatus(siteId);
-      if (!cancelled) setGatewayOnline(status?.is_online ?? null);
+      // Single batched call covers gateway status (realtime.is_online — a strict
+      // superset of the old getGatewayStatus response), weather, and smart devices,
+      // replacing what used to be 3 separate endpoints/pollers.
+      const overview = await apiService.getStaffOverview(siteId);
+      if (cancelled) return;
+      setGatewayOnline(overview?.realtime?.is_online ?? null);
+      dispatchFetch({ type: 'OVERVIEW_SUCCESS', payload: {
+        weather: overview?.weather ?? null,
+        smartDevices: Array.isArray(overview?.smart_devices) ? overview.smart_devices : [],
+      }});
     };
-    // Stagger behind fetchAll's initial burst (forecast/weather/smartDevices/telemetry)
-    // rather than firing in the same tick — the two together were enough concurrent
-    // requests on mount to trip the backend's throttle.
+    // Stagger behind fetchAll's initial burst rather than firing in the same tick —
+    // the two together were enough concurrent requests on mount to trip the
+    // backend's throttle. 30s cadence matches the backend's realtime fragment TTL.
     const kickoff = setTimeout(poll, 800);
-    const iv = setInterval(poll, 60_000);
+    const iv = setInterval(poll, 30_000);
     return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
 
   useEffect(() => {
     let cancelled = false;
     if (!siteId) return;
-    const kickoff = setTimeout(() => {
+    const fetchCtLatest = () => {
       apiService.getLatestEnergyMeter(siteId)
         .then(data => { if (!cancelled) setCtLatest(data ?? null); })
         .catch(() => { if (!cancelled) setCtLatest(null); });
-    }, 800);
-    return () => { cancelled = true; clearTimeout(kickoff); };
+    };
+    // Staggered initial fetch (avoid piling onto the mount burst), then poll at the
+    // same 30s cadence EnergyFlow's own poller used to run at — this is now the
+    // sole source for both PhaseLoadTab and the Overview tab's EnergyFlow, so it
+    // needs to stay fresh, not just fetch once at mount. Staleness (>15 min old)
+    // is discarded downstream in EnergyFlow, not here.
+    const kickoff = setTimeout(fetchCtLatest, 800);
+    const iv = setInterval(fetchCtLatest, 30_000);
+    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
 
   const refreshVsActualData = useCallback(async () => {
@@ -414,12 +433,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         return windows;
       };
 
+      // Weather/smart-devices/gateway-status come from the dedicated fetchOverview
+      // poller below (its own faster cadence) — fetchAll only owns forecast + the
+      // telemetry chart windows now, so this single fetch doesn't need Promise.all.
       const fcst = await apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd });
-
-      // Batched overview call replaces individual getSiteWeather/getSmartDevices calls
-      const overview = await apiService.getStaffOverview(siteId);
-      const wth = overview?.weather ?? null;
-      const devices = overview?.smart_devices ?? [];
 
       let telemetryRows: any[] = [];
       if (dateRange === '24h') {
@@ -449,17 +466,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      // Use latest telemetry from realtime overview fragment or existing fetchLatestTelemetry poller
-      const realtimeTelemetry = overview?.realtime?.latest_telemetry ?? null;
-      if (realtimeTelemetry) {
-        setLatestLiveTelemetry(realtimeTelemetry);
-      }
+      // latestLiveTelemetry is sourced from fetchLatestTelemetry (full raw row, all
+      // per-phase fields) rather than the overview's realtime fragment, which is
+      // slimmed down to a customer-portal-oriented field subset (_slim_telemetry)
+      // that's missing per-phase grid/load/battery detail the staff UI needs.
 
       dispatchFetch({ type: 'FETCH_SUCCESS', payload: {
         telemetry: telemetryRows,
         forecast: Array.isArray(fcst) ? fcst : [],
-        weather: wth || null,
-        smartDevices: Array.isArray(devices) ? devices : [],
         lastUpdated: new Date(),
       }});
       // phaseLoad/forecastAccuracy/loadForecast/weatherAccuracy/loadForecastAccuracy used
@@ -532,6 +546,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   useEffect(() => {
     if (!autoRefresh) return;
+    // Fire immediately so latestLiveTelemetry is populated on mount instead of
+    // waiting for the first 30s tick — this is now the sole source of live
+    // telemetry (the old inline 20-min-window fetch in fetchAll was removed).
+    fetchLatestTelemetry();
     const fastId = setInterval(fetchLatestTelemetry, 30_000);
     return () => clearInterval(fastId);
   }, [fetchLatestTelemetry, autoRefresh]);
@@ -1223,6 +1241,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 deyeCloudAgeMs={deyeCloudAgeMs}
                 ctStale={ctStale}
                 ctAgeMs={ctAgeMs}
+                ctLatest={ctLatest}
                 batDataStale={batDataStale}
                 batDataAgeLabel={batDataAgeLabel}
                 batVoltage={batVoltage}
