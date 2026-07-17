@@ -16,7 +16,6 @@ import { AccessibleModal } from '../../shared/components/AccessibleModal';
 import PageHeader from '../../shared/layout/PageHeader';
 import { useModal } from '../../shared/hooks';
 import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
-import DeviceTypeSelector from './DeviceTypeSelector';
 import EditDeviceModal from './EditDeviceModal';
 import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
 import RestoreArchivedDeviceModal from './RestoreArchivedDeviceModal';
@@ -274,15 +273,9 @@ const Devices: React.FC = () => {
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [creatingDevice, setCreatingDevice] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [presetSearch, setPresetSearch] = useState('');
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   // Pagination state
@@ -318,23 +311,6 @@ const Devices: React.FC = () => {
   const [scanSearchFilter, setScanSearchFilter] = useState('');
   const [expandedScanGroups, setExpandedScanGroups] = useState<Set<string>>(new Set());
 
-  const [editForm, setEditForm] = useState({
-    device_serial: '',
-    device_type: 'gateway' as 'gateway' | 'energy_meter',
-    user: '',
-    config_version: '',
-    wifi_ssid: '',
-    wifi_password: '',
-  });
-  const [createForm, setCreateForm] = useState({
-    device_serial_preview: '',
-    device_type: 'gateway' as 'gateway' | 'energy_meter',
-    user: '',
-    config_version: '',
-    wifi_ssid: '',
-    wifi_password: '',
-  } as any);
-  const [showChangeWifiPassword, setShowChangeWifiPassword] = useState(false);
 
   // Site management state
   const [siteDetails, setSiteDetails] = useState<SolarSite | null>(null);
@@ -410,16 +386,6 @@ const Devices: React.FC = () => {
       if (!silent) setLoading(false);
     }
   }, [pageSize]);
-
-  const fetchUsers = async () => {
-    if (!user?.is_staff) return; // customers cannot access /api/users/
-    try {
-      const response = await apiService.getUsers();
-      setUsers(response.results ?? []);
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-    }
-  };
 
   const fetchPresets = async () => {
     try {
@@ -637,12 +603,6 @@ const Devices: React.FC = () => {
   }, [fetchDeviceLogFiles, presets]);
 
   useEffect(() => {
-    // fetchUsers() intentionally NOT called here: its only consumer (the inline
-    // create/edit form driven by editingDevice/creatingDevice, ~line 1017) is
-    // unreachable — nothing in this file ever sets editingDevice to a device or
-    // creatingDevice to true (the live edit flow is handleEdit -> EditDeviceModal,
-    // which doesn't use a users list at all). Fetching the full user list on every
-    // Devices page mount for a UI path that can never render was pure waste.
     fetchPresets();
     fetchAlerts();
   }, [fetchAlerts]);
@@ -678,20 +638,6 @@ const Devices: React.FC = () => {
   
   useEffect(() => {
     const handleClickOutside = () => {
-      setShowUserDropdown(false);
-    };
-
-    if (showUserDropdown) {
-      document.addEventListener('click', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [showUserDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = () => {
       setShowPresetDropdown(false);
     };
 
@@ -703,25 +649,6 @@ const Devices: React.FC = () => {
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showPresetDropdown]);
-
-  useEffect(() => {
-    if (userSearchTerm.trim() === '') {
-      setFilteredUsers(users);
-    } else {
-      const searchLower = userSearchTerm.toLowerCase();
-      const filtered = users.filter(user => {
-        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
-        return (
-          user.username.toLowerCase().includes(searchLower) ||
-          user.first_name.toLowerCase().includes(searchLower) ||
-          user.last_name.toLowerCase().includes(searchLower) ||
-          fullName.includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower)
-        );
-      });
-      setFilteredUsers(filtered);
-    }
-  }, [users, userSearchTerm]);
 
   // Debounced search function that runs the actual search after 300ms of inactivity
   const debouncedSearch = useDebouncedCallback(
@@ -760,53 +687,6 @@ const Devices: React.FC = () => {
     } catch (err) {
       console.error('Failed to update device:', err);
       throw err;
-    }
-  };
-
-  const handleSave = async () => {
-    if (!editingDevice) return;
-
-    try {
-      const payload: any = { ...editForm };
-      if (!showChangeWifiPassword) {
-        delete payload.wifi_password;
-      }
-      // device_type is read-only but we include it for consistency
-      payload.device_type = editForm.device_type;
-      await apiService.updateDevice(editingDevice.id, payload);
-      setEditingDevice(null);
-      // Refetch to get the updated device with all fields including audit trail
-      await fetchDevices(currentPage, searchTerm);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update device');
-    }
-  };
-
-  const handleCreate = async () => {
-    try {
-      const response = await apiService.createDevice(createForm);
-      // Show MQTT cert modal if cert was issued
-      if (response.mqttCert && response.mqttKey) {
-        setMqttCertData({
-          cert: response.mqttCert,
-          key: response.mqttKey,
-          endpoint: response.mqttEndpoint || 'a3abbajlzutkd4-ats.iot.ap-south-1.amazonaws.com',
-        });
-        setShowMqttCertModal(true);
-      }
-      setCreatingDevice(false);
-      setCreateForm({
-        device_serial_preview: '',
-        device_type: 'gateway',
-        user: '',
-        config_version: '',
-        wifi_ssid: '',
-        wifi_password: '',
-      } as any);
-      // Refetch to get the new device with all fields including audit trail
-      await fetchDevices(currentPage, searchTerm);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create device');
     }
   };
 
@@ -980,14 +860,6 @@ const Devices: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    setEditingDevice(null);
-    setCreatingDevice(false);
-    setUserSearchTerm('');
-    setShowUserDropdown(false);
-    setShowChangeWifiPassword(false);
-  };
-
   const handleBackToList = () => {
     setSelectedDevice(null);
     setSiteDetails(null);
@@ -1015,336 +887,6 @@ const Devices: React.FC = () => {
     return <div className="error">Error: {error}</div>;
   }
 
-  const getPresetConfigId = (preset: Preset): string => {
-    return preset.gateway_configuration?.general_settings?.config_id || preset.config_id || '';
-  };
-
-  const editDevicePortal = (editingDevice || creatingDevice) ? ReactDOM.createPortal(
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: isDark ? 'rgba(8,12,20,0.78)' : 'rgba(18,21,26,0.55)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 9999, padding: '16px',
-    }} onClick={handleCancel}>
-      <div style={{
-        background: 'var(--card)',
-        borderRadius: 14,
-        boxShadow: isDark
-          ? '0 24px 64px rgba(0,0,0,0.55)'
-          : '0 24px 64px rgba(15,23,42,0.16)',
-        maxWidth: 'min(560px, calc(100vw - 24px))', width: '100%',
-        maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
-      }} onClick={e => e.stopPropagation()}>
-        {/* Header — Refined Design */}
-        <div style={{
-          background: isDark ? 'linear-gradient(135deg, rgba(15,22,35,0.96), rgba(8,12,20,0.96))' : 'linear-gradient(135deg, #ffffff, #f8fafc)',
-          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(47,191,113,0.08)'}`,
-          padding: '22px 24px',
-          flexShrink: 0,
-        }}>
-          <h2 style={{
-            margin: '0 0 8px 0',
-            fontSize: '24px',
-            fontWeight: 700,
-            fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
-            color: T.text,
-            letterSpacing: '-0.02em',
-          }}>
-            {editingDevice ? `Edit: ${editingDevice.device_serial}` : 'Register New Device'}
-          </h2>
-          <p style={{
-            margin: 0,
-            fontSize: '13px',
-            color: 'var(--muted-foreground)',
-            fontFamily: '"Inter", sans-serif',
-            fontWeight: 400,
-          }}>
-            {editingDevice ? 'Update device configuration and assignment' : 'Configure your IoT gateway for solar energy management'}
-          </p>
-        </div>
-
-        <form onSubmit={(e) => { e.preventDefault(); editingDevice ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          {/* Scrollable body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-
-            {/* Device Identity — Refined */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '16px',
-                paddingBottom: '10px',
-                borderBottom: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
-              }}>
-                <div style={{ width: '3px', height: '18px', background: '#2FBF71', borderRadius: '1.5px' }} />
-                <h3 style={{ margin: 0, fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: T.text, fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif' }}>
-                  Device Identity
-                </h3>
-              </div>
-
-              {/* Auto-generated serial badge (create mode only) */}
-              {!editingDevice && (
-                <div style={{
-                  padding: '16px',
-                  background: 'rgba(47,191,113,0.06)',
-                  border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                }}>
-                  <div>
-                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 600, color: T.textM, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Inter", sans-serif' }}>Device Serial</p>
-                    <p style={{ margin: 0, fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', color: T.text, fontWeight: 600, letterSpacing: '0.08em' }}>
-                      {createForm.device_serial_preview || '(auto-generated)'}
-                    </p>
-                  </div>
-                  {createForm.device_serial_preview && (
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(createForm.device_serial_preview)}
-                      style={{
-                        padding: '8px 12px',
-                        fontSize: '12px',
-                        background: 'rgba(47,191,113,0.08)',
-                        border: '1px solid rgba(47,191,113,0.16)',
-                        color: 'var(--primary)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(203, 213, 225, 0.2)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(203, 213, 225, 0.1)'; }}
-                    >
-                      Copy
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Edit mode serial display */}
-              {editingDevice && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: T.textM, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: '"Inter", sans-serif' }}>Device Serial Number</label>
-                  <input type="text"
-                    value={editForm.device_serial}
-                    disabled autoComplete="off"
-                    style={{ padding: '12px 14px', borderRadius: '10px', width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', color: 'var(--muted-foreground)', fontSize: '14px', fontFamily: '"JetBrains Mono", monospace', cursor: 'not-allowed' }} />
-                </div>
-              )}
-            </div>
-
-            {/* Device Type Selection */}
-            <DeviceTypeSelector
-              value={editingDevice ? editForm.device_type : createForm.device_type}
-              onChange={(type) => {
-                if (editingDevice) {
-                  setEditForm({...editForm, device_type: type});
-                } else {
-                  setCreateForm({...createForm, device_type: type});
-                }
-              }}
-              disabled={!!editingDevice}
-              disabledReason="Device type is locked after creation. Contact system admin to change."
-            />
-
-            {/* Ownership & Assignment — Refined */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '2px solid #f59e0b',
-              }}>
-                <div style={{ width: '3px', height: '20px', background: '#f59e0b', borderRadius: '1.5px' }} />
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.text, fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif' }}>
-                  Owner Assignment
-                </h3>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Assigned User</label>
-                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                  <input type="text" placeholder="Search and select user..." value={userSearchTerm}
-                    onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserDropdown(true); }}
-                    onFocus={() => setShowUserDropdown(true)} autoComplete="off"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
-                  {(editingDevice ? editForm.user : createForm.user) && (
-                    <div style={{ marginTop: 8, fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
-                      <strong>Selected:</strong> {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.first_name} {users.find(u => u.username === (editingDevice ? editForm.user : createForm.user))?.last_name} ({editingDevice ? editForm.user : createForm.user})
-                      <button type="button" onClick={() => { if (editingDevice) setEditForm({...editForm, user: ''}); else setCreateForm({...createForm, user: ''}); setUserSearchTerm(''); }} className="btn-icon btn-icon-danger" style={{ marginLeft: 10 }}>✕</button>
-                    </div>
-                  )}
-                  {showUserDropdown && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, maxHeight: 200, overflowY: 'auto', zIndex: 1000, boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)', marginTop: 4 }}>
-                      {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-                        <div key={user.id}
-                          onClick={() => { if (editingDevice) setEditForm({...editForm, user: user.username}); else setCreateForm({...createForm, user: user.username}); setUserSearchTerm(`${user.first_name} ${user.last_name} (${user.username})`); setShowUserDropdown(false); }}
-                          style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: `1px solid ${T.borderM}`, background: (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(47,191,113,0.10)' : 'transparent', color: T.text, fontSize: '0.875rem' }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = T.cardEl}
-                          onMouseLeave={(e) => e.currentTarget.style.background = (editingDevice ? editForm.user : createForm.user) === user.username ? 'rgba(47,191,113,0.10)' : 'transparent'}>
-                          {user.first_name} {user.last_name} ({user.username})<br/>
-                          <span style={{ fontSize: '0.75rem', color: T.textM }}>{user.email}</span>
-                        </div>
-                      )) : (
-                        <div style={{ padding: '12px 16px', color: T.textD, fontSize: '0.875rem' }}>
-                          {userSearchTerm.trim() === '' ? 'Start typing to search users...' : 'No users found'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Network / Provisioning */}
-            <div style={{ background: 'rgba(47,191,113,0.06)', borderRadius: 12, padding: '20px', marginBottom: 16, border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #34d399, #10b981)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2FBF71' }}>Network / Provisioning</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Wi&#8209;Fi SSID</label>
-                  <input type="text"
-                    value={editingDevice ? editForm.wifi_ssid : createForm.wifi_ssid}
-                    onChange={(e) => editingDevice ? setEditForm({ ...editForm, wifi_ssid: e.target.value }) : setCreateForm({ ...createForm, wifi_ssid: e.target.value })}
-                    autoComplete="off" placeholder="Optional — SSID to provision on the device"
-                    style={{ padding: '10px 12px', borderRadius: 10, width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Wi&#8209;Fi Password</label>
-                  {editingDevice ? (
-                    showChangeWifiPassword ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <input type="password" value={editForm.wifi_password}
-                          onChange={(e) => setEditForm({ ...editForm, wifi_password: e.target.value })}
-                          autoComplete="new-password" placeholder="Enter new Wi-Fi password"
-                          style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
-                        <button type="button" onClick={() => { setShowChangeWifiPassword(false); setEditForm({ ...editForm, wifi_password: '' }); }}
-                          style={{ background: 'transparent', border: 'none', color: T.textM, cursor: 'pointer', textAlign: 'left', fontSize: '0.8rem' }}>Cancel password change</button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <small style={{ fontSize: '0.875rem', color: T.textM }}>
-                          {editingDevice.wifi_password ? 'Password stored (hidden).' : 'No password stored.'}
-                        </small>
-                        <button type="button" onClick={() => setShowChangeWifiPassword(true)}
-                          style={{ background: 'transparent', border: `1px solid ${isDark ? 'rgba(47,191,113,0.35)' : 'rgba(47,191,113,0.28)'}`, padding: '6px 10px', borderRadius: 10, cursor: 'pointer', color: '#2FBF71', fontSize: '0.8rem' }}>
-                          Change password
-                        </button>
-                      </div>
-                    )
-                  ) : (
-                    <input type="password" value={createForm.wifi_password}
-                      onChange={(e) => setCreateForm({ ...createForm, wifi_password: e.target.value })}
-                      autoComplete="new-password" placeholder="Optional Wi-Fi password"
-                      style={{ padding: '10px 12px', borderRadius: 10, width: '100%', boxSizing: 'border-box', border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
-                  )}
-                </div>
-                <small style={{ fontSize: '0.75rem', color: T.textM }}>
-                  If provided, credentials are returned to the device when it calls.
-                </small>
-              </div>
-            </div>
-
-            {/* Configuration */}
-            <div style={{ background: 'rgba(47,191,113,0.06)', borderRadius: 12, padding: '20px', marginBottom: 16, border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#2FBF71' }}>Configuration</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Preset Template</label>
-                  <select value={editingDevice ? editForm.config_version : createForm.config_version}
-                    onChange={(e) => editingDevice ? setEditForm({ ...editForm, config_version: e.target.value }) : setCreateForm({ ...createForm, config_version: e.target.value })}
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }}>
-                    <option value="">-- Manual Configuration --</option>
-                    {presetsLoading && <option value="" disabled>Loading presets...</option>}
-                    {!presetsLoading && presets.map((preset) => (
-                      <option key={preset.id} value={getPresetConfigId(preset)}>{preset.name} ({getPresetConfigId(preset) || 'no ID'})</option>
-                    ))}
-                  </select>
-                  <small style={{ fontSize: '0.75rem', color: T.textM }}>Selecting a preset sets the Config Version ID below.</small>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Config Version ID</label>
-                  <input type="text"
-                    value={editingDevice ? editForm.config_version : createForm.config_version}
-                    onChange={(e) => editingDevice ? setEditForm({...editForm, config_version: e.target.value}) : setCreateForm({...createForm, config_version: e.target.value})}
-                    autoComplete="off" placeholder="Manual Config ID"
-                    style={{ padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box', border: `1px solid ${T.border}`, background: T.surface, color: T.text, fontSize: '0.875rem' }} />
-                </div>
-              </div>
-            </div>
-
-            {editingDevice && (
-              <AuditTrail createdBy={editingDevice.created_by_username} createdAt={editingDevice.created_at} updatedBy={editingDevice.updated_by_username} updatedAt={editingDevice.updated_at} />
-            )}
-          </div>
-
-          {/* Footer — Refined */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', padding: '18px 24px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(47,191,113,0.08)'}`, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={handleCancel}
-              style={{
-                padding: '10px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                border: '1px solid rgba(203, 213, 225, 0.3)',
-                background: 'transparent',
-                color: T.textM,
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(203, 213, 225, 0.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              style={{
-                padding: '10px 24px',
-                fontSize: '13px',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, sans-serif',
-                boxShadow: '0 4px 12px rgba(47,191,113,0.22)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(47,191,113,0.25), 0 6px 16px rgba(47,191,113,0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(47,191,113,0.22)';
-              }}
-            >
-              {editingDevice ? 'Update' : 'Register Device'} →
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>,
-    document.body
-  ) : null;
 
   if (selectedDevice) {
 
@@ -2821,7 +2363,6 @@ const Devices: React.FC = () => {
           </div>,
           document.body
         )}
-        {editDevicePortal}
 
         {/* ── Log scan modal (day-wise) ── */}
         {scanModalOpen && ReactDOM.createPortal(
@@ -3365,8 +2906,6 @@ const Devices: React.FC = () => {
           </div>
         )}
       </div>
-
-      {editDevicePortal}
 
     {/* Modern Reboot Confirmation Modal */}
     <AccessibleModal
