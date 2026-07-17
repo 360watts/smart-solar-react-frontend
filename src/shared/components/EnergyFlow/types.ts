@@ -55,4 +55,5 @@ export interface EnergyFlowBlockProps {
   smartDevices?: SmartDeviceNode[];
   siteId?: string;
   inverterPhases?: InverterPhases;
+  ctReading?: any | null;
 }

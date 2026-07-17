@@ -471,7 +471,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc, smartDevices = [], siteId, inverterPhases }: EnergyFlowBlockProps) {
+export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc, smartDevices = [], siteId, inverterPhases, ctReading: externalCtReading }: EnergyFlowBlockProps) {
   const { isDark } = useTheme();
   const uidRef = useRef('');
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
@@ -498,9 +498,14 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [ctReading, setCtReading] = useState<CtMeterReading | null>(null);
+  const [ctReading, setCtReading] = useState<CtMeterReading | null>(externalCtReading ?? null);
 
   useEffect(() => {
+    // If ctReading provided by parent (e.g., from SiteDataPanel), skip independent polling
+    if (externalCtReading !== undefined) {
+      setCtReading(externalCtReading);
+      return;
+    }
     if (!siteId) return;
     let cancelled = false;
     const fetch = async () => {
@@ -516,7 +521,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     fetch();
     const interval = setInterval(fetch, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [siteId]);
+  }, [siteId, externalCtReading]);
 
   const nonGridDevices  = smartDevices.filter(d => d.appliance_label !== 'grid');
   const evLoads         = nonGridDevices.filter(d => d.appliance_label === 'ev_charger');

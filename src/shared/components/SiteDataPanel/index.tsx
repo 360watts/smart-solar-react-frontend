@@ -414,11 +414,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         return windows;
       };
 
-      const forecastWeatherPromise = Promise.all([
-        apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd }),
-        apiService.getSiteWeather(siteId),
-        apiService.getSmartDevices(siteId),
-      ] as Promise<any>[]);
+      const fcst = await apiService.getSiteForecast(siteId, { start_date: forecastStart, end_date: forecastEnd });
+
+      // Batched overview call replaces individual getSiteWeather/getSmartDevices calls
+      const overview = await apiService.getStaffOverview(siteId);
+      const wth = overview?.weather ?? null;
+      const devices = overview?.smart_devices ?? [];
 
       let telemetryRows: any[] = [];
       if (dateRange === '24h') {
@@ -448,26 +449,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         telemetryRows.sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp));
       }
 
-      const [fcst, wth, devices] = await forecastWeatherPromise;
-
-      let latestRawRows: any[] = [];
-      try {
-        const raw = await apiService.getSiteTelemetry(siteId, {
-          start_date: new Date(now.getTime() - 20 * 60 * 1000).toISOString(),
-          end_date: now.toISOString(),
-          aggregate: 'none',
-        });
-        latestRawRows = Array.isArray(raw) ? raw : [];
-      } catch {
-        latestRawRows = [];
-      }
-
-      if (latestRawRows.length > 0) {
-        // Prefer the last non-standby row — run_state=0 zeros all registers.
-        const liveRow = latestRawRows.slice().reverse().find(r => Number(r.run_state) !== 0) ?? latestRawRows[latestRawRows.length - 1];
-        setLatestLiveTelemetry(liveRow ?? null);
-      } else {
-        setLatestLiveTelemetry(null);
+      // Use latest telemetry from realtime overview fragment or existing fetchLatestTelemetry poller
+      const realtimeTelemetry = overview?.realtime?.latest_telemetry ?? null;
+      if (realtimeTelemetry) {
+        setLatestLiveTelemetry(realtimeTelemetry);
       }
 
       dispatchFetch({ type: 'FETCH_SUCCESS', payload: {

@@ -1045,12 +1045,28 @@ class ApiService {
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/weather/`), 15 * 60 * 1000);
   }
 
+  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[] } | null> {
+    // 15-second TTL: backend fragment-caches at 15s for realtime, so this passthrough is safe
+    const cacheKey = `staff_overview_${siteId}`;
+    try {
+      const response = await cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/staff-overview/`), 15 * 1000);
+      if (response?.data) {
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.warn('getStaffOverview error:', error);
+      return null;
+    }
+  }
+
   async getPhaseLoad(siteId: string, hours: number = 24, aggregate: string = 'hourly'): Promise<any[]> {
     const enc = encodeURIComponent(siteId);
     const cacheKey = `phase_load_${siteId}_${hours}_${aggregate}`;
-    // dedup (not a plain get/set check) — SiteDataPanel fires this from two separate
-    // effects on mount with identical params; a plain cache check lets both fire before
-    // either resolves and populates it, so this needs to share the in-flight promise.
+    // dedup (not a plain get/set check) — React StrictMode double-invokes the effect
+    // that calls this on mount with identical params; a plain cache check lets both
+    // fire before either resolves and populates it, so this needs to share the
+    // in-flight promise.
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${enc}/phase-load/?hours=${hours}&aggregate=${aggregate}`), 5 * 60 * 1000);
   }
 

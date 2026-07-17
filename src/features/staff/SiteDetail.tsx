@@ -594,10 +594,9 @@ export default function SiteDetail() {
         if (mounted) setAppliancesLoading(false);
       }
     };
-    // This page's own refresh() plus SiteDataPanel (its child) mounting in the same
-    // commit already fire ~10 concurrent requests — staggering the non-critical ones
-    // behind a short delay keeps this page from adding to that burst and tripping the
-    // backend's throttle.
+    // This page's own refresh() already fires several concurrent requests on mount —
+    // staggering the non-critical ones behind a short delay keeps this page from
+    // adding to that burst and tripping the backend's throttle.
     const kickoff = setTimeout(loadAppliances, 900);
     return () => {
       mounted = false;
