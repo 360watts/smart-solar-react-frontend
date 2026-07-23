@@ -133,7 +133,14 @@ const isActive = (status?: string) => status === 'active' || status === 'online'
 // Field in site history response per node type
 // Maps node type to a function that extracts kW from a history row.
 // Backend returns watts from telemetry_5min CAGG: pv1_power_w, pv2_power_w,
-// ac_output_power_w, load_power_w, grid_power_w, battery_power_w.
+// ac_output_power_w, load_power_w, grid_power_w, battery_power_w — plus
+// em_active_power_w (the real physical CT/energy-meter reading, joined from
+// the separate energymeter_5min CAGG — see api/views/telemetry.py::site_history_s3).
+// grid_power_w is the INVERTER's own grid-connection reading, a different
+// circuit from the CT meter (per this platform's architecture: the energy
+// meter measures grid-direct loads the inverter never sees). ctmeter's live
+// value already comes from the real CT meter (getLatestEnergyMeter) — its
+// history must match, not silently substitute the inverter's grid reading.
 const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => number | null>> = {
   solar: (r) => {
     const pv1 = Number(r.pv1_power_w ?? 0);
@@ -145,8 +152,23 @@ const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => 
   },
   battery: (r) => r.battery_power_w != null ? Number(r.battery_power_w) / 1000 : null,
   grid:    (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
-  ctmeter: (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
+  // Prefer the real CT-meter reading; fall back to the inverter's grid_power_w
+  // only for buckets predating the em_active_power_w join (Jun 10 2026) or a
+  // genuine CT-meter data gap — better than showing nothing at all.
+  ctmeter: (r) => {
+    if (r.em_active_power_w != null) return Number(r.em_active_power_w) / 1000;
+    return r.grid_power_w != null ? Number(r.grid_power_w) / 1000 : null;
+  },
   load:    (r) => r.load_power_w    != null ? Number(r.load_power_w)    / 1000 : null,
+};
+
+// Real CT-meter reading for the Total Load chart's "Energy Meter" series —
+// same em_active_power_w-first, grid_power_w-fallback logic as HISTORY_EXTRACT.ctmeter
+// above, kept separate since the "load" node's own extractor means something
+// different (inverter-side load, not grid).
+const extractCtMeter = (r: Record<string, unknown>): number | null => {
+  if (r.em_active_power_w != null) return Number(r.em_active_power_w) / 1000;
+  return r.grid_power_w != null ? Number(r.grid_power_w) / 1000 : null;
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -543,7 +565,10 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
         } else if (node.type === 'load' && siteId) {
           // Fetch inverter load history and EV device readings in parallel.
-          // energy meter history is NOT available in getSiteHistory (inverter telemetry only).
+          // getSiteHistory's response also includes em_active_power_w (the real
+          // CT/energy-meter reading, joined server-side from energymeter_5min) —
+          // used below via extractCtMeter for the "Energy Meter" series, matching
+          // the live loadSplit breakdown which is also CT-meter-sourced.
           const extractLoad = HISTORY_EXTRACT.load!;
           const [histRows, evRows] = await Promise.all([
             apiService.getSiteHistory(siteId, { start_date: today, end_date: tomorrow, aggregate: '15min' }),
@@ -556,14 +581,13 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
             evMap.set(fmtTime(r.timestamp), (r.power_w ?? 0) / 1000);
           }
 
-          const extractGrid = HISTORY_EXTRACT.grid!;
           points = histRows
             .map(r => {
               const t = fmtTime(r.timestamp ?? '');
               const v = extractLoad(r as Record<string, unknown>);
               if (v == null || isNaN(v)) return null;
               const pt: SparkPoint = { t, v: Math.abs(v) };
-              const gv = extractGrid(r as Record<string, unknown>);
+              const gv = extractCtMeter(r as Record<string, unknown>);
               if (gv != null && !isNaN(gv)) pt.grid = Math.abs(gv);
               const evVal = evMap.get(t);
               if (evVal != null) pt.ev = evVal;
