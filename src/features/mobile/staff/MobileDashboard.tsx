@@ -192,7 +192,7 @@ const MobileDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 30_000);
+    const id = setInterval(() => { if (!document.hidden) fetchAll(); }, 30_000);
     return () => clearInterval(id);
   }, []); // eslint-disable-line
 
@@ -204,7 +204,7 @@ const MobileDashboard: React.FC = () => {
     fetchTelemetry(selectedId);
     fetchWeather(selectedId);
     apiService.getSmartDevices(selectedId).then(d => setSmartDevices(Array.isArray(d) ? d : [])).catch(() => setSmartDevices([]));
-    const id = setInterval(() => fetchTelemetry(selectedId), 60_000);
+    const id = setInterval(() => { if (!document.hidden) fetchTelemetry(selectedId); }, 60_000);
     return () => clearInterval(id);
   }, [selectedId, fetchTelemetry, fetchWeather]);
 

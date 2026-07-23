@@ -302,7 +302,7 @@ const Alerts: React.FC = () => {
     apiService.getFleetHealthReport(null)
       .then(setTodayFleetHealthReport)
       .catch(err => console.error('Failed to load today\'s fleet health for summary:', err));
-    const interval = setInterval(fetchAlerts, 30000);
+    const interval = setInterval(() => { if (!document.hidden) fetchAlerts(); }, 30000);
     return () => clearInterval(interval);
   }, []);
 

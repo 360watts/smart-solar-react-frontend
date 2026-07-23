@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
   LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
-  Zap, CalendarCheck,
+  Zap, CalendarCheck, MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -29,6 +29,7 @@ const NAV_STAFF = [
   { path: '/equipment',        label: 'Product Catalog',  icon: Server       },
   { path: '/quotation',        label: 'Quotation',        icon: FileText     },
   { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck },
+  { path: '/support-inbox',    label: 'Support Inbox',    icon: MessageCircle },
   { path: '/ota',              label: 'OTA Updates',      icon: Download     },
 ];
 

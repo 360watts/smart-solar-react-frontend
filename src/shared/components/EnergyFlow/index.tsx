@@ -522,6 +522,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     if (!siteId) return;
     let cancelled = false;
     const fetch = async () => {
+      if (document.hidden) return;
       const data = await apiService.getLatestEnergyMeter(siteId);
       if (cancelled) return;
       setCtReading(freshOrNull(data));

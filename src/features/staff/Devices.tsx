@@ -629,6 +629,7 @@ const Devices: React.FC = () => {
   // a throttled request doesn't just get retried every cycle and re-trigger the same window.
   useEffect(() => {
     const intervalId = window.setInterval(() => {
+      if (document.hidden) return;
       if (Date.now() < pollBackoffUntilRef.current) return;
       fetchDevices(currentPage, searchTerm, true);
       fetchAlerts(true);

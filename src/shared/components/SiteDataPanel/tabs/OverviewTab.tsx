@@ -221,7 +221,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {/* ── Solar Observatory — flow + health 50/50 ── */}
       <div style={{ marginBottom: 20 }}>
-        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} />
+        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} latest={latest} />
       </div>
 
       {/* ── KPI Cards ── */}

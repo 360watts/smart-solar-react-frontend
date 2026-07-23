@@ -174,6 +174,79 @@ function _mapIncidentDict(raw: any): IncidentItem {
   };
 }
 
+// ─── Support inquiries (portal Help & Support inbox) ──────────────────────────
+
+export type SupportInquiryCategory = 'account' | 'billing' | 'app' | 'other';
+export type SupportInquiryStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type SupportInquirySeverity = 'critical' | 'warning' | 'info';
+
+export interface SupportInquiryListItem {
+  id: number;
+  category: SupportInquiryCategory;
+  message: string;
+  status: SupportInquiryStatus;
+  severity: SupportInquirySeverity;
+  slaDueAt: string | null;
+  slaBreached: boolean;
+  createdAt: string;
+  updatedAt: string;
+  replyCount: number;
+  customerName: string;
+  customerEmail: string;
+}
+
+export interface SupportInquiryReplyItem {
+  id: number;
+  authorName: string;
+  isStaffReply: boolean;
+  message: string;
+  createdAt: string;
+}
+
+export interface SupportInquiryDetail extends Omit<SupportInquiryListItem, 'replyCount'> {
+  replies: SupportInquiryReplyItem[];
+}
+
+function _mapSupportInquiryListItem(raw: any): SupportInquiryListItem {
+  return {
+    id: raw.id,
+    category: raw.category,
+    message: raw.message,
+    status: raw.status,
+    severity: raw.severity,
+    slaDueAt: raw.sla_due_at ?? null,
+    slaBreached: raw.sla_breached ?? false,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    replyCount: raw.reply_count ?? 0,
+    customerName: raw.customer_name ?? '',
+    customerEmail: raw.customer_email ?? '',
+  };
+}
+
+function _mapSupportInquiryDetail(raw: any): SupportInquiryDetail {
+  return {
+    id: raw.id,
+    category: raw.category,
+    message: raw.message,
+    status: raw.status,
+    severity: raw.severity,
+    slaDueAt: raw.sla_due_at ?? null,
+    slaBreached: raw.sla_breached ?? false,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    customerName: raw.customer_name ?? '',
+    customerEmail: raw.customer_email ?? '',
+    replies: (raw.replies || []).map((r: any) => ({
+      id: r.id,
+      authorName: r.author_name,
+      isStaffReply: r.is_staff_reply,
+      message: r.message,
+      createdAt: r.created_at,
+    })),
+  };
+}
+
 export type BookingStatus = 'pending' | 'scheduled' | 'completed' | 'closed' | 'cancelled';
 
 export interface Technician {
@@ -721,6 +794,48 @@ class ApiService {
   async resolveIncident(incidentId: number): Promise<IncidentItem> {
     const raw = await this.request(`/incidents/${incidentId}/resolve/`, { method: 'POST' });
     return _mapIncidentDict(raw);
+  }
+
+  // GET /support-inquiries/ is staff-aware server-side (returns every
+  // inquiry, not just the caller's own) when the authenticated user is
+  // staff — same list endpoint the customer portal calls, per
+  // api/views/support.py::support_inquiry_create_or_list.
+  async getSupportInquiries(opts?: { status?: SupportInquiryStatus; category?: SupportInquiryCategory }): Promise<SupportInquiryListItem[]> {
+    const params = new URLSearchParams();
+    if (opts?.status) params.set('status', opts.status);
+    if (opts?.category) params.set('category', opts.category);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const raw: any[] = await this.request(`/support-inquiries/${qs}`);
+    return raw.map(_mapSupportInquiryListItem);
+  }
+
+  async getSupportInquiry(inquiryId: number): Promise<SupportInquiryDetail> {
+    const raw = await this.request(`/support-inquiries/${inquiryId}/`);
+    return _mapSupportInquiryDetail(raw);
+  }
+
+  async replySupportInquiry(inquiryId: number, message: string): Promise<SupportInquiryDetail> {
+    const raw = await this.request(`/support-inquiries/${inquiryId}/reply/`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+    return _mapSupportInquiryDetail(raw);
+  }
+
+  async setSupportInquiryStatus(inquiryId: number, status: SupportInquiryStatus): Promise<SupportInquiryListItem> {
+    const raw = await this.request(`/support-inquiries/${inquiryId}/status/`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    });
+    return _mapSupportInquiryListItem(raw);
+  }
+
+  async setSupportInquirySeverity(inquiryId: number, severity: SupportInquirySeverity): Promise<SupportInquiryListItem> {
+    const raw = await this.request(`/support-inquiries/${inquiryId}/severity/`, {
+      method: 'POST',
+      body: JSON.stringify({ severity }),
+    });
+    return _mapSupportInquiryListItem(raw);
   }
 
   async getSiteDataQualityGaps(siteId: string, start: string, end: string): Promise<Array<{

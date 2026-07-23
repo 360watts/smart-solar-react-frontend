@@ -360,6 +360,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     let cancelled = false;
     if (!siteId) return;
     const fetchCtLatest = () => {
+      if (document.hidden) return;
       apiService.getLatestEnergyMeter(siteId)
         .then(data => { if (!cancelled) setCtLatest(data ?? null); })
         .catch(() => { if (!cancelled) setCtLatest(null); });
@@ -386,6 +387,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId]);
 
   const fetchLatestTelemetry = useCallback(async () => {
+    if (document.hidden) return;
     try {
       const now = new Date();
       const telemetryParams: any = {
@@ -537,7 +539,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     dispatchFetch({ type: 'FETCH_START' });
     fetchAll(false).then(() => fetchHistory());
     if (!autoRefresh) return () => { analyticsStaleRef.current = true; };
-    const fullId = setInterval(() => fetchAll(false).then(() => fetchHistory()), 5 * 60_000);
+    const fullId = setInterval(() => {
+      if (document.hidden) return;
+      fetchAll(false).then(() => fetchHistory());
+    }, 5 * 60_000);
     return () => {
       analyticsStaleRef.current = true;
       clearInterval(fullId);

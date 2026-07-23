@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Web admin dashboard for the 360Watts smart solar monitoring platform. React + TypeScript + Vite SPA that connects to `smart-solar-django-backend`. Deployed on Vercel.
 
-**Tech Stack:** React 18 + TypeScript, React Router v6, Radix UI + shadcn/ui, Recharts, Framer Motion, TailwindCSS, Vite, socket.io-client (live telemetry), html2canvas (export), xlsx (CSV export)
+**Tech Stack:** React 18 + TypeScript, React Router v6, Radix UI + shadcn/ui, Recharts, Framer Motion, TailwindCSS, Vite, html2canvas (export), xlsx (CSV export)
 
 ## Commands
 
@@ -113,7 +113,7 @@ This app previously shipped its own customer-facing portal at `src/features/port
 
 ### Live Data
 
-Socket.io client connects to backend for real-time telemetry updates on the Dashboard. Socket URL matches `VITE_API_BASE_URL` host.
+Dashboard live updates are REST polling (`Dashboard.tsx`'s `fetchSites`/`fetchAlerts` on a `setInterval`), not a websocket — `socket.io-client` was previously a dependency here but had zero usage in `src/`; removed 2026-07-20.
 
 ## Deployment
 

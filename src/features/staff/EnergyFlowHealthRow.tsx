@@ -3,7 +3,7 @@
  * Glassmorphism command bar + bezel ring gauge + instrument tiles
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
@@ -76,36 +76,28 @@ interface LiveValues {
   gridKw: number|null; battKw: number|null; battSoc: number|null;
 }
 
-function useLiveTelemetry(siteId: string) {
-  const [values, setValues] = useState<LiveValues>({ pvKw:null, loadKw:null, gridKw:null, battKw:null, battSoc:null });
-  const [age, setAge] = useState<string|null>(null);
-  useEffect(() => {
-    if (!siteId) return;
-    let cancelled = false;
-    const go = async () => {
-      try {
-        const rows = await apiService.getSiteTelemetry(siteId, { days:1, aggregate:'none' });
-        if (cancelled || !rows?.length) return;
-        // Prefer last non-standby row — run_state=0 zeros all registers.
-        const r = rows.slice().reverse().find((x: any) => Number(x.run_state) !== 0) ?? rows[rows.length - 1];
-        const pv = (Number(r.pv1_power_w??0)+Number(r.pv2_power_w??0)+Number(r.pv3_power_w??0)+Number(r.pv4_power_w??0))/1000;
-        setValues({
-          pvKw:    pv || null,
-          loadKw:  r.load_power_w        != null ? Number(r.load_power_w)    / 1000 : null,
-          gridKw:  r.grid_power_w        != null ? Number(r.grid_power_w)    / 1000 : null,
-          battKw:  r.battery_power_w     != null ? Number(r.battery_power_w) / 1000 : null,
-          battSoc: r.battery_soc_percent != null ? Number(r.battery_soc_percent)    : null,
-        });
-        if (r.timestamp) setAge(new Date(r.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }));
-      } catch { /* silent */ }
+// Derives live values from SiteDataPanel's already-polled `latest` telemetry row
+// instead of independently polling getSiteTelemetry — this row renders inside
+// SiteDataPanel's Overview tab, which already fetches the same data every 30s
+// via fetchLatestTelemetry. A second independent poller here (previously fetching
+// a full day of raw rows every 30s) doubled telemetry_read throttle usage for no
+// benefit. See EnergyFlow/index.tsx's externalCtReading for the same pattern.
+function useLiveTelemetry(latest: any | null) {
+  const values = useMemo<LiveValues>(() => {
+    if (!latest) return { pvKw:null, loadKw:null, gridKw:null, battKw:null, battSoc:null };
+    const r = latest;
+    const pv = (Number(r.pv1_power_w??0)+Number(r.pv2_power_w??0)+Number(r.pv3_power_w??0)+Number(r.pv4_power_w??0))/1000;
+    return {
+      pvKw:    pv || null,
+      loadKw:  r.load_power_w        != null ? Number(r.load_power_w)    / 1000 : null,
+      gridKw:  r.grid_power_w        != null ? Number(r.grid_power_w)    / 1000 : null,
+      battKw:  r.battery_power_w     != null ? Number(r.battery_power_w) / 1000 : null,
+      battSoc: r.battery_soc_percent != null ? Number(r.battery_soc_percent)    : null,
     };
-    // This row renders inside SiteDataPanel's default Overview tab, mounting in the
-    // same commit as SiteDataPanel's own ~9-request fetchAll burst — stagger the first
-    // fetch so it doesn't pile onto that.
-    const kickoff = setTimeout(go, 1300);
-    const iv = setInterval(go, 30_000);
-    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
-  }, [siteId]);
+  }, [latest]);
+  const age = latest?.timestamp
+    ? new Date(latest.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+    : null;
   return { values, age };
 }
 
@@ -496,12 +488,12 @@ function Skeleton({ B }: { B:ReturnType<typeof mkB> }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; }
+interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; latest?: any | null; }
 
-export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading }: Props) {
+export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, latest }: Props) {
   const { isDark } = useTheme();
   const B = mkB(isDark);
-  const { values, age } = useLiveTelemetry(siteId);
+  const { values, age } = useLiveTelemetry(latest ?? null);
   const [healthData, setHealthData] = useState<HardwareHealthData|null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 

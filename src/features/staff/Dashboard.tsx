@@ -96,6 +96,7 @@ const Dashboard: React.FC = () => {
     fetchAlerts();
     // Poll site status + alerts every 30 seconds silently
     const id = setInterval(() => {
+      if (document.hidden) return;
       fetchSites();
       fetchAlerts();
     }, 30_000);
