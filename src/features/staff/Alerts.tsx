@@ -1490,7 +1490,7 @@ const Alerts: React.FC = () => {
                   {[
                     { label: 'Total Occurrences', value: totalOccurrences.toString(), sub: `in last ${analyticsData.lookback_days}d`, color: '#6366F1', icon: <BarChart3 size={17} /> },
                     { label: 'Active Faults', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear in this period' : 'Unresolved in period', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
-                    { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${normalizeFaultTitle(mostFrequent.fault_code, mostFrequent.title)}` : 'No faults', color: mostFrequent ? SEVERITY_CONFIG[mostFrequent.severity].color : sub, icon: <AlertTriangle size={17} /> },
+                    { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${normalizeFaultTitle(mostFrequent.fault_code, mostFrequent.title)}` : 'No faults', color: mostFrequent ? (SEVERITY_CONFIG[mostFrequent.severity] ?? SEVERITY_CONFIG.info).color : sub, icon: <AlertTriangle size={17} /> },
                     { label: 'Avg Time to Resolve', value: fmtTTR(avgTTR), sub: resolvedFaults.length > 0 ? `across ${resolvedFaults.length} fault type${resolvedFaults.length > 1 ? 's' : ''}` : 'No resolved faults', color: '#F59E0B', icon: <Clock size={17} /> },
                   ].map(card => (
                     <div key={card.label} style={{ ...cardStyle(isDark), padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1524,7 +1524,7 @@ const Alerts: React.FC = () => {
                       <span>Fault Code</span><span>Title</span><span>Severity</span><span>Count</span><span>Active</span><span>Avg Resolve</span><span>First Seen</span><span>Last Seen</span>
                     </div>
                     {[...analyticsData.fault_summaries].sort((a, b) => b.total_occurrences - a.total_occurrences).map(f => {
-                      const sevCfg = SEVERITY_CONFIG[f.severity];
+                      const sevCfg = SEVERITY_CONFIG[f.severity] ?? SEVERITY_CONFIG.info;
                       const isExpanded = expandedFaultCode === f.fault_code;
                       const instances = analyticsData.recent_instances[f.fault_code] ?? [];
                       const catEntry = catalogueByCode[f.fault_code];

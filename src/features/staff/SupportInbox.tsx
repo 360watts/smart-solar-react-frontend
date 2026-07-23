@@ -10,6 +10,7 @@ import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
 import PageHeader from '../../shared/layout/PageHeader';
 
 const STATUS_CONFIG: Record<SupportInquiryStatus, { color: string; bg: string; label: string }> = {
+  ai_handling: { color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)', label: 'AI Handling' },
   open:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', label: 'Open' },
   in_progress: { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)', label: 'In Progress' },
   resolved:    { color: '#10B981', bg: 'rgba(16,185,129,0.12)', label: 'Resolved' },
@@ -38,13 +39,16 @@ const SEVERITY_ESCALATIONS: Record<SupportInquirySeverity, SupportInquirySeverit
   critical: [],
 };
 
-const STATUS_FILTERS: Array<SupportInquiryStatus | 'all'> = ['all', 'open', 'in_progress', 'resolved', 'closed'];
+const STATUS_FILTERS: Array<SupportInquiryStatus | 'all'> = ['all', 'ai_handling', 'open', 'in_progress', 'resolved', 'closed'];
 
 // Next status a staff member can move an inquiry to, in the order the
 // lifecycle actually progresses — no point offering "reopen" from this menu
 // since that only happens implicitly (customer replies to a resolved/closed
-// inquiry, handled server-side).
+// inquiry, handled server-side). ai_handling is AI-owned (turns to `open`
+// automatically once the AI escalates or its turn cap is hit), but staff can
+// still jump in early.
 const NEXT_STATUS_OPTIONS: Record<SupportInquiryStatus, SupportInquiryStatus[]> = {
+  ai_handling: ['open', 'closed'],
   open: ['in_progress', 'resolved', 'closed'],
   in_progress: ['resolved', 'closed'],
   resolved: ['closed', 'open'],
@@ -52,7 +56,10 @@ const NEXT_STATUS_OPTIONS: Record<SupportInquiryStatus, SupportInquiryStatus[]> 
 };
 
 function StatusPill({ status }: { status: SupportInquiryStatus }) {
-  const cfg = STATUS_CONFIG[status];
+  // Defense-in-depth: fall back rather than crash the page if the backend
+  // ever serializes a status value this map doesn't know about yet — this is
+  // exactly how the ai_handling gap crashed the page before it was added here.
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open;
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
@@ -64,7 +71,7 @@ function StatusPill({ status }: { status: SupportInquiryStatus }) {
 }
 
 function SeverityPill({ severity }: { severity: SupportInquirySeverity }) {
-  const cfg = SEVERITY_CONFIG[severity];
+  const cfg = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.info;
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
@@ -218,7 +225,7 @@ function InquiryDetailModal({
           <div style={{ padding: '14px 20px', borderTop: `1px solid ${t.border}` }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <StatusPill status={detail.status} />
-              {NEXT_STATUS_OPTIONS[detail.status].map(next => (
+              {(NEXT_STATUS_OPTIONS[detail.status] ?? NEXT_STATUS_OPTIONS.open).map(next => (
                 <button
                   key={next}
                   onClick={() => handleSetStatus(next)}

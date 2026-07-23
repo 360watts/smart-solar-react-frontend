@@ -177,7 +177,7 @@ function _mapIncidentDict(raw: any): IncidentItem {
 // ─── Support inquiries (portal Help & Support inbox) ──────────────────────────
 
 export type SupportInquiryCategory = 'account' | 'billing' | 'app' | 'other';
-export type SupportInquiryStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type SupportInquiryStatus = 'ai_handling' | 'open' | 'in_progress' | 'resolved' | 'closed';
 export type SupportInquirySeverity = 'critical' | 'warning' | 'info';
 
 export interface SupportInquiryListItem {
