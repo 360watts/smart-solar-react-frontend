@@ -152,24 +152,23 @@ const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => 
   },
   battery: (r) => r.battery_power_w != null ? Number(r.battery_power_w) / 1000 : null,
   grid:    (r) => r.grid_power_w    != null ? Number(r.grid_power_w)    / 1000 : null,
-  // Prefer the real CT-meter reading; fall back to the inverter's grid_power_w
-  // only for buckets predating the em_active_power_w join (Jun 10 2026) or a
-  // genuine CT-meter data gap — better than showing nothing at all.
-  ctmeter: (r) => {
-    if (r.em_active_power_w != null) return Number(r.em_active_power_w) / 1000;
-    return r.grid_power_w != null ? Number(r.grid_power_w) / 1000 : null;
-  },
+  // No fallback to grid_power_w: this modal always fetches TODAY's window, so
+  // the "predates the join" case never applies in practice — the only real
+  // trigger is a genuine CT-meter outage, and silently substituting the
+  // inverter's own reading during an outage is exactly the bug this replaced
+  // (see git history). A null here means "no real CT reading for this bucket"
+  // and should render as a gap, not a smoothed-over substitute value.
+  ctmeter: (r) => r.em_active_power_w != null ? Number(r.em_active_power_w) / 1000 : null,
   load:    (r) => r.load_power_w    != null ? Number(r.load_power_w)    / 1000 : null,
 };
 
 // Real CT-meter reading for the Total Load chart's "Energy Meter" series —
-// same em_active_power_w-first, grid_power_w-fallback logic as HISTORY_EXTRACT.ctmeter
-// above, kept separate since the "load" node's own extractor means something
-// different (inverter-side load, not grid).
-const extractCtMeter = (r: Record<string, unknown>): number | null => {
-  if (r.em_active_power_w != null) return Number(r.em_active_power_w) / 1000;
-  return r.grid_power_w != null ? Number(r.grid_power_w) / 1000 : null;
-};
+// same no-fallback rule as HISTORY_EXTRACT.ctmeter above (a null CT-meter
+// bucket must render as a gap, not the inverter's grid_power_w standing in
+// for it) — kept separate since the "load" node's own extractor means
+// something different (inverter-side load, not grid).
+const extractCtMeter = (r: Record<string, unknown>): number | null =>
+  r.em_active_power_w != null ? Number(r.em_active_power_w) / 1000 : null;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -660,7 +659,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
             fill: false,
             tension: 0.3,
             pointRadius: 0,
-            spanGaps: true,
+            // false (unlike every other series here): a null bucket means a
+            // genuine CT-meter outage, not a missing sample to interpolate
+            // over — bridging it would draw a straight line across real
+            // downtime as if the meter had been reporting the whole time.
+            spanGaps: false,
           }] : []),
           ...(visibleSeries.ev && node?.evDevice ? [{
             label: 'EV Charging',

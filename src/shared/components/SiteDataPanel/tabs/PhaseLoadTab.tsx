@@ -621,13 +621,24 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     }
 
     const bucketMs = loadBucketMinutes * 60 * 1000;
+    // Per-phase presence counters (inverterL1N/L2N/L3N, gridL1N/L2N/L3N), not
+    // one shared counter — a bucket where L1 has a real reading but L2/L3
+    // don't must still let L1 average correctly while L2/L3 stay unknown,
+    // same principle as the backend's site_phase_load fix (per-field
+    // presence counts, not one blanket sample count). inverterTotalFallback
+    // is a genuinely separate accumulator for load_power_w (the aggregate,
+    // real data) used ONLY when no real per-phase reading exists at all for
+    // a bucket — it must never be written into inverterL1/L2/L3 themselves
+    // (that fabricates "100% of load on L1, 0 on L2/L3", a specific shape
+    // that never actually happened).
     const map = new Map<string, {
       ts: Date;
       inverterL1: number; inverterL2: number; inverterL3: number;
+      inverterL1N: number; inverterL2N: number; inverterL3N: number;
+      inverterTotalFallback: number; inverterTotalFallbackN: number;
       gridL1: number; gridL2: number; gridL3: number;
+      gridL1N: number; gridL2N: number; gridL3N: number;
       ev: number;
-      inverterN: number;
-      gridN: number;
       evN: number;
     }>();
     const ensureBucket = (key: string, snapped: number) => {
@@ -635,9 +646,11 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         map.set(key, {
           ts: new Date(snapped),
           inverterL1: 0, inverterL2: 0, inverterL3: 0,
+          inverterL1N: 0, inverterL2N: 0, inverterL3N: 0,
+          inverterTotalFallback: 0, inverterTotalFallbackN: 0,
           gridL1: 0, gridL2: 0, gridL3: 0,
-          ev: 0,
-          inverterN: 0, gridN: 0, evN: 0,
+          gridL1N: 0, gridL2N: 0, gridL3N: 0,
+          ev: 0, evN: 0,
         });
       }
       return map.get(key)!;
@@ -648,19 +661,21 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
       const key = new Date(snapped).toISOString();
       const b = ensureBucket(key, snapped);
-      const inverterL1 = pickFirstKw(row, ['inverter_load_l1_kw', 'load_l1_kw', 'inverter_l1_kw', 'load_l1_power_w']) ?? 0;
-      const inverterL2 = pickFirstKw(row, ['inverter_load_l2_kw', 'load_l2_kw', 'inverter_l2_kw', 'load_l2_power_w']) ?? 0;
-      const inverterL3 = pickFirstKw(row, ['inverter_load_l3_kw', 'load_l3_kw', 'inverter_l3_kw', 'load_l3_power_w']) ?? 0;
-      const gridL1 = Math.max(0, pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1']) ?? 0);
-      const gridL2 = Math.max(0, pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2']) ?? 0);
-      const gridL3 = Math.max(0, pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3']) ?? 0);
+      const inverterL1 = pickFirstKw(row, ['inverter_load_l1_kw', 'load_l1_kw', 'inverter_l1_kw', 'load_l1_power_w']);
+      const inverterL2 = pickFirstKw(row, ['inverter_load_l2_kw', 'load_l2_kw', 'inverter_l2_kw', 'load_l2_power_w']);
+      const inverterL3 = pickFirstKw(row, ['inverter_load_l3_kw', 'load_l3_kw', 'inverter_l3_kw', 'load_l3_power_w']);
+      const gridL1Raw = pickFirstKw(row, ['grid_load_l1_kw', 'ct_l1_kw', 'active_power_l1']);
+      const gridL2Raw = pickFirstKw(row, ['grid_load_l2_kw', 'ct_l2_kw', 'active_power_l2']);
+      const gridL3Raw = pickFirstKw(row, ['grid_load_l3_kw', 'ct_l3_kw', 'active_power_l3']);
       const evFb = evByBucket.get(key);
       const ev = pickFirstKw(row, ['ev_load_kw', 'ev_kw', 'ev_charger_kw', 'smart_device_kw']) ?? (evFb ? evFb.sum / evFb.count : 0);
-      b.inverterL1 += inverterL1; b.inverterL2 += inverterL2; b.inverterL3 += inverterL3;
-      b.gridL1 += gridL1; b.gridL2 += gridL2; b.gridL3 += gridL3;
+      if (inverterL1 != null) { b.inverterL1 += inverterL1; b.inverterL1N += 1; }
+      if (inverterL2 != null) { b.inverterL2 += inverterL2; b.inverterL2N += 1; }
+      if (inverterL3 != null) { b.inverterL3 += inverterL3; b.inverterL3N += 1; }
+      if (gridL1Raw != null) { b.gridL1 += Math.max(0, gridL1Raw); b.gridL1N += 1; }
+      if (gridL2Raw != null) { b.gridL2 += Math.max(0, gridL2Raw); b.gridL2N += 1; }
+      if (gridL3Raw != null) { b.gridL3 += Math.max(0, gridL3Raw); b.gridL3N += 1; }
       b.ev += ev;
-      if (inverterL1 !== 0 || inverterL2 !== 0 || inverterL3 !== 0) b.inverterN += 1;
-      if (gridL1 !== 0 || gridL2 !== 0 || gridL3 !== 0) b.gridN += 1;
       if (ev !== 0) b.evN += 1;
     }
 
@@ -674,10 +689,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       const nextGridL1 = row.active_power_l1 != null && Number.isFinite(Number(row.active_power_l1)) ? Math.max(0, Number(row.active_power_l1) / 1000) : null;
       const nextGridL2 = row.active_power_l2 != null && Number.isFinite(Number(row.active_power_l2)) ? Math.max(0, Number(row.active_power_l2) / 1000) : null;
       const nextGridL3 = row.active_power_l3 != null && Number.isFinite(Number(row.active_power_l3)) ? Math.max(0, Number(row.active_power_l3) / 1000) : null;
-      if (nextGridL1 != null) b.gridL1 += nextGridL1;
-      if (nextGridL2 != null) b.gridL2 += nextGridL2;
-      if (nextGridL3 != null) b.gridL3 += nextGridL3;
-      if (nextGridL1 != null || nextGridL2 != null || nextGridL3 != null) b.gridN += 1;
+      if (nextGridL1 != null) { b.gridL1 += nextGridL1; b.gridL1N += 1; }
+      if (nextGridL2 != null) { b.gridL2 += nextGridL2; b.gridL2N += 1; }
+      if (nextGridL3 != null) { b.gridL3 += nextGridL3; b.gridL3N += 1; }
     }
 
     for (const row of siteHistoryRows) {
@@ -687,12 +701,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
       const key = new Date(snapped).toISOString();
       const b = ensureBucket(key, snapped);
-      if ((b.inverterL1 + b.inverterL2 + b.inverterL3) === 0) {
-        const inverterTotal = row.load_power_w != null && Number.isFinite(Number(row.load_power_w))
-          ? Number(row.load_power_w) / 1000
-          : 0;
-        b.inverterL1 = inverterTotal;
-        b.inverterN = Math.max(b.inverterN, 1);
+      if (row.load_power_w != null && Number.isFinite(Number(row.load_power_w))) {
+        b.inverterTotalFallback += Number(row.load_power_w) / 1000;
+        b.inverterTotalFallbackN += 1;
       }
     }
 
@@ -709,12 +720,34 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       .sort((a, b) => a.ts.getTime() - b.ts.getTime())
       .map(b => {
         const rawDate = new Date(b.ts).toLocaleDateString('en-CA', { timeZone: IST });
-        const inverterL1 = +Number(b.inverterL1 / (b.inverterN || 1)).toFixed(2);
-        const inverterL2 = +Number(b.inverterL2 / (b.inverterN || 1)).toFixed(2);
-        const inverterL3 = +Number(b.inverterL3 / (b.inverterN || 1)).toFixed(2);
-        const gridL1 = +Number(b.gridL1 / (b.gridN || 1)).toFixed(2);
-        const gridL2 = +Number(b.gridL2 / (b.gridN || 1)).toFixed(2);
-        const gridL3 = +Number(b.gridL3 / (b.gridN || 1)).toFixed(2);
+        // null (not a divide-by-shared-count 0) when THIS SPECIFIC phase has
+        // zero real readings in this bucket — same principle as the grid/CT
+        // fix below and the backend's site_phase_load fix: a missing phase
+        // register and a genuine 0 kW reading on that phase are not the same
+        // thing, and per-phase (not per-bucket) counters are what let one
+        // phase go missing without corrupting the others' averages.
+        const inverterL1 = b.inverterL1N > 0 ? +Number(b.inverterL1 / b.inverterL1N).toFixed(2) : null;
+        const inverterL2 = b.inverterL2N > 0 ? +Number(b.inverterL2 / b.inverterL2N).toFixed(2) : null;
+        const inverterL3 = b.inverterL3N > 0 ? +Number(b.inverterL3 / b.inverterL3N).toFixed(2) : null;
+        const hasAnyRealInverterPhase = b.inverterL1N > 0 || b.inverterL2N > 0 || b.inverterL3N > 0;
+        // Combined total: sum whatever real per-phase data exists; only fall
+        // back to the separate aggregate accumulator (real load_power_w, never
+        // written into inverterL1/L2/L3 themselves) when NO phase has any
+        // real reading at all for this bucket — never fabricate a specific
+        // "100% on L1" shape to produce a total.
+        const inverterTotal = hasAnyRealInverterPhase
+          ? +((inverterL1 ?? 0) + (inverterL2 ?? 0) + (inverterL3 ?? 0)).toFixed(2)
+          : (b.inverterTotalFallbackN > 0 ? +(b.inverterTotalFallback / b.inverterTotalFallbackN).toFixed(2) : null);
+        // null (not 0/(gridN||1)) when this bucket has zero real CT-meter
+        // readings — a genuine energy-meter outage must render as a gap, not
+        // a confident flat 0 kW line (same fix as NodeDetailModal.tsx's
+        // ctmeter/Energy-Meter series; see FAULT_LOG.md for the incident this
+        // matches). Chart.js's default spanGaps:false (unset below) then
+        // draws the break correctly.
+        const gridL1 = b.gridL1N > 0 ? +Number(b.gridL1 / b.gridL1N).toFixed(2) : null;
+        const gridL2 = b.gridL2N > 0 ? +Number(b.gridL2 / b.gridL2N).toFixed(2) : null;
+        const gridL3 = b.gridL3N > 0 ? +Number(b.gridL3 / b.gridL3N).toFixed(2) : null;
+        const hasAnyRealGridPhase = b.gridL1N > 0 || b.gridL2N > 0 || b.gridL3N > 0;
         const ev = +Number(b.ev / (b.evN || 1)).toFixed(2);
         return {
           rawTs: b.ts.getTime(),
@@ -722,9 +755,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           time: b.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
           dateLabel: b.ts.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', timeZone: IST }),
           inverterL1, inverterL2, inverterL3,
-          inverter: +(inverterL1 + inverterL2 + inverterL3).toFixed(2),
+          inverter: inverterTotal,
           gridL1, gridL2, gridL3,
-          grid: +(gridL1 + gridL2 + gridL3).toFixed(2),
+          grid: hasAnyRealGridPhase ? +((gridL1 ?? 0) + (gridL2 ?? 0) + (gridL3 ?? 0)).toFixed(2) : null,
           ev,
         };
       });
