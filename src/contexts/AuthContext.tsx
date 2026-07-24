@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { getCsrfToken } from '../services/api';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
@@ -15,19 +16,17 @@ interface User {
   is_superuser: boolean;
 }
 
-interface AuthTokens {
-  access: string;
-  refresh: string;
-}
-
 interface AuthContextType {
   user: User | null;
-  tokens: AuthTokens | null;
   login: (email: string, password: string) => Promise<boolean>;
   requestOtp: (mobileNumber: string) => Promise<void>;
   verifyOtp: (mobileNumber: string, otp: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  /** Re-checks the session cookie against the backend and updates `user`.
+   * Used after flows (email verification, password setup) that log the
+   * user in via a response this component didn't itself handle. */
+  refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
   loading: boolean;
@@ -49,32 +48,34 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for stored tokens on app start
-    const storedTokens = localStorage.getItem('authTokens');
-    const storedUser = localStorage.getItem('authUser');
-
-    if (storedTokens && storedUser) {
-      try {
-        const parsedTokens = JSON.parse(storedTokens);
-        const parsedUser = JSON.parse(storedUser);
-        setTokens(parsedTokens);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing stored auth data:', error);
-        localStorage.removeItem('authTokens');
-        localStorage.removeItem('authUser');
+  // Auth state lives in httpOnly cookies set by the backend — not localStorage.
+  // Bootstrap by asking the backend who (if anyone) the cookie belongs to.
+  const refreshSession = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/user/`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setUser(await response.json());
+      } else {
+        setUser(null);
       }
+    } catch (error) {
+      console.error('Session check failed:', error);
+      setUser(null);
     }
-    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    refreshSession().finally(() => setLoading(false));
+  }, [refreshSession]);
 
   const requestOtp = useCallback(async (mobileNumber: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mobile_number: mobileNumber }),
     });
@@ -85,15 +86,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const verifyOtp = useCallback(async (mobileNumber: string, otp: string): Promise<boolean> => {
     const response = await fetch(`${API_BASE_URL}/auth/otp/verify/`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mobile_number: mobileNumber, otp }),
     });
     if (response.ok) {
       const data = await response.json();
       setUser(data.user);
-      setTokens(data.tokens);
-      localStorage.setItem('authTokens', JSON.stringify(data.tokens));
-      localStorage.setItem('authUser', JSON.stringify(data.user));
       if (data.site_id) localStorage.setItem('siteId', data.site_id);
       return true;
     }
@@ -104,15 +103,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     const response = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     if (response.ok) {
       const data = await response.json();
       setUser(data.user);
-      setTokens(data.tokens);
-      localStorage.setItem('authTokens', JSON.stringify(data.tokens));
-      localStorage.setItem('authUser', JSON.stringify(data.user));
       return true;
     }
     const errorData = await response.json().catch(() => ({}));
@@ -121,44 +118,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      if (tokens?.refresh) {
-        await fetch(`${API_BASE_URL}/auth/logout/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokens.access}` },
-          body: JSON.stringify({ refresh_token: tokens.refresh }),
-        });
-      }
+      await fetch(`${API_BASE_URL}/auth/logout/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+      });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
-      setTokens(null);
-      localStorage.removeItem('authTokens');
-      localStorage.removeItem('authUser');
     }
-  }, [tokens]);
+  }, []);
 
   const updateUser = useCallback((userData: Partial<User>) => {
-    setUser(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...userData };
-      localStorage.setItem('authUser', JSON.stringify(updated));
-      return updated;
-    });
+    setUser(prev => (prev ? { ...prev, ...userData } : prev));
   }, []);
 
   const value = useMemo<AuthContextType>(() => ({
     user,
-    tokens,
     login,
     requestOtp,
     verifyOtp,
     logout,
     updateUser,
-    isAuthenticated: !!user && !!tokens,
+    refreshSession,
+    isAuthenticated: !!user,
     isAdmin: !!(user && user.is_superuser),
     loading,
-  }), [user, tokens, login, requestOtp, verifyOtp, logout, updateUser, loading]);
+  }), [user, login, requestOtp, verifyOtp, logout, updateUser, refreshSession, loading]);
 
   return (
     <AuthContext.Provider value={value}>

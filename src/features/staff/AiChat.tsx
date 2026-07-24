@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
+import { getCsrfToken } from '../../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -24,14 +25,7 @@ const API_BASE_URL =
   (import.meta as any).env?.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
 function getAuthHeaders(): HeadersInit {
-  const tokens = localStorage.getItem('authTokens');
-  if (tokens) {
-    try {
-      const parsed = JSON.parse(tokens);
-      return { Authorization: `Bearer ${parsed.access}`, 'Content-Type': 'application/json' };
-    } catch {}
-  }
-  return { 'Content-Type': 'application/json' };
+  return { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() };
 }
 
 const COMMANDS = [
@@ -142,6 +136,7 @@ const AiChat: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
         method: 'POST',
+        credentials: 'include',
         headers: getAuthHeaders(),
         body: JSON.stringify({ messages: updated.map(m => ({ role: m.role, content: m.content })) }),
       });

@@ -462,25 +462,25 @@ export interface QuotationEvent {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
+/** Reads the (non-httpOnly) CSRF cookie the backend sets alongside the auth
+ * cookies, for the double-submit header DRF's CookieJWTAuthentication checks
+ * on unsafe methods. Auth itself rides on httpOnly cookies (see api/cookie_auth.py
+ * on the backend) — the browser attaches those automatically once credentials:
+ * 'include' is set, this header is purely the CSRF proof. */
+export function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 class ApiService {
   private refreshTokenPromise: Promise<boolean> | null = null;
 
-  private getAuthHeaders(): HeadersInit {
-    const tokens = localStorage.getItem('authTokens');
-    if (tokens) {
-      try {
-        const parsedTokens = JSON.parse(tokens);
-        return {
-          'Authorization': `Bearer ${parsedTokens.access}`,
-          'Content-Type': 'application/json',
-        };
-      } catch (error) {
-        console.error('Error parsing auth tokens:', error);
-      }
+  private getAuthHeaders(method: string = 'GET'): HeadersInit {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+      headers['X-CSRFToken'] = getCsrfToken();
     }
-    return {
-      'Content-Type': 'application/json',
-    };
+    return headers;
   }
 
   /** Normalize backend error: supports { error }, { detail }, or raw text. */
@@ -559,7 +559,7 @@ class ApiService {
     this.logRequest({ endpoint, method, outcome: 'sent' });
 
     const url = `${API_BASE_URL}${endpoint}`;
-    let headers = this.getAuthHeaders();
+    let headers = this.getAuthHeaders(method);
 
     // Backend request timeout — long enough for cold starts, short enough to fail fast.
     const controller = new AbortController();
@@ -572,6 +572,7 @@ class ApiService {
     try {
       response = await fetch(url, {
         ...options,
+        credentials: 'include',
         headers: { ...headers, ...options.headers },
         signal: controller.signal,
       });
@@ -584,7 +585,7 @@ class ApiService {
       const refreshSuccess = await this.refreshToken();
       if (refreshSuccess) {
         // Retry with new token
-        headers = this.getAuthHeaders();
+        headers = this.getAuthHeaders(method);
         const retryController = new AbortController();
         const retryTimeoutId = setTimeout(
           () => retryController.abort(new DOMException('Server is warming up — please try again in a moment.', 'AbortError')),
@@ -593,6 +594,7 @@ class ApiService {
         try {
           response = await fetch(url, {
             ...options,
+            credentials: 'include',
             headers: { ...headers, ...options.headers },
             signal: retryController.signal,
           });
@@ -603,9 +605,7 @@ class ApiService {
     }
 
     if (response.status === 401) {
-      // Token refresh failed or not attempted, logout
-      localStorage.removeItem('authTokens');
-      localStorage.removeItem('authUser');
+      // Refresh failed or not attempted — session cookie is gone/invalid, log out.
       window.location.href = '/login';
       throw new Error('Authentication required');
     }
@@ -640,28 +640,16 @@ class ApiService {
   }
 
   private async _doRefreshToken(): Promise<boolean> {
-    const tokens = localStorage.getItem('authTokens');
-    if (!tokens) return false;
-
+    // Refresh token lives in an httpOnly cookie — the backend reads it from
+    // there when the body doesn't carry one (see TokenRefreshView.post).
     try {
-      const parsedTokens = JSON.parse(tokens);
       const response = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh: parsedTokens.refresh }),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        const newTokens = {
-          access: data.access,
-          refresh: data.refresh ?? parsedTokens.refresh, // Use rotated token if server sent one
-        };
-        localStorage.setItem('authTokens', JSON.stringify(newTokens));
-        return true;
-      }
+      return response.ok;
     } catch (error) {
       console.error('Token refresh failed:', error);
     }
@@ -675,17 +663,15 @@ class ApiService {
   async getConfiguration(): Promise<any> {
     const url = `${API_BASE_URL}/config/`;
     const headers = this.getAuthHeaders();
-    let response = await fetch(url, { headers });
+    let response = await fetch(url, { headers, credentials: 'include' });
 
     if (response.status === 401) {
       const refreshSuccess = await this.refreshToken();
       if (refreshSuccess) {
-        response = await fetch(url, { headers: this.getAuthHeaders() });
+        response = await fetch(url, { headers: this.getAuthHeaders(), credentials: 'include' });
       }
     }
     if (response.status === 401) {
-      localStorage.removeItem('authTokens');
-      localStorage.removeItem('authUser');
       window.location.href = '/login';
       throw new Error('Authentication required');
     }
@@ -1252,22 +1238,11 @@ class ApiService {
     formData.append('avatar', file);
 
     // Don't use this.request() for FormData because it adds JSON Content-Type
-    // Instead, use fetch directly with only Authorization header
-    const tokens = localStorage.getItem('authTokens');
-    const headers: HeadersInit = {};
-    if (tokens) {
-      try {
-        const parsedTokens = JSON.parse(tokens);
-        headers['Authorization'] = `Bearer ${parsedTokens.access}`;
-      } catch (error) {
-        console.error('Error parsing auth tokens:', error);
-      }
-    }
-
     const url = `${API_BASE_URL}/profile-picture/`;
     const response = await fetch(url, {
       method: 'POST',
-      headers,
+      credentials: 'include',
+      headers: { 'X-CSRFToken': getCsrfToken() },
       body: formData,
     });
 
@@ -1678,7 +1653,7 @@ class ApiService {
     if (start) params.push(`start=${encodeURIComponent(start)}`);
     if (end) params.push(`end=${encodeURIComponent(end)}`);
     if (params.length) url += `?${params.join('&')}`;
-    const response = await fetch(url, { headers: this.getAuthHeaders() });
+    const response = await fetch(url, { headers: this.getAuthHeaders(), credentials: 'include' });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(text || `Bulk download failed: ${response.status}`);
@@ -1701,7 +1676,7 @@ class ApiService {
 
   async getDeviceLogFileContent(deviceId: number, fileId: number): Promise<string> {
     const url = `${API_BASE_URL}/devices/${deviceId}/logs/files/${fileId}/content/`;
-    const response = await fetch(url, { headers: this.getAuthHeaders() });
+    const response = await fetch(url, { headers: this.getAuthHeaders(), credentials: 'include' });
     if (!response.ok) throw new Error(`Failed to fetch log content: ${response.status}`);
     return response.text();
   }
@@ -1782,14 +1757,12 @@ class ApiService {
 
   async uploadFirmwareVersion(formData: FormData, onProgress?: (pct: number) => void): Promise<any> {
     const url = `${API_BASE_URL}/ota/firmware/create/`;
-    const tokens = localStorage.getItem('authTokens');
-    if (!tokens) throw new Error('Authentication required');
-    const parsedTokens = JSON.parse(tokens);
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url);
-      xhr.setRequestHeader('Authorization', `Bearer ${parsedTokens.access}`);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('X-CSRFToken', getCsrfToken());
 
       if (onProgress) {
         xhr.upload.addEventListener('progress', (e) => {
@@ -1799,8 +1772,6 @@ class ApiService {
 
       xhr.onload = () => {
         if (xhr.status === 401) {
-          localStorage.removeItem('authTokens');
-          localStorage.removeItem('authUser');
           window.location.href = '/login';
           return reject(new Error('Authentication required'));
         }

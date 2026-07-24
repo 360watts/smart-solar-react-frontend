@@ -84,7 +84,7 @@ const ParticleCanvas: React.FC = () => {
 const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { login, requestOtp, verifyOtp } = useAuth()
+  const { login, requestOtp, verifyOtp, refreshSession } = useAuth()
 
   // Initialise from URL params (?verify=1&email=...) — set by activation link in email
   const urlVerifyEmail = searchParams.get('email') ?? ''
@@ -139,10 +139,9 @@ const Login: React.FC = () => {
     clearError()
     setLoading(true)
     try {
-      const data = await apiService.verifyEmail({ email: verifyEmail, otp: verifyOtpVal })
-      // Store tokens and navigate — mirror what login() does
-      localStorage.setItem('authTokens', JSON.stringify({ access: data.access, refresh: data.refresh }))
-      localStorage.setItem('authUser', JSON.stringify(data.user))
+      await apiService.verifyEmail({ email: verifyEmail, otp: verifyOtpVal })
+      // Backend set the auth cookies on that response — sync context state from it.
+      await refreshSession()
       navigate('/', { replace: true })
     } catch (err: any) {
       setError(err?.message ?? 'Verification failed. Please try again.')
