@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { getCsrfToken } from '../../services/api';
+import { getCsrfToken, apiService } from '../../services/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -134,12 +134,28 @@ const AiChat: React.FC = () => {
     setStreaming(true);
     isStreamingRef.current = true;
     try {
-      const res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
+      const body = JSON.stringify({ messages: updated.map(m => ({ role: m.role, content: m.content })) });
+      let res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
         method: 'POST',
         credentials: 'include',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ messages: updated.map(m => ({ role: m.role, content: m.content })) }),
+        body,
       });
+      if (res.status === 401) {
+        // Mirrors api.ts's request() 401-retry: the access-token cookie may
+        // have expired (or the in-memory CSRF token hasn't been populated
+        // yet this page load) — refresh once and retry before giving up,
+        // instead of surfacing the raw backend error text as a chat reply.
+        const refreshed = await apiService.refreshToken();
+        if (refreshed) {
+          res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: getAuthHeaders(),
+            body,
+          });
+        }
+      }
       if (!res.ok) {
         const err = await res.text();
         setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });

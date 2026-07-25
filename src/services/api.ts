@@ -637,7 +637,11 @@ class ApiService {
     return response.json();
   }
 
-  private async refreshToken(): Promise<boolean> {
+  /** Public so callers outside this class (e.g. AiChat.tsx's own streaming
+   * fetch, which can't go through request() since it needs the raw
+   * ReadableStream reader) can retry a 401 the same way request() does,
+   * instead of re-implementing refresh logic that drifts out of sync. */
+  async refreshToken(): Promise<boolean> {
     // Singleton: if a refresh is already in flight, all callers share the same promise.
     // This prevents refresh token rotation failures when Promise.all fires multiple
     // simultaneous 401s — without this each caller would consume the rotated token.
