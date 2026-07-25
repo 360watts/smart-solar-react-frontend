@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { getCsrfToken } from '../services/api';
+import { getCsrfToken, setCsrfToken } from '../services/api';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
@@ -93,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (response.ok) {
       const data = await response.json();
       setUser(data.user);
+      setCsrfToken(data.csrf_token);
       if (data.site_id) localStorage.setItem('siteId', data.site_id);
       return true;
     }
@@ -110,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (response.ok) {
       const data = await response.json();
       setUser(data.user);
+      setCsrfToken(data.csrf_token);
       return true;
     }
     const errorData = await response.json().catch(() => ({}));

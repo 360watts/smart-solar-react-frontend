@@ -462,14 +462,23 @@ export interface QuotationEvent {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
-/** Reads the (non-httpOnly) CSRF cookie the backend sets alongside the auth
- * cookies, for the double-submit header DRF's CookieJWTAuthentication checks
- * on unsafe methods. Auth itself rides on httpOnly cookies (see api/cookie_auth.py
- * on the backend) — the browser attaches those automatically once credentials:
- * 'include' is set, this header is purely the CSRF proof. */
+/** CSRF double-submit token, held in memory (not read from document.cookie).
+ * The backend also sets a same-named cookie, but that cookie is host-only on
+ * api.360watts.com — the staff frontend runs on a different origin (Vercel),
+ * and document.cookie can never read a cookie belonging to another origin's
+ * jar regardless of credentials:'include'/SameSite=None (those only control
+ * whether the *browser* attaches the cookie to the request, not whether *JS*
+ * can read it). The backend now also returns the value in the JSON body of
+ * every login/register/refresh response (see api/cookie_auth.py::set_auth_cookies),
+ * so we capture it there instead. */
+let inMemoryCsrfToken = '';
+
+export function setCsrfToken(token: string | undefined | null): void {
+  if (token) inMemoryCsrfToken = token;
+}
+
 export function getCsrfToken(): string {
-  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : '';
+  return inMemoryCsrfToken;
 }
 
 class ApiService {
@@ -649,6 +658,10 @@ class ApiService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        setCsrfToken(data?.csrf_token);
+      }
       return response.ok;
     } catch (error) {
       console.error('Token refresh failed:', error);
