@@ -1572,6 +1572,18 @@ class ApiService {
     });
   }
 
+  async createDeviceClaim(hwId: string, expiresInHours?: number): Promise<any> {
+    return this.request('/devices/claims/', {
+      method: 'POST',
+      body: JSON.stringify({ hwId, ...(expiresInHours ? { expiresInHours } : {}) }),
+    });
+  }
+
+  async getDeviceClaims(hwId?: string): Promise<any> {
+    const queryString = hwId ? `?hwId=${encodeURIComponent(hwId)}` : '';
+    return this.request(`/devices/claims/${queryString}`);
+  }
+
   async getArchivedDevices(search?: string, deviceType?: 'gateway' | 'energy_meter'): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -1721,10 +1733,15 @@ class ApiService {
     });
   }
 
-  async deleteDevicesBulk(deviceIds: number[]): Promise<any> {
+  async deleteDevicesBulk(deviceIds: number[], options?: {
+    revoke_iot?: boolean;
+    delete_config?: boolean;
+    delete_alerts?: boolean;
+    delete_logs?: boolean;
+  }): Promise<any> {
     return this.request(`/devices/delete-bulk/`, {
       method: 'POST',
-      body: JSON.stringify({ device_ids: deviceIds }),
+      body: JSON.stringify({ device_ids: deviceIds, ...(options ?? {}) }),
     });
   }
 

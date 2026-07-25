@@ -13,6 +13,10 @@ export interface DeleteDeviceOptions {
 interface DeleteDeviceModalProps {
   open: boolean;
   device: { id: number; device_serial: string; site?: string } | null;
+  /** Bulk mode: pass the selected devices here instead of `device`. When
+   * non-empty, the modal switches to "Delete N Devices" copy, lists all
+   * serials, and requires typing DELETE (no single serial to type). */
+  devices?: { id: number; device_serial: string }[];
   onClose: () => void;
   onConfirm: (options: DeleteDeviceOptions) => Promise<void>;
 }
@@ -53,9 +57,10 @@ const CLEANUP_OPTIONS = [
 ];
 
 export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
-  open, device, onClose, onConfirm,
+  open, device, devices, onClose, onConfirm,
 }) => {
   const { isDark } = useTheme();
+  const isBulk = !!devices && devices.length > 0;
   const [options, setOptions] = useState<DeleteDeviceOptions>({
     revoke_iot: true,
     delete_config: false,
@@ -67,7 +72,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
   const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const requiredText = device?.device_serial ?? '';
+  const requiredText = isBulk ? 'DELETE' : device?.device_serial ?? '';
   const confirmed = confirmText === requiredText;
 
   useEffect(() => {
@@ -101,7 +106,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     }
   };
 
-  if (!mounted || !device) return null;
+  if (!mounted || (!isBulk && !device)) return null;
 
   const S: Record<string, React.CSSProperties> = {
     overlay: {
@@ -247,7 +252,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                 fontSize: '0.9375rem', fontWeight: 700,
                 color: 'var(--foreground)',
                 lineHeight: 1.2,
-              }}>Delete Device</div>
+              }}>{isBulk ? `Delete ${devices!.length} Device${devices!.length !== 1 ? 's' : ''}` : 'Delete Device'}</div>
               <div style={{
                 fontSize: '0.75rem', marginTop: 2,
                 color: 'var(--muted-foreground)',
@@ -261,16 +266,32 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
 
         {/* Body */}
         <div style={S.body}>
-          {/* Device serial */}
-          <div style={S.serialBox}>
-            <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 2 }}>
-                Device to delete
+          {/* Device serial(s) */}
+          {isBulk ? (
+            <div style={{ ...S.serialBox, alignItems: 'flex-start' }}>
+              <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 4 }}>
+                  Devices to delete
+                </div>
+                <div style={{ maxHeight: 100, overflowY: 'auto' }}>
+                  {devices!.map(d => (
+                    <div key={d.id} style={{ ...S.serialText, fontSize: '0.8rem', lineHeight: 1.6 }}>{d.device_serial}</div>
+                  ))}
+                </div>
               </div>
-              <div style={S.serialText}>{device.device_serial}</div>
             </div>
-          </div>
+          ) : (
+            <div style={S.serialBox}>
+              <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 2 }}>
+                  Device to delete
+                </div>
+                <div style={S.serialText}>{device!.device_serial}</div>
+              </div>
+            </div>
+          )}
 
           {/* Cleanup options */}
           <div style={S.sectionLabel}>Also remove</div>
@@ -393,7 +414,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
               ) : (
                 <>
                   <Trash2 size={14} />
-                  Delete Device
+                  {isBulk ? `Delete ${devices!.length} Device${devices!.length !== 1 ? 's' : ''}` : 'Delete Device'}
                   <ChevronRight size={13} style={{ opacity: 0.7 }} />
                 </>
               )}

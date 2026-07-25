@@ -19,6 +19,7 @@ import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
 import EditDeviceModal from './EditDeviceModal';
 import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
 import RestoreArchivedDeviceModal from './RestoreArchivedDeviceModal';
+import ProvisionDeviceModal from './ProvisionDeviceModal';
 
 interface User {
   id: number;
@@ -336,6 +337,7 @@ const Devices: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [modalDevice, setModalDevice] = useState<Device | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [showProvisionModal, setShowProvisionModal] = useState(false);
 
   // Shared throttle backoff for the silent heartbeat poll below — a 429 sets this to the
   // moment the backend says it'll accept requests again, so the poll skips ticks instead of
@@ -840,10 +842,10 @@ const Devices: React.FC = () => {
     setBulkDeleteModal({ show: true, deviceList });
   };
 
-  const confirmBulkDelete = async () => {
+  const confirmBulkDelete = async (options: DeleteDeviceOptions) => {
     try {
       setBulkDeleteLoading(true);
-      await apiService.deleteDevicesBulk(Array.from(selectedDevices));
+      await apiService.deleteDevicesBulk(Array.from(selectedDevices), options);
 
       const updatedDevices = devices.filter(d => !selectedDevices.has(d.id));
       setDevices(updatedDevices);
@@ -2638,6 +2640,25 @@ const Devices: React.FC = () => {
             >
               ↺ Restore Archived Device
             </button>
+            <button
+              onClick={() => setShowProvisionModal(true)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: `1px solid ${T.border}`,
+                background: T.surface,
+                color: isDark ? '#e0e0e0' : 'inherit',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                letterSpacing: '0.01em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              ▦ Provision Device
+            </button>
           </div>
         </div>
         <div className="table-responsive"><table className="table">
@@ -3049,6 +3070,11 @@ const Devices: React.FC = () => {
       }}
     />
 
+    <ProvisionDeviceModal
+      open={showProvisionModal}
+      onClose={() => setShowProvisionModal(false)}
+    />
+
     {/* Modern Success Notification Modal */}
     {successModal.show && ReactDOM.createPortal(
       <div style={{
@@ -3113,75 +3139,16 @@ const Devices: React.FC = () => {
       document.body
     )}
 
-    {/* Bulk Delete Confirmation Modal */}
-    {bulkDeleteModal.show && (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', zIndex: 9999, backdropFilter: 'blur(4px)'
-      }}>
-        <div style={{
-          background: isDark ? '#2d2d2d' : 'white', borderRadius: '16px',
-          padding: '2rem', maxWidth: '520px', width: '90%',
-          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.3)',
-          border: '2px solid #7f1d1d', animation: 'slideIn 0.2s ease-out'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div style={{
-              width: '48px', height: '48px', borderRadius: '12px',
-              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.5rem', animation: 'pulse 2s infinite'
-            }}>🗑️</div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#7f1d1d' }}>
-              Delete {bulkDeleteModal.deviceList.length} Device{bulkDeleteModal.deviceList.length !== 1 ? 's' : ''} Permanently
-            </h3>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem', color: 'var(--muted-foreground)', lineHeight: '1.6' }}>
-            <div style={{
-              background: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fee2e2',
-              border: isDark ? '1px solid rgba(127, 29, 29, 0.3)' : '1px solid #fecaca',
-              borderRadius: '8px', padding: '1rem', marginBottom: '1rem',
-              color: 'var(--destructive)'
-            }}>
-              <strong style={{ fontSize: '1.05rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><AlertTriangle size={18} strokeWidth={2} /> PERMANENT DELETION</strong>
-              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                This action <strong>cannot be undone</strong>. All data for these devices will be permanently deleted.
-              </p>
-            </div>
-            <p style={{ marginBottom: '0.5rem' }}>Devices to delete:</p>
-            <ul style={{ margin: '0', paddingLeft: '1.5rem', fontSize: '0.9rem', maxHeight: '120px', overflowY: 'auto' }}>
-              {bulkDeleteModal.deviceList.map(d => (
-                <li key={d.id} style={{ color: 'var(--muted-foreground)', fontWeight: '600' }}>{d.device_serial}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setBulkDeleteModal({ show: false, deviceList: [] })}
-              style={{
-                background: 'var(--muted-foreground)', color: 'var(--muted-foreground)',
-                border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
-                fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >Cancel</button>
-            <button
-              onClick={confirmBulkDelete}
-              disabled={bulkDeleteLoading}
-              style={{
-                background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', color: 'white',
-                border: 'none', padding: '0.75rem 1.5rem', borderRadius: '8px',
-                fontSize: '0.95rem', fontWeight: '600', cursor: bulkDeleteLoading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 12px rgba(127, 29, 29, 0.3)', transition: 'all 0.2s',
-                opacity: bulkDeleteLoading ? 0.7 : 1
-              }}
-            >{bulkDeleteLoading ? 'Deleting…' : 'Yes, Delete All'}</button>
-          </div>
-        </div>
-      </div>
-    )}
+    {/* Bulk Delete Confirmation Modal — same DeleteDeviceModal as single-delete
+        (bulk mode via `devices` prop), so cleanup options and copy stay in
+        sync instead of drifting like the old hand-rolled version did. */}
+    <DeleteDeviceModal
+      open={bulkDeleteModal.show}
+      device={null}
+      devices={bulkDeleteModal.deviceList}
+      onClose={() => setBulkDeleteModal({ show: false, deviceList: [] })}
+      onConfirm={confirmBulkDelete}
+    />
 
     {/* MQTT Certificate Display Modal — one-time popup */}
     {showMqttCertModal && mqttCertData && (
