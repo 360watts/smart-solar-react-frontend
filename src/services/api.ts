@@ -729,7 +729,17 @@ class ApiService {
       type: inc.incident_type ?? '',
       severity: inc.severity,
       message: inc.summary || inc.title || '',
-      device_id: inc.device_serial ?? '',
+      // Must be the numeric device PK, not the serial — Dashboard.tsx's
+      // activeAlerts filter does parseInt(a.device_id) to match against a
+      // site's real numeric device IDs. A serial here silently corrupts that
+      // match: JS parseInt() only reads the leading digit run and stops at
+      // the first non-digit char, so e.g. parseInt('47DFE039E911') === 47 —
+      // any incident for a device whose serial happens to start with digits
+      // matching another device's real numeric ID gets misattributed to
+      // whatever site that other device is on. Confirmed live: incidents for
+      // device 47DFE039E911 (site coim_001) were rendering under coim_002,
+      // because coim_002 has an unrelated device with the real numeric id 47.
+      device_id: inc.device_id != null ? String(inc.device_id) : '',
       device_serial: inc.device_serial ?? undefined,
       timestamp: inc.ts_start ?? '',
       resolved: inc.status === 'resolved',
@@ -1582,6 +1592,10 @@ class ApiService {
   async getDeviceClaims(hwId?: string): Promise<any> {
     const queryString = hwId ? `?hwId=${encodeURIComponent(hwId)}` : '';
     return this.request(`/devices/claims/${queryString}`);
+  }
+
+  async revokeDeviceClaim(claimId: number): Promise<any> {
+    return this.request(`/devices/claims/${claimId}/`, { method: 'DELETE' });
   }
 
   async getArchivedDevices(search?: string, deviceType?: 'gateway' | 'energy_meter'): Promise<any> {

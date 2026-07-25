@@ -588,7 +588,7 @@ const MobileDashboard: React.FC = () => {
                               {a.message}
                             </div>
                             <div style={{ fontSize: '0.58rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
-                              Device {a.device_id}
+                              Device {a.device_serial ?? a.device_id}
                             </div>
                           </div>
                         </div>

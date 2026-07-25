@@ -65,7 +65,7 @@ const MobileAlerts: React.FC = () => {
     if (search) {
       const q = search.toLowerCase();
       if (!a.message?.toLowerCase().includes(q) &&
-          !String(a.device_id).includes(q) &&
+          !(a.device_serial ?? '').toLowerCase().includes(q) &&
           !a.fault_code?.toLowerCase().includes(q) &&
           !a.site_id?.toLowerCase().includes(q)) return false;
     }
@@ -242,7 +242,7 @@ const MobileAlerts: React.FC = () => {
                     {a.message}
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:'0.62rem', color:muted, fontFamily:"'JetBrains Mono', monospace" }}>Dev {a.device_id}</span>
+                    <span style={{ fontSize:'0.62rem', color:muted, fontFamily:"'JetBrains Mono', monospace" }}>Dev {a.device_serial ?? a.device_id}</span>
                     <span style={{ fontSize:'0.62rem', color:muted, display:'flex', alignItems:'center', gap:2, marginLeft:'auto', fontFamily:"'DM Sans', sans-serif" }}>
                       <Clock size={10}/>{new Date(a.timestamp).toLocaleString('en-IN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
                     </span>
@@ -324,7 +324,7 @@ const MobileAlerts: React.FC = () => {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                 {[
                   { label:'Alert ID',  value:`#${a.id}` },
-                  { label:'Device',    value:String(a.device_id) },
+                  { label:'Device',    value:a.device_serial ?? String(a.device_id) },
                   ...(a.site_id ? [{ label:'Site', value:a.site_id }] : []),
                   { label:'Triggered', value:new Date(a.timestamp).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) },
                   ...(a.resolved_at ? [{ label:'Resolved', value:new Date(a.resolved_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) }] : []),

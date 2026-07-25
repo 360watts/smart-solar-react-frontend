@@ -19,7 +19,7 @@ import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
 import EditDeviceModal from './EditDeviceModal';
 import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
 import RestoreArchivedDeviceModal from './RestoreArchivedDeviceModal';
-import ProvisionDeviceModal from './ProvisionDeviceModal';
+import ManageProvisionsModal from './ManageProvisionsModal';
 
 interface User {
   id: number;
@@ -337,7 +337,7 @@ const Devices: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [modalDevice, setModalDevice] = useState<Device | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
-  const [showProvisionModal, setShowProvisionModal] = useState(false);
+  const [showManageProvisionsModal, setShowManageProvisionsModal] = useState(false);
 
   // Shared throttle backoff for the silent heartbeat poll below — a 429 sets this to the
   // moment the backend says it'll accept requests again, so the poll skips ticks instead of
@@ -436,12 +436,18 @@ const Devices: React.FC = () => {
     return deviceAlerts.filter((a) => a.status !== 'resolved' && !a.resolved);
   }, [deviceAlerts]);
 
+  // Indexed under both the numeric device_id and device_serial — call sites
+  // below look it up both ways (selectedDevice.id and device.device_serial),
+  // and AlertItem.device_id is now the real numeric PK (previously held the
+  // serial by mistake, see _incidentToAlertItem's comment in api.ts).
   const activeAlertsByDevice = useMemo(() => {
     const map = new Map<string, AlertItem[]>();
     for (const alert of activeAlerts) {
-      const key = alert.device_id || '';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(alert);
+      for (const key of [alert.device_id, alert.device_serial]) {
+        if (!key) continue;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(alert);
+      }
     }
     return map;
   }, [activeAlerts]);
@@ -2641,7 +2647,7 @@ const Devices: React.FC = () => {
               ↺ Restore Archived Device
             </button>
             <button
-              onClick={() => setShowProvisionModal(true)}
+              onClick={() => setShowManageProvisionsModal(true)}
               style={{
                 padding: '9px 18px',
                 borderRadius: '10px',
@@ -2657,7 +2663,7 @@ const Devices: React.FC = () => {
                 gap: '6px',
               }}
             >
-              ▦ Provision Device
+              ▦ Manage Provisions
             </button>
           </div>
         </div>
@@ -3070,9 +3076,9 @@ const Devices: React.FC = () => {
       }}
     />
 
-    <ProvisionDeviceModal
-      open={showProvisionModal}
-      onClose={() => setShowProvisionModal(false)}
+    <ManageProvisionsModal
+      open={showManageProvisionsModal}
+      onClose={() => setShowManageProvisionsModal(false)}
     />
 
     {/* Modern Success Notification Modal */}
