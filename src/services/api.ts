@@ -1572,10 +1572,10 @@ class ApiService {
     });
   }
 
-  async createDeviceClaim(hwId: string, expiresInHours?: number): Promise<any> {
+  async createDeviceClaim(hwId?: string, expiresInHours?: number): Promise<any> {
     return this.request('/devices/claims/', {
       method: 'POST',
-      body: JSON.stringify({ hwId, ...(expiresInHours ? { expiresInHours } : {}) }),
+      body: JSON.stringify({ ...(hwId ? { hwId } : {}), ...(expiresInHours ? { expiresInHours } : {}) }),
     });
   }
 
