@@ -129,23 +129,30 @@ export function Step1Customer({ form }: Props) {
             />
             <button
               type="button"
+              aria-label="Remove site photo"
               onClick={() => setValue('customer.sitePhotoBase64', '')}
               style={{
-                position: 'absolute', top: -8, right: -8,
-                width: 22, height: 22, borderRadius: '50%',
+                position: 'absolute', top: -10, right: -10,
+                width: 30, height: 30, borderRadius: '50%',
                 background: 'var(--sq-raised)', border: '1px solid var(--sq-border2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', color: 'var(--sq-muted)',
               }}
             >
-              <X style={{ width: 11, height: 11 }} />
+              <X style={{ width: 13, height: 13 }} />
             </button>
           </div>
         ) : (
           <div
             className="sq-photo-zone"
             style={{ width: 210, height: 130 }}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload site photo"
             onClick={() => fileRef.current?.click()}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current?.click(); }
+            }}
           >
             <Upload style={{ width: 20, height: 20 }} />
             <span style={{ fontFamily: 'var(--sq-mono)', fontSize: '0.6rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>

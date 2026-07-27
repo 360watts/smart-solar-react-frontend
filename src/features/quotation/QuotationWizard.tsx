@@ -12,7 +12,7 @@ import { LiveSummaryRail } from './components/LiveSummaryRail';
 import { PdfPreviewModal } from './components/PdfPreviewModal';
 import { usePdfExport, generatePdfBlob } from './hooks/usePdfExport';
 import { useSaveDraft } from './hooks/useSaveDraft';
-import { calcEbBill } from './utils/roiCalculator';
+import { calcEbBill, calcEvSizing, getEffectiveSystemKw } from './utils/roiCalculator';
 import type { QuotationData } from './types/quotation';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 
@@ -201,12 +201,15 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
       const priceMap = new Map(prices.map((p: any) => [p.item_name.toLowerCase(), p]));
       // Panels and Inverter are selected from ProductCatalog in Step 3 — skip them here
       const CATALOG_ITEMS = new Set(['panels', 'inverter']);
-      function applyPrices(rows: ReturnType<typeof newRows>) {
-        return rows.map(r => {
-          if (CATALOG_ITEMS.has(r.item.toLowerCase())) return r;
+      // Patch only the rows that actually match a legacy price — via indexed setValue,
+      // not a whole-array replace — so this can't remount (and interrupt) any in-flight
+      // catalog picker elsewhere in the table (see autofillBomQuantities below for why).
+      function applyPrices(path: 'optionA' | 'optionB', rows: ReturnType<typeof newRows>) {
+        rows.forEach((r, idx) => {
+          if (CATALOG_ITEMS.has(r.item.toLowerCase())) return;
           const p = priceMap.get(r.item.toLowerCase());
-          if (!p) return r;
-          return {
+          if (!p) return;
+          form.setValue(`${path}.rows.${idx}`, {
             ...r,
             brand: p.brand || r.brand,
             unitPrice: parseFloat(p.unit_price) || r.unitPrice,
@@ -214,12 +217,12 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
             gstPct: parseFloat(p.gst_pct) ?? r.gstPct,
             priceSource: 'legacy-equipment-price' as const,
             priceUnit: p.uom,
-          };
+          });
         });
       }
-      form.setValue('optionA.rows', applyPrices(form.getValues('optionA.rows')));
+      applyPrices('optionA', form.getValues('optionA.rows'));
       const optionB = form.getValues('optionB');
-      if (optionB) form.setValue('optionB.rows', applyPrices(optionB.rows));
+      if (optionB) applyPrices('optionB', optionB.rows);
     }).catch(() => { /* prices unavailable — keep zeros */ });
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -230,42 +233,48 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
 
   const autofillBomQuantities = useCallback(() => {
     const { ebBill } = form.getValues();
-    const { inverterKw, exactDcKw, recommendedSystemKw } = calcEbBill({ ...ebBill });
-    const dcKw = recommendedSystemKw > 0 ? recommendedSystemKw : exactDcKw;
+    const calc = calcEbBill({ ...ebBill });
+    const { inverterKw, exactDcKw } = calc;
+    const effectiveKw = getEffectiveSystemKw(ebBill, calc);
+    const baseDcKw = effectiveKw > 0 ? effectiveKw : exactDcKw;
     const acKw = inverterKw;
     if (acKw <= 0) return;
 
-    function applyQtys(rows: ReturnType<typeof newRows>) {
-      return rows.map(r => {
+    // Option B represents the EV-inclusive system when an EV preset is selected —
+    // it needs its own (bigger) panel/inverter sizing, not a mirror of Option A's.
+    const evCalc = calcEvSizing(ebBill);
+    const optionBDcKw = evCalc ? evCalc.recommendedSystemKw : baseDcKw;
+
+    // Patches only the rows that actually need a new qty/rate, via indexed setValue —
+    // never a whole-array replace. Replacing the whole array regenerates react-hook-form's
+    // field-array ids, which remounts every CatalogSelector in the table (including any
+    // mid-flight catalog auto-pick), silently dropping the price it was about to apply —
+    // that's exactly how Option B's Panels row was ending up unpriced.
+    function applyQtys(path: 'optionA' | 'optionB', rows: ReturnType<typeof newRows>, dcKw: number) {
+      const panelDesc = rows.find(x => x.item.toLowerCase() === 'panels')?.description ?? '';
+      const panelWpMatch = panelDesc.match(/(\d+)\s*[Ww]p/);
+      const panelWp = panelWpMatch ? parseInt(panelWpMatch[1], 10) : 615;
+      const panelQty = Math.ceil((dcKw * 1000) / panelWp);
+
+      rows.forEach((r, idx) => {
         const item = r.item.toLowerCase();
-        if (item === 'panels') {
-          const wpMatch = r.description.match(/(\d+)\s*[Ww]p/);
-          const panelWp = wpMatch ? parseInt(wpMatch[1], 10) : 615;
-          return { ...r, qty: Math.ceil((dcKw * 1000) / panelWp) };
-        }
-        if (item === 'mc4 connectors') {
-          const wpMatch = (rows.find(x => x.item.toLowerCase() === 'panels')?.description ?? '').match(/(\d+)\s*[Ww]p/);
-          const panelWp = wpMatch ? parseInt(wpMatch[1], 10) : 615;
-          const panelQty = Math.ceil((dcKw * 1000) / panelWp);
-          return { ...r, qty: panelQty * 2 };
-        }
-        if (item === 'mounting structure') {
-          if (r.priceSource === 'catalog') return r;
+        if (item === 'panels' && r.qty !== panelQty) {
+          form.setValue(`${path}.rows.${idx}`, { ...r, qty: panelQty });
+        } else if (item === 'mc4 connectors' && r.qty !== panelQty * 2) {
+          form.setValue(`${path}.rows.${idx}`, { ...r, qty: panelQty * 2 });
+        } else if (item === 'mounting structure' && r.priceSource !== 'catalog') {
           const ratePerKw = r.unitPrice > 0 && r.unitPrice <= 10000 ? r.unitPrice : 4000;
-          return { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' };
-        }
-        if (item === 'installation') {
-          if (r.priceSource === 'catalog') return r;
+          form.setValue(`${path}.rows.${idx}`, { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' });
+        } else if (item === 'installation' && r.priceSource !== 'catalog') {
           const ratePerKw = r.unitPrice > 0 && r.unitPrice <= 10000 ? r.unitPrice : 3000;
-          return { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' };
+          form.setValue(`${path}.rows.${idx}`, { ...r, qty: 1, unitPrice: ratePerKw, priceUnit: 'rate_per_kw' });
         }
-        return r;
       });
     }
 
-    form.setValue('optionA.rows', applyQtys(form.getValues('optionA.rows')));
+    applyQtys('optionA', form.getValues('optionA.rows'), baseDcKw);
     const optionB = form.getValues('optionB');
-    if (optionB) form.setValue('optionB.rows', applyQtys(optionB.rows));
+    if (optionB) applyQtys('optionB', optionB.rows, optionBDcKw);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function persistDraft({ silent = false, leaveWizard = false }: { silent?: boolean; leaveWizard?: boolean } = {}) {
@@ -284,6 +293,20 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   async function navigateTo(targetStep: number) {
     const nextStep = Math.max(1, Math.min(targetStep, STEPS.length));
     if (nextStep === step) return;
+
+    // Only gate forward movement — going back should always be free.
+    if (nextStep > step) {
+      if (step === 1) {
+        const valid = await form.trigger(['customer.name', 'customer.address']);
+        if (!valid) { toast.error('Add the customer name and site address before continuing.'); return; }
+      }
+      if (step === 2) {
+        const ebBill = form.getValues('ebBill');
+        const effectiveKw = getEffectiveSystemKw(ebBill, calcEbBill(ebBill));
+        if (effectiveKw <= 0) { toast.error('Add at least one electricity bill reading before continuing.'); return; }
+      }
+    }
+
     const saved = await persistDraft({ silent: true });
     if (!saved) return;
     goTo(nextStep);

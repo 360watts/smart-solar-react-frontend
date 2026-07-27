@@ -68,6 +68,10 @@ export function calcDcAndInverter(
   return { inverterKw, dcKw, rawDcKw, rawAcKw };
 }
 
+export function getEffectiveSystemKw(ebBill: EbBillData, calc: EbCalcResult): number {
+  return ebBill.systemSizeOverrideKw ?? calc.recommendedSystemKw;
+}
+
 export function calcSystemSize(avgBimonthlyKwh: number, psh = 4.5, pf = 1.0, dcAcRatio = 1.1): number {
   return calcDcAndInverter(avgBimonthlyKwh, psh, pf, dcAcRatio).dcKw;
 }

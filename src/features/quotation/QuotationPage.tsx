@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Plus, FileText, CheckCircle, XCircle, Send, ChevronRight, Trash2, ChevronLeft, MoreVertical } from 'lucide-react';
@@ -97,32 +97,70 @@ function RowActionsMenu({ item, onStatusChange, onDelete }: {
   onDelete: (item: QuotationListItem) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number }>({ top: 0, right: 0 });
+  const [menuReady, setMenuReady] = useState(false);
   const [actioning, setActioning] = useState<string | null>(null);
   const [sharing, setSharing] = useState<'wa' | 'email' | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const readyAtRef = useRef(0);
 
+  // Gated on menuReady (not just open) — attaching the outside-click/scroll listeners
+  // before the position-correction pass below has committed meant a layout-caused
+  // scroll during that very first render could self-close the menu before it ever
+  // became visible.
+  //
+  // That alone wasn't the whole story for the *last* row specifically: a button near
+  // the bottom of the viewport is exactly the case where the browser's own focus
+  // handling scrolls the page a few pixels to bring the just-clicked button fully
+  // into view — a native scroll, not a user dismissal, but our capture-phase scroll
+  // listener can't tell the difference. Ignoring scrolls in the brief window right
+  // after opening filters out that native adjustment while still closing on a real
+  // user scroll afterward.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !menuReady) return;
     function handler(e: MouseEvent) {
       if (
         menuRef.current && !menuRef.current.contains(e.target as Node) &&
         btnRef.current && !btnRef.current.contains(e.target as Node)
       ) setOpen(false);
     }
-    function onScroll() { setOpen(false); }
+    function onScroll() {
+      if (Date.now() - readyAtRef.current < 250) return;
+      setOpen(false);
+    }
     document.addEventListener('mousedown', handler);
     document.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('scroll', onScroll, true);
     };
+  }, [open, menuReady]);
+
+  // The menu's height varies by row (draft/sent rows show different status actions),
+  // so its position can't be computed correctly until it's actually rendered. First
+  // paint places it below the button as a guess (hidden); this measures the real
+  // height and flips it above the button instead if it would run off the viewport
+  // bottom — that overflow was reading as the menu "escaping" the card.
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current || !btnRef.current) return;
+    const btnRect = btnRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current.offsetHeight;
+    const spaceBelow = window.innerHeight - btnRect.bottom;
+    const right = window.innerWidth - btnRect.right;
+    if (spaceBelow < menuHeight + 12 && btnRect.top > spaceBelow) {
+      setMenuPos({ bottom: window.innerHeight - btnRect.top + 4, right });
+    } else {
+      setMenuPos({ top: btnRect.bottom + 4, right });
+    }
+    setMenuReady(true);
+    readyAtRef.current = Date.now();
   }, [open]);
 
   function openMenu() {
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
+    setMenuReady(false);
     setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
     setOpen(v => !v);
   }
@@ -193,7 +231,10 @@ function RowActionsMenu({ item, onStatusChange, onDelete }: {
         <div
           ref={menuRef}
           className="sq-row-menu"
-          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+          style={{
+            position: 'fixed', ...menuPos, zIndex: 9999,
+            visibility: menuReady ? 'visible' : 'hidden',
+          }}
         >
           {/* Status actions */}
           {item.status === 'draft' && (
@@ -257,13 +298,18 @@ export default function QuotationPage() {
   const [deleting, setDeleting] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
-  const visibleDrafts = items.filter(item => item.status === 'draft').length;
-  const visibleSent = items.filter(item => item.status === 'sent').length;
-  const visibleAccepted = items.filter(item => item.status === 'accepted').length;
-  const visiblePipelineValue = items.reduce((sum, item) => sum + Number(item.net_investment || 0), 0);
-  const visibleDraftValue = items.filter(i => i.status === 'draft').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
-  const visibleSentValue = items.filter(i => i.status === 'sent').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
-  const visibleAcceptedValue = items.filter(i => i.status === 'accepted').reduce((sum, i) => sum + Number(i.net_investment || 0), 0);
+  // Backend aggregate across every status matching the current search (not narrowed by
+  // the status filter, not paginated) — replaces the old items.filter(...) approach,
+  // which only ever reflected whatever 15 rows happened to be on the current page.
+  const [stats, setStats] = useState<Record<string, { count: number; value: number }>>({});
+  const stage = (key: string) => stats[key] ?? { count: 0, value: 0 };
+  const pipelineTotalCount = Object.values(stats).reduce((sum, s) => sum + s.count, 0);
+  const pipelineTotalValue = Object.values(stats).reduce((sum, s) => sum + s.value, 0);
+  const lostCount = stage('rejected').count + stage('expired').count;
+
+  function selectPipelineStage(stage: 'draft' | 'sent' | 'accepted') {
+    setStatus(status === stage ? 'all' : stage);
+  }
 
   const fetchPage = useCallback(async (p: number, q: string, s: StatusFilter) => {
     const reqId = ++requestIdRef.current;
@@ -279,6 +325,7 @@ export default function QuotationPage() {
       setPage(data.page);
       setTotalPages(data.total_pages);
       setTotal(data.total);
+      setStats(data.stats ?? {});
     } catch {
       if (reqId !== requestIdRef.current) return;
       setError('Failed to load quotations. Please try again.');
@@ -364,11 +411,14 @@ export default function QuotationPage() {
         />
 
         <PipelineFlow
-          draft={{ count: visibleDrafts, value: visibleDraftValue }}
-          sent={{ count: visibleSent, value: visibleSentValue }}
-          accepted={{ count: visibleAccepted, value: visibleAcceptedValue }}
-          total={{ count: total, value: visiblePipelineValue }}
+          draft={stage('draft')}
+          sent={stage('sent')}
+          accepted={stage('accepted')}
+          total={{ count: pipelineTotalCount, value: pipelineTotalValue }}
+          lostCount={lostCount}
           loading={loading}
+          activeStage={status === 'draft' || status === 'sent' || status === 'accepted' ? status : null}
+          onSelectStage={selectPipelineStage}
         />
 
         {!loading && <ActionStats items={items} />}

@@ -51,6 +51,7 @@ export interface EbBillData {
   dcAcRatio: number;
   phase: 'single' | 'three';
   evSizing?: EvSizingData;
+  systemSizeOverrideKw?: number | null; // rep override; null/undefined = use calc.recommendedSystemKw
 }
 
 export interface QuotationData {

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { useFieldArray, UseFormReturn } from 'react-hook-form';
-import { Plus, Trash2, ToggleLeft, ToggleRight, Search, ChevronDown, ChevronUp, Sun, Boxes, Wrench, PackagePlus } from 'lucide-react';
+import { Plus, Trash2, ToggleLeft, ToggleRight, Search, ChevronDown, ChevronUp, Sun, Boxes, Wrench, PackagePlus, Lock, LockOpen } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { calcBomBaseCost, calcBomRow, calcBomTotals, calcEbBill, calcSubsidy, formatINR } from '../../utils/roiCalculator';
+import { calcBomBaseCost, calcBomRow, calcBomTotals, calcEbBill, calcEvSizing, calcSubsidy, formatINR, getEffectiveSystemKw } from '../../utils/roiCalculator';
 import { apiService } from '../../../../services/api';
 import type { ProductCatalogItem } from '../../../../services/api';
 import type { QuotationData, BomRow } from '../../types/quotation';
@@ -28,6 +28,18 @@ export function newRows(): BomRow[] {
   return DEFAULT_ROWS.map(r => ({ ...r, id: uuid() }));
 }
 
+export function newOptionB(): NonNullable<QuotationData['optionB']> {
+  return {
+    rows: newRows(),
+    subsidy: 78000,
+    discount: 0,
+    isRecommended: false,
+    expansionPossible: false,
+    notIncluded: 'Civil works\nTANGEDCO payment for sanctioned load extension + solar net meter\nReflective paints',
+    factorsNote: '',
+  };
+}
+
 // ── Row item name → catalog category mapping ──────────────────────────────
 
 type CatalogCategory =
@@ -39,6 +51,7 @@ type CatalogCategory =
 const ITEM_TO_CATEGORY: Record<string, CatalogCategory> = {
   'panels':             'panels',
   'inverter':           'inverters',
+  'battery':            'batteries',
   'dcdb':               'dcdb',
   'acdb':               'acdb',
   'mounting structure': 'mounting',
@@ -97,6 +110,8 @@ const SECTION_ICON: Record<BomSection, typeof Sun> = {
   services:   Wrench,
   custom:     PackagePlus,
 };
+
+const RATE_PER_KW_CATEGORIES = new Set<CatalogCategory>(['mounting', 'installation']);
 
 const CATEGORY_TO_SECTION: Record<CatalogCategory, BomSection> = {
   panels: 'generation', inverters: 'generation', batteries: 'generation',
@@ -165,22 +180,28 @@ function CatalogSelector({ category, onSelect, autoPickFn, currentRow }: Catalog
 
   useEffect(() => {
     if (!items.length) return;
-    const matched = items.find(item => matchesCatalogItem(category, currentRow, item));
-    if (matched) {
-      autoSelected.current = true;
-      setSelectedId(String(matched.id));
-      return;
-    }
-    if (!autoSelected.current && autoPickFn && isRowUntouched(currentRow)) {
-      autoSelected.current = true;
-      const best = autoPickFn(items);
-      if (best) {
-        setSelectedId(String(best.id));
-        onSelect(best);
+
+    // Untouched rows always go through auto-pick — never short-circuited by the
+    // "does this already match a catalog item" text check below. Some DEFAULT_ROWS
+    // placeholder text (e.g. "615Wp TOPCon", "DC + AC cables") coincidentally equals
+    // a real seeded product's model name, so that check would otherwise conclude a
+    // brand-new row "already matches" and skip applying any price/brand to it at all.
+    if (isRowUntouched(currentRow)) {
+      if (!autoSelected.current && autoPickFn) {
+        autoSelected.current = true;
+        const best = autoPickFn(items);
+        if (best) { setSelectedId(String(best.id)); onSelect(best); }
+      } else if (!currentRow) {
+        setSelectedId('');
       }
       return;
     }
-    if (!currentRow || isRowUntouched(currentRow)) setSelectedId('');
+
+    // Row already carries real data (a prior pick, or reloaded from a saved draft) —
+    // just reflect which catalog entry it corresponds to, without reapplying pricing.
+    const matched = items.find(item => matchesCatalogItem(category, currentRow, item));
+    autoSelected.current = true;
+    setSelectedId(matched ? String(matched.id) : '');
   }, [items, category, currentRow, autoPickFn, onSelect]);
 
   const label = CATEGORY_LABEL[category];
@@ -240,9 +261,15 @@ function CatalogSelector({ category, onSelect, autoPickFn, currentRow }: Catalog
 function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFormReturn<QuotationData> }) {
   const { register, watch, control, setValue } = form;
   const [openCatalogId, setOpenCatalogId] = useState<string | null>(null);
+  const [openDetailId, setOpenDetailId] = useState<string | null>(null);
   const ebBill = watch('ebBill');
-  const { inverterKw, recommendedSystemKw } = calcEbBill(ebBill);
-  const systemKw = recommendedSystemKw;
+  const calc = calcEbBill(ebBill);
+  const { inverterKw } = calc;
+  const baseSystemKw = getEffectiveSystemKw(ebBill, calc);
+  // When an EV preset is selected, Option B represents the EV-inclusive system
+  // (the whole point of having a second option here) — Option A stays the base size.
+  const evCalc = calcEvSizing(ebBill);
+  const systemKw = prefix === 'optionB' && evCalc ? evCalc.recommendedSystemKw : baseSystemKw;
   const { fields, append, remove } = useFieldArray({ control, name: `${prefix}.rows` as any });
   const liveRows: BomRow[] = watch(`${prefix}.rows`) ?? [];
   const subsidy: number    = watch(`${prefix}.subsidy`) ?? 78000;
@@ -254,17 +281,10 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
   const panelRow     = liveRows.find(r => r.item.toLowerCase() === 'panels');
   const isDcr        = panelRow ? /\bDCR\b/i.test(panelRow.description) && !/non-DCR/i.test(panelRow.description) : false;
   useEffect(() => {
-    if (prefix !== 'optionA') return;
-    const computed = calcSubsidy(recommendedSystemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three', isDcr);
+    const computed = calcSubsidy(systemKw, customerType as 'residential' | 'commercial', phase as 'single' | 'three', isDcr);
     setValue(`${prefix}.subsidy`, computed);
-  }, [recommendedSystemKw, customerType, phase, isDcr]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [systemKw, customerType, phase, isDcr]); // eslint-disable-line react-hooks/exhaustive-deps
   const { grossTotal, netInvestment } = calcBomTotals(liveRows, subsidy, discount, systemKw);
-  const totalBaseRs   = liveRows.reduce((s, r) => s + calcBomBaseCost(r, systemKw), 0);
-  const totalMarginRs = liveRows.reduce((s, r) => s + (calcBomBaseCost(r, systemKw) * r.marginPct / 100), 0);
-  const totalGstRs    = liveRows.reduce((s, r) => {
-    const withMargin = calcBomBaseCost(r, systemKw) * (1 + r.marginPct / 100);
-    return s + withMargin * r.gstPct / 100;
-  }, 0);
   const isRecommended: boolean    = watch(`${prefix}.isRecommended`);
   const expansionPossible: boolean = watch(`${prefix}.expansionPossible`);
 
@@ -273,9 +293,14 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
     const rows: BomRow[] = form.getValues(`${prefix}.rows`);
     const rowKey = Object.entries(ITEM_TO_CATEGORY).find(([, c]) => c === category)?.[0] ?? '';
     const unitPrice = parseFloat(item.price_per_unit);
+    // Mounting/Installation are priced per system kW in this app; the catalog model has no
+    // concept of that (price_unit always 'nos' backend-side) — keep the row's rate_per_kw
+    // unit instead of letting the catalog item silently switch it to a flat per-unit price
+    // (which, combined with qty staying at 1, would undercharge by ~systemKw× on any real job).
+    const priceUnit = RATE_PER_KW_CATEGORIES.has(category) ? 'rate_per_kw' : item.price_unit;
     const catalogPriceMeta = {
       priceSource: 'catalog' as const,
-      priceUnit: item.price_unit,
+      priceUnit,
     };
 
     let description = item.model_name;
@@ -283,16 +308,17 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
       const wp = item.specs.wp as number ?? 0;
       description = `${wp}Wp ${item.model_name} ${item.specs.dcr ? 'DCR' : 'non-DCR'}`.trim();
       const panelQty = wp > 0 ? Math.ceil((systemKw * 1000) / wp) : rows.find(r => r.item.toLowerCase() === rowKey)?.qty ?? 1;
-      const updated = rows.map(r => {
-        if (r.item.toLowerCase() === rowKey) {
-          return { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, qty: panelQty, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) };
-        }
-        if (r.item.toLowerCase() === 'mc4 connectors') {
-          return { ...r, qty: panelQty * 2 };
-        }
-        return r;
-      });
-      setValue(`${prefix}.rows`, updated);
+      const panelIdx = rows.findIndex(r => r.item.toLowerCase() === rowKey);
+      if (panelIdx >= 0) {
+        setValue(`${prefix}.rows.${panelIdx}`, {
+          ...rows[panelIdx], ...catalogPriceMeta, brand: item.brand, description, unitPrice, qty: panelQty,
+          marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct),
+        });
+      }
+      const mc4Idx = rows.findIndex(r => r.item.toLowerCase() === 'mc4 connectors');
+      if (mc4Idx >= 0) {
+        setValue(`${prefix}.rows.${mc4Idx}`, { ...rows[mc4Idx], qty: panelQty * 2 });
+      }
       return;
     }
     if (category === 'inverters') {
@@ -302,15 +328,30 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
       description = `${kw}kW ${phases === 3 ? '3-ph' : '1-ph'} ${type}`;
     }
 
-    const updated = rows.map(r =>
-      r.item.toLowerCase() === rowKey
-        ? { ...r, ...catalogPriceMeta, brand: item.brand, description, unitPrice, marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct) }
-        : r
-    );
-    setValue(`${prefix}.rows`, updated);
+    const idx = rows.findIndex(r => r.item.toLowerCase() === rowKey);
+    if (idx >= 0) {
+      setValue(`${prefix}.rows.${idx}`, {
+        ...rows[idx], ...catalogPriceMeta, brand: item.brand, description, unitPrice,
+        marginPct: parseFloat(item.margin_pct), gstPct: parseFloat(item.gst_pct),
+      });
+    }
   }
 
   const systemType = form.getValues('customer.systemType') ?? 'ON-GRID';
+
+  // Hybrid/Off-Grid quotes are the ones a battery is actually relevant to — On-Grid
+  // never gets one. Only adds the row if it isn't already there, and never removes
+  // it on switching back (a rep may have already priced it; don't destroy that).
+  useEffect(() => {
+    if (systemType !== 'HYBRID' && systemType !== 'OFF-GRID') return;
+    const rows = form.getValues(`${prefix}.rows`);
+    if (rows.some(r => r.item.toLowerCase() === 'battery')) return;
+    setValue(`${prefix}.rows`, [
+      ...rows,
+      { id: uuid(), item: 'Battery', brand: '', description: '', qty: 1, unitPrice: 0, marginPct: 20, gstPct: 5 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemType]);
   const isThreePhase = (form.getValues('ebBill.phase') ?? 'single') === 'three';
 
   function inStock(items: ProductCatalogItem[]) {
@@ -321,6 +362,14 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
   function pickBestPanel(items: ProductCatalogItem[]) {
     return inStock(items).reduce<ProductCatalogItem | undefined>((best, cur) =>
       ((cur.specs.wp as number) ?? 0) > ((best?.specs.wp as number) ?? -1) ? cur : best, undefined);
+  }
+
+  // No backup-hours sizing exists anywhere in this app yet, so default to the
+  // smallest in-stock battery — cheapest, least presumptuous starting point;
+  // the rep picks a bigger one from the catalog dropdown if the customer wants more.
+  function pickSmallestBattery(items: ProductCatalogItem[]) {
+    return inStock(items).reduce<ProductCatalogItem | undefined>((smallest, cur) =>
+      ((cur.specs.kwh as number) ?? Infinity) < ((smallest?.specs.kwh as number) ?? Infinity) ? cur : smallest, undefined);
   }
 
   function pickBestInverter(items: ProductCatalogItem[]) {
@@ -393,6 +442,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
   function autoPickFnFor(category: CatalogCategory) {
     if (category === 'panels') return pickBestPanel;
     if (category === 'inverters') return pickBestInverter;
+    if (category === 'batteries') return pickSmallestBattery;
     if (category === 'dcdb') return (items: ProductCatalogItem[]) => pickBomsBySize(items, false);
     if (category === 'acdb') return (items: ProductCatalogItem[]) => pickBomsBySize(items, systemType === 'HYBRID');
     return pickFirstInStock;
@@ -405,16 +455,12 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
         <table className="sq-table sq-bom-table">
           <thead>
             <tr>
-              <th style={{ width: 130 }}>Item</th>
+              <th style={{ width: 150 }}>Item</th>
               <th style={{ width: 90 }}>Brand</th>
-              <th style={{ width: 140 }}>Description</th>
+              <th style={{ width: 180 }}>Description</th>
               <th className="right" style={{ width: 52 }} title="How many">Qty</th>
-              <th className="right" style={{ width: 96 }} title="Price per unit, before margin and GST">Unit Rate</th>
-              <th className="right" style={{ width: 96 }} title="Qty × Unit Rate — what this line costs 360Watts">Base Cost</th>
-              <th className="right" style={{ width: 62 }} title="Markup added over base cost">Margin %</th>
-              <th className="right" style={{ width: 52 }} title="Tax applied after margin">GST %</th>
-              <th className="right" style={{ width: 108 }} title="What the customer pays for this line, after margin and GST">Customer Price</th>
-              <th style={{ width: 28 }} />
+              <th className="right" style={{ width: 120 }} title="What the customer pays for this line">Customer Price</th>
+              <th style={{ width: 50 }} />
             </tr>
           </thead>
           {SECTION_ORDER.map(sectionKey => {
@@ -425,7 +471,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             return (
               <tbody key={sectionKey} className="sq-bom-section">
                 <tr className="sq-bom-section-row">
-                  <td colSpan={10}>
+                  <td colSpan={6}>
                     <div className="sq-bom-section-head">
                       <SectionIcon className="sq-bom-section-icon" style={{ width: 14, height: 14 }} />
                       <div className="sq-bom-section-titles">
@@ -443,6 +489,7 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
                   const finalCost = calcBomRow(liveRow, systemKw);
                   const category = ITEM_TO_CATEGORY[liveRow.item.toLowerCase()];
                   const isCatalogOpen = openCatalogId === field.id;
+                  const isDetailOpen = openDetailId === field.id;
                   return (
                     <Fragment key={field.id}>
                       <tr>
@@ -465,36 +512,20 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
                         <td><input className="sq-bom-input" style={{ minWidth: 60 }} {...register(`${prefix}.rows.${idx}.brand`)} /></td>
                         <td><input className="sq-bom-input" style={{ minWidth: 100 }} {...register(`${prefix}.rows.${idx}.description`)} /></td>
                         <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.qty`, { valueAsNumber: true })} /></td>
-                        <td><input type="number" min={0} className="sq-bom-input mono" style={{ minWidth: 72 }} {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} /></td>
-                        <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: baseCost > 0 ? 'var(--fg)' : 'var(--muted-foreground)', paddingRight: 8 }}>
-                          {baseCost > 0 ? formatINR(baseCost) : '—'}
+                        <td style={{ textAlign: 'right', paddingRight: 8 }}>
+                          {finalCost > 0
+                            ? <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--fg)' }}>{formatINR(finalCost)}</span>
+                            : <span style={{ fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>—</span>}
                         </td>
-                        <td><input type="number" min={0} max={500} className="sq-bom-input mono" style={{ minWidth: 46 }} {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} /></td>
-                        <td><input type="number" min={0} max={28} className="sq-bom-input mono" style={{ minWidth: 40 }} {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} /></td>
-                        <td style={{ paddingRight: 8 }}>
-                          {finalCost > 0 ? (
-                            <div className="sq-bom-price-cell">
-                              {/* Composition bar: base cost vs. margin+GST markup, so a rep can
-                                  see at a glance how much of the price is markup without reading
-                                  four separate numbers. */}
-                              <span
-                                className="sq-bom-price-bar"
-                                title={`${formatINR(baseCost)} base · ${formatINR(finalCost - baseCost)} margin + GST`}
-                              >
-                                <span
-                                  className="sq-bom-price-bar__base"
-                                  style={{ width: `${Math.min(100, (baseCost / finalCost) * 100)}%` }}
-                                />
-                              </span>
-                              <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--fg)' }}>
-                                {formatINR(finalCost)}
-                              </span>
-                            </div>
-                          ) : (
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ paddingRight: 6 }}>
+                        <td style={{ paddingRight: 6, whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            className={`sq-icon-btn sq-bom-lock-toggle ${isDetailOpen ? 'on' : ''}`}
+                            title={isDetailOpen ? 'Hide pricing detail' : 'Show base cost, margin & GST'}
+                            onClick={() => setOpenDetailId(isDetailOpen ? null : field.id)}
+                          >
+                            {isDetailOpen ? <LockOpen style={{ width: 12, height: 12 }} /> : <Lock style={{ width: 12, height: 12 }} />}
+                          </button>
                           <button type="button" className="sq-icon-btn" onClick={() => remove(idx)} title="Remove row">
                             <Trash2 style={{ width: 11, height: 11 }} />
                           </button>
@@ -505,13 +536,39 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
                           Only visibility toggles; the component itself never unmounts. */}
                       {category && (
                         <tr className="sq-bom-catalog-row" style={{ display: isCatalogOpen ? 'table-row' : 'none' }}>
-                          <td colSpan={10}>
+                          <td colSpan={6}>
                             <CatalogSelector
                               category={category}
                               onSelect={item => { applyFromCatalog(category, item); setOpenCatalogId(null); }}
                               currentRow={liveRow}
                               autoPickFn={autoPickFnFor(category)}
                             />
+                          </td>
+                        </tr>
+                      )}
+                      {/* Base cost / margin / GST — hidden by default so the table reads as a
+                          price list, not a spreadsheet; opened per-row via the lock icon. */}
+                      {isDetailOpen && (
+                        <tr className="sq-bom-detail-row">
+                          <td colSpan={6}>
+                            <div className="sq-bom-detail">
+                              <div>
+                                <span className="sq-bom-detail-k">Unit Rate</span>
+                                <input type="number" min={0} className="sq-bom-input mono" {...register(`${prefix}.rows.${idx}.unitPrice`, { valueAsNumber: true })} />
+                              </div>
+                              <div>
+                                <span className="sq-bom-detail-k">Margin %</span>
+                                <input type="number" min={0} max={500} className="sq-bom-input mono" {...register(`${prefix}.rows.${idx}.marginPct`, { valueAsNumber: true })} />
+                              </div>
+                              <div>
+                                <span className="sq-bom-detail-k">GST %</span>
+                                <input type="number" min={0} max={28} className="sq-bom-input mono" {...register(`${prefix}.rows.${idx}.gstPct`, { valueAsNumber: true })} />
+                              </div>
+                              <div>
+                                <span className="sq-bom-detail-k">Base Cost</span>
+                                <span className="mono sq-bom-detail-v">{baseCost > 0 ? formatINR(baseCost) : '—'}</span>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -522,23 +579,10 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
             );
           })}
           <tfoot>
-            {/* Column-aligned totals row */}
             <tr style={{ borderTop: '1px solid var(--line-2, rgba(0,0,0,0.1))' }}>
               <td colSpan={3} style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', paddingLeft: 4 }}>Totals</td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
                 {liveRows.reduce((s, r) => s + (r.qty || 0), 0)}
-              </td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
-                —
-              </td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
-                {formatINR(totalBaseRs)}
-              </td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 4 }}>
-                {formatINR(totalMarginRs)}
-              </td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
-                {formatINR(totalGstRs)}
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--fg)', fontWeight: 600, paddingRight: 8 }}>
                 {formatINR(grossTotal)}
@@ -546,23 +590,23 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               <td />
             </tr>
             <tr>
-              <td colSpan={6} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>PM Surya Ghar Subsidy</td>
-              <td colSpan={2} style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
+              <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>PM Surya Ghar Subsidy</td>
+              <td style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
                 − {formatINR(subsidy)}
               </td>
               <td />
             </tr>
             {discount > 0 && (
               <tr>
-                <td colSpan={6} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>Discount</td>
-                <td colSpan={2} style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
+                <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>Discount</td>
+                <td style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
                   − {formatINR(discount)}
                 </td>
                 <td />
               </tr>
             )}
             <tr>
-              <td colSpan={7} style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
+              <td colSpan={4} style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
                 Net Investment
               </td>
               <td style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '1rem', fontWeight: 700, paddingRight: 8 }}>
@@ -659,21 +703,10 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
 export function StepBom({ form }: Props) {
   const { watch, setValue } = form;
   const hasOptionB = watch('optionB') !== null;
+  const isEvSelected = !!calcEvSizing(watch('ebBill'));
 
   function toggleOptionB() {
-    if (hasOptionB) {
-      setValue('optionB', null);
-    } else {
-      setValue('optionB', {
-        rows: newRows(),
-        subsidy: 78000,
-        discount: 0,
-        isRecommended: false,
-        expansionPossible: false,
-        notIncluded: 'Civil works\nTANGEDCO payment for sanctioned load extension + solar net meter\nReflective paints',
-        factorsNote: '',
-      });
-    }
+    setValue('optionB', hasOptionB ? null : newOptionB());
   }
 
   return (
@@ -702,7 +735,7 @@ export function StepBom({ form }: Props) {
         <div>
           <div className="sq-section-title">
             Option B
-            <span className="sq-badge sq-badge-blue">Alternate</span>
+            <span className="sq-badge sq-badge-blue">{isEvSelected ? 'EV-inclusive' : 'Alternate'}</span>
           </div>
           <BomTable prefix="optionB" form={form} />
         </div>

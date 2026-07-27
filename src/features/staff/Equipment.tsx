@@ -11,6 +11,7 @@ import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileEquipment from '../mobile/staff/MobileEquipment';
 import { EmptyState } from '../../shared/components/EmptyState';
 import PageHeader from '../../shared/layout/PageHeader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
 
 // ── Theme ──────────────────────────────────────────────────────────────────────
 
@@ -34,12 +35,31 @@ const mkT = (isDark: boolean) => ({
 const inputStyle = (isDark: boolean): React.CSSProperties => ({
   padding: '8px 11px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
   border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)',
-  background: 'var(--card)',
+  backgroundColor: 'var(--card)',
   color: 'var(--foreground)',
   fontSize: '0.875rem',
   outline: 'none',
   transition: 'border-color 140ms',
 });
+
+// Shared shadcn Select dressed to match this page's inputStyle look
+const StyledSelect: React.FC<{
+  value: string; onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  isDark: boolean; placeholder?: string; className?: string;
+}> = ({ value, onChange, options, isDark, placeholder, className }) => {
+  const { width: _width, padding: _padding, ...triggerStyle } = inputStyle(isDark); // width comes from className, not inline — inline would beat w-auto
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className={className ?? 'w-full'} style={{ ...triggerStyle, padding: '9px 14px' }}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+};
 
 const labelStyle = (isDark: boolean): React.CSSProperties => ({
   fontSize: '0.75rem', fontWeight: 600,
@@ -229,11 +249,20 @@ const KVEditor: React.FC<{
                   )}
                 </div>
                 <div style={{ borderRight: rowBorder, display: 'flex', alignItems: 'center', padding: '0 6px' }}>
-                  <select value={row.type} onChange={e => setRow(row.id, { type: e.target.value as KVType, value: '' })} style={{ ...inputBase, cursor: 'pointer', padding: '2px 4px', fontSize: '0.7rem', fontWeight: 700, color: TYPE_COLORS[row.type], background: `${TYPE_COLORS[row.type]}14`, border: `1px solid ${TYPE_COLORS[row.type]}30`, borderRadius: 5 }}>
-                    <option value="text">Text</option>
-                    <option value="number">Num</option>
-                    <option value="boolean">Y/N</option>
-                  </select>
+                  <Select value={row.type} onValueChange={v => setRow(row.id, { type: v as KVType, value: '' })}>
+                    <SelectTrigger
+                      size="sm"
+                      className="h-auto w-full rounded-[5px] border px-2.5 py-1 text-[0.7rem] font-bold"
+                      style={{ color: TYPE_COLORS[row.type], background: `${TYPE_COLORS[row.type]}14`, borderColor: `${TYPE_COLORS[row.type]}30` }}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="number">Num</SelectItem>
+                      <SelectItem value="boolean">Y/N</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button onClick={() => removeRow(row.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textM, padding: 4, lineHeight: 1, fontSize: 16, opacity: 0.6 }} title="Remove">×</button>
@@ -720,9 +749,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
                 <div>
                   <label style={labelStyle(isDark)}>Category <span style={{ color: '#ef4444' }}>*</span></label>
-                  <select value={cat} onChange={e => f('category', e.target.value as ProductCatalogCategory)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                    {ALL_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <StyledSelect value={cat} onChange={v => f('category', v as ProductCatalogCategory)} isDark={isDark} options={ALL_CATEGORY_OPTIONS} />
                 </div>
                 <div>
                   <label style={labelStyle(isDark)}>Brand <span style={{ color: '#ef4444' }}>*</span></label>
@@ -741,10 +768,11 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                   <div><label style={labelStyle(isDark)}>Efficiency (%)</label><input type="number" value={form.specs_panels_efficiency} onChange={e => f('specs_panels_efficiency', e.target.value)} style={inputStyle(isDark)} placeholder="21.3" /></div>
                   <div>
                     <label style={labelStyle(isDark)}>Technology</label>
-                    <select value={form.specs_panels_technology} onChange={e => f('specs_panels_technology', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                      <option value="">— Select —</option>
-                      {['Mono PERC','TOPCon','Bifacial TOPCon','HJT','Bifacial PERC','Polycrystalline'].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <StyledSelect
+                      value={form.specs_panels_technology} onChange={v => f('specs_panels_technology', v)} isDark={isDark}
+                      placeholder="— Select —"
+                      options={['Mono PERC','TOPCon','Bifacial TOPCon','HJT','Bifacial PERC','Polycrystalline'].map(t => ({ value: t, label: t }))}
+                    />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20 }}>
                     <input type="checkbox" checked={form.specs_panels_dcr} onChange={e => f('specs_panels_dcr', e.target.checked)} style={{ width: 16, height: 16, accentColor: catColor, cursor: 'pointer' }} />
@@ -757,15 +785,17 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                   <div><label style={labelStyle(isDark)}>Power (kW)</label><input type="number" value={form.specs_inv_kw} onChange={e => f('specs_inv_kw', e.target.value)} style={inputStyle(isDark)} placeholder="10" /></div>
                   <div>
                     <label style={labelStyle(isDark)}>Type</label>
-                    <select value={form.specs_inv_type} onChange={e => f('specs_inv_type', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                      {['on-grid','hybrid','off-grid','micro','string'].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <StyledSelect
+                      value={form.specs_inv_type} onChange={v => f('specs_inv_type', v)} isDark={isDark}
+                      options={['on-grid','hybrid','off-grid','micro','string'].map(t => ({ value: t, label: t }))}
+                    />
                   </div>
                   <div>
                     <label style={labelStyle(isDark)}>Phases</label>
-                    <select value={form.specs_inv_phases} onChange={e => f('specs_inv_phases', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                      <option value="1">Single Phase</option><option value="3">Three Phase</option>
-                    </select>
+                    <StyledSelect
+                      value={form.specs_inv_phases} onChange={v => f('specs_inv_phases', v)} isDark={isDark}
+                      options={[{ value: '1', label: 'Single Phase' }, { value: '3', label: 'Three Phase' }]}
+                    />
                   </div>
                 </div>
               )}
@@ -775,9 +805,10 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                   <div><label style={labelStyle(isDark)}>Nominal Voltage (V)</label><input type="number" value={form.specs_bat_voltage} onChange={e => f('specs_bat_voltage', e.target.value)} style={inputStyle(isDark)} placeholder="51.2" /></div>
                   <div>
                     <label style={labelStyle(isDark)}>Chemistry</label>
-                    <select value={form.specs_bat_chemistry} onChange={e => f('specs_bat_chemistry', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                      {['LiFePO4','NMC','Lead Acid','NCA'].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <StyledSelect
+                      value={form.specs_bat_chemistry} onChange={v => f('specs_bat_chemistry', v)} isDark={isDark}
+                      options={['LiFePO4','NMC','Lead Acid','NCA'].map(t => ({ value: t, label: t }))}
+                    />
                   </div>
                 </div>
               )}
@@ -792,9 +823,10 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                 </div>
                 <div>
                   <label style={labelStyle(isDark)}>Unit</label>
-                  <select value={form.price_unit ?? 'nos'} onChange={e => f('price_unit', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                    {['Wp','nos','kWh','kW','set','m','kg'].map(u => <option key={u} value={u}>₹/{u}</option>)}
-                  </select>
+                  <StyledSelect
+                    value={form.price_unit ?? 'nos'} onChange={v => f('price_unit', v)} isDark={isDark}
+                    options={['Wp','nos','kWh','kW','set','m','kg'].map(u => ({ value: u, label: `₹/${u}` }))}
+                  />
                 </div>
                 <div>
                   <label style={labelStyle(isDark)}>Margin %</label>
@@ -806,9 +838,10 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                 </div>
                 <div>
                   <label style={labelStyle(isDark)}>Retail / Pallet</label>
-                  <select value={form.retail_or_pallet ?? 'retail'} onChange={e => f('retail_or_pallet', e.target.value)} style={{ ...inputStyle(isDark), cursor: 'pointer' }}>
-                    <option value="retail">Retail</option><option value="pallet">Pallet</option>
-                  </select>
+                  <StyledSelect
+                    value={form.retail_or_pallet ?? 'retail'} onChange={v => f('retail_or_pallet', v)} isDark={isDark}
+                    options={[{ value: 'retail', label: 'Retail' }, { value: 'pallet', label: 'Pallet' }]}
+                  />
                 </div>
                 <div style={{ gridColumn: '2 / -1' }}>
                   <label style={labelStyle(isDark)}>Price Updated On</label>
@@ -931,20 +964,6 @@ const ProductCatalog: React.FC = () => {
 
   const hasActiveFilters = stockFilter !== 'all' || activeFilter !== 'all' || search.trim() !== '';
 
-  // Stats
-  const inStockPct = items.length ? Math.round(items.filter(i => i.in_stock).length / items.length * 100) : 0;
-  const activeCnt = items.filter(i => i.is_active).length;
-  const categoryCnt = new Set(items.map(i => i.category)).size;
-
-  const filterPill = (active: boolean, onClick: () => void, children: React.ReactNode) => (
-    <button onClick={onClick} style={{
-      padding: '4px 11px', borderRadius: 99, border: `1px solid ${active ? T.accent : T.border}`,
-      cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, transition: 'all 140ms',
-      background: active ? (isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)') : 'transparent',
-      color: active ? T.accent : T.textM,
-    }}>{children}</button>
-  );
-
   const dotGrid = isDark
     ? 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)'
     : 'radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px)';
@@ -970,22 +989,6 @@ const ProductCatalog: React.FC = () => {
         }
       />
 
-      {/* Stats bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Total Products', value: items.length, color: T.accent },
-          { label: 'In Stock', value: `${inStockPct}%`, color: '#22c55e' },
-          { label: 'Active', value: activeCnt, color: T.amber },
-          { label: 'Categories', value: categoryCnt, color: '#60a5fa' },
-        ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, duration: 0.28 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderRadius: 10, background: T.surfaceRaised, border: `1px solid ${T.border}` }}>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: '1.05rem', color: s.color, lineHeight: 1 }}>{loading ? '—' : s.value}</span>
-            <span style={{ fontSize: '0.7rem', color: T.textM, fontWeight: 500 }}>{s.label}</span>
-          </motion.div>
-        ))}
-      </div>
-
       {/* Category tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
         {CATEGORY_TABS.map(ct => {
@@ -1010,14 +1013,17 @@ const ProductCatalog: React.FC = () => {
       </div>
 
       {/* Filters + search toolbar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        {filterPill(stockFilter === 'all', () => setStockFilter('all'), 'All stock')}
-        {filterPill(stockFilter === 'in_stock', () => setStockFilter('in_stock'), '✅ In Stock')}
-        {filterPill(stockFilter === 'out_of_stock', () => setStockFilter('out_of_stock'), '❌ Out')}
-        <div style={{ width: 1, height: 16, background: T.border, margin: '0 4px' }} />
-        {filterPill(activeFilter === 'all', () => setActiveFilter('all'), 'All status')}
-        {filterPill(activeFilter === 'active', () => setActiveFilter('active'), '● Active')}
-        {filterPill(activeFilter === 'inactive', () => setActiveFilter('inactive'), '○ Inactive')}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <StyledSelect
+          value={stockFilter} onChange={v => setStockFilter(v as typeof stockFilter)} isDark={isDark}
+          className="w-auto h-8 text-[0.8rem]"
+          options={[{ value: 'all', label: 'All stock' }, { value: 'in_stock', label: 'In stock' }, { value: 'out_of_stock', label: 'Out of stock' }]}
+        />
+        <StyledSelect
+          value={activeFilter} onChange={v => setActiveFilter(v as typeof activeFilter)} isDark={isDark}
+          className="w-auto h-8 text-[0.8rem]"
+          options={[{ value: 'all', label: 'All status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+        />
         {hasActiveFilters && (
           <button onClick={() => { setSearch(''); setStockFilter('all'); setActiveFilter('all'); }}
             style={{ padding: '4px 10px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: '0.73rem', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>

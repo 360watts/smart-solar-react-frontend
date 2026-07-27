@@ -2028,9 +2028,24 @@ class ApiService {
 
   // ── Product Catalog ────────────────────────────────────────────────────────
 
-  async getProductCatalog(category?: 'panels' | 'inverters' | 'batteries'): Promise<ProductCatalogItem[]> {
+  // Every BoM row with a catalog category mounts its own picker, and Option A / Option B
+  // both cover the same categories — without this, the same category was being fetched
+  // repeatedly in parallel (worse: every bulk row-array replace in Step 3 remounts every
+  // picker in that table, refiring all of them again). Cache by category so concurrent/
+  // repeat requests share one in-flight fetch instead of hitting the network again.
+  private productCatalogCache = new Map<string, Promise<ProductCatalogItem[]>>();
+
+  async getProductCatalog(category?: ProductCatalogCategory): Promise<ProductCatalogItem[]> {
+    const cacheKey = category ?? '__all__';
+    const cached = this.productCatalogCache.get(cacheKey);
+    if (cached) return cached;
     const url = category ? `/product-catalog/?category=${category}` : '/product-catalog/';
-    return this.request(url);
+    const promise = this.request(url).catch((err: unknown) => {
+      this.productCatalogCache.delete(cacheKey);
+      throw err;
+    });
+    this.productCatalogCache.set(cacheKey, promise);
+    return promise;
   }
 
   async createProductCatalogItem(data: Partial<ProductCatalogItem>): Promise<ProductCatalogItem> {
@@ -2052,7 +2067,13 @@ class ApiService {
     customer_name?: string;
     search?: string;
     page?: number;
-  }): Promise<{ results: QuotationListItem[]; total: number; page: number; page_size: number; total_pages: number; next_cursor: string | null }> {
+  }): Promise<{
+    results: QuotationListItem[]; total: number; page: number; page_size: number; total_pages: number; next_cursor: string | null;
+    // Aggregated across every status matching the current search/customer_name filters
+    // (not narrowed by `status`, and not paginated) — the real pipeline breakdown,
+    // independent of which page or status filter the list itself is currently on.
+    stats: Record<string, { count: number; value: number }>;
+  }> {
     const qs = new URLSearchParams();
     if (params?.status) qs.set('status', params.status);
     if (params?.customer_name) qs.set('customer_name', params.customer_name);

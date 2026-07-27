@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, Legend,
   ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { calcBomTotals, calcEbBill, calcROI, formatINR } from '../../utils/roiCalculator';
+import { calcBomTotals, calcEbBill, calcROI, formatINR, getEffectiveSystemKw } from '../../utils/roiCalculator';
 import type { QuotationData } from '../../types/quotation';
 
 interface Props { form: UseFormReturn<QuotationData> }
@@ -44,7 +44,7 @@ function parsePanelWp(description: string): number {
 export function Step4Review({ form }: Props) {
   const data = form.getValues();
   const calc = calcEbBill(data.ebBill);
-  const quotedSystemKw = calc.recommendedSystemKw;
+  const quotedSystemKw = getEffectiveSystemKw(data.ebBill, calc);
 
   // Derive production kW from actual BoM, while pricing rate-per-kW rows from the quoted system size.
   const panelRow = data.optionA.rows.find(r => r.item.toLowerCase() === 'panels');
