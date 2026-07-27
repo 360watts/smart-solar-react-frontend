@@ -133,7 +133,8 @@ const isActive = (status?: string) => status === 'active' || status === 'online'
 // Field in site history response per node type
 // Maps node type to a function that extracts kW from a history row.
 // Backend returns watts from telemetry_5min CAGG: pv1_power_w, pv2_power_w,
-// ac_output_power_w, load_power_w, grid_power_w, battery_power_w — plus
+// ac_output_power_w (phase L1 only), inv_total_power_w (real AC total),
+// load_power_w, grid_power_w, battery_power_w — plus
 // em_active_power_w (the real physical CT/energy-meter reading, joined from
 // the separate energymeter_5min CAGG — see api/views/telemetry.py::site_history_s3).
 // grid_power_w is the INVERTER's own grid-connection reading, a different
@@ -145,9 +146,13 @@ const HISTORY_EXTRACT: Partial<Record<NodeType, (r: Record<string, unknown>) => 
   solar: (r) => {
     const pv1 = Number(r.pv1_power_w ?? 0);
     const pv2 = Number(r.pv2_power_w ?? 0);
+    // Fallback when PV strings are missing: inv_total_power_w is the real total AC
+    // output; ac_output_power_w is phase-L1-only (see FAULT_LOG.md F-048) and would
+    // understate generation by ~2/3 on a 3-phase site if used here.
+    const inv = Number(r.inv_total_power_w ?? 0);
     const ac = Number(r.ac_output_power_w ?? 0);
-    // Use AC output if PV strings are missing, otherwise sum PV strings
-    const raw = (pv1 === 0 && pv2 === 0 && ac > 0) ? ac : (pv1 + pv2);
+    const fallback = inv > 0 ? inv : ac;
+    const raw = (pv1 === 0 && pv2 === 0 && fallback > 0) ? fallback : (pv1 + pv2);
     return raw / 1000;
   },
   battery: (r) => r.battery_power_w != null ? Number(r.battery_power_w) / 1000 : null,

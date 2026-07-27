@@ -700,8 +700,10 @@ const InverterDetails: React.FC<{
   const tempColor = temp != null ? (temp > 70 ? '#ef4444' : temp > 55 ? '#f59e0b' : '#10b981') : tok.textPrimary;
   const dcTemp = t.dc_temp_c != null ? Number(t.dc_temp_c) : null;
   const dcTempColor = dcTemp != null ? (dcTemp > 70 ? '#ef4444' : dcTemp > 55 ? '#f59e0b' : '#10b981') : tok.textPrimary;
-  const acPctOfRated = t.ac_output_power_w != null && t.rated_power_w
-    ? (Number(t.ac_output_power_w) / Number(t.rated_power_w)) * 100 : null;
+  // ac_output_power_w is phase-L1-only (see FAULT_LOG.md F-048), not total AC
+  // output — inv_total_power_w is the real total and must be used for % of rated.
+  const acPctOfRated = t.inv_total_power_w != null && t.rated_power_w
+    ? (Number(t.inv_total_power_w) / Number(t.rated_power_w)) * 100 : null;
   const runIsActive = runStateLabel?.toLowerCase().includes('run') || runStateLabel?.toLowerCase().includes('normal');
 
   return (
@@ -729,7 +731,7 @@ const InverterDetails: React.FC<{
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <MetricCell label="AC Output" value={t.ac_output_power_w != null ? `${(Number(t.ac_output_power_w) / 1000).toFixed(2)} kW` : '—'} accent={accent} isDark={isDark} />
+            <MetricCell label="AC Output (L1)" value={t.ac_output_power_w != null ? `${(Number(t.ac_output_power_w) / 1000).toFixed(2)} kW` : '—'} accent={accent} isDark={isDark} />
             <MetricCell label="Total Power" value={t.inv_total_power_w != null ? `${(Number(t.inv_total_power_w) / 1000).toFixed(2)} kW` : '—'} isDark={isDark} />
           </div>
         </div>

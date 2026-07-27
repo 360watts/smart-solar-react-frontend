@@ -634,7 +634,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const invTemp = latest?.inverter_temp_c ?? null;
   const batVoltage = latest?.battery_voltage_v ?? null;
   const runState = latest?.run_state;
-  const acOutputKw = latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
+  // inv_total_power_w is the real total AC output; ac_output_power_w is phase-L1-only
+  // (see FAULT_LOG.md F-048) and understates true output by ~2/3 on 3-phase sites.
+  const acOutputKw = latest?.inv_total_power_w != null
+    ? latest.inv_total_power_w / 1000
+    : latest?.ac_output_power_w != null ? latest.ac_output_power_w / 1000 : null;
   const pvPowerDisplay = formatPowerForKpi(pvKw);
   const gridPowerDisplay = formatPowerForKpi(gridKw != null ? Math.abs(gridKw) : null);
   const acOutputPowerDisplay = formatPowerForKpi(acOutputKw);
@@ -757,7 +761,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         'PV (kW)': +(((row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0) + (row.pv3_power_w ?? 0) + (row.pv4_power_w ?? 0)) / 1000).toFixed(2),
         'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
         'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
-        'Inv Out (kW)': +((row.ac_output_power_w ?? 0) / 1000).toFixed(2),
+        // inv_total_power_w is the real total; ac_output_power_w is phase-L1-only (FAULT_LOG.md F-048)
+        'Inv Out (kW)': +(((row.inv_total_power_w ?? row.ac_output_power_w ?? 0)) / 1000).toFixed(2),
         'Batt SOC (%)': row.battery_soc_percent ?? null,
       };
     });
