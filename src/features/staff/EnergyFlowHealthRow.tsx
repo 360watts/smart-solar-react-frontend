@@ -10,6 +10,7 @@ import { apiService } from '../../services/api';
 import type { HardwareHealthData, ComponentHealth } from '../../services/api';
 import EnergyFlowBlock from '../../shared/components/EnergyFlow';
 import ComponentDetailModalPremium from './ComponentDetailModalPremium';
+import { CountUp } from '../../shared/components/CountUp';
 
 // ─── Observatory design tokens ────────────────────────────────────────────────
 
@@ -108,17 +109,6 @@ function cxy(deg: number, cx: number, cy: number, r: number) {
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function CountUp({ to, delay=0, style }: { to:number; delay?:number; style?:React.CSSProperties }) {
-  const mv = useMotionValue(0);
-  const rounded = useTransform(mv, v => Math.round(v));
-  const [d, setD] = useState(0);
-  useEffect(() => {
-    const u = rounded.on('change', v => setD(v));
-    const c = animate(mv, to, { duration:1.3, ease:[0.25,0.46,0.45,0.94], delay });
-    return () => { c.stop(); u(); };
-  }, [to]);
-  return <span style={style}>{d}</span>;
-}
 
 function PulseDot({ color }: { color:string }) {
   return (

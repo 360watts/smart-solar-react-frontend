@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { getDesignTokens } from '../../shared/theme';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
+import { StatusPill as StatusPillBase } from '../../shared/components/StatusPill';
 import PageHeader from '../../shared/layout/PageHeader';
 
 const STATUS_CONFIG: Record<BookingStatus, { color: string; bg: string; label: string }> = {
@@ -158,15 +159,7 @@ function SelectedCard({
 }
 
 function StatusPill({ status }: { status: BookingStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
-      borderRadius: 999, fontSize: 12, fontWeight: 600, color: cfg.color, background: cfg.bg,
-    }}>
-      {cfg.label}
-    </span>
-  );
+  return <StatusPillBase cfg={STATUS_CONFIG[status]} />;
 }
 
 function VendorPicker({

@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { getDesignTokens } from '../../shared/theme';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
+import { StatusPill as StatusPillBase } from '../../shared/components/StatusPill';
 import PageHeader from '../../shared/layout/PageHeader';
 
 const STATUS_CONFIG: Record<SupportInquiryStatus, { color: string; bg: string; label: string }> = {
@@ -60,14 +61,7 @@ function StatusPill({ status }: { status: SupportInquiryStatus }) {
   // ever serializes a status value this map doesn't know about yet — this is
   // exactly how the ai_handling gap crashed the page before it was added here.
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open;
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
-      borderRadius: 999, fontSize: 12, fontWeight: 600, color: cfg.color, background: cfg.bg,
-    }}>
-      {cfg.label}
-    </span>
-  );
+  return <StatusPillBase cfg={cfg} />;
 }
 
 function SeverityPill({ severity }: { severity: SupportInquirySeverity }) {

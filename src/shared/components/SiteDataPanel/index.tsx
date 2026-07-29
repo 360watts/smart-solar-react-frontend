@@ -32,6 +32,7 @@ import { resolveCssVar } from '../../lib/resolveCssVar';
 import { cacheService } from '../../../services/cacheService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../../app/constants';
+import { istDate, startOfSolarDayIST } from './istDate';
 import DetailsTab from '../../../features/staff/DetailsTab';
 import { useChartZoomState } from './chartUtils';
 
@@ -72,22 +73,6 @@ const tabTransition = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function istDate(d: Date): string {
-  return d.toLocaleDateString('en-CA', { timeZone: IST });
-}
-
-// Solar day starts at 6am IST — if we're before 6am, use yesterday's 6am so the
-// chart always shows the most recent full solar day window.
-function startOfSolarDayIST(): string {
-  const now = new Date();
-  const todayStr = istDate(now);
-  const todaySolar = new Date(`${todayStr}T06:00:00+05:30`);
-  if (now < todaySolar) {
-    return new Date(todaySolar.getTime() - 24 * 3600 * 1000).toISOString();
-  }
-  return todaySolar.toISOString();
-}
 
 function getTelemetryAggregateForRange(range: string, start?: string, end?: string): '5min' | undefined {
   if (range === '24h') return '5min';

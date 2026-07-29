@@ -14,37 +14,9 @@ import { resolveCssVar } from '../../../lib/resolveCssVar';
 import { apiService } from '../../../../services/api';
 import { cacheService } from '../../../../services/cacheService';
 import { IST_TIMEZONE } from '../../../../app/constants';
+import { istDate, startOfSolarDayIST, endOfSolarDayIST, istDateOffset } from '../istDate';
 
 const IST = IST_TIMEZONE;
-
-function istDate(d: Date): string {
-  return d.toLocaleDateString('en-CA', { timeZone: IST });
-}
-
-function startOfSolarDayIST(): string {
-  const now = new Date();
-  const todayStr = istDate(now);
-  const todaySolar = new Date(`${todayStr}T06:00:00+05:30`);
-  if (now < todaySolar) {
-    return new Date(todaySolar.getTime() - 24 * 3600 * 1000).toISOString();
-  }
-  return todaySolar.toISOString();
-}
-
-/** The solar day that starts at startOfSolarDayIST() runs until 6am IST the
- * following calendar day — used as the upper bound so "today"'s vs-actual
- * chart keeps showing the forecast curve overnight, not just up to the last
- * actual reading. */
-function endOfSolarDayIST(): string {
-  return new Date(new Date(startOfSolarDayIST()).getTime() + 24 * 3600 * 1000).toISOString();
-}
-
-function istDateOffset(n: number): string {
-  const IST_MS = 5.5 * 60 * 60 * 1000;
-  const nowIST = Date.now() + IST_MS;
-  const istMidnightMS = Math.floor(nowIST / 86400000) * 86400000;
-  return istDate(new Date(istMidnightMS + n * 86400000 - IST_MS));
-}
 
 // ── VS_ACTUAL_SERIES ───────────────────────────────────────────────────────────
 
