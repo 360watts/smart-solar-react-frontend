@@ -460,10 +460,10 @@ export default function SiteDetail() {
   const [ownerUserId, setOwnerUserId] = useState('');
   const [deyeStationId, setDeyeStationId] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
-  const [installerName, setInstallerName] = useState('');
-  const [installerGst, setInstallerGst] = useState('');
-  const [installerPhone, setInstallerPhone] = useState('');
-  const [installerEmail, setInstallerEmail] = useState('');
+  const [vendorName, setVendorName] = useState('');
+  const [vendorGst, setVendorGst] = useState('');
+  const [vendorPhone, setVendorPhone] = useState('');
+  const [vendorEmail, setVendorEmail] = useState('');
   const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -569,10 +569,10 @@ export default function SiteDetail() {
       setLifecycleTo(data.site_status || 'active');
       setDeyeStationId(data.deye_station_id != null ? String(data.deye_station_id) : '');
       setLoggerSerial(data.gateway_device?.logger_serial ?? '');
-      setInstallerName(data.installer_name ?? '');
-      setInstallerGst(data.installer_gst ?? '');
-      setInstallerPhone(data.installer_phone ?? '');
-      setInstallerEmail(data.installer_email ?? '');
+      setVendorName(data.vendor_name ?? '');
+      setVendorGst(data.vendor_gst ?? '');
+      setVendorPhone(data.vendor_phone ?? '');
+      setVendorEmail(data.vendor_email ?? '');
     } catch (e) {
       setSite(null);
       setError(e instanceof Error ? e.message : 'Failed to load site');
@@ -758,10 +758,10 @@ export default function SiteDetail() {
     setLatitude(site?.latitude != null ? String(site.latitude) : '');
     setLongitude(site?.longitude != null ? String(site.longitude) : '');
     setOwnerUserId(site?.owner_user != null ? String(site.owner_user) : '');
-    setInstallerName(site?.installer_name ?? '');
-    setInstallerGst(site?.installer_gst ?? '');
-    setInstallerPhone(site?.installer_phone ?? '');
-    setInstallerEmail(site?.installer_email ?? '');
+    setVendorName(site?.vendor_name ?? '');
+    setVendorGst(site?.vendor_gst ?? '');
+    setVendorPhone(site?.vendor_phone ?? '');
+    setVendorEmail(site?.vendor_email ?? '');
     setCalcNote(null);
   };
 
@@ -813,10 +813,10 @@ export default function SiteDetail() {
       if (latitude.trim() !== '' && Number.isFinite(parsedLatitude)) payload.latitude = parsedLatitude;
       if (longitude.trim() !== '' && Number.isFinite(parsedLongitude)) payload.longitude = parsedLongitude;
       payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
-      payload.installer_name = installerName.trim();
-      payload.installer_gst = installerGst.trim();
-      payload.installer_phone = installerPhone.trim();
-      payload.installer_email = installerEmail.trim();
+      payload.vendor_name = vendorName.trim();
+      payload.vendor_gst = vendorGst.trim();
+      payload.vendor_phone = vendorPhone.trim();
+      payload.vendor_email = vendorEmail.trim();
 
       const data = await apiService.patchSiteStaff(siteId, payload);
       setSite(data);
@@ -1175,13 +1175,13 @@ export default function SiteDetail() {
 
                   <div style={{ height: 1, background: border, margin: '24px 0' }} />
 
-                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Installer / Vendor</h3>
+                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Vendor</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                     <div>
-                      <label style={labelStyle}>Installer Name</label>
+                      <label style={labelStyle}>Vendor Name</label>
                       <input
-                        value={installerName}
-                        onChange={e => setInstallerName(e.target.value)}
+                        value={vendorName}
+                        onChange={e => setVendorName(e.target.value)}
                         style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
                         placeholder="e.g. Beamz Energy Solutions"
                         disabled={!editingDetails || busy}
@@ -1190,8 +1190,8 @@ export default function SiteDetail() {
                     <div>
                       <label style={labelStyle}>GST Number</label>
                       <input
-                        value={installerGst}
-                        onChange={e => setInstallerGst(e.target.value)}
+                        value={vendorGst}
+                        onChange={e => setVendorGst(e.target.value)}
                         style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
                         placeholder="e.g. 33AAQFT4234R1ZH"
                         disabled={!editingDetails || busy}
@@ -1200,8 +1200,8 @@ export default function SiteDetail() {
                     <div>
                       <label style={labelStyle}>Phone</label>
                       <input
-                        value={installerPhone}
-                        onChange={e => setInstallerPhone(e.target.value)}
+                        value={vendorPhone}
+                        onChange={e => setVendorPhone(e.target.value)}
                         style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
                         placeholder="e.g. +91 6379506240"
                         disabled={!editingDetails || busy}
@@ -1211,8 +1211,8 @@ export default function SiteDetail() {
                       <label style={labelStyle}>Email</label>
                       <input
                         type="email"
-                        value={installerEmail}
-                        onChange={e => setInstallerEmail(e.target.value)}
+                        value={vendorEmail}
+                        onChange={e => setVendorEmail(e.target.value)}
                         style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
                         placeholder="e.g. info@beamzenergy.com"
                         disabled={!editingDetails || busy}
