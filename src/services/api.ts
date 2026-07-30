@@ -915,7 +915,7 @@ class ApiService {
   }
 
   async createUser(userData: any): Promise<any> {
-    const result = await this.request('/users/create/', {
+    const result = await this.request('/users/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -955,7 +955,7 @@ class ApiService {
   }
 
   async createEmployee(employeeData: any): Promise<any> {
-    const result = await this.request('/employees/create/', {
+    const result = await this.request('/employees/', {
       method: 'POST',
       body: JSON.stringify(employeeData),
     });
@@ -975,7 +975,7 @@ class ApiService {
   }
 
   async deleteEmployee(id: number): Promise<any> {
-    return this.request(`/employees/${id}/delete/`, {
+    return this.request(`/employees/${id}/`, {
       method: 'DELETE',
     });
   }
@@ -996,7 +996,7 @@ class ApiService {
   }
 
   async updateUserSite(userId: number, data: Record<string, unknown>): Promise<any> {
-    return this.request(`/users/${userId}/site/update/`, {
+    return this.request(`/users/${userId}/site/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -1014,7 +1014,7 @@ class ApiService {
   }
 
   async updateDeviceSite(deviceId: number, data: Record<string, unknown>): Promise<any> {
-    return this.request(`/devices/${deviceId}/site/update/`, {
+    return this.request(`/devices/${deviceId}/site/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -1118,6 +1118,17 @@ class ApiService {
       : '';
     const cacheKey = `telemetry_${siteId}_${params?.start_date ?? ''}_${roundedEnd}_${params?.days ?? ''}_${params?.aggregate ?? ''}`;
     return cacheService.dedup(cacheKey, () => this.request(url), 55 * 1000);
+  }
+
+  /**
+   * 6am–6am solar-day energy totals, computed backend-side as a delta of the
+   * inverter's lifetime (never-resetting) counters — correct across the
+   * midnight boundary, unlike the inverter's own *_today_kwh registers
+   * (reset at IST midnight, wrong 00:00–06:00) or a naive midnight-midnight sum.
+   */
+  async getEnergySummaryCombined(siteId: string): Promise<{ summary?: { today?: Record<string, number> } } | null> {
+    const cacheKey = `energy_summary_combined_${siteId}`;
+    return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/energy-summary/?combined=true`), 55 * 1000);
   }
 
   /**
@@ -1241,7 +1252,7 @@ class ApiService {
   }
 
   async deleteUser(userId: number): Promise<any> {
-    const result = await this.request(`/users/${userId}/delete/`, {
+    const result = await this.request(`/users/${userId}/`, {
       method: 'DELETE',
     });
     cacheService.clearPattern(/^users_/);
@@ -1254,7 +1265,7 @@ class ApiService {
   }
 
   async updateProfile(data: any): Promise<any> {
-    return this.request('/profile/update/', {
+    return this.request('/profile/', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -1278,36 +1289,6 @@ class ApiService {
     }
 
     return response.json();
-  }
-
-  // Customer Management (separate from staff users/employees)
-  async getCustomers(search?: string): Promise<any[]> {
-    const params = search ? `?search=${encodeURIComponent(search)}` : '';
-    return this.request(`/customers/${params}`);
-  }
-
-  async createCustomer(customerData: any): Promise<any> {
-    return this.request('/customers/create/', {
-      method: 'POST',
-      body: JSON.stringify(customerData),
-    });
-  }
-
-  async getCustomer(customerId: number): Promise<any> {
-    return this.request(`/customers/${customerId}/`);
-  }
-
-  async updateCustomer(customerId: number, data: any): Promise<any> {
-    return this.request(`/customers/${customerId}/update/`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteCustomer(customerId: number): Promise<any> {
-    return this.request(`/customers/${customerId}/delete/`, {
-      method: 'DELETE',
-    });
   }
 
   async getPresets(search?: string, page?: number, pageSize?: number): Promise<any> {
@@ -1336,7 +1317,7 @@ class ApiService {
   }
 
   async createPreset(data: any): Promise<any> {
-    const result = await this.request('/presets/create/', {
+    const result = await this.request('/presets/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -1354,7 +1335,7 @@ class ApiService {
   }
 
   async deletePreset(id: number): Promise<any> {
-    const result = await this.request(`/presets/${id}/delete/`, {
+    const result = await this.request(`/presets/${id}/`, {
       method: 'DELETE',
     });
     cacheService.clearPattern(/^presets_/);
@@ -1373,7 +1354,7 @@ class ApiService {
   }
 
   async createGlobalSlave(slaveData: any): Promise<any> {
-    return this.request('/slaves/create/', {
+    return this.request('/slaves/', {
       method: 'POST',
       body: JSON.stringify(slaveData),
     });
@@ -1387,7 +1368,7 @@ class ApiService {
   }
 
   async deleteGlobalSlave(slaveId: number): Promise<any> {
-    return this.request(`/slaves/${slaveId}/delete/`, {
+    return this.request(`/slaves/${slaveId}/`, {
       method: 'DELETE',
     });
   }
@@ -1412,7 +1393,7 @@ class ApiService {
   }
 
   async createSiteStaff(data: Record<string, unknown>): Promise<any> {
-    const result = await this.request('/sites/create/', {
+    const result = await this.request('/sites/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -1542,7 +1523,7 @@ class ApiService {
     return this.request(`/sites/${siteId}/inverters/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
   }
   async deleteInverter(siteId: string, pk: number): Promise<any> {
-    return this.request(`/sites/${siteId}/inverters/${pk}/delete/`, { method: 'DELETE' });
+    return this.request(`/sites/${siteId}/inverters/${pk}/`, { method: 'DELETE' });
   }
 
   async createBattery(siteId: string, data: any): Promise<any> {
@@ -1552,7 +1533,7 @@ class ApiService {
     return this.request(`/sites/${siteId}/batteries/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
   }
   async deleteBattery(siteId: string, pk: number): Promise<any> {
-    return this.request(`/sites/${siteId}/batteries/${pk}/delete/`, { method: 'DELETE' });
+    return this.request(`/sites/${siteId}/batteries/${pk}/`, { method: 'DELETE' });
   }
 
   async createPanel(siteId: string, data: any): Promise<any> {
@@ -1562,7 +1543,7 @@ class ApiService {
     return this.request(`/sites/${siteId}/panels/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
   }
   async deletePanel(siteId: string, pk: number): Promise<any> {
-    return this.request(`/sites/${siteId}/panels/${pk}/delete/`, { method: 'DELETE' });
+    return this.request(`/sites/${siteId}/panels/${pk}/`, { method: 'DELETE' });
   }
 
   async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): Promise<any> {
@@ -1576,7 +1557,7 @@ class ApiService {
   }
 
   async createDevice(deviceData: any): Promise<any> {
-    return this.request('/devices/create/', {
+    return this.request('/devices/', {
       method: 'POST',
       body: JSON.stringify(deviceData),
     });
@@ -1607,7 +1588,7 @@ class ApiService {
   }
 
   async restoreDevice(deviceSerial: string): Promise<any> {
-    return this.request('/devices/create/', {
+    return this.request('/devices/', {
       method: 'POST',
       body: JSON.stringify({ device_serial: deviceSerial }),
     });
@@ -1650,7 +1631,7 @@ class ApiService {
     delete_alerts?: boolean;
     delete_logs?: boolean;
   }): Promise<any> {
-    return this.request(`/devices/${deviceId}/delete/`, {
+    return this.request(`/devices/${deviceId}/`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options ?? {}),
@@ -1764,7 +1745,7 @@ class ApiService {
   }
 
   async createSlave(configId: string, slaveData: any): Promise<any> {
-    return this.request(`/presets/${configId}/slaves/create/`, {
+    return this.request(`/presets/${configId}/slaves/`, {
       method: 'POST',
       body: JSON.stringify(slaveData),
     });
@@ -1778,7 +1759,7 @@ class ApiService {
   }
 
   async deleteSlave(configId: string, slaveId: number): Promise<any> {
-    return this.request(`/presets/${configId}/slaves/${slaveId}/delete/`, {
+    return this.request(`/presets/${configId}/slaves/${slaveId}/`, {
       method: 'DELETE',
     });
   }
@@ -1991,7 +1972,7 @@ class ApiService {
   }
 
   async createDepartment(data: { name: string; slug: string; description?: string }): Promise<any> {
-    return this.request('/departments/create/', {
+    return this.request('/departments/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -2005,7 +1986,7 @@ class ApiService {
   }
 
   async deleteDepartment(id: number): Promise<any> {
-    return this.request(`/departments/${id}/delete/`, {
+    return this.request(`/departments/${id}/`, {
       method: 'DELETE',
     });
   }
