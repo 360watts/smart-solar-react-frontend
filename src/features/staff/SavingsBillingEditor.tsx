@@ -26,6 +26,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   const [ebBill, setEbBill] = useState('');
   const [investment, setInvestment] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('due');
+  const [showDataQuality, setShowDataQuality] = useState(false);
 
   const syncFields = (d: SiteSavingsData) => {
     setEbBill(d.electricityBill.amount != null ? String(d.electricityBill.amount) : '');
@@ -188,6 +189,30 @@ export default function SavingsBillingEditor({ siteId }: Props) {
 
   const statusColor = (s: string) => s === 'paid' ? '#2FBF71' : s === 'overdue' ? '#E55A5A' : '#E9B949';
 
+  const confidencePill = (dq: SiteSavingsData['data_quality']): { label: string; color: string } | null => {
+    if (!dq) return null;
+    if (dq.coverage_pct < 80) return { label: 'Low data coverage', color: '#E55A5A' };
+    if (dq.estimate_status === 'reconciled') return { label: 'Reconciled', color: '#2FBF71' };
+    if (dq.estimate_status === 'estimated') return { label: 'Estimated', color: '#E9B949' };
+    return null;
+  };
+
+  const pillStyle = (color: string): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    fontSize: '0.62rem',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    color,
+    background: `${color}1A`,
+    border: `1px solid ${color}4D`,
+    borderRadius: 2,
+    padding: '3px 8px',
+    textTransform: 'uppercase' as const,
+  });
+
+  const variancePercent = (estimate: number, actual: number) => ((actual - estimate) / estimate) * 100;
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -247,7 +272,43 @@ export default function SavingsBillingEditor({ siteId }: Props) {
             {/* Billing period */}
             <div style={{ marginBottom: 14 }}>
               <div style={sectionLabel}>Billing Period</div>
-              <div style={{ ...valueMuted, fontSize: '0.82rem' }}>{data.electricityBill.period}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+                <div style={{ ...valueMuted, fontSize: '0.82rem' }}>{data.electricityBill.period}</div>
+                {data.data_quality && confidencePill(data.data_quality) && (
+                  <span style={pillStyle(confidencePill(data.data_quality)!.color)}>
+                    {confidencePill(data.data_quality)!.label}
+                  </span>
+                )}
+                {data.data_quality && (
+                  <button
+                    type="button"
+                    style={{ ...btnGhost, padding: '2px 8px', fontSize: '0.62rem' }}
+                    onClick={() => setShowDataQuality(v => !v)}
+                  >
+                    {showDataQuality ? 'Hide details' : 'Data quality'}
+                  </button>
+                )}
+              </div>
+
+              {showDataQuality && data.data_quality && (
+                <div style={{ marginTop: 10, fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
+                  <div>Coverage: {fmt(data.data_quality.coverage_pct, 1)}%</div>
+                  <div>{data.data_quality.days_with_data} / {data.data_quality.days_in_period} days with data</div>
+                  <div>Source: {data.data_quality.source}</div>
+                  <div>Bill is {data.data_quality.estimate_status}. Lower coverage means the estimate is less reliable.</div>
+                </div>
+              )}
+
+              {data.electricityBill.estimateAmount != null && data.electricityBill.actualAmount != null && (
+                <div style={{ marginTop: 8, fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>
+                  Est. was ₹{fmt(data.electricityBill.estimateAmount)} · actual ₹{fmt(data.electricityBill.actualAmount)} (
+                  {(() => {
+                    const v = variancePercent(data.electricityBill.estimateAmount!, data.electricityBill.actualAmount!);
+                    return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+                  })()}
+                  )
+                </div>
+              )}
             </div>
 
             <div style={divider} />
