@@ -2218,6 +2218,14 @@ if (import.meta.env.DEV) {
 
 // ─── Savings & ROI ───────────────────────────────────────────────────────────
 
+export interface DataQuality {
+  coverage_pct: number;
+  days_with_data: number;
+  days_in_period: number;
+  source: 'inverter' | 'energy_meter';
+  estimate_status: 'estimated' | 'reconciled';
+}
+
 export interface SiteSavingsData {
   id: number;
   electricityBill: {
@@ -2225,6 +2233,8 @@ export interface SiteSavingsData {
     period: string;
     billingMonths: number;
     status: string;
+    estimateAmount?: number | null;
+    actualAmount?: number | null;
   };
   consumption: {
     totalUnitsWithoutSolar: number;
@@ -2246,6 +2256,7 @@ export interface SiteSavingsData {
     monthsToBreakEven: number;
     breakEvenDate: string;
   };
+  data_quality: DataQuality;
 }
 
 export interface UpdateSavingsRecordPayload {
