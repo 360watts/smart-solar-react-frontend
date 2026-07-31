@@ -259,13 +259,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'SOC' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'SOC' ? 0 : 3)} ${unit}`; } },
       },
       zoom: {
-        wheel: { enabled: true, speed: 0.08 },
-        drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
-        pinch: { enabled: true },
-        mode: 'x' as const,
-        onZoomComplete: () => historyZoom.onZoomComplete.current(),
+        zoom: {
+          wheel: { enabled: true, speed: 0.08 },
+          drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
+          pinch: { enabled: true },
+          mode: 'x' as const,
+          onZoomComplete: () => historyZoom.onZoomComplete.current(),
+        },
+        pan: { enabled: false, mode: 'x' as const },
       },
-      pan: { enabled: false, mode: 'x' as const },
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
@@ -288,13 +290,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
       },
       zoom: {
-        wheel: { enabled: true, speed: 0.08 },
-        drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
-        pinch: { enabled: true },
-        mode: 'x' as const,
-        onZoomComplete: () => vsActualZoom.onZoomComplete.current(),
+        zoom: {
+          wheel: { enabled: true, speed: 0.08 },
+          drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
+          pinch: { enabled: true },
+          mode: 'x' as const,
+          onZoomComplete: () => vsActualZoom.onZoomComplete.current(),
+        },
+        pan: { enabled: false, mode: 'x' as const },
       },
-      pan: { enabled: false, mode: 'x' as const },
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },

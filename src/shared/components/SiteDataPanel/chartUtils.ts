@@ -18,18 +18,20 @@ export function makeGradient(
 export function createDragZoomPlugins(onZoomComplete: () => void) {
   return {
     zoom: {
-      wheel:  { enabled: true, speed: 0.08 },
-      drag: {
-        enabled: true,
-        backgroundColor: 'rgba(0,166,62,0.14)',
-        borderColor:     'rgba(0,166,62,0.7)',
-        borderWidth: 1,
+      zoom: {
+        wheel:  { enabled: true, speed: 0.08 },
+        drag: {
+          enabled: true,
+          backgroundColor: 'rgba(0,166,62,0.14)',
+          borderColor:     'rgba(0,166,62,0.7)',
+          borderWidth: 1,
+        },
+        pinch:  { enabled: true },
+        mode:   'x' as const,
+        onZoomComplete,
       },
-      pinch:  { enabled: true },
-      mode:   'x' as const,
-      onZoomComplete,
+      pan: { enabled: false, mode: 'x' as const },
     },
-    pan: { enabled: false, mode: 'x' as const },
   };
 }
 
