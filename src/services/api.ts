@@ -1266,7 +1266,7 @@ class ApiService {
 
   async updateProfile(data: any): Promise<any> {
     return this.request('/profile/', {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }
@@ -1765,7 +1765,7 @@ class ApiService {
   }
 
   async addSlavesToPreset(configId: string, slaveIds: number[]): Promise<any> {
-    return this.request(`/presets/${configId}/slaves/add/`, {
+    return this.request(`/presets/${configId}/slaves/attach/`, {
       method: 'POST',
       body: JSON.stringify({ slave_ids: slaveIds }),
     });
