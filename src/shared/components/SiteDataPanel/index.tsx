@@ -315,6 +315,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [phaseLoadHours, setPhaseLoadHours] = useState(24);
   const [ctLatest, setCtLatest] = useState<any | null>(null);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
+  const [solarDayToday, setSolarDayToday] = useState<Record<string, number> | null>(null);
   const [gatewayOnline, setGatewayOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -357,6 +358,20 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     // is discarded downstream in EnergyFlow, not here.
     const kickoff = setTimeout(fetchCtLatest, 800);
     const iv = setInterval(fetchCtLatest, 30_000);
+    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
+  }, [siteId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!siteId) return;
+    const fetchSolarDayToday = () => {
+      if (document.hidden) return;
+      apiService.getEnergySummaryCombined(siteId)
+        .then(data => { if (!cancelled) setSolarDayToday(data?.summary?.today ?? null); })
+        .catch(() => { if (!cancelled) setSolarDayToday(null); });
+    };
+    const kickoff = setTimeout(fetchSolarDayToday, 800);
+    const iv = setInterval(fetchSolarDayToday, 30_000);
     return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
 
@@ -612,7 +627,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   ) : null;
   const batSoc = latest?.battery_soc_percent ?? null;
   const loadKwRaw = latest ? (latest.load_power_w ?? 0) / 1000 : null;
-  const todayKwh    = latest?.pv_today_kwh    ?? null;
+  // 6am–6am solar-day total (lifetime-counter delta, see getEnergySummaryCombined) —
+  // falls back to the inverter's own midnight-reset daily accumulator, which is
+  // wrong 00:00–06:00 IST (shows only the post-midnight sliver, not the full solar day).
+  const todayKwh    = solarDayToday?.pv_gen_kwh ?? latest?.pv_today_kwh ?? null;
   const totalPvKwh  = latest?.pv_total_kwh    ?? null;
   const gridKw = latest ? (latest.grid_power_w ?? 0) / 1000 : null;
   const batPowerKw = latest ? (latest.battery_power_w ?? 0) / 1000 : null;
