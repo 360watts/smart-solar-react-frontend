@@ -43,6 +43,8 @@ interface User {
   address?: string;
   is_staff: boolean;
   is_superuser: boolean;
+  is_active: boolean;
+  customer_id: string | null;
   date_joined: string;
 }
 
@@ -229,6 +231,19 @@ const Users: React.FC = () => {
     setDeleteModal({ show: true, user });
   };
 
+  const handleActivate = async (user: User) => {
+    try {
+      await apiService.activateUser(user.id);
+      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
+      setSuccessModal({
+        show: true,
+        message: `Account activated — setup email sent to ${user.email}.`,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to activate user');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteModal.user) return;
     
@@ -362,6 +377,36 @@ const Users: React.FC = () => {
                     : 'N/A'}
                 </p>
               </div>
+              <div>
+                <strong>Account Status:</strong>
+                <p style={{ margin: '5px 0' }}>
+                  {selectedUser.is_active ? (
+                    <span style={{ color: '#22c55e', fontWeight: 600 }}>Active</span>
+                  ) : (
+                    <>
+                      <span style={{ color: '#d97706', fontWeight: 600 }}>Inactive</span>
+                      <button
+                        onClick={() => handleActivate(selectedUser)}
+                        style={{
+                          marginLeft: 12, padding: '4px 12px', borderRadius: 6,
+                          border: 'none', background: '#22c55e', color: '#fff',
+                          fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >
+                        Activate Account
+                      </button>
+                    </>
+                  )}
+                </p>
+              </div>
+              {selectedUser.customer_id && (
+                <div>
+                  <strong>Customer ID:</strong>
+                  <p style={{ margin: '5px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem' }}>
+                    {selectedUser.customer_id}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -709,7 +754,19 @@ const Users: React.FC = () => {
                       {userInitials(user.first_name, user.last_name, user.username)}
                     </div>
                     <div className="table-name-block">
-                      <span className="table-name-primary">{user.first_name} {user.last_name}</span>
+                      <span className="table-name-primary">
+                        {user.first_name} {user.last_name}
+                        {!user.is_active && (
+                          <span style={{
+                            display: 'inline-block', marginLeft: 8,
+                            padding: '2px 8px', borderRadius: 999,
+                            background: 'rgba(245,158,11,0.12)',
+                            color: '#d97706', fontSize: '0.7rem', fontWeight: 700,
+                            letterSpacing: '0.04em', textTransform: 'uppercase',
+                            verticalAlign: 'middle',
+                          }}>Inactive</span>
+                        )}
+                      </span>
                       <span className="table-name-secondary">@{user.username}</span>
                     </div>
                   </div>
@@ -728,6 +785,15 @@ const Users: React.FC = () => {
                   <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', margin: '0 6px' }} title="Edit">
                     <Pencil size={16} strokeWidth={2} />
                   </button>
+                  {!user.is_active && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleActivate(user); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', margin: '0 6px' }}
+                      title="Activate account"
+                    >
+                      <CheckCircle2 size={16} strokeWidth={2} />
+                    </button>
+                  )}
                   <button onClick={() => handleDelete(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)', margin: '0 6px' }} title="Delete">
                     <Trash2 size={16} strokeWidth={2} />
                   </button>

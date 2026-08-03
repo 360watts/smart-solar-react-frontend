@@ -1259,6 +1259,14 @@ class ApiService {
     return result;
   }
 
+  async activateUser(userId: number): Promise<any> {
+    const result = await this.request(`/users/${userId}/activate/`, {
+      method: 'POST',
+    });
+    cacheService.clearPattern(/^users_/);
+    return result;
+  }
+
   // Profile Management (for current logged-in user)
   async getProfile(): Promise<any> {
     return this.request('/profile/');
