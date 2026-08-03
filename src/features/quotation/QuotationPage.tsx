@@ -200,7 +200,7 @@ function RowActionsMenu({ item, onStatusChange, onDelete }: {
           {actioning === 'sent'
             ? <Loader2 style={{ width: 10, height: 10 }} className="animate-spin" />
             : <Send style={{ width: 10, height: 10 }} />}
-          {actioning === 'sent' ? 'Sending…' : 'Send'}
+          {actioning === 'sent' ? 'Marking…' : 'Mark Sent'}
         </button>
       )}
       {item.status === 'sent' && (
