@@ -20,6 +20,7 @@ function buildPayload(data: QuotationData): Record<string, unknown> {
   return {
     customer_name: data.customer.name,
     customer_phone: data.customer.phone,
+    customer_email: data.customer.email ?? '',
     site_address: data.customer.address,
     system_type: systemTypeMap[data.customer.systemType] ?? 'on_grid',
     system_kw: Math.round(systemKw * 100) / 100,
