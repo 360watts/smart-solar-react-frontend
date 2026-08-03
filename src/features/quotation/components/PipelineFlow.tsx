@@ -47,7 +47,7 @@ export default function PipelineFlow({ draft, sent, accepted, total, lostCount, 
           <span className="sq-flow-node__value">{loading ? '' : INR.format(draft.value)}</span>
         </button>
         <div className="sq-flow-conn">
-          <span className="sq-flow-conn__meta">awaiting send</span>
+          <span className="sq-flow-conn__meta">unsent</span>
           <svg viewBox="0 0 100 10" preserveAspectRatio="none">
             <line x1="0" y1="5" x2="100" y2="5" />
           </svg>

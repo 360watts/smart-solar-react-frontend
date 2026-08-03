@@ -264,30 +264,6 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
   const hourly: any[] = accuracy?.hourly ?? [];
   const chartZoom = useChartZoomState();
 
-  if (!hourly.length) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
-          borderRadius: 16, fontSize: '0.875rem',
-          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
-          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
-        }}
-      >
-        <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Load forecast accuracy data will appear once historical forecasts become verifiable.</div>
-      </motion.div>
-    );
-  }
-
-  const maeKw = summary.mae_kw ?? 0;
-  const rmseKw = summary.rmse_kw ?? 0;
-  const mapeKw = summary.mape_pct ?? 0;
-  const coverage = summary.coverage_pct ?? 0;
-
   const maxMae = Math.max(...hourly.map((h: any) => h.mae_kw ?? 0), 0.01);
   const chartData = useMemo(() => hourly.map((h: any) => {
     const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(3) : null;
@@ -338,6 +314,30 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
       y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
     },
   }), [isDark]);
+
+  const maeKw = summary.mae_kw ?? 0;
+  const rmseKw = summary.rmse_kw ?? 0;
+  const mapeKw = summary.mape_pct ?? 0;
+  const coverage = summary.coverage_pct ?? 0;
+
+  if (!hourly.length) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
+          borderRadius: 16, fontSize: '0.875rem',
+          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
+          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+        }}
+      >
+        <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
+        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Load forecast accuracy data will appear once historical forecasts become verifiable.</div>
+      </motion.div>
+    );
+  }
 
   const daysComputed = summary.days_computed ?? '—';
   const getMaeStatus = (mae: number) => mae < 0.15 ? 'good' : mae < 0.30 ? 'warning' : 'critical';
