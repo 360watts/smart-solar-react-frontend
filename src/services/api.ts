@@ -923,18 +923,6 @@ class ApiService {
     return result;
   }
 
-  async sendPrecreationOtp(email: string): Promise<{ message: string }> {
-    return this.request('/auth/send-precreation-otp/', { method: 'POST', body: JSON.stringify({ email }) });
-  }
-
-  async confirmPrecreationOtp(email: string, otp: string): Promise<{ verified: boolean }> {
-    return this.request('/auth/confirm-precreation-otp/', { method: 'POST', body: JSON.stringify({ email, otp }) });
-  }
-
-  async checkEmailVerified(email: string): Promise<{ verified: boolean }> {
-    return this.request(`/auth/check-email-verified/?email=${encodeURIComponent(email)}`);
-  }
-
   async checkContactAvailable(field: 'email' | 'phone', value: string): Promise<{ available: boolean; field: string }> {
     const param = field === 'email' ? `email=${encodeURIComponent(value)}` : `phone=${encodeURIComponent(value)}`;
     return this.request(`/auth/check-contact/?${param}`);

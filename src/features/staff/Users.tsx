@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import PhoneInput from '../../shared/components/PhoneInput';
 import { useNavigate } from 'react-router-dom';
@@ -108,11 +108,6 @@ const Users: React.FC = () => {
     address: '',
   });
 
-  // Email verification state for create flow
-  const [emailVerifyStep, setEmailVerifyStep] = useState<'idle' | 'sending' | 'waiting' | 'verified'>('idle');
-  const [emailVerifyError, setEmailVerifyError] = useState('');
-  const emailPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Modern modal states
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; user: User | null }>({ show: false, user: null });
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -173,52 +168,12 @@ const Users: React.FC = () => {
     }
   };
 
-  const stopPoll = () => {
-    if (emailPollRef.current) { clearInterval(emailPollRef.current); emailPollRef.current = null; }
-  };
-
-  const startPoll = (email: string) => {
-    stopPoll();
-    emailPollRef.current = setInterval(async () => {
-      try {
-        const { verified } = await apiService.checkEmailVerified(email);
-        if (verified) {
-          stopPoll();
-          setEmailVerifyStep('verified');
-        }
-      } catch { /* ignore — keep polling */ }
-    }, 4000);
-  };
-
-  const handleSendVerificationOtp = async () => {
-    const email = createForm.email.trim();
-    if (!email) { setEmailVerifyError('Enter an email address first'); return; }
-    setEmailVerifyError('');
-    setEmailVerifyStep('sending');
-    try {
-      await apiService.sendPrecreationOtp(email);
-      setEmailVerifyStep('waiting');
-      startPoll(email);
-    } catch (err) {
-      setEmailVerifyError(err instanceof Error ? err.message : 'Failed to send code');
-      setEmailVerifyStep('idle');
-    }
-  };
-
-  // Clean up poll on unmount
-  useEffect(() => () => stopPoll(), []);
-
   const handleCreate = async () => {
-    if (emailVerifyStep !== 'verified') {
-      setError('Please verify the email address before creating the account.');
-      return;
-    }
     try {
       setCreatingLoading(true);
       await apiService.createUser(createForm);
       setCreatingUser(false);
       setCreateForm({ email: '', first_name: '', last_name: '', mobile_number: '', address: '' });
-      setEmailVerifyStep('idle');
       await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
@@ -291,9 +246,6 @@ const Users: React.FC = () => {
   const handleCancel = () => {
     setEditingUser(null);
     setCreatingUser(false);
-    stopPoll();
-    setEmailVerifyStep('idle');
-    setEmailVerifyError('');
   };
 
   if (loading) {
@@ -977,106 +929,28 @@ const Users: React.FC = () => {
                         <input type="text" autoComplete="username" style={{display: 'none'}} />
                         <input type="password" autoComplete="current-password" style={{display: 'none'}} />
                         <p style={{ fontSize: '0.813rem', color: T.textM, marginBottom: 8 }}>
-                          Username and password will be auto-generated and sent to the user's email along with download link for the mobile app.
+                          Account will be created as inactive. Activate it after installation to send the welcome email.
                         </p>
                       </>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>
-                        Email Address
-                        {!editingUser && emailVerifyStep === 'verified' && (
-                          <span style={{ marginLeft: 8, color: '#22c55e', fontSize: '0.75rem', fontWeight: 700 }}>✓ Verified</span>
-                        )}
-                      </label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input
-                          type="email"
-                          value={editingUser ? editForm.email : createForm.email}
-                          onChange={(e) => {
-                            if (editingUser) { setEditForm({...editForm, email: e.target.value}); }
-                            else {
-                              setCreateForm({...createForm, email: e.target.value});
-                              // Reset verification if email changes
-                              if (emailVerifyStep !== 'idle') { stopPoll(); setEmailVerifyStep('idle'); setEmailVerifyError(''); }
-                            }
-                          }}
-                          required
-                          autoComplete="off"
-                          placeholder="john.doe@example.com"
-                          disabled={!editingUser && emailVerifyStep === 'verified'}
-                          style={{
-                            flex: 1, padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                            border: !editingUser && emailVerifyStep === 'verified'
-                              ? '1px solid rgba(34,197,94,0.4)'
-                              : `1px solid ${T.border}`,
-                            background: !editingUser && emailVerifyStep === 'verified'
-                              ? 'rgba(34,197,94,0.07)'
-                              : T.surface,
-                            color: T.text,
-                            fontSize: '0.875rem',
-                          }}
-                        />
-                        {/* Verify button — only on create form */}
-                        {!editingUser && emailVerifyStep !== 'verified' && (
-                          <button
-                            type="button"
-                            onClick={handleSendVerificationOtp}
-                            disabled={emailVerifyStep === 'sending' || emailVerifyStep === 'waiting' || !createForm.email.trim()}
-                            style={{
-                              padding: '10px 14px', borderRadius: 8, border: 'none', flexShrink: 0,
-                              background: (emailVerifyStep === 'sending' || emailVerifyStep === 'waiting') ? 'rgba(99,102,241,0.4)' : '#6366f1',
-                              color: '#fff', fontSize: '0.8rem', fontWeight: 700,
-                              cursor: (emailVerifyStep === 'sending' || emailVerifyStep === 'waiting' || !createForm.email.trim()) ? 'not-allowed' : 'pointer',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {emailVerifyStep === 'sending' ? 'Sending…' : emailVerifyStep === 'waiting' ? 'Sent ✓' : 'Send Code'}
-                          </button>
-                        )}
-                        {!editingUser && emailVerifyStep === 'verified' && (
-                          <button
-                            type="button"
-                            onClick={() => { stopPoll(); setEmailVerifyStep('idle'); setEmailVerifyError(''); }}
-                            style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.3)', background: 'transparent', color: '#22c55e', fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                          >
-                            Change
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Waiting for customer to click link */}
-                      {!editingUser && emailVerifyStep === 'waiting' && (
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: 10, marginTop: 6,
-                          padding: '10px 14px', borderRadius: 8,
-                          background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
-                        }}>
-                          <div style={{
-                            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                            border: '2px solid rgba(99,102,241,0.3)', borderTop: '2px solid #6366f1',
-                            animation: 'spin 0.9s linear infinite',
-                          }} />
-                          <div>
-                            <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 600, color: 'var(--info)' }}>
-                              Waiting for customer to verify…
-                            </p>
-                            <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: T.textD }}>
-                              Verification email sent to <strong>{createForm.email}</strong>. Page updates automatically.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleSendVerificationOtp}
-                            style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: '0.72rem', color: T.textD, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-                          >
-                            Resend
-                          </button>
-                        </div>
-                      )}
-
-                      {emailVerifyError && (
-                        <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#f87171' }}>{emailVerifyError}</p>
-                      )}
+                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Email Address</label>
+                      <input
+                        type="email"
+                        value={editingUser ? editForm.email : createForm.email}
+                        onChange={(e) => {
+                          if (editingUser) { setEditForm({...editForm, email: e.target.value}); }
+                          else { setCreateForm({...createForm, email: e.target.value}); }
+                        }}
+                        required
+                        autoComplete="off"
+                        placeholder="john.doe@example.com"
+                        style={{
+                          padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                          border: `1px solid ${T.border}`, background: T.surface,
+                          color: T.text, fontSize: '0.875rem',
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1194,16 +1068,15 @@ const Users: React.FC = () => {
                 }}>Cancel</button>
                 <button
                   type="submit"
-                  disabled={creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified')}
-                  title={!editingUser && emailVerifyStep !== 'verified' ? 'Verify the email address first' : undefined}
+                  disabled={creatingLoading || savingLoading}
                   style={{
                     padding: '10px 20px', borderRadius: 8, border: 'none',
-                    background: (creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified'))
+                    background: (creatingLoading || savingLoading)
                       ? 'rgba(99,102,241,0.4)'
                       : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                     color: 'white', fontSize: '0.875rem', fontWeight: 600,
-                    cursor: (creatingLoading || savingLoading || (!editingUser && emailVerifyStep !== 'verified')) ? 'not-allowed' : 'pointer',
-                    boxShadow: (!editingUser && emailVerifyStep !== 'verified') ? 'none' : '0 4px 12px rgba(99,102,241,0.35)',
+                    cursor: (creatingLoading || savingLoading) ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}>
                   {(creatingLoading || savingLoading) && <Loader size={16} />}
