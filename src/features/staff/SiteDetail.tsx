@@ -464,6 +464,7 @@ export default function SiteDetail() {
   const [vendorGst, setVendorGst] = useState('');
   const [vendorPhone, setVendorPhone] = useState('');
   const [vendorEmail, setVendorEmail] = useState('');
+  const [commissionedOn, setCommissionedOn] = useState('');
   const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -573,6 +574,7 @@ export default function SiteDetail() {
       setVendorGst(data.vendor_gst ?? '');
       setVendorPhone(data.vendor_phone ?? '');
       setVendorEmail(data.vendor_email ?? '');
+      setCommissionedOn(data.commissioned_on ?? '');
     } catch (e) {
       setSite(null);
       setError(e instanceof Error ? e.message : 'Failed to load site');
@@ -760,6 +762,7 @@ export default function SiteDetail() {
     setOwnerUserId(site?.owner_user != null ? String(site.owner_user) : '');
     setVendorName(site?.vendor_name ?? '');
     setVendorGst(site?.vendor_gst ?? '');
+    setCommissionedOn(site?.commissioned_on ?? '');
     setVendorPhone(site?.vendor_phone ?? '');
     setVendorEmail(site?.vendor_email ?? '');
     setCalcNote(null);
@@ -817,6 +820,7 @@ export default function SiteDetail() {
       payload.vendor_gst = vendorGst.trim();
       payload.vendor_phone = vendorPhone.trim();
       payload.vendor_email = vendorEmail.trim();
+      payload.commissioned_on = commissionedOn.trim() === '' ? null : commissionedOn.trim();
 
       const data = await apiService.patchSiteStaff(siteId, payload);
       setSite(data);
@@ -1217,6 +1221,26 @@ export default function SiteDetail() {
                         placeholder="e.g. info@beamzenergy.com"
                         disabled={!editingDetails || busy}
                       />
+                    </div>
+                  </div>
+
+                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
+
+                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Billing</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                    <div>
+                      <label style={labelStyle}>Net metering commissioned on</label>
+                      <input
+                        type="date"
+                        value={commissionedOn}
+                        onChange={e => setCommissionedOn(e.target.value)}
+                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
+                        disabled={!editingDetails || busy}
+                      />
+                      <div style={{ fontSize: '0.7rem', color: textMute, marginTop: 4 }}>
+                        Date the DISCOM billed net metering from — not the physical install date.
+                        The first cycle&apos;s network charge is pro-rated from here; leave blank to charge the full cycle.
+                      </div>
                     </div>
                   </div>
 
