@@ -1,22 +1,14 @@
 import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { CUSTOMER_PORTAL_URL } from '../../app/constants';
 
 interface StaffRouteProps {
   children: React.ReactElement;
 }
 
-// This app has no customer-facing routes — the customer portal is a separate
-// app (my.360watts.com), so a non-staff account can't be sent to an internal path.
-const CUSTOMER_PORTAL_URL = 'https://my.360watts.com';
-
-/**
- * StaffRoute — allow staff or superusers.
- * Backend equipment endpoints are IsStaffUser, so non-staff should not access this UI.
- */
 const StaffRoute: React.FC<StaffRouteProps> = ({ children }) => {
-  const { isAuthenticated, user, loading } = useAuth();
-  const isStaff = !!(user?.is_staff || user?.is_superuser);
+  const { isAuthenticated, isStaff, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && isAuthenticated && !isStaff) {
@@ -32,4 +24,3 @@ const StaffRoute: React.FC<StaffRouteProps> = ({ children }) => {
 };
 
 export default StaffRoute;
-

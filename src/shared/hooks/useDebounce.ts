@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 
 interface UseDebouncedValueOptions {
   delay?: number;
@@ -64,28 +64,3 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   return debouncedCallback;
 }
 
-/**
- * Custom hook for search input with debouncing
- * Returns a hook that handles search input changes with built-in debouncing
- */
-export function useDebouncedSearch(
-  onSearch: (query: string) => void,
-  delay: number = 300
-) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedCallback = useDebouncedCallback(onSearch, delay);
-
-  const handleSearch = useCallback(
-    (query: string) => {
-      setSearchQuery(query);
-      debouncedCallback(query);
-    },
-    [debouncedCallback]
-  );
-
-  return {
-    searchQuery,
-    setSearchQuery,
-    handleSearch,
-  };
-}

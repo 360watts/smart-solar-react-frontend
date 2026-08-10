@@ -64,8 +64,7 @@ const BOTTOM_NAV_PRIMARY = [
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated, isAdmin } = useAuth();
-  const isStaff = !!(user?.is_staff);
+  const { logout, isAuthenticated, isAdmin, isStaff } = useAuth();
   const { setIsNavigating, navigationHistory } = useNavigation();
   const { isDark, toggleTheme } = useTheme();
   const tok = getNavbarTokens(isDark);

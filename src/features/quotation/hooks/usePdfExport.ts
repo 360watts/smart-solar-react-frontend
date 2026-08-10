@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { toast } from 'sonner';
-import React from 'react';
 import type { QuotationData } from '../types/quotation';
 import { ProposalDocument } from '../components/pdf/ProposalDocument';
 
@@ -62,9 +61,5 @@ export function usePdfExport() {
     }
   }
 
-  // Kept for backwards compat — no longer used
-  const containerRef = { current: null };
-  const slideRefs: React.RefObject<HTMLDivElement>[] = [];
-
-  return { containerRef, slideRefs, generating, generate };
+  return { generating, generate };
 }

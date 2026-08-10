@@ -77,7 +77,7 @@ const MobileSiteDetail: React.FC = () => {
   useEffect(() => {
     if (!siteId) return;
     setAppliancesLoading(true);
-    apiService.getSiteProfileAppliances(siteId)
+    apiService.getSiteProfile(siteId)
       .then(setApplianceData)
       .catch(e => console.warn('Failed to load appliances:', e))
       .finally(() => setAppliancesLoading(false));

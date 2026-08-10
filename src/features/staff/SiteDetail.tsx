@@ -589,7 +589,7 @@ export default function SiteDetail() {
     const loadAppliances = async () => {
       setAppliancesLoading(true);
       try {
-        const data = await apiService.getSiteProfileAppliances(siteId);
+        const data = await apiService.getSiteProfile(siteId);
         if (mounted) {
           setApplianceData(data);
           setApplianceDraft(data);
@@ -931,7 +931,7 @@ export default function SiteDetail() {
   const saveAppliances = async () => {
     setBusy(true); setError(null);
     try {
-      const updated = await apiService.updateSiteProfileAppliances(siteId, applianceDraft);
+      const updated = await apiService.updateSiteProfile(siteId, applianceDraft);
       setApplianceData(updated);
       setApplianceDraft(updated);
       setEditingAppliances(false);

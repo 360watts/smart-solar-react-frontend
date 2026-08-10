@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { getCsrfToken, setCsrfToken } from '../services/api';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
+import { API_BASE_URL } from '../app/constants';
 
 interface User {
   id: number;
@@ -29,6 +27,7 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isStaff: boolean;
   loading: boolean;
 }
 
@@ -146,6 +145,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshSession,
     isAuthenticated: !!user,
     isAdmin: !!(user && user.is_superuser),
+    isStaff: !!(user && (user.is_staff || user.is_superuser)),
     loading,
   }), [user, login, requestOtp, verifyOtp, logout, updateUser, refreshSession, loading]);
 

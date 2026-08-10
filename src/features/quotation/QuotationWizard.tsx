@@ -180,7 +180,7 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   const [quoteStatus, setQuoteStatus] = useState<string>('draft');
   const [railCollapsed, setRailCollapsed] = useState(false);
   const form = useForm<QuotationData>({ defaultValues: getDefaults() });
-  const { containerRef, slideRefs, generating, generate } = usePdfExport();
+  const { generating, generate } = usePdfExport();
   const { saveDraft, saving, lastSavedAt, quoteNumber, publicId: savedPublicId, setExistingDraft } = useSaveDraft();
 
   useEffect(() => {

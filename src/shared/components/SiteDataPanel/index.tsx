@@ -11,7 +11,9 @@
  *
  * This file is the entry-point shell. Each tab's JSX lives in ./tabs/<Tab>.tsx.
  */
-import React, { useState, useEffect, useCallback, useMemo, useRef, useReducer } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useReducer, type FC } from 'react';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useDebouncedValue } from '../../hooks/useDebounce';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement, BarElement,
@@ -25,7 +27,7 @@ ChartJS.register(
   Title, CJTooltip, CJLegend, Filler, ZoomPlugin,
 );
 
-import { Home, CloudSun, TrendingUp, Sun, Activity, RefreshCw, Layers } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../../../services/api';
 import { resolveCssVar } from '../../lib/resolveCssVar';
@@ -39,6 +41,7 @@ import { useChartZoomState } from './chartUtils';
 // Tab components
 import OverviewTab from './tabs/OverviewTab';
 import WeatherTab from './tabs/WeatherTab';
+import { TABS, type TabId, type HistorySeriesKey, type VsActualSeriesKey } from './types';
 import HistoryTab, { HISTORY_SERIES } from './tabs/HistoryTab';
 import ForecastTab from './tabs/ForecastTab';
 import PhaseLoadTab from './tabs/PhaseLoadTab';
@@ -47,24 +50,6 @@ import PhaseLoadTab from './tabs/PhaseLoadTab';
 
 const IST = IST_TIMEZONE;
 
-const tabIconSize = 16;
-const TABS = [
-  { id: 'overview',   label: 'Overview',  icon: <Home size={tabIconSize} /> },
-  { id: 'details',    label: 'Details',   icon: <Activity size={tabIconSize} /> },
-  { id: 'weather',    label: 'Weather',   icon: <CloudSun size={tabIconSize} /> },
-  { id: 'history',    label: 'History',   icon: <TrendingUp size={tabIconSize} /> },
-  { id: 'forecast',   label: 'Solar',     icon: <Sun size={tabIconSize} /> },
-  { id: 'phase-load', label: 'Load',      icon: <Layers size={tabIconSize} /> },
-] as const;
-type TabId = typeof TABS[number]['id'];
-
-type HistorySeriesKey = typeof HISTORY_SERIES[number]['key'];
-const VS_ACTUAL_SERIES = [
-  { key: 'Actual', label: 'Actual' },
-  { key: 'P50', label: 'P50' },
-  { key: 'Delta', label: 'Δ %' },
-] as const;
-type VsActualSeriesKey = typeof VS_ACTUAL_SERIES[number]['key'];
 
 const tabTransition = {
   type: 'spring' as const,
@@ -187,13 +172,7 @@ interface Props {
 
 const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterCapacityKw, initialTab, hideTabs = false, hideHeader = false, visibleTabs }) => {
   const { isDark } = useTheme();
-  const [isTouch, setIsTouch] = useState(() => window.matchMedia('(hover: none)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(hover: none)');
-    const handler = (e: MediaQueryListEvent) => setIsTouch(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const isTouch = useIsMobile();
 
   const [fetchState, dispatchFetch] = useReducer(fetchReducer, FETCH_INITIAL);
   const { telemetry, forecast, weather, smartDevices, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
@@ -220,11 +199,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [dateRange, setDateRange] = useState('24h');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  const [debouncedStart, setDebouncedStart] = useState('');
-  const [debouncedEnd, setDebouncedEnd] = useState('');
-
-  useEffect(() => { const t = setTimeout(() => setDebouncedStart(customStartDate), 600); return () => clearTimeout(t); }, [customStartDate]);
-  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(customEndDate), 600); return () => clearTimeout(t); }, [customEndDate]);
+  const debouncedStart = useDebouncedValue(customStartDate, { delay: 600 });
+  const debouncedEnd = useDebouncedValue(customEndDate, { delay: 600 });
 
   const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
   const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '2d'>('2d');

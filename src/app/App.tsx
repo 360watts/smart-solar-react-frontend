@@ -33,6 +33,7 @@ import '../features/staff/site.css';
 import '../features/staff/admin.css';
 import '../features/staff/ota.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { CUSTOMER_PORTAL_URL } from './constants';
 import { NavigationProvider } from '../contexts/NavigationContext';
 import AdminRoute from '../shared/guards/AdminRoute';
 import Login from '../features/auth/components/Login';
@@ -70,34 +71,22 @@ const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
 
 /** Renders AiChat only for staff/superusers. */
 function StaffAiChat() {
-  const { user, isAuthenticated, loading } = useAuth();
-  if (loading || !isAuthenticated) return null;
-  if (!user?.is_staff && !user?.is_superuser) return null;
+  const { isAuthenticated, isStaff, loading } = useAuth();
+  if (loading || !isAuthenticated || !isStaff) return null;
   return <Suspense fallback={null}><AiChat /></Suspense>;
 }
 
-// The customer portal lives in a separate app (my.360watts.com) — this app has no
-// customer-facing routes of its own, so a non-staff account can't be sent to an
-// internal path.
-const CUSTOMER_PORTAL_URL = 'https://my.360watts.com';
-
-/**
- * Redirects authenticated users to the correct landing page based on role.
- * Includes loading guard to prevent flash-redirect while auth state resolves.
- * Staff/superusers land on the internal dashboard; anyone else is sent to the
- * external customer portal, since this app doesn't serve customers anymore.
- */
 function RoleRedirect() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isStaff, loading } = useAuth();
   React.useEffect(() => {
-    if (!loading && isAuthenticated && !(user?.is_staff || user?.is_superuser)) {
+    if (!loading && isAuthenticated && !isStaff) {
       window.location.href = CUSTOMER_PORTAL_URL;
     }
-  }, [loading, isAuthenticated, user]);
+  }, [loading, isAuthenticated, isStaff]);
 
   if (loading) return <div className="loading">Loading…</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!(user?.is_staff || user?.is_superuser)) return <div className="loading">Redirecting…</div>;
+  if (!isStaff) return <div className="loading">Redirecting…</div>;
   return <Navigate to="/dashboard" replace />;
 }
 

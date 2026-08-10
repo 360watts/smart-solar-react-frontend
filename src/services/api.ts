@@ -1,4 +1,4 @@
-import { cacheService, DEFAULT_TTL } from './cacheService';
+import { cacheService } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../app/constants';
 
 // ─── CT Energy Meter ──────────────────────────────────────────────────────────
@@ -379,8 +379,6 @@ export interface SiteProfile {
   last_updated?: string;
 }
 
-// Backward-compat alias — remove once all callers use SiteProfile directly
-export type ApplianceInventory = SiteProfile;
 
 // ── Product Catalog types ──────────────────────────────────────────────────
 export type ProductCatalogCategory =
@@ -505,10 +503,6 @@ class ApiService {
       // ignore
     }
     return text || `API request failed: ${response.status} ${response.statusText}`;
-  }
-
-  async request_(endpoint: string, options: RequestInit = {}): Promise<any> {
-    return this.request(endpoint, options);
   }
 
   // Per-endpoint 429 cooldown shared by every caller (pollers, retries, etc.) that routes
@@ -673,46 +667,14 @@ class ApiService {
     return false;
   }
 
-  /**
-   * Fetches gateway configuration. Returns null when none exists (404),
-   * so the UI can treat it as "no config" / global mode.
-   */
+  /** Returns null when none exists (404) — UI treats that as "no config / global mode". */
   async getConfiguration(): Promise<any> {
-    const url = `${API_BASE_URL}/config/`;
-    const headers = this.getAuthHeaders();
-    let response = await fetch(url, { headers, credentials: 'include' });
-
-    if (response.status === 401) {
-      const refreshSuccess = await this.refreshToken();
-      if (refreshSuccess) {
-        response = await fetch(url, { headers: this.getAuthHeaders(), credentials: 'include' });
-      }
+    try {
+      return await this.request('/config/');
+    } catch (err: any) {
+      if (err?.status === 404 || err?.message?.includes('404')) return null;
+      throw err;
     }
-    if (response.status === 401) {
-      window.location.href = '/login';
-      throw new Error('Authentication required');
-    }
-    if (response.status === 404) return null;
-    if (!response.ok) {
-      const message = await this.parseErrorResponse(response);
-      throw new Error(message);
-    }
-    return response.json();
-  }
-
-
-  async provisionDevice(data: any): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/devices/provision`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error(`Provisioning failed: ${response.statusText}`);
-    }
-    return response.json();
   }
 
   invalidateAlertsCache(): void {
@@ -757,7 +719,7 @@ class ApiService {
     const raw = await this.request('/incidents/');
     const data: AlertItem[] = (raw.results || []).map((inc: any) => this._incidentToAlertItem(inc));
 
-    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
   }
 
@@ -886,7 +848,7 @@ class ApiService {
     if (cached) return cached;
 
     const data = await this.request('/health/');
-    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
   }
 
@@ -910,7 +872,7 @@ class ApiService {
     params.set('page', String(page));
     params.set('page_size', String(pageSize));
     const data = await this.request(`/users/?${params.toString()}`);
-    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
   }
 
@@ -938,7 +900,7 @@ class ApiService {
     params.set('page', String(page));
     params.set('page_size', String(pageSize));
     const data = await this.request(`/employees/?${params.toString()}`);
-    cacheService.set(cacheKey, data, DEFAULT_TTL);
+    cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
   }
 
@@ -1127,13 +1089,8 @@ class ApiService {
   async getSiteHistory(siteId: string, params: { start_date: string; end_date: string; aggregate?: '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams({ start_date: params.start_date, end_date: params.end_date });
     if (params.aggregate) query.append('aggregate', params.aggregate);
-    // 5-minute TTL: S3 history is immutable for past data, very safe to cache
     const cacheKey = `history_${siteId}_${query.toString()}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${siteId}/history/?${query.toString()}`);
-    cacheService.set(cacheKey, data, 5 * 60 * 1000);
-    return data;
+    return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/history/?${query.toString()}`), 5 * 60 * 1000);
   }
 
   async getSiteForecast(siteId: string, params?: { date?: string; start_date?: string; end_date?: string }): Promise<any[]> {
@@ -1191,42 +1148,22 @@ class ApiService {
 
   async getForecastAccuracy(siteId: string, days: number = 30): Promise<any> {
     const enc = encodeURIComponent(siteId);
-    const cacheKey = `forecast_accuracy_${siteId}_${days}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${enc}/forecast-accuracy/?days=${days}`);
-    cacheService.set(cacheKey, data, 30 * 60 * 1000);
-    return data;
+    return cacheService.dedup(`forecast_accuracy_${siteId}_${days}`, () => this.request(`/sites/${enc}/forecast-accuracy/?days=${days}`), 30 * 60 * 1000);
   }
 
   async getLoadForecastAccuracy(siteId: string, days: number = 30): Promise<any> {
     const enc = encodeURIComponent(siteId);
-    const cacheKey = `load_forecast_accuracy_${siteId}_${days}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}`);
-    cacheService.set(cacheKey, data, 30 * 60 * 1000);
-    return data;
+    return cacheService.dedup(`load_forecast_accuracy_${siteId}_${days}`, () => this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}`), 30 * 60 * 1000);
   }
 
   async getLoadForecast(siteId: string, days: number = 2): Promise<any[]> {
     const enc = encodeURIComponent(siteId);
-    const cacheKey = `load_forecast_${siteId}_${days}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${enc}/load-forecast/?days=${days}`);
-    cacheService.set(cacheKey, data, 2 * 60 * 1000); // 2 min — scheduler runs every 15 min
-    return data;
+    return cacheService.dedup(`load_forecast_${siteId}_${days}`, () => this.request(`/sites/${enc}/load-forecast/?days=${days}`), 2 * 60 * 1000);
   }
 
   async getWeatherAccuracy(siteId: string, days: number = 7): Promise<any> {
     const enc = encodeURIComponent(siteId);
-    const cacheKey = `weather_accuracy_${siteId}_${days}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    const data = await this.request(`/sites/${enc}/weather-accuracy/?days=${days}`);
-    cacheService.set(cacheKey, data, 30 * 60 * 1000);
-    return data;
+    return cacheService.dedup(`weather_accuracy_${siteId}_${days}`, () => this.request(`/sites/${enc}/weather-accuracy/?days=${days}`), 30 * 60 * 1000);
   }
 
   async updateUser(userId: number, data: any): Promise<any> {
@@ -1449,14 +1386,6 @@ class ApiService {
     });
     cacheService.clearPattern(/^sites/);
     return result;
-  }
-
-  // Backward-compat aliases — kept so CommissioningWizard and SiteDetail compile unchanged
-  async getSiteProfileAppliances(siteId: string): Promise<SiteProfile> {
-    return this.getSiteProfile(siteId);
-  }
-  async updateSiteProfileAppliances(siteId: string, data: Partial<SiteProfile>): Promise<SiteProfile> {
-    return this.updateSiteProfile(siteId, data);
   }
 
   async siteDetachDevice(siteId: string, devicePk: number): Promise<any> {
