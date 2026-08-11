@@ -321,8 +321,8 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark, ctReverse
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#60a5fa', flexShrink: 0 }} />
             <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#60a5fa' }}>Grid</span>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: DS.colors.textPrimary, letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-            {fmtKw(gridKw)}
+          <div style={{ fontSize: 18, fontWeight: 900, color: ctReversed ? DS.colors.warning : DS.colors.textPrimary, letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {ctReversed ? '-' : ''}{fmtKw(gridKw)}
           </div>
           <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>{gridPct.toFixed(0)}% · Energy Meter</div>
         </div>
