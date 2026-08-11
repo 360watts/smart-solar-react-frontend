@@ -2134,6 +2134,7 @@ export interface SiteSavingsData {
   };
   consumption: {
     totalUnitsWithoutSolar: number;
+    loadUnits: number;
     solarUnits: number;
     ebImportUnits: number;
     ebExportUnits: number;

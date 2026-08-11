@@ -253,8 +253,9 @@ export default function SavingsBillingEditor({ siteId }: Props) {
             <div style={divider} />
 
             {/* Energy snapshot */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 14 }}>
               {[
+                { label: 'Load (billing basis)', val: `${fmt(data.consumption.loadUnits, 1)} kWh` },
                 { label: 'Solar Gen', val: `${fmt(data.consumption.solarUnits, 1)} kWh` },
                 { label: 'EB Import', val: `${fmt(data.consumption.ebImportUnits, 1)} kWh` },
                 { label: 'EB Export', val: `${fmt(data.consumption.ebExportUnits, 1)} kWh` },
