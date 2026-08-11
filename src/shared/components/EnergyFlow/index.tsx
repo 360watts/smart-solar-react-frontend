@@ -899,7 +899,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
               color: '#60a5fa',
               icon: <Activity size={24} color="#60a5fa" />,
               details: {
-                'Active Power': `${Math.abs(ctActivePowerW(ctReading)).toFixed(1)} W`,
+                'Active Power': `${ctActivePowerW(ctReading).toFixed(1)} W`,
                 'Apparent Power': `${Math.abs(ctReading.apparent_power_total ?? 0).toFixed(1)} VA`,
                 'Power Factor': (ctReading.power_factor_total ?? 0).toFixed(3),
               },
