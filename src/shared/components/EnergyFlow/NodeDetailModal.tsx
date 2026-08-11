@@ -239,8 +239,8 @@ function TrendIcon({ kw }: { kw: number }) {
 
 // ─── Load split panel ─────────────────────────────────────────────────────────
 
-function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark }: {
-  solarKw: number; gridKw: number; evKw?: number; evDevice?: SmartDeviceNode; isDark: boolean;
+function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark, ctReversed }: {
+  solarKw: number; gridKw: number; evKw?: number; evDevice?: SmartDeviceNode; isDark: boolean; ctReversed?: boolean;
 }) {
   const hasEv = evDevice != null;
   const total = solarKw + gridKw + evKw;
@@ -327,6 +327,19 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark }: {
           <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 4 }}>{gridPct.toFixed(0)}% · Energy Meter</div>
         </div>
       </div>
+
+      {ctReversed && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: isDark ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)',
+          border: `1px solid ${DS.colors.warning}40`,
+          borderRadius: DS.radius.sm, padding: '7px 10px', marginBottom: 10,
+          fontSize: 9.5, fontWeight: 600, color: DS.colors.warning,
+        }}>
+          <span>⚠</span>
+          <span>Energy meter reads negative — grid circuit shouldn't export. Likely CT clamp installed backwards; figure shown as magnitude only.</span>
+        </div>
+      )}
 
       {/* Proportional bar */}
       <div>
@@ -1047,7 +1060,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 {node.loadSplit && (
                   <motion.div custom={2} variants={rowVariants} initial="hidden" animate="visible">
                     <SectionLabel>Load Breakdown</SectionLabel>
-                    <LoadSplitPanel solarKw={node.loadSplit.solarKw} gridKw={node.loadSplit.gridKw} evKw={node.loadSplit.evKw} evDevice={node.evDevice} isDark={isDark} />
+                    <LoadSplitPanel solarKw={node.loadSplit.solarKw} gridKw={node.loadSplit.gridKw} evKw={node.loadSplit.evKw} evDevice={node.evDevice} isDark={isDark} ctReversed={(node.ctReading?.active_power_total ?? 0) < 0} />
                   </motion.div>
                 )}
 

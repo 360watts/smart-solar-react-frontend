@@ -753,6 +753,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
       <div style={{ padding: '0 18px 0', marginTop: 0 }}>
         {(() => {
           const ctGridKw = Math.abs(ctActivePowerW(ctReading)) / 1000;
+          const ctReversed = (ctReading?.active_power_total ?? 0) < 0;
           const totalLoadKw = load + ctGridKw;
           const totalLoadFmt = fmtPower(totalLoadKw);
           const totalLoadActive = totalLoadKw > 0;
@@ -778,7 +779,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 <NodeCard label="Total Load"
                   icon={<Home size={22} color={totalLoadActive ? '#f87171' : 'var(--muted-foreground)'} />}
                   valueStr={totalLoadFmt.valueStr} unit={totalLoadFmt.unit}
-                  color="#f87171" active={totalLoadActive} isDark={isDark} />
+                  color="#f87171" active={totalLoadActive} isDark={isDark}
+                  isAnomalous={ctReversed} subLabel={ctReversed ? 'CT reversed?' : undefined} />
               </div>
             </div>
           );
