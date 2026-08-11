@@ -605,7 +605,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
               if (v == null || isNaN(v)) return null;
               const pt: SparkPoint = { t, v: Math.abs(v) };
               const gv = extractCtMeter(r as Record<string, unknown>);
-              if (gv != null && !isNaN(gv)) pt.grid = Math.abs(gv);
+              // Not abs()'d, unlike every other series here: a negative CT
+              // reading is a real anomaly signal (likely a reversed clamp,
+              // see FAULT_LOG.md) and should visibly dip below zero rather
+              // than being folded into a normal-looking positive value.
+              if (gv != null && !isNaN(gv)) pt.grid = gv;
               const evVal = evMap.get(t);
               if (evVal != null) pt.ev = evVal;
               return pt;
@@ -618,7 +622,10 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
           points = rows
             .map(r => ({ t: fmtTime(r.timestamp ?? ''), v: extract(r as Record<string, unknown>) }))
             .filter((p): p is { t: string; v: number } => p.v != null && !isNaN(p.v))
-            .map(p => ({ ...p, v: Math.abs(p.v) }));
+            // ctmeter is not abs()'d — a negative reading is a real anomaly
+            // signal (see the load-node grid series above) and should dip
+            // below zero rather than look like normal positive load.
+            .map(p => ({ ...p, v: node.type === 'ctmeter' ? p.v : Math.abs(p.v) }));
         }
 
         if (!cancelled) setSparkData(points);
