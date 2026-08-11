@@ -1029,11 +1029,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                       <span style={{
                         fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
-                        color: isDark ? DS.colors.textPrimary : '#0F172A',
+                        color: node.type === 'ctmeter' && node.power_kw < 0 ? DS.colors.warning : isDark ? DS.colors.textPrimary : '#0F172A',
                         fontVariantNumeric: 'tabular-nums',
                         fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                       }}>
-                        {pwr.value}
+                        {node.type === 'ctmeter' && node.power_kw < 0 ? '-' : ''}{pwr.value}
                       </span>
                       <span style={{
                         fontSize: 13, fontWeight: 700,

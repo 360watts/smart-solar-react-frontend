@@ -414,7 +414,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         {hasCtTotal && (
           <ItemCard
             label="Energy Meter · Grid"
-            valueFmt={(() => { const f = fmtPower(ctTotalKw!); return `${f.valueStr} ${f.unit}`; })()}
+            valueFmt={(() => { const f = fmtPower(ctTotalKw!); return `${ctTotalKw! < 0 ? '-' : ''}${f.valueStr} ${f.unit}`; })()}
             chevron="3-Phase ›"
             onClick={onCtHeaderClick}
           />
@@ -888,13 +888,16 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             accentColor="#60a5fa" devices={gridLoads} isDark={isDark}
             compact={compactFlow}
             onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#60a5fa'))}
-            ctTotalKw={ctReading ? Math.abs(ctActivePowerW(ctReading)) / 1000 : undefined}
+            ctTotalKw={ctReading ? ctActivePowerW(ctReading) / 1000 : undefined}
             onCtHeaderClick={() => ctReading && handleNodeClick({
               type: 'ctmeter',
               id: 'ctmeter',
               title: 'Grid Load · Energy Meter',
               subtitle: '3-Phase Measurement',
-              power_kw: Math.abs(ctActivePowerW(ctReading)) / 1000,
+              // Signed, unlike every other node type's power_kw here — this is
+              // the meter's own headline number and should show its real
+              // direction (see F-051), not just feed a magnitude/active check.
+              power_kw: ctActivePowerW(ctReading) / 1000,
               status: (Math.abs(ctActivePowerW(ctReading)) / 1000) > 0 ? 'active' : 'inactive',
               color: '#60a5fa',
               icon: <Activity size={24} color="#60a5fa" />,

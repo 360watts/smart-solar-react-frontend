@@ -651,9 +651,13 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       if (inverterL1 != null) { b.inverterL1 += inverterL1; b.inverterL1N += 1; }
       if (inverterL2 != null) { b.inverterL2 += inverterL2; b.inverterL2N += 1; }
       if (inverterL3 != null) { b.inverterL3 += inverterL3; b.inverterL3N += 1; }
-      if (gridL1Raw != null) { b.gridL1 += Math.max(0, gridL1Raw); b.gridL1N += 1; }
-      if (gridL2Raw != null) { b.gridL2 += Math.max(0, gridL2Raw); b.gridL2N += 1; }
-      if (gridL3Raw != null) { b.gridL3 += Math.max(0, gridL3Raw); b.gridL3N += 1; }
+      // abs(), not max(0, ...): the CT meter is known to report negative
+      // stretches (F-051, likely a noisy power channel on the substitute
+      // device) that are still real load, not zero — clamping to 0 quietly
+      // erased that magnitude from this stacked chart instead of showing it.
+      if (gridL1Raw != null) { b.gridL1 += Math.abs(gridL1Raw); b.gridL1N += 1; }
+      if (gridL2Raw != null) { b.gridL2 += Math.abs(gridL2Raw); b.gridL2N += 1; }
+      if (gridL3Raw != null) { b.gridL3 += Math.abs(gridL3Raw); b.gridL3N += 1; }
       b.ev += ev;
       if (ev !== 0) b.evN += 1;
     }
@@ -665,9 +669,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       const snapped = Math.floor(baseTs.getTime() / bucketMs) * bucketMs;
       const key = new Date(snapped).toISOString();
       const b = ensureBucket(key, snapped);
-      const nextGridL1 = row.active_power_l1 != null && Number.isFinite(Number(row.active_power_l1)) ? Math.max(0, Number(row.active_power_l1) / 1000) : null;
-      const nextGridL2 = row.active_power_l2 != null && Number.isFinite(Number(row.active_power_l2)) ? Math.max(0, Number(row.active_power_l2) / 1000) : null;
-      const nextGridL3 = row.active_power_l3 != null && Number.isFinite(Number(row.active_power_l3)) ? Math.max(0, Number(row.active_power_l3) / 1000) : null;
+      // abs(), same reason as the block above.
+      const nextGridL1 = row.active_power_l1 != null && Number.isFinite(Number(row.active_power_l1)) ? Math.abs(Number(row.active_power_l1) / 1000) : null;
+      const nextGridL2 = row.active_power_l2 != null && Number.isFinite(Number(row.active_power_l2)) ? Math.abs(Number(row.active_power_l2) / 1000) : null;
+      const nextGridL3 = row.active_power_l3 != null && Number.isFinite(Number(row.active_power_l3)) ? Math.abs(Number(row.active_power_l3) / 1000) : null;
       if (nextGridL1 != null) { b.gridL1 += nextGridL1; b.gridL1N += 1; }
       if (nextGridL2 != null) { b.gridL2 += nextGridL2; b.gridL2N += 1; }
       if (nextGridL3 != null) { b.gridL3 += nextGridL3; b.gridL3N += 1; }
@@ -776,9 +781,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     const invL1 = latest?.load_l1_power_w != null ? Number(latest.load_l1_power_w) / 1000 : 0;
     const invL2 = latest?.load_l2_power_w != null ? Number(latest.load_l2_power_w) / 1000 : 0;
     const invL3 = latest?.load_l3_power_w != null ? Number(latest.load_l3_power_w) / 1000 : 0;
-    const gridL1 = ctLatest?.active_power_l1 != null ? Math.max(0, Number(ctLatest.active_power_l1) / 1000) : 0;
-    const gridL2 = ctLatest?.active_power_l2 != null ? Math.max(0, Number(ctLatest.active_power_l2) / 1000) : 0;
-    const gridL3 = ctLatest?.active_power_l3 != null ? Math.max(0, Number(ctLatest.active_power_l3) / 1000) : 0;
+    // abs(), same reason as the bucket-aggregation block above (F-051).
+    const gridL1 = ctLatest?.active_power_l1 != null ? Math.abs(Number(ctLatest.active_power_l1) / 1000) : 0;
+    const gridL2 = ctLatest?.active_power_l2 != null ? Math.abs(Number(ctLatest.active_power_l2) / 1000) : 0;
+    const gridL3 = ctLatest?.active_power_l3 != null ? Math.abs(Number(ctLatest.active_power_l3) / 1000) : 0;
 
     const base = filteredLoadChartData.length > 0
       ? filteredLoadChartData
