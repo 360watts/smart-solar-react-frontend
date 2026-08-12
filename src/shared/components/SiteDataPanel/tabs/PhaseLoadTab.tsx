@@ -475,7 +475,14 @@ interface PhaseLoadTabProps {
 const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadForecast, smartDevices, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual, ctLatest }) => {
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
   const [loadSourceView, setLoadSourceView] = useState<LoadSourceKey | 'total'>('inverter');
-  const [loadChartCumulative, setLoadChartCumulative] = useState(true);
+  // Instantaneous power (kW), not cumulative kWh, is the correct default: a
+  // cumulative area chart never returns to zero once a load has run, so a
+  // completed EV charge (or any load) reads as "still active" for the rest
+  // of the window instead of dropping to a flat, empty baseline. Confirmed
+  // against real coim_002 data: EV charged 16:55-20:15 IST, then power_w=0
+  // for the next 18h+, but the cumulative default kept the "EV Charging
+  // Trace" area filled the whole time, looking like an ongoing charge.
+  const [loadChartCumulative, setLoadChartCumulative] = useState(false);
   const [loadTotalCombined, setLoadTotalCombined] = useState(false);
   const [selectedLoadDate, setSelectedLoadDate] = useState('');
   const phaseLoadChartZoom = useChartZoomState();
