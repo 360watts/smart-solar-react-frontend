@@ -32,6 +32,7 @@ interface SmartDeviceForm {
   device_type: string;
   provider_device_id: string;
   appliance_label: string;
+  circuit: string;
   display_name: string;
   is_active: boolean;
 }
@@ -39,6 +40,7 @@ const blankSmartDeviceForm = (): SmartDeviceForm => ({
   device_type: 'tuya_plug',
   provider_device_id: '',
   appliance_label: 'ev_charger',
+  circuit: 'grid_direct',
   display_name: '',
   is_active: true,
 });
@@ -890,6 +892,7 @@ export default function SiteDetail() {
       device_type: device.device_type ?? 'tuya_plug',
       provider_device_id: device.provider_device_id ?? '',
       appliance_label: device.appliance_label ?? 'other',
+      circuit: device.circuit ?? 'grid_direct',
       display_name: device.display_name ?? '',
       is_active: device.is_active !== false,
     });
@@ -901,6 +904,7 @@ export default function SiteDetail() {
       device_type: smartDeviceDraft.device_type,
       provider_device_id: smartDeviceDraft.provider_device_id.trim(),
       appliance_label: smartDeviceDraft.appliance_label,
+      circuit: smartDeviceDraft.circuit,
       display_name: smartDeviceDraft.display_name.trim(),
       is_active: smartDeviceDraft.is_active,
     };
@@ -1502,6 +1506,8 @@ export default function SiteDetail() {
                                   Provider type: <strong>{String(device.device_type || '').replace(/_/g, ' ') || 'unknown'}</strong>
                                   {' · '}
                                   Appliance: <strong>{String(device.appliance_label || '').replace(/_/g, ' ') || 'unmapped'}</strong>
+                                  {' · '}
+                                  Circuit: <strong>{device.circuit === 'inverter_backup' ? 'inverter backup' : 'grid line'}</strong>
                                 </div>
                                 <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>
                                   Provider ID: {device.provider_device_id || '—'}
@@ -1570,6 +1576,19 @@ export default function SiteDetail() {
                             <option value="water_pump">Water Pump</option>
                             <option value="washing_machine">Washing Machine</option>
                             <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Circuit</label>
+                          <select
+                            value={smartDeviceDraft.circuit}
+                            onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, circuit: e.target.value })}
+                            disabled={smartDevicesSaving}
+                            title="Which electrical bus this device is on — grid line (outside the inverter) or the inverter's backup bus"
+                            style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
+                          >
+                            <option value="grid_direct">Grid Line</option>
+                            <option value="inverter_backup">Inverter Backup</option>
                           </select>
                         </div>
                         <div>
