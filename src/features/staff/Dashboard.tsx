@@ -53,6 +53,7 @@ const Dashboard: React.FC = () => {
   const [sitesError, setSitesError] = useState<string | null>(null);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [alertsCollapsed, setAlertsCollapsed] = useState(false);
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -355,34 +356,49 @@ const Dashboard: React.FC = () => {
 
     return (
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          padding: '10px 14px',
-          borderRadius: 12,
-          border: `1px solid ${tokens.border}`,
-          background: tokens.primarySoft,
-        }}>
+        <button
+          type="button"
+          onClick={() => setAlertsCollapsed(c => !c)}
+          aria-expanded={!alertsCollapsed}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: `1px solid ${tokens.border}`,
+            background: tokens.primarySoft,
+            cursor: 'pointer',
+            width: '100%',
+            textAlign: 'left',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <Bell size={14} color={activeAlerts.length > 0 ? tokens.primary : textMute} />
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: textMain }}>
               Active alerts
             </span>
           </div>
-          <span style={{
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-            color: activeAlerts.length > 0 ? tokens.primary : textMute,
-          }}>
-            {activeAlerts.length > 0 ? `${activeAlerts.length} open` : 'None'}
-          </span>
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: activeAlerts.length > 0 ? tokens.primary : textMute,
+            }}>
+              {activeAlerts.length > 0 ? `${activeAlerts.length} open` : 'None'}
+            </span>
+            <ChevronDown
+              size={14}
+              color={textMute}
+              style={{ transform: alertsCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 150ms' }}
+            />
+          </div>
+        </button>
 
-        {activeAlerts.length === 0 ? (
+        {alertsCollapsed ? null : activeAlerts.length === 0 ? (
           <div style={{
             padding: '12px 14px',
             borderRadius: 12,

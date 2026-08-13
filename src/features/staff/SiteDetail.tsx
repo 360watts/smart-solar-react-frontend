@@ -640,6 +640,15 @@ export default function SiteDetail() {
     try {
       const response = await apiService.getUsers();
       const users = Array.isArray(response?.results) ? response.results : Array.isArray(response) ? response : [];
+      // The dropdown only shows the most recently created 25 customers — the
+      // site's current owner can easily fall outside that window, which made
+      // the select silently fall back to its "Unassigned" placeholder option
+      // even though the site had a real owner. Fetch and merge it in if missing.
+      const currentOwnerId = site?.owner_user;
+      if (currentOwnerId != null && !users.some((u: any) => u.id === currentOwnerId)) {
+        const owner = await apiService.getUserById(currentOwnerId).catch(() => null);
+        if (owner) users.unshift(owner);
+      }
       setOwnerUsers(users);
     } catch {
       setOwnerUsers([]);
@@ -647,7 +656,7 @@ export default function SiteDetail() {
     } finally {
       setUsersBusy(false);
     }
-  }, [user]);
+  }, [user, site]);
 
   // Load available devices and sites when gateway tab is opened
   useEffect(() => {

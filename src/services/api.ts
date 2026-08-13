@@ -862,6 +862,12 @@ class ApiService {
     return data;
   }
 
+  async getUserById(id: number): Promise<any> {
+    const data = await this.request(`/users/?id=${id}&page_size=1`);
+    const results = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+    return results[0] ?? null;
+  }
+
   async getUsers(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
     const cacheKey = `users_${search || 'all'}_${page}_${pageSize}`;
     const cached = cacheService.get(cacheKey);
