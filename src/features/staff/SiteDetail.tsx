@@ -1507,7 +1507,7 @@ export default function SiteDetail() {
                                   {' · '}
                                   Appliance: <strong>{String(device.appliance_label || '').replace(/_/g, ' ') || 'unmapped'}</strong>
                                   {' · '}
-                                  Circuit: <strong>{device.circuit === 'inverter_backup' ? 'inverter backup' : 'grid line'}</strong>
+                                  Circuit: <strong>{device.circuit === 'inverter_backup' ? 'inverter backup' : device.circuit === 'ev_line' ? 'EV line' : 'grid line'}</strong>
                                 </div>
                                 <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>
                                   Provider ID: {device.provider_device_id || '—'}
@@ -1584,11 +1584,12 @@ export default function SiteDetail() {
                             value={smartDeviceDraft.circuit}
                             onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, circuit: e.target.value })}
                             disabled={smartDevicesSaving}
-                            title="Which electrical bus this device is on — grid line (outside the inverter) or the inverter's backup bus"
+                            title="Which electrical circuit this device is on — grid line, inverter backup bus, or the isolated EV charger circuit"
                             style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
                           >
                             <option value="grid_direct">Grid Line</option>
                             <option value="inverter_backup">Inverter Backup</option>
+                            <option value="ev_line">EV Line</option>
                           </select>
                         </div>
                         <div>
