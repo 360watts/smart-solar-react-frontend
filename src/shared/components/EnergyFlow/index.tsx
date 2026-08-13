@@ -117,8 +117,11 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
 };
 
 const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine'];
-const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' =>
-  d.circuit ?? (GRID_APPLIANCES.includes(d.appliance_label) ? 'grid' : 'solar');
+const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' => {
+  if (d.circuit === 'inverter_backup') return 'solar';
+  if (d.circuit === 'grid_direct' || d.circuit === 'ev_line') return 'grid';
+  return GRID_APPLIANCES.includes(d.appliance_label) ? 'grid' : 'solar';
+};
 const deviceLabel = (device: SmartDeviceNode) =>
   (device.display_name || `Device ${device.id}`).split(' — ')[0] || 'Smart device';
 const isFreshReading = (timestamp?: string | null) =>

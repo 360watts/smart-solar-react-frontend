@@ -652,7 +652,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
   if (node?.voltage_v != null) extraEntries.push(['Voltage', `${node.voltage_v.toFixed(1)} V`]);
   if (node?.energy_kwh != null) extraEntries.push(['Energy Today', `${node.energy_kwh.toFixed(3)} kWh`]);
   if (node?.deviceType) extraEntries.push(['Device Type', node.deviceType.replace(/_/g, ' ')]);
-  if (node?.circuit) extraEntries.push(['Circuit', node.circuit]);
+  if (node?.circuit) extraEntries.push(['Circuit', node.circuit.replace(/_/g, ' ')]);
 
   // Merge: extra readings take precedence over generic details
   const allDetails: [string, string][] = [

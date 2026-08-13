@@ -28,7 +28,7 @@ export interface SmartDeviceNode {
   is_active: boolean;
   latest: SmartDeviceReading | null;
   /** Which physical circuit the device is on. Defaults to heuristic if absent. */
-  circuit?: 'solar' | 'grid';
+  circuit?: 'grid_direct' | 'inverter_backup' | 'ev_line';
 }
 
 export interface InverterPhases {
