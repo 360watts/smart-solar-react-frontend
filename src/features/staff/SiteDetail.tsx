@@ -460,6 +460,8 @@ export default function SiteDetail() {
   const [ownerUserId, setOwnerUserId] = useState('');
   const [deyeStationId, setDeyeStationId] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
+  const [savedLoggerSerial, setSavedLoggerSerial] = useState('');
+  const [activeInverterId, setActiveInverterId] = useState<number | null>(null);
   const [vendorName, setVendorName] = useState('');
   const [vendorGst, setVendorGst] = useState('');
   const [vendorPhone, setVendorPhone] = useState('');
@@ -569,7 +571,17 @@ export default function SiteDetail() {
       setOwnerUserId(data.owner_user != null ? String(data.owner_user) : '');
       setLifecycleTo(data.site_status || 'active');
       setDeyeStationId(data.deye_station_id != null ? String(data.deye_station_id) : '');
-      setLoggerSerial(data.gateway_device?.logger_serial ?? '');
+      try {
+        const eq = await apiService.getSiteEquipment(siteId);
+        const activeInv = (eq.inverters ?? []).find((i: any) => i.is_active !== false) ?? null;
+        setActiveInverterId(activeInv?.id ?? null);
+        setLoggerSerial(activeInv?.logger_serial ?? '');
+        setSavedLoggerSerial(activeInv?.logger_serial ?? '');
+      } catch {
+        setActiveInverterId(null);
+        setLoggerSerial('');
+        setSavedLoggerSerial('');
+      }
       setVendorName(data.vendor_name ?? '');
       setVendorGst(data.vendor_gst ?? '');
       setVendorPhone(data.vendor_phone ?? '');
@@ -831,7 +843,7 @@ export default function SiteDetail() {
 
   const resetDeyeSettingsForm = () => {
     setDeyeStationId(site?.deye_station_id != null ? String(site.deye_station_id) : '');
-    setLoggerSerial(site?.gateway_device?.logger_serial ?? '');
+    setLoggerSerial(savedLoggerSerial);
   };
 
   const saveDeyeSettings = async () => {
@@ -850,12 +862,13 @@ export default function SiteDetail() {
       const data = await apiService.patchSiteStaff(siteId, sitePayload);
       setSite(data);
 
-      // Logger Serial lives on the device (gateway)
-      if (gw?.device_id) {
-        const devicePayload: Record<string, unknown> = {
-          logger_serial: loggerSerial.trim() === '' ? null : loggerSerial.trim(),
-        };
-        await apiService.patchDevice(gw.device_id, devicePayload);
+      // Logger Serial lives on the site's active inverter
+      const value = loggerSerial.trim() === '' ? null : loggerSerial.trim();
+      if (activeInverterId != null) {
+        await apiService.updateInverter(siteId, activeInverterId, { logger_serial: value });
+        setSavedLoggerSerial(value ?? '');
+      } else if (value !== null) {
+        throw new Error('No active inverter on this site — add one on the Equipment tab before setting Logger Serial');
       }
 
       setEditingDeyeSettings(false);
@@ -1641,7 +1654,7 @@ export default function SiteDetail() {
                         />
                       </div>
                       <div>
-                        <label style={labelStyle}>Logger Serial (on Device)</label>
+                        <label style={labelStyle}>Logger Serial (on Inverter)</label>
                         <input
                           value={loggerSerial}
                           onChange={e => setLoggerSerial(e.target.value)}
