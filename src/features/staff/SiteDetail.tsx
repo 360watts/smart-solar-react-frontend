@@ -571,6 +571,14 @@ export default function SiteDetail() {
       setLatitude(data.latitude != null ? String(data.latitude) : '');
       setLongitude(data.longitude != null ? String(data.longitude) : '');
       setOwnerUserId(data.owner_user != null ? String(data.owner_user) : '');
+      // Seed a minimal owner option immediately so the (disabled, read-only) Owner
+      // User select shows the correct name before "Edit Details" is clicked — the
+      // full dropdown list is intentionally lazy-loaded only on edit (loadOwnerUsers),
+      // so without this the select has no matching <option> yet and silently falls
+      // back to its "Unassigned" placeholder despite the site having a real owner.
+      if (data.owner_user != null && !usersLoadedRef.current) {
+        setOwnerUsers([{ id: data.owner_user, first_name: data.owner_username || '', last_name: '', username: '' }]);
+      }
       setLifecycleTo(data.site_status || 'active');
       setDeyeStationId(data.deye_station_id != null ? String(data.deye_station_id) : '');
       try {
