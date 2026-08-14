@@ -999,7 +999,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       legend: {
         display: true, position: 'top', align: 'center',
         labels: {
-          color: 'var(--muted-foreground)',
+          color: resolveCssVar('--muted-foreground'),
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 16,
         },
@@ -1026,7 +1026,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         title: {
           display: true,
           text: loadChartHasMultipleDays ? 'Day / Time (IST)' : 'Time (IST)',
-          color: 'var(--muted-foreground)',
+          color: resolveCssVar('--muted-foreground'),
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { top: 10, bottom: 0 },
         },
@@ -1037,12 +1037,12 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         title: {
           display: true,
           text: loadChartCumulative ? 'Energy (kWh)' : (loadChartUseWatts ? 'Load (W)' : 'Load (kW)'),
-          color: 'var(--muted-foreground)',
+          color: resolveCssVar('--muted-foreground'),
           font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
           padding: { bottom: 6 },
         },
         ticks: {
-          color: 'var(--muted-foreground)',
+          color: resolveCssVar('--muted-foreground'),
           font: { family: 'JetBrains Mono, monospace', size: 11 },
           callback: (v: any) => loadChartCumulative ? Number(v).toFixed(1) : (loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1)),
         },
@@ -1081,7 +1081,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       legend: {
         display: true,
         labels: {
-          color: 'var(--muted-foreground)',
+          color: resolveCssVar('--muted-foreground'),
           font: { family: 'Poppins, sans-serif', size: 11 },
           boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14,
           filter: (item: any) => item.text !== 'P10',
