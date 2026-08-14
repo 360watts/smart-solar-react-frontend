@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import gsap from 'gsap';
 import { Sun, Battery, Home, Zap, Wind, Droplets, Waves, Plug, Activity, Grid, Car, Refrigerator } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { NodeCard, SmartCard } from './DeviceCard';
@@ -14,11 +15,19 @@ import { apiService, CtMeterReading } from '../../../services/api';
 // top-level SVG <defs> so they are in scope before any path references them.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Cross topology: Gateway hub at centre, Battery above, Solar left, Grid right, Load below.
+// Cross topology: Inverter hub at centre, Battery above, Solar left, Grid right, Load below.
 const VW  = 700;
 const HUB_R    = 38;
-const NODE_R   = 85;
-const BATT_TRIM = 36;
+// NodeCard's real, fixed CSS size (see DeviceCard.tsx) — unlike the SVG diagram,
+// which scales uniformly with container width, this card does NOT scale with it,
+// so a trim in fixed viewBox units can only line up with the card's actual edge
+// at one specific container width. NODE_R/BATT_TRIM below are computed live from
+// these CSS px constants and the current render's actual scale instead of being
+// guessed viewBox-unit constants — that mismatch (a static guess vs. a card whose
+// on-screen size doesn't track it) was why lines missed the card border after
+// every layout tweak: gap on one side, running under the card on the other.
+const CARD_HALF_W_PX = 56;   // half of NodeCard's 108px width + a couple px breathing room
+const CARD_HALF_H_PX = 62;   // half of NodeCard's ~120–130px rendered height (with/without sub-label)
 
 function trimEnd(x1: number, y1: number, x2: number, y2: number, trim: number) {
   const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -32,8 +41,47 @@ function trimStart(x1: number, y1: number, x2: number, y2: number, trim: number)
   return { x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t };
 }
 
-const bez = (x1: number, y1: number, x2: number, y2: number) =>
-  `M ${x1} ${y1} L ${x2} ${y2}`;
+// Quadratic-bezier beam, pulled from the customer portal's EnergyFlowDiagram
+// (its Hub node literally says "matches staff HubNode" — same design lineage,
+// this was the one piece of polish worth pulling back). Bows perpendicular to
+// the (untrimmed) node→hub direction; the XOR sign rule makes opposite arms of
+// the cross bow the same way and adjacent arms bow oppositely, so the whole
+// diagram reads as one balanced pinwheel instead of four independent curves.
+function bez(x1: number, y1: number, x2: number, y2: number, origX1: number, origY1: number, origX2: number, origY2: number, k = 26) {
+  const dx = origX2 - origX1, dy = origY2 - origY1;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const sign = (origX1 < origX2) !== (origY1 < origY2) ? -1 : 1;
+  const cpx = mx + k * sign * (dy / dist);
+  const cpy = my - k * sign * (dx / dist);
+  // True quadratic-bezier midpoint at t=0.5 — where the FlowLabel pill sits,
+  // matching the customer portal's BeamLabel placement.
+  const mid = { x: 0.25 * x1 + 0.5 * cpx + 0.25 * x2, y: 0.25 * y1 + 0.5 * cpy + 0.25 * y2 };
+  return { path: `M ${x1} ${y1} Q ${cpx} ${cpy} ${x2} ${y2}`, mid, cp: { x: cpx, y: cpy } };
+}
+
+// Sankey-ish weighted width: stroke-width scales with magnitude instead of
+// every connector drawing at the same fixed weight (Iteration C).
+const widthForKw = (kw: number) => Math.min(12, Math.max(2, Math.abs(kw) * 1.6));
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+// Smoothly tweens an SVG element's stroke-width via GSAP when `width` changes,
+// instead of it snapping between renders. No-ops under prefers-reduced-motion.
+function useTweenedStrokeWidth(ref: React.RefObject<SVGElement>, width: number) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (prefersReducedMotion()) {
+      el.setAttribute('stroke-width', String(width));
+      return;
+    }
+    const tween = gsap.to(el, { attr: { 'stroke-width': width }, duration: 0.6, ease: 'power2.out' });
+    return () => { tween.kill(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width]);
+}
 
 function ctActivePowerW(reading: CtMeterReading | null): number {
   if (!reading) return 0;
@@ -52,49 +100,74 @@ function hubPath(
   srcTrim = 52,
   hubTrim = HUB_R,
 ) {
-  if (direction === 'toHub') {
-    const s = trimStart(sx, sy, hub.x, hub.y, srcTrim);
-    const e = trimEnd(sx, sy, hub.x, hub.y, hubTrim);
-    return bez(s.x, s.y, e.x, e.y);
-  }
-  const s = trimStart(hub.x, hub.y, sx, sy, hubTrim);
-  const e = trimEnd(hub.x, hub.y, sx, sy, srcTrim);
-  return bez(s.x, s.y, e.x, e.y);
+  // Curve shape is always derived from the same canonical (external node → hub)
+  // orientation, regardless of direction — toHub/fromHub are the same physical
+  // line, just drawn (and dash-animated) in opposite directions. Computing the
+  // bow from swapped orig points per direction (the previous version) flips the
+  // control point to the opposite side of the chord, producing two separate
+  // mirror-image arcs instead of one shared curve — that was the actual bug
+  // behind Battery/Grid Tie showing a lens-shaped double line.
+  const near = trimStart(sx, sy, hub.x, hub.y, srcTrim); // trimmed point near the external node
+  const far  = trimEnd(sx, sy, hub.x, hub.y, hubTrim);   // trimmed point near the hub
+  const shared = bez(near.x, near.y, far.x, far.y, sx, sy, hub.x, hub.y);
+  if (direction === 'toHub') return { path: shared.path, mid: shared.mid };
+  return { path: `M ${far.x} ${far.y} Q ${shared.cp.x} ${shared.cp.y} ${near.x} ${near.y}`, mid: shared.mid };
 }
 
 type NodePos = { x: number; y: number };
+type DiamondNodes = { pv: NodePos; hub: NodePos; batt: NodePos; grid: NodePos; load: NodePos };
 
-function computeLayout(vh: number, nodes: { pv: NodePos; hub: NodePos; batt: NodePos; grid: NodePos }) {
-  const { pv, hub, batt, grid } = nodes;
+function computeLayout(vh: number, nodes: DiamondNodes) {
   return {
     VH: vh,
     N: nodes,
     ASPECT_PAD: `${(vh / VW) * 100}%`,
-    P: {
-      pvToHub:   hubPath(pv.x,   pv.y,   'toHub',   hub, NODE_R),
-      battToHub: hubPath(batt.x, batt.y, 'toHub',   hub, BATT_TRIM),
-      hubToBatt: hubPath(batt.x, batt.y, 'fromHub', hub, BATT_TRIM),
-      gridToHub: hubPath(grid.x, grid.y, 'toHub',   hub, NODE_R),
-      hubToGrid: hubPath(grid.x, grid.y, 'fromHub', hub, NODE_R),
-      hubToLoad: `M ${hub.x} ${hub.y + HUB_R} L ${hub.x} ${vh}`,
-    },
   };
 }
 
-// Wide layout — desktop / tablet (container ≥ 480 px)
-const WIDE_LAYOUT = computeLayout(362, {
-  pv:   { x: 90,  y: 213 },
-  hub:  { x: 350, y: 213 },
-  batt: { x: 350, y: 42  },
-  grid: { x: 610, y: 213 },
+// Paths depend on the live container width (see CARD_HALF_W_PX/CARD_HALF_H_PX
+// comment above), so they're computed per-render, not baked into the static
+// layout constants.
+function computePaths(nodes: DiamondNodes, containerWidthPx: number) {
+  const { pv, hub, batt, grid, load } = nodes;
+  const scale = containerWidthPx / VW; // CSS px per viewBox unit at the current render width
+  // Diamond arrangement (matches the customer portal's node layout): all four
+  // arms approach the hub at the same shallow diagonal angle, unlike the old
+  // axis-aligned cross where PV/Grid were purely horizontal and Battery/Load
+  // were purely vertical — so one shared trim now applies to all four instead
+  // of a horizontal-half-width one and a vertical-half-height one.
+  const trim = ((CARD_HALF_W_PX + CARD_HALF_H_PX) / 2) / scale;
+  return {
+    pvToHub:   hubPath(pv.x,   pv.y,   'toHub',   hub, trim),
+    battToHub: hubPath(batt.x, batt.y, 'toHub',   hub, trim),
+    hubToBatt: hubPath(batt.x, batt.y, 'fromHub', hub, trim),
+    gridToHub: hubPath(grid.x, grid.y, 'toHub',   hub, trim),
+    hubToGrid: hubPath(grid.x, grid.y, 'fromHub', hub, trim),
+    hubToLoad: hubPath(load.x, load.y, 'fromHub', hub, trim),
+  };
+}
+
+// Diamond layout (matches the customer portal's EnergyFlowDiagram: Solar
+// top-left, Battery top-right, Home/Load bottom-left, Grid bottom-right, hub
+// dead center) — not their exact aspect ratio, though: at their proportions
+// this would render ~400 viewBox units tall, right back into the "forces page
+// scroll on a full-width host" problem the flatter cross layout was built to
+// fix. Same diamond arrangement, compressed to fit a shorter box instead.
+const WIDE_LAYOUT = computeLayout(300, {
+  pv:   { x: 120, y: 70  },
+  batt: { x: 580, y: 70  },
+  hub:  { x: 350, y: 150 },
+  load: { x: 120, y: 230 },
+  grid: { x: 580, y: 230 },
 });
 
 // Narrow layout — mobile (container < 480 px).
-const NARROW_LAYOUT = computeLayout(350, {
-  pv:   { x: 90,  y: 228 },
-  hub:  { x: 350, y: 228 },
-  batt: { x: 350, y: 43  },
-  grid: { x: 610, y: 228 },
+const NARROW_LAYOUT = computeLayout(300, {
+  pv:   { x: 120, y: 75  },
+  batt: { x: 580, y: 75  },
+  hub:  { x: 350, y: 155 },
+  load: { x: 120, y: 235 },
+  grid: { x: 580, y: 235 },
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -135,9 +208,11 @@ const freshLatest = (device: SmartDeviceNode) =>
 // Flowing dashed-line beam — no particles, no blinking.
 // Animates stroke-dashoffset directly (avoids Framer Motion pathLength/Chrome bug)
 // by using a CSS animation string injected once per unique color.
-function Beam({ d, color, active, speed = 1.6, intensity = 0.5 }: {
-  d: string; color: string; active: boolean; glowId?: string; speed?: number; intensity?: number;
+function Beam({ d, color, active, speed = 1.6, intensity = 0.5, width }: {
+  d: string; color: string; active: boolean; glowId?: string; speed?: number; intensity?: number; width?: number;
 }) {
+  const lineRef = useRef<SVGPathElement>(null);
+  useTweenedStrokeWidth(lineRef, width ?? 2.5);
   if (!active) return null;
   const glowOpacity = Math.min(0.18, 0.07 + intensity * 0.11);
   // Dash pattern: visible dash length, gap length (total = 20px)
@@ -151,11 +226,12 @@ function Beam({ d, color, active, speed = 1.6, intensity = 0.5 }: {
       <style>{`@keyframes ${animId}{from{stroke-dashoffset:0}to{stroke-dashoffset:-${dash + gap}}}`}</style>
       {/* Soft outer glow */}
       <path d={d} stroke={color} strokeWidth={12} strokeOpacity={glowOpacity} fill="none" strokeLinecap="round" />
-      {/* Flowing dashed line */}
+      {/* Flowing dashed line — width carries magnitude (Sankey-ish), tweened via GSAP */}
       <path
+        ref={lineRef}
         d={d}
         stroke={color}
-        strokeWidth={2.5}
+        strokeWidth={width ?? 2.5}
         strokeOpacity={0.85}
         fill="none"
         strokeLinecap="round"
@@ -225,9 +301,9 @@ function HubNode({ isDark }: { isDark: boolean }) {
         <Activity size={22} color="#818cf8" />
       </motion.div>
       <span style={{
-        fontSize: 8, fontWeight: 800, textTransform: 'uppercase',
-        letterSpacing: '0.12em', color: 'var(--info)',
-      }}>Gateway</span>
+        fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
+        letterSpacing: '0.1em', color: 'var(--info)',
+      }}>Inverter</span>
     </div>
   );
 }
@@ -358,12 +434,12 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: compact ? 7.5 : 8, fontWeight: 800, letterSpacing: '0.07em',
+          fontSize: compact ? 9.5 : 10, fontWeight: 700, letterSpacing: '0.05em',
           textTransform: 'uppercase', color: accentColor, marginBottom: 3,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{label}</div>
         <div style={{
-          fontSize: compact ? 15 : 19, fontWeight: 900,
+          fontSize: compact ? 16 : 20, fontWeight: 900,
           color: 'var(--foreground)',
           letterSpacing: '-0.03em', lineHeight: 1,
           fontVariantNumeric: 'tabular-nums',
@@ -371,7 +447,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         }}>{valueFmt}</div>
       </div>
       {oc && <div style={{
-        fontSize: compact ? 9 : 10, fontWeight: 600,
+        fontSize: compact ? 10 : 11, fontWeight: 600,
         color: isDark ? `${accentColor}80` : `${accentColor}90`,
         flexShrink: 0, letterSpacing: '0.02em',
       }}>{chevron}</div>}
@@ -404,7 +480,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>{icon}</div>
         <span style={{
-          fontSize: compact ? 8.5 : 9, fontWeight: 800, letterSpacing: '0.08em',
+          fontSize: compact ? 10 : 10.5, fontWeight: 700, letterSpacing: '0.06em',
           textTransform: 'uppercase',
           color: isDark ? `${accentColor}e0` : accentColor,
           flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -424,10 +500,12 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
           />
         )}
 
-        {/* Solar load with Inverter total */}
+        {/* Same reading as the Backup Load card above — labeled as a cross-reference,
+            not a second independent measurement, so it doesn't read as two numbers
+            that happen to coincide. */}
         {hasInverter && (
           <ItemCard
-            label="Inverter · AC Output"
+            label="↑ Same as Backup Load"
             valueFmt={(() => { const f = fmtPower(inverterKw!); return `${f.valueStr} ${f.unit}`; })()}
             chevron="Detail ›"
             onClick={onInverterClick}
@@ -481,7 +559,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   if (!uidRef.current) uidRef.current = `efb-${Math.random().toString(36).slice(2, 8)}`;
 
   // Track container width to switch between wide and narrow layouts and to
-  // scale node cards, the Total Load card, and SubSection proportionally.
+  // scale node cards, the Backup Load card, and SubSection proportionally.
   const diagramRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(700);
   const [nodeScale, setNodeScale] = useState(1);
@@ -498,7 +576,10 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     return () => ro.disconnect();
   }, []);
 
-  const { VH, N, P, ASPECT_PAD } = containerWidth < 480 ? NARROW_LAYOUT : WIDE_LAYOUT;
+  const { VH, N, ASPECT_PAD } = containerWidth < 480 ? NARROW_LAYOUT : WIDE_LAYOUT;
+  // Recomputed every render off the live container width — see computePaths' doc
+  // comment for why a static, precomputed set of paths can't stay correct here.
+  const P = computePaths(N, containerWidth);
 
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -536,14 +617,15 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     return () => { cancelled = true; clearInterval(interval); };
   }, [siteId, externalCtReading]);
 
+  const ctGridKw  = Math.abs(ctActivePowerW(ctReading)) / 1000;
+  const ctReversed = (ctReading?.active_power_total ?? 0) < 0;
+
   const nonGridDevices  = smartDevices.filter(d => d.appliance_label !== 'grid');
   const evLoads         = nonGridDevices.filter(d => d.appliance_label === 'ev_charger');
   const solarLoads      = nonGridDevices.filter(d => d.appliance_label !== 'ev_charger' && circuitOf(d) === 'solar');
   const gridLoads       = nonGridDevices.filter(d => d.appliance_label !== 'ev_charger' && circuitOf(d) === 'grid');
   const evLoadPowerKw  = evLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
-  const gridLoadPowerKw = gridLoads.reduce((s, d) => s + ((freshLatest(d)?.power_w ?? 0) / 1000), 0);
   const evLoadActive   = evLoadPowerKw  > 0;
-  const gridLoadActive = gridLoadPowerKw > 0;
 
   const pv   = pvKw   ?? 0;
   const load = loadKw ?? 0;
@@ -566,13 +648,6 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const battIntensity = battActive ? Math.min(1, Math.abs(batt) / 10) : 0;
   const loadIntensity = loadActive ? Math.min(1, load / 10) : 0;
   const compactFlow = containerWidth < 480;
-  const branchStrokeWidth = compactFlow ? 2.2 : 2.5;
-  const branchTrackWidth = compactFlow ? 6 : 10;
-  const branchDash = compactFlow ? 8 : 10;
-  const branchGap = compactFlow ? 8 : 10;
-  const branchDur = compactFlow ? 2.1 : 2.4;
-  const branchMidY = compactFlow ? 13 : 15;
-  const branchEndY = compactFlow ? 24 : 31;
 
   const pvFmt   = fmtPower(pv);
   const battFmt = fmtPower(batt);
@@ -610,7 +685,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 0' }}>
-        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: isDark ? '#cbd5e1' : 'var(--text-dim)' }}>
+        <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: isDark ? '#cbd5e1' : 'var(--text-dim)' }}>
           Energy Flow
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -619,7 +694,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
             style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }}
           />
-          <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e' }}>Live</span>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#22c55e' }}>Live</span>
         </div>
       </div>
 
@@ -638,8 +713,11 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         </div>
       )}
 
-      {/* Diagram */}
-      <div ref={diagramRef} style={{ padding: '10px 18px 0' }}>
+      {/* Diagram — capped and centered so a full-width host (now that Health has
+          its own tab) doesn't stretch the fixed-aspect-ratio cross diagram tall
+          enough to force page scroll. Cap sits above the nodeScale saturation
+          point (480px) so card sizing is unaffected. */}
+      <div ref={diagramRef} style={{ padding: '10px 18px 0', maxWidth: 800, margin: '0 auto' }}>
         <div style={{ position: 'relative', width: '100%', paddingBottom: ASPECT_PAD }}>
           <div style={{ position: 'absolute', inset: 0 }}>
             <svg
@@ -670,13 +748,27 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
               {/* Hub mask */}
               <circle cx={N.hub.x} cy={N.hub.y} r={HUB_R} fill={bgColor} />
 
+              {/* Static idle tracks — Beam renders nothing at all when a flow is 0,
+                  so without these the connector to Hub just disappears whenever
+                  PV/Battery/Grid/Load is momentarily idle, reading as a broken
+                  link rather than "nothing flowing right now". Always drawn,
+                  dim; the animated Beam on top is what actually shows magnitude.
+                  Reuses the exact same (trimmed, curved) path as the active beam
+                  for each connector — one source of truth for idle vs. active,
+                  instead of a second hand-drawn straight line that can drift out
+                  of sync with it. */}
+              <path d={P.pvToHub.path}   stroke="#f59e0b" strokeWidth={6} strokeOpacity={0.22} strokeLinecap="round" fill="none" />
+              <path d={P.battToHub.path} stroke="#0ea5e9" strokeWidth={6} strokeOpacity={0.22} strokeLinecap="round" fill="none" />
+              <path d={P.gridToHub.path} stroke="#60a5fa" strokeWidth={6} strokeOpacity={0.22} strokeLinecap="round" fill="none" />
+              <path d={P.hubToLoad.path} stroke="#f87171" strokeWidth={6} strokeOpacity={0.22} strokeLinecap="round" fill="none" />
+
               {/* Animated beam pulses — glowId scoped per instance to avoid SVG filter collision */}
-              <Beam d={P.pvToHub}   color="#f59e0b" active={pvActive}                   glowId={`efglow-${uidRef.current}`} intensity={pvIntensity} />
-              <Beam d={P.battToHub} color="#0ea5e9" active={battActive && isDischarging} glowId={`efglow-${uidRef.current}`} intensity={battIntensity} />
-              <Beam d={P.hubToBatt} color="#0ea5e9" active={isCharging}                  glowId={`efglow-${uidRef.current}`} intensity={battIntensity} />
-              <Beam d={P.gridToHub} color="#60a5fa" active={gridActive && isImporting}   glowId={`efglow-${uidRef.current}`} intensity={gridIntensity} />
-              <Beam d={P.hubToGrid} color="#34d399" active={isExporting}                 glowId={`efglow-${uidRef.current}`} intensity={gridIntensity} />
-              <Beam d={P.hubToLoad} color="#f87171" active={loadActive}                  glowId={`efglow-${uidRef.current}`} intensity={loadIntensity} />
+              <Beam d={P.pvToHub.path}   color="#f59e0b" active={pvActive}                   glowId={`efglow-${uidRef.current}`} intensity={pvIntensity} width={widthForKw(pv)} />
+              <Beam d={P.battToHub.path} color="#0ea5e9" active={battActive && isDischarging} glowId={`efglow-${uidRef.current}`} intensity={battIntensity} width={widthForKw(batt)} />
+              <Beam d={P.hubToBatt.path} color="#0ea5e9" active={isCharging}                  glowId={`efglow-${uidRef.current}`} intensity={battIntensity} width={widthForKw(batt)} />
+              <Beam d={P.gridToHub.path} color="#60a5fa" active={gridActive && isImporting}   glowId={`efglow-${uidRef.current}`} intensity={gridIntensity} width={widthForKw(grid)} />
+              <Beam d={P.hubToGrid.path} color="#34d399" active={isExporting}                 glowId={`efglow-${uidRef.current}`} intensity={gridIntensity} width={widthForKw(grid)} />
+              <Beam d={P.hubToLoad.path} color="#f87171" active={loadActive}                  glowId={`efglow-${uidRef.current}`} intensity={loadIntensity} width={widthForKw(load)} />
             </svg>
 
             {/* Node cards */}
@@ -697,7 +789,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 <NodeCard label="Solar PV"
                   icon={<Sun size={22} color={pvActive ? '#f59e0b' : 'var(--muted-foreground)'} />}
                   valueStr={pvFmt.valueStr} unit={pvFmt.unit}
-                  color="#f59e0b" active={pvActive} isDark={isDark} />
+                  color="#f59e0b" active={pvActive} isDark={isDark}
+                  arcPct={pv / 6} />
               </div>
             </At>
             <At cx={N.hub.x} cy={N.hub.y} scale={nodeScale} vw={VW} vh={VH}><HubNode isDark={isDark} /></At>
@@ -722,14 +815,14 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   valueStr={battFmt.valueStr} unit={battFmt.unit}
                   color="#0ea5e9" active={battPresent}
                   subLabel={(battSoc ?? 0) > 0 ? `${Math.round(battSoc ?? 0)}%${isCharging ? ' ↑' : isDischarging ? ' ↓' : ''}` : undefined}
-                  isDark={isDark} />
+                  isDark={isDark} arcPct={(battSoc ?? 0) / 100} />
               </div>
             </At>
             <At cx={N.grid.x} cy={N.grid.y} scale={nodeScale} vw={VW} vh={VH}>
               <div onClick={() => handleNodeClick({
                 type: 'grid',
                 id: 'grid',
-                title: 'Grid',
+                title: 'Grid Tie (Inverter)',
                 subtitle: isExporting ? 'Exporting' : isImporting ? 'Importing' : 'Idle',
                 power_kw: Math.abs(grid),
                 status: gridActive ? 'active' : 'inactive',
@@ -739,36 +832,25 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                   'Power Flow': `${gridFmt.valueStr} ${gridFmt.unit}`,
                   'Direction': isExporting ? 'Export ↑' : isImporting ? 'Import ↓' : 'Idle',
                   'Mode': isExporting ? 'Selling' : isImporting ? 'Buying' : 'Idle',
+                  'Meter': "Inverter's own built-in grid CT",
                 },
               })} style={{ cursor: 'pointer' }}>
-                <NodeCard label="Grid"
+                <NodeCard label="Grid Tie"
                   icon={<Zap size={22} color={gridActive ? gridColor : 'var(--muted-foreground)'} />}
                   valueStr={gridFmt.valueStr} unit={gridFmt.unit}
                   color={gridColor} active={gridActive}
                   subLabel={isExporting ? '↑ Selling' : isImporting ? '↓ Buying' : undefined}
-                  isDark={isDark} />
+                  isDark={isDark} arcPct={Math.abs(grid) / 5} />
               </div>
             </At>
-          </div>
-        </div>
-      </div>
-
-      {/* Total Load + EV node (if present) + Y-connector + Sub-loads */}
-      <div style={{ padding: '0 18px 0', marginTop: 0 }}>
-        {(() => {
-          const ctGridKw = Math.abs(ctActivePowerW(ctReading)) / 1000;
-          const ctReversed = (ctReading?.active_power_total ?? 0) < 0;
-          const totalLoadKw = load + ctGridKw;
-          const totalLoadFmt = fmtPower(totalLoadKw);
-          const totalLoadActive = totalLoadKw > 0;
-          return (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: `${-(1 - nodeScale) * 93}px` }}>
-              <div style={{ display: 'inline-block', width: 108, transform: `scale(${nodeScale})`, transformOrigin: 'top center', cursor: 'pointer' }} onClick={() => handleNodeClick({
+            <At cx={N.load.x} cy={N.load.y} scale={nodeScale} vw={VW} vh={VH}>
+              <div onClick={() => handleNodeClick({
                 type: 'load',
                 id: 'load',
-                title: 'Total Load',
-                power_kw: totalLoadKw,
-                status: totalLoadActive ? 'active' : 'inactive',
+                title: 'Backup Load',
+                subtitle: 'via inverter',
+                power_kw: load,
+                status: loadActive ? 'active' : 'inactive',
                 color: '#f87171',
                 icon: <Home size={24} color="#f87171" />,
                 loadSplit: {
@@ -779,80 +861,86 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 evDevice: evLoads[0] ?? undefined,
                 ctReading: ctReading ?? undefined,
                 inverterPhases: inverterPhases ?? undefined,
-              })}>
-                <NodeCard label="Total Load"
-                  icon={<Home size={22} color={totalLoadActive ? '#f87171' : 'var(--muted-foreground)'} />}
-                  valueStr={totalLoadFmt.valueStr} unit={totalLoadFmt.unit}
-                  color="#f87171" active={totalLoadActive} isDark={isDark}
-                  isAnomalous={ctReversed} subLabel={ctReversed ? 'CT reversed?' : undefined} />
+              })} style={{ cursor: 'pointer' }}>
+                <NodeCard label="Backup Load"
+                  icon={<Home size={22} color={loadActive ? '#f87171' : 'var(--muted-foreground)'} />}
+                  valueStr={fmtPower(load).valueStr} unit={fmtPower(load).unit}
+                  color="#f87171" active={loadActive} isDark={isDark}
+                  isAnomalous={ctReversed} subLabel={ctReversed ? 'CT reversed?' : undefined}
+                  arcPct={load / 6} />
+              </div>
+            </At>
+          </div>
+        </div>
+      </div>
+
+      {/* Y-connector group labels (Backup→Solar, Grid→EV/Grid-Direct). Backup Load's
+          own card now lives up in the diamond diagram as the 4th node (matching the
+          customer portal's layout), so this section only holds the group labels +
+          sub-load row + Site Total below it. */}
+      <div style={{ padding: '0 18px 0', marginTop: 0 }}>
+        {/* Two independent groups, not one shared stem — Backup Load is the only
+            one actually sourced from the inverter (matches the hubToLoad beam
+            above it); EV + Grid-Direct both bypass the inverter, so they're
+            grouped under "Grid" instead. Plain flexbox with the SAME flex
+            ratios as the card row below, instead of a hand-scaled SVG: alignment
+            comes from one shared layout algorithm, not coordinate math that has
+            to be kept in sync with it by hand (that mismatch was the actual bug
+            behind three straight rounds of "still not connecting" reports). */}
+        {(() => {
+          const hasEv = evLoads.length > 0;
+          return (
+            <div style={{ display: 'flex', gap: compactFlow ? 8 : 10, padding: '10px 0 2px' }}>
+              <div style={{
+                flex: '1 1 0', textAlign: 'center', color: '#f87171',
+                fontSize: compactFlow ? 9.5 : 10, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase', paddingTop: 6,
+                borderTop: '2px solid #f8717166',
+              }}>
+                ↓ Inverter
+              </div>
+              <div style={{
+                flex: hasEv ? '2 1 0' : '1 1 0', textAlign: 'center', color: '#f472b6',
+                fontSize: compactFlow ? 9.5 : 10, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase', paddingTop: 6,
+                borderTop: '2px solid #f472b666',
+              }}>
+                ↓ Grid
               </div>
             </div>
           );
         })()}
+      </div>
 
-        {/* Y-connector — 3 branches when EV present, 2 branches otherwise */}
-        {(() => {
-          const ctGridKw = Math.abs(ctActivePowerW(ctReading)) / 1000;
-          const solarBranchActive = load > 0;
-          const gridBranchActive  = gridLoadActive || ctGridKw > 0;
-          const evBranchActive    = evLoadActive;
-          const hasEv             = evLoads.length > 0;
-          const stemActive = solarBranchActive || gridBranchActive || evBranchActive;
-          const solarX = hasEv ? 25  : 50;
-          const gridX  = hasEv ? 175 : 150;
-          return (
-            <svg width="100%" height={branchEndY} viewBox={`0 0 200 ${branchEndY}`}
-              style={{ display: 'block', overflow: 'visible' }} preserveAspectRatio="none">
-              <style>{`
-                @keyframes flow-f87171{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
-                @keyframes flow-f59e0b{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
-                @keyframes flow-60a5fa{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
-                @keyframes flow-34d399{from{stroke-dashoffset:0}to{stroke-dashoffset:-${branchDash + branchGap}}}
-              `}</style>
-              {/* Stem */}
-              <line x1="100" y1="0" x2="100" y2={branchMidY} stroke="#f87171" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {stemActive && (
-                <line x1="100" y1="0" x2="100" y2={branchMidY} stroke="#f87171" strokeWidth={branchStrokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f87171 ${branchDur}s linear infinite` }} />
-              )}
-              {/* Solar branch (amber, left) */}
-              <line x1="100" y1={branchMidY} x2={solarX} y2={branchMidY} stroke="#f59e0b" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {solarBranchActive && <line x1="100" y1={branchMidY} x2={solarX} y2={branchMidY} stroke="#f59e0b" strokeWidth={branchStrokeWidth} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />}
-              <line x1={solarX} y1={branchMidY} x2={solarX} y2={branchEndY} stroke="#f59e0b" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {solarBranchActive && <line x1={solarX} y1={branchMidY} x2={solarX} y2={branchEndY} stroke="#f59e0b" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-f59e0b ${branchDur}s linear infinite` }} />}
-              {/* EV branch (green, center) — only when EV device exists */}
-              {hasEv && <>
-                <line x1="100" y1={branchMidY} x2="100" y2={branchEndY} stroke="#34d399" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-                {evBranchActive && <line x1="100" y1={branchMidY} x2="100" y2={branchEndY} stroke="#34d399" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-34d399 ${branchDur}s linear infinite` }} />}
-              </>}
-              {/* Grid branch (blue, right) */}
-              <line x1="100" y1={branchMidY} x2={gridX} y2={branchMidY} stroke="#60a5fa" strokeWidth={branchTrackWidth} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {gridBranchActive && <line x1="100" y1={branchMidY} x2={gridX} y2={branchMidY} stroke="#60a5fa" strokeWidth={branchStrokeWidth} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />}
-              <line x1={gridX} y1={branchMidY} x2={gridX} y2={branchEndY} stroke="#60a5fa" strokeWidth={compactFlow ? 3 : 5} strokeLinecap="round" strokeOpacity={compactFlow ? 0.08 : 0.06} />
-              {gridBranchActive && <line x1={gridX} y1={branchMidY} x2={gridX} y2={branchEndY} stroke="#60a5fa" strokeWidth={compactFlow ? 1.15 : 1.5} strokeLinecap="round" strokeDasharray={`${branchDash} ${branchGap}`} style={{ animation: `flow-60a5fa ${branchDur}s linear infinite` }} />}
-            </svg>
-          );
-        })()}
-
-        {/* Sub-load row: Solar SubSection | EV NodeCard | Grid SubSection */}
+      {/* Sub-load row: Solar SubSection | EV NodeCard | Grid SubSection — full
+          width, not capped like the diagram/connectors above. These cards list
+          individual devices and benefit from the horizontal room a full-width
+          host actually gives; their height doesn't grow with width the way the
+          fixed-aspect-ratio diagram does, so there's no scroll risk in letting
+          them stretch. */}
+      <div style={{ padding: '0 18px 0' }}>
         <div style={{ display: 'flex', gap: compactFlow ? 8 : 10, alignItems: 'stretch', paddingBottom: 14, marginTop: 0 }}>
           <SubSection
-            title="Solar Load" icon={<Sun size={11} color="#f59e0b" />}
-            accentColor="#f59e0b" devices={solarLoads} isDark={isDark}
+            // Same reading as the "Backup Load" card above, not a second number —
+            // shares its name and color so that's obvious, and only shows the
+            // header line (no duplicate big stat) if there are no individual
+            // inverter-backup smart devices to break it down further.
+            title="Backup Load" icon={<Home size={11} color="#f87171" />}
+            accentColor="#f87171" devices={solarLoads} isDark={isDark}
             compact={compactFlow}
-            onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f59e0b'))}
+            onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f87171'))}
             inverterKw={load > 0 ? load : undefined}
             onInverterClick={() => handleNodeClick({
               type: 'solar',
               id: 'inverter-load',
-              title: 'Inverter · Solar Load',
-              subtitle: 'AC Output',
+              title: 'Backup Load',
+              subtitle: 'Inverter AC Output — same reading as above',
               power_kw: load,
               status: load > 0 ? 'active' : 'inactive',
-              color: '#f59e0b',
-              icon: <Sun size={24} color="#f59e0b" />,
+              color: '#f87171',
+              icon: <Home size={24} color="#f87171" />,
               details: {
-                'Solar Load': `${fmtPower(load).valueStr} ${fmtPower(load).unit}`,
+                'Backup Load': `${fmtPower(load).valueStr} ${fmtPower(load).unit}`,
                 'PV Generation': `${fmtPower(pv).valueStr} ${fmtPower(pv).unit}`,
                 'Self-consumption': pv > 0 ? `${Math.min(100, Math.round((load / pv) * 100))}%` : '—',
                 'Status': load > 0 ? 'Active' : 'Idle',
@@ -888,32 +976,60 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           )}
 
           <SubSection
-            title="Grid Load" icon={<Grid size={11} color="#60a5fa" />}
-            accentColor="#60a5fa" devices={gridLoads} isDark={isDark}
+            title="Grid Direct" icon={<Grid size={11} color="#f472b6" />}
+            accentColor="#f472b6" devices={gridLoads} isDark={isDark}
             compact={compactFlow}
-            onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#60a5fa'))}
+            onDeviceClick={(device) => handleNodeClick(createDeviceNodeData(device, '#f472b6'))}
             ctTotalKw={ctReading ? ctActivePowerW(ctReading) / 1000 : undefined}
             onCtHeaderClick={() => ctReading && handleNodeClick({
               type: 'ctmeter',
               id: 'ctmeter',
-              title: 'Grid Load · Energy Meter',
+              title: 'Grid Direct · Energy Meter',
               subtitle: '3-Phase Measurement',
               // Signed, unlike every other node type's power_kw here — this is
               // the meter's own headline number and should show its real
               // direction (see F-051), not just feed a magnitude/active check.
               power_kw: ctActivePowerW(ctReading) / 1000,
               status: (Math.abs(ctActivePowerW(ctReading)) / 1000) > 0 ? 'active' : 'inactive',
-              color: '#60a5fa',
-              icon: <Activity size={24} color="#60a5fa" />,
+              color: '#f472b6',
+              icon: <Activity size={24} color="#f472b6" />,
               details: {
                 'Active Power': `${ctActivePowerW(ctReading).toFixed(1)} W`,
                 'Apparent Power': `${Math.abs(ctReading.apparent_power_total ?? 0).toFixed(1)} VA`,
                 'Power Factor': (ctReading.power_factor_total ?? 0).toFixed(3),
+                'Meter': 'Separate submeter on the grid-direct circuit',
               },
               ctReading,
             })}
           />
         </div>
+
+        {/* Site Total — a computed sum, not a drawn beam. Backup Load, Grid-Direct,
+            and EV are three genuinely independent circuits; this readout is the
+            only place their total is claimed, and it says so instead of implying
+            a shared physical path. */}
+        {(() => {
+          const siteTotalKw = load + ctGridKw + evLoadPowerKw;
+          const siteTotalFmt = fmtPower(siteTotalKw);
+          return (
+            <div style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6,
+              padding: '2px 0 14px', fontSize: compactFlow ? 11.5 : 12.5,
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace", flexWrap: 'wrap',
+            }}>
+              <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>Site Total</span>
+              <span style={{ color: 'var(--foreground)', fontWeight: 800 }}>{siteTotalFmt.valueStr} {siteTotalFmt.unit}</span>
+              <span style={{ color: 'var(--text-dim)' }}>=</span>
+              <span style={{ color: '#f87171' }}>Backup {fmtPower(load).valueStr}</span>
+              <span style={{ color: 'var(--text-dim)' }}>+</span>
+              <span style={{ color: '#f472b6' }}>Grid-Direct {fmtPower(ctGridKw).valueStr}</span>
+              {evLoadPowerKw > 0 && <>
+                <span style={{ color: 'var(--text-dim)' }}>+</span>
+                <span style={{ color: '#34d399' }}>EV {fmtPower(evLoadPowerKw).valueStr}</span>
+              </>}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Status row */}
@@ -921,8 +1037,8 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '7px 18px 12px', borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.07)' : '#f1f5f9'}`,
       }}>
-        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{statusText}</span>
-        <span style={{ fontSize: 9.5, color: isDark ? '#cbd5e1' : 'var(--border-strong)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{statusText}</span>
+        <span style={{ fontSize: 10.5, color: isDark ? '#cbd5e1' : 'var(--border-strong)', fontVariantNumeric: 'tabular-nums' }}>
           {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>

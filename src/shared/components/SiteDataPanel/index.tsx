@@ -36,6 +36,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../../app/constants';
 import { istDate, startOfSolarDayIST } from './istDate';
 import DetailsTab from '../../../features/staff/DetailsTab';
+import { SystemHealthPanel } from '../../../features/staff/EnergyFlowHealthRow';
 import { useChartZoomState } from './chartUtils';
 
 // Tab components
@@ -1274,6 +1275,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   isLatestToday={isLatestToday}
                   achievedPct={achievedPct ?? undefined}
                 />
+              </motion.div>
+            )}
+
+            {activeTab === 'health' && (
+              <motion.div
+                key="health"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={{ initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 20 } }}
+                transition={tabTransition}
+              >
+                <SystemHealthPanel siteId={siteId} />
               </motion.div>
             )}
 

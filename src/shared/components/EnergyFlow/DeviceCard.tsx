@@ -1,6 +1,34 @@
 import React from 'react';
 import { DeviceStatus } from './types';
 
+// 270°-sweep progress arc around the icon — same polar-coordinate technique as
+// the customer portal's EnergyFlowDiagram node rings (`arc()` there).
+export function arcPath(cx: number, cy: number, r: number, startDeg: number, sweepDeg: number): string {
+  if (sweepDeg <= 0) return '';
+  const clamped = Math.min(sweepDeg, 359.9);
+  const rad = (d: number) => (d - 90) * Math.PI / 180;
+  const sx = cx + r * Math.cos(rad(startDeg));
+  const sy = cy + r * Math.sin(rad(startDeg));
+  const ex = cx + r * Math.cos(rad(startDeg + clamped));
+  const ey = cy + r * Math.sin(rad(startDeg + clamped));
+  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 ${clamped > 180 ? 1 : 0} 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`;
+}
+
+export function IconRing({ size, color, active, pct }: { size: number; color: string; active: boolean; pct?: number }) {
+  const r = size / 2 - 2.5;
+  const cx = size / 2, cy = size / 2;
+  const clampedPct = pct != null ? Math.max(0, Math.min(1, pct)) : null;
+  return (
+    <svg width={size} height={size} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+      <path d={arcPath(cx, cy, r, 225, 270)} fill="none" stroke={`${color}22`} strokeWidth={3} strokeLinecap="round" />
+      {active && clampedPct != null && clampedPct > 0 && (
+        <path d={arcPath(cx, cy, r, 225, clampedPct * 270)} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round"
+          style={{ filter: `drop-shadow(0 0 4px ${color}99)` }} />
+      )}
+    </svg>
+  );
+}
+
 export interface NodeCardProps {
   label: string;
   icon: React.ReactNode;
@@ -13,6 +41,9 @@ export interface NodeCardProps {
   subLabel?: string;
   onClick?: () => void;
   isDark: boolean;
+  /** 0–1 fill for the icon's progress-arc ring — e.g. PV vs. inverter capacity,
+   * battery SoC/100, grid vs. a reference max. Omit to render icon-only (no ring). */
+  arcPct?: number;
 }
 
 const STATUS_BG: Record<DeviceStatus, string> = {
@@ -23,7 +54,7 @@ const STATUS_BG: Record<DeviceStatus, string> = {
 
 export function NodeCard({
   label, icon, valueStr, unit, color, active,
-  status, isAnomalous, subLabel, onClick, isDark,
+  status, isAnomalous, subLabel, onClick, isDark, arcPct,
 }: NodeCardProps) {
   return (
     <div
@@ -35,7 +66,7 @@ export function NodeCard({
         alignItems: 'center',
         gap: 6,
         padding: '11px 10px 10px',
-        borderRadius: 12,
+        borderRadius: 24,
         background: isDark
           ? active
             ? `radial-gradient(ellipse at 50% 0%, ${color}1a 0%, #0d1117 70%)`
@@ -71,15 +102,16 @@ export function NodeCard({
         el.style.transform = 'scale(1) translateZ(0)';
       }}
     >
-      {/* Icon circle */}
-      <div style={{ position: 'relative' }}>
+      {/* Icon circle, with a 270° progress-arc ring when arcPct is given */}
+      <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {active && (
           <div style={{
-            position: 'absolute', inset: -10,
-            background: color, opacity: isDark ? 0.2 : 0.13,
+            position: 'absolute', inset: 0,
+            background: color, opacity: isDark ? 0.16 : 0.11,
             filter: 'blur(12px)', borderRadius: '50%',
           }} />
         )}
+        {arcPct != null && <IconRing size={52} color={color} active={active} pct={arcPct} />}
         <div style={{
           width: 42, height: 42, borderRadius: '50%',
           background: active
@@ -97,22 +129,22 @@ export function NodeCard({
 
       {/* Value */}
       <div style={{
-        fontSize: 16, fontWeight: 800, lineHeight: 1,
+        fontSize: 19, fontWeight: 800, lineHeight: 1,
         color: active ? color : 'var(--text-dim)',
         fontVariantNumeric: 'tabular-nums',
         letterSpacing: '-0.02em',
         display: 'flex', alignItems: 'baseline', gap: 2,
       }}>
         {valueStr}
-        <span style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
       </div>
 
       {/* Sub-label */}
       {subLabel && (
         <span style={{
-          fontSize: 8.5,
+          fontSize: 10.5,
           color: active ? `${color}cc` : isDark ? '#cbd5e1' : 'var(--text-dim)',
-          marginTop: -3,
+          marginTop: -2,
           whiteSpace: 'nowrap',
           fontWeight: 600,
         }}>
@@ -122,10 +154,10 @@ export function NodeCard({
 
       {/* Node label */}
       <span style={{
-        fontSize: 8, fontWeight: 800,
-        textTransform: 'uppercase', letterSpacing: '0.1em',
+        fontSize: 10, fontWeight: 800,
+        textTransform: 'uppercase', letterSpacing: '0.08em',
         color: active ? color : isDark ? 'var(--text-dim)' : '#b0bcc8',
-        marginTop: subLabel ? 0 : -3,
+        marginTop: subLabel ? 0 : -2,
         whiteSpace: 'nowrap',
         opacity: active ? 0.85 : 1,
       }}>
@@ -135,11 +167,11 @@ export function NodeCard({
       {/* Status badge */}
       {status && (
         <div style={{
-          fontSize: 7, fontWeight: 700,
+          fontSize: 9, fontWeight: 700,
           color: status === 'online' ? '#0A0E1A' : '#FFFFFF', background: STATUS_BG[status],
-          borderRadius: 3, padding: '1.5px 5px',
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-          marginTop: -3,
+          borderRadius: 3, padding: '2px 6px',
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+          marginTop: -2,
         }}>
           {status}
         </div>
@@ -170,13 +202,13 @@ export function SmartCard({
     <div
       onClick={onClick}
       style={{
-        width: compact ? 78 : 90,
+        width: compact ? 88 : 100,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: compact ? 4 : 5,
         padding: compact ? '7px 6px 8px' : '9px 8px 9px',
-        borderRadius: compact ? 9 : 10,
+        borderRadius: compact ? 16 : 18,
         background: isDark
           ? active ? `${color}12` : 'rgba(13,17,23,0.92)'
           : active ? `${color}09` : 'rgba(255,255,255,0.98)',
@@ -229,24 +261,24 @@ export function SmartCard({
 
       {/* Value */}
       <div style={{
-        fontSize: compact ? 12 : 14, fontWeight: 800, lineHeight: 1,
+        fontSize: compact ? 14 : 16, fontWeight: 800, lineHeight: 1,
         color: active ? color : 'var(--text-dim)',
         fontVariantNumeric: 'tabular-nums',
         display: 'flex', alignItems: 'baseline', gap: 1.5,
         letterSpacing: '-0.01em',
       }}>
         {valueStr}
-        <span style={{ fontSize: compact ? 7.5 : 8.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
+        <span style={{ fontSize: compact ? 9.5 : 10.5, fontWeight: 600, opacity: 0.8 }}>{unit}</span>
       </div>
 
       {/* Label */}
       <span style={{
-        fontSize: compact ? 6.8 : 7.5, fontWeight: 800,
-        textTransform: 'uppercase', letterSpacing: '0.09em',
+        fontSize: compact ? 9 : 9.5, fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.06em',
         color: active ? color : isDark ? 'var(--text-dim)' : '#b0bcc8',
         opacity: active ? 0.85 : 1,
         whiteSpace: 'nowrap', textAlign: 'center',
-        maxWidth: compact ? 70 : 80, overflow: 'hidden', textOverflow: 'ellipsis',
+        maxWidth: compact ? 82 : 92, overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
         {label}
       </span>

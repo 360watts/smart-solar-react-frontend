@@ -559,39 +559,79 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, late
           </div>
         </div>
 
-        {/* Two-panel body: energy flow left | health observatory right */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+        {/* Live energy flow — full width. Health moved to its own tab (SystemHealthPanel
+            below) so the diagram isn't squeezed into half a row. */}
+        <div style={{
+          background:B.canvas,
+          backgroundImage:`
+            linear-gradient(rgba(0,212,255,0.022) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,212,255,0.022) 1px, transparent 1px)
+          `,
+          backgroundSize:'32px 32px',
+          display:'flex', flexDirection:'column',
+        }}>
+          {/* No section label here — EnergyFlowBlock renders its own "Energy Flow /
+              Live" header immediately below, so a second one just repeated it. */}
+          <div style={{ flex:1, padding:'4px 4px 4px', minWidth:0 }}>
+            <EnergyFlowBlock
+              pvKw={values.pvKw} loadKw={values.loadKw}
+              gridKw={values.gridKw} battKw={values.battKw}
+              battSoc={values.battSoc} siteId={siteId}
+              smartDevices={smartDevices}
+              ctReading={ctReading}
+            />
+          </div>
+        </div>
 
-          {/* Left — live energy flow */}
-          <div style={{
-            background:B.canvas,
-            backgroundImage:`
-              linear-gradient(rgba(0,212,255,0.022) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,212,255,0.022) 1px, transparent 1px)
-            `,
-            backgroundSize:'32px 32px',
-            borderRight:`1px solid ${B.borderC}`,
-            display:'flex', flexDirection:'column',
-          }}>
-            <div style={{ padding:'10px 16px 0', fontFamily:MONO, fontSize:9,
-              letterSpacing:'0.12em', textTransform:'uppercase' as const, color:B.dim }}>
-              LIVE POWER FLOW
-            </div>
-            <div style={{ flex:1, padding:'0 4px 4px', minWidth:0 }}>
-              <EnergyFlowBlock
-                pvKw={values.pvKw} loadKw={values.loadKw}
-                gridKw={values.gridKw} battKw={values.battKw}
-                battSoc={values.battSoc} siteId={siteId}
-                smartDevices={smartDevices}
-                ctReading={ctReading}
-              />
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── System Health tab — same observatory panel, full width ─────────────────
+
+export function SystemHealthPanel({ siteId }: { siteId: string }) {
+  const { isDark } = useTheme();
+  const B = mkB(isDark);
+  const [healthData, setHealthData] = useState<HardwareHealthData|null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+
+  useEffect(() => {
+    if (!siteId) return;
+    setHealthLoading(true);
+    apiService.getSiteHardwareHealth(siteId)
+      .then(d => { setHealthData(d); setHealthLoading(false); })
+      .catch(() => setHealthLoading(false));
+  }, [siteId]);
+
+  return (
+    <motion.div
+      initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+      transition={{ duration:0.35, ease:[0.25,0.46,0.45,0.94] }}>
+      <div style={{
+        borderRadius:16, overflow:'hidden',
+        boxShadow:`0 0 0 1px ${B.borderC}, 0 24px 64px rgba(0,0,0,0.7), 0 0 80px rgba(0,212,255,0.04)`,
+      }}>
+        <div style={{
+          position:'relative', overflow:'hidden',
+          background:B.glass,
+          backdropFilter:'blur(20px) saturate(160%)',
+          WebkitBackdropFilter:'blur(20px) saturate(160%)',
+          borderBottom:`1px solid ${B.borderC}`,
+          padding:'11px 20px',
+        }}>
+          <ScanLine B={B}/>
+          <div style={{ position:'relative', display:'flex', alignItems:'center', gap:12, zIndex:1 }}>
+            <span style={{ fontFamily:SYNE, fontSize:14, fontWeight:800, color:B.value,
+              letterSpacing:'-0.02em', textShadow:`0 0 20px rgba(232,244,255,0.2)` }}>{siteId}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'3px 8px',
+              borderRadius:20, background:`rgba(0,212,255,0.1)`, border:`1px solid ${B.borderC}` }}>
+              <PulseDot color={B.cyan}/>
+              <span style={{ fontFamily:MONO, fontSize:8, color:B.cyan, letterSpacing:'0.1em', fontWeight:700 }}>SYSTEM HEALTH</span>
             </div>
           </div>
-
-          {/* Right — observatory health */}
-          <HealthPane healthData={healthData} healthLoading={healthLoading} B={B}/>
-
-        </div> {/* end two-panel grid */}
+        </div>
+        <HealthPane healthData={healthData} healthLoading={healthLoading} B={B}/>
       </div>
     </motion.div>
   );
