@@ -6,6 +6,7 @@ export type ApplianceLabel =
   | 'ac_unit'
   | 'water_pump'
   | 'washing_machine'
+  | 'fridge'
   | 'grid'
   | 'other';
 

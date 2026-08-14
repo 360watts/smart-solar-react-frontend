@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sun, Battery, Home, Zap, Wind, Droplets, Waves, Plug, Activity, Grid, Car } from 'lucide-react';
+import { Sun, Battery, Home, Zap, Wind, Droplets, Waves, Plug, Activity, Grid, Car, Refrigerator } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { NodeCard, SmartCard } from './DeviceCard';
 import AnomalyBanner from './AnomalyBanner';
@@ -112,11 +112,12 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
     case 'ac_unit':         return <Wind {...p} />;
     case 'water_pump':      return <Droplets {...p} />;
     case 'washing_machine': return <Waves {...p} />;
+    case 'fridge':          return <Refrigerator {...p} />;
     default:                return <Plug {...p} />;
   }
 };
 
-const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine'];
+const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine', 'fridge'];
 const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' => {
   if (d.circuit === 'inverter_backup') return 'solar';
   if (d.circuit === 'grid_direct' || d.circuit === 'ev_line') return 'grid';

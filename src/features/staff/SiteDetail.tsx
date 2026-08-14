@@ -1592,6 +1592,7 @@ export default function SiteDetail() {
                             <option value="ac_unit">AC Unit</option>
                             <option value="water_pump">Water Pump</option>
                             <option value="washing_machine">Washing Machine</option>
+                            <option value="fridge">Fridge</option>
                             <option value="other">Other</option>
                           </select>
                         </div>

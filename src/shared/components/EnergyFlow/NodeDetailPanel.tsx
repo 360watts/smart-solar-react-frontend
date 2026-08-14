@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sun, Battery, Zap, Home, Car, Droplets, Wind, Waves, Plug, Activity } from 'lucide-react';
+import { X, Sun, Battery, Zap, Home, Car, Droplets, Wind, Waves, Plug, Activity, Refrigerator } from 'lucide-react';
 import { SmartDeviceNode, ApplianceLabel } from './types';
 
 export type NodeType = 'solar' | 'battery' | 'grid' | 'load' | 'device';
@@ -39,6 +39,7 @@ const applIcon = (label: ApplianceLabel, color: string) => {
     case 'ac_unit': return <Wind {...p} />;
     case 'water_pump': return <Droplets {...p} />;
     case 'washing_machine': return <Waves {...p} />;
+    case 'fridge': return <Refrigerator {...p} />;
     default: return <Plug {...p} />;
   }
 };
