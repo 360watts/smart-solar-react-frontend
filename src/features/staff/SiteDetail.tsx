@@ -36,6 +36,16 @@ interface SmartDeviceForm {
   display_name: string;
   is_active: boolean;
 }
+interface CircuitLineForm {
+  circuit: string;
+  label: string;
+  device: number | null;
+}
+const blankCircuitLineForm = (): CircuitLineForm => ({
+  circuit: 'grid_direct',
+  label: '',
+  device: null,
+});
 const blankSmartDeviceForm = (): SmartDeviceForm => ({
   device_type: 'tuya_plug',
   provider_device_id: '',
@@ -454,6 +464,11 @@ export default function SiteDetail() {
   const [smartDevicesSaving, setSmartDevicesSaving] = useState(false);
   const [editingSmartDeviceId, setEditingSmartDeviceId] = useState<number | null>(null);
   const [smartDeviceDraft, setSmartDeviceDraft] = useState<SmartDeviceForm>(blankSmartDeviceForm());
+  const [circuitLines, setCircuitLines] = useState<any[]>([]);
+  const [circuitLinesLoading, setCircuitLinesLoading] = useState(false);
+  const [circuitLinesSaving, setCircuitLinesSaving] = useState(false);
+  const [editingCircuitLineId, setEditingCircuitLineId] = useState<number | null>(null);
+  const [circuitLineDraft, setCircuitLineDraft] = useState<CircuitLineForm>(blankCircuitLineForm());
   const [lifecycleTo, setLifecycleTo] = useState('active');
   const [displayName, setDisplayName] = useState('');
   const [capacityKw, setCapacityKw] = useState('');
@@ -531,6 +546,19 @@ export default function SiteDetail() {
       setSmartDevices([]);
     } finally {
       setSmartDevicesLoading(false);
+    }
+  }, [siteId]);
+
+  const refreshCircuitLines = useCallback(async () => {
+    if (!siteId) return;
+    setCircuitLinesLoading(true);
+    try {
+      const lines = await apiService.getCircuitLines(siteId);
+      setCircuitLines(Array.isArray(lines) ? lines : []);
+    } catch {
+      setCircuitLines([]);
+    } finally {
+      setCircuitLinesLoading(false);
     }
   }, [siteId]);
 
@@ -696,7 +724,8 @@ export default function SiteDetail() {
     loadDevices();
     loadSites();
     refreshSmartDevices();
-  }, [tab, refreshSmartDevices]);
+    refreshCircuitLines();
+  }, [tab, refreshSmartDevices, refreshCircuitLines]);
 
   // Load equipment when equipment tab is opened
   const refreshEquipment = useCallback(async () => {
@@ -944,6 +973,61 @@ export default function SiteDetail() {
       setError(e instanceof Error ? e.message : 'Failed to save smart device');
     } finally {
       setSmartDevicesSaving(false);
+    }
+  };
+
+  const resetCircuitLineForm = () => {
+    setEditingCircuitLineId(null);
+    setCircuitLineDraft(blankCircuitLineForm());
+  };
+
+  const beginEditCircuitLine = (line: any) => {
+    setEditingCircuitLineId(line.id);
+    setCircuitLineDraft({
+      circuit: line.circuit ?? 'grid_direct',
+      label: line.label ?? '',
+      device: line.device ?? null,
+    });
+  };
+
+  const saveCircuitLine = async () => {
+    if (!siteId) return;
+    const payload = {
+      circuit: circuitLineDraft.circuit,
+      label: circuitLineDraft.label.trim(),
+      device: circuitLineDraft.device,
+    };
+
+    setCircuitLinesSaving(true);
+    setError(null);
+    try {
+      if (editingCircuitLineId != null) {
+        await apiService.updateCircuitLine(siteId, editingCircuitLineId, payload);
+      } else {
+        await apiService.createCircuitLine(siteId, payload);
+      }
+      resetCircuitLineForm();
+      await refreshCircuitLines();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save circuit line');
+    } finally {
+      setCircuitLinesSaving(false);
+    }
+  };
+
+  const removeCircuitLine = async (line: any) => {
+    if (!siteId) return;
+    if (!window.confirm(`Delete circuit line ${line.label || line.circuit}?`)) return;
+    setCircuitLinesSaving(true);
+    setError(null);
+    try {
+      await apiService.deleteCircuitLine(siteId, line.id);
+      if (editingCircuitLineId === line.id) resetCircuitLineForm();
+      await refreshCircuitLines();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete circuit line');
+    } finally {
+      setCircuitLinesSaving(false);
     }
   };
 
@@ -1647,6 +1731,108 @@ export default function SiteDetail() {
                         <button type="button" disabled={smartDevicesSaving} onClick={saveSmartDevice} style={buttonStyle()}>
                           {smartDevicesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />}
                           {editingSmartDeviceId != null ? 'Update Smart Device' : 'Add Smart Device'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <Zap size={16} color={primary} />
+                      <div>
+                        <div style={{ fontWeight: 700, color: textMain }}>Circuit Lines</div>
+                        <div style={{ fontSize: '0.8rem', color: textSub }}>Known circuits, monitored or not. A line with no device attached tells the billing/recommendation logic its usage isn't counted.</div>
+                      </div>
+                    </div>
+                    {circuitLinesLoading ? (
+                      <div style={{ fontSize: '0.84rem', color: textMute }}>Loading circuit lines…</div>
+                    ) : circuitLines.length === 0 ? (
+                      <div style={{ fontSize: '0.84rem', color: textMute }}>No circuit lines declared for this site.</div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        {circuitLines.map((line: any) => (
+                          <div key={line.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                              <div>
+                                <div style={{ fontWeight: 700, color: textMain }}>{line.label || line.circuit}</div>
+                                <div style={{ fontSize: '0.78rem', color: textSub }}>
+                                  Circuit: <strong>{line.circuit === 'inverter_backup' ? 'inverter backup' : line.circuit === 'ev_line' ? 'EV line' : 'grid line'}</strong>
+                                  {' · '}
+                                  <span style={{ color: line.is_monitored ? primary : palette.warn.color }}>
+                                    {line.is_monitored ? 'Monitored' : 'Unmonitored'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <button type="button" disabled={circuitLinesSaving} onClick={() => beginEditCircuitLine(line)} style={buttonStyle(true)}>
+                                  <Pencil size={14} /> Edit
+                                </button>
+                                <button type="button" disabled={circuitLinesSaving} onClick={() => removeCircuitLine(line)} style={buttonStyle(false, true)}>
+                                  <Trash2 size={14} /> Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${border}`, display: 'grid', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>
+                          {editingCircuitLineId != null ? 'Edit Circuit Line' : 'Add Circuit Line'}
+                        </div>
+                        {(editingCircuitLineId != null || circuitLineDraft.label) && (
+                          <button type="button" disabled={circuitLinesSaving} onClick={resetCircuitLineForm} style={buttonStyle(true)}>
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                        <div>
+                          <label style={labelStyle}>Circuit</label>
+                          <select
+                            value={circuitLineDraft.circuit}
+                            onChange={e => setCircuitLineDraft({ ...circuitLineDraft, circuit: e.target.value })}
+                            disabled={circuitLinesSaving}
+                            style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
+                          >
+                            <option value="grid_direct">Grid Line</option>
+                            <option value="inverter_backup">Inverter Backup</option>
+                            <option value="ev_line">EV Line</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Label</label>
+                          <input
+                            value={circuitLineDraft.label}
+                            onChange={e => setCircuitLineDraft({ ...circuitLineDraft, label: e.target.value })}
+                            disabled={circuitLinesSaving}
+                            style={{ ...inputStyle, width: '100%', background: surface }}
+                            placeholder="e.g. Garage EV charger"
+                          />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Monitoring Device</label>
+                          <select
+                            value={circuitLineDraft.device != null ? String(circuitLineDraft.device) : ''}
+                            onChange={e => setCircuitLineDraft({ ...circuitLineDraft, device: e.target.value ? parseInt(e.target.value, 10) : null })}
+                            disabled={circuitLinesSaving}
+                            style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
+                          >
+                            <option value="">-- None (unmonitored) --</option>
+                            {smartDevices.filter((d: any) => d.circuit === circuitLineDraft.circuit).map((d: any) => (
+                              <option key={d.id} value={String(d.id)}>{d.display_name || d.provider_device_id || d.id}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button type="button" disabled={circuitLinesSaving} onClick={saveCircuitLine} style={buttonStyle()}>
+                          {circuitLinesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />}
+                          {editingCircuitLineId != null ? 'Update Circuit Line' : 'Add Circuit Line'}
                         </button>
                       </div>
                     </div>

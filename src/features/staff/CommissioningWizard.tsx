@@ -34,6 +34,15 @@ export default function CommissioningWizard() {
     display_name: '',
   });
 
+  type CircuitLineDraft = {
+    circuit: string;
+    label: string;
+  };
+  const blankCircuitLine = (): CircuitLineDraft => ({
+    circuit: 'grid_direct',
+    label: '',
+  });
+
   // ── State ──
   const [step, setStep] = useState(1);
   const [siteId, setSiteId] = useState('');
@@ -75,6 +84,7 @@ export default function CommissioningWizard() {
   const [devicesBusy, setDevicesBusy] = useState(false);
   const [smartDevicesBusy, setSmartDevicesBusy] = useState(false);
   const [smartDeviceDrafts, setSmartDeviceDrafts] = useState<SmartDeviceDraft[]>([]);
+  const [circuitLineDrafts, setCircuitLineDrafts] = useState<CircuitLineDraft[]>([]);
 
   // ── Appliance Inventory (Step 3) ──
   const [numAcUnits, setNumAcUnits] = useState(0);
@@ -335,11 +345,19 @@ export default function CommissioningWizard() {
       }))
       .filter((row) => row.provider_device_id);
 
+    const lineRows = circuitLineDrafts.map((row) => ({
+      circuit: row.circuit,
+      label: row.label.trim(),
+    }));
+
     setSmartDevicesBusy(true);
     setError(null);
     try {
       for (const row of rows) {
         await apiService.createSmartDevice(targetSiteId, row);
+      }
+      for (const row of lineRows) {
+        await apiService.createCircuitLine(targetSiteId, row);
       }
       setStep(5);
     } catch (e) {
@@ -842,6 +860,68 @@ export default function CommissioningWizard() {
                               onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, display_name: e.target.value } : item))}
                               style={inputStyle}
                               placeholder="e.g. EV Charger Plug"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '28px 0 16px', gap: 12 }}>
+                  <div>
+                    <div style={{ ...labelStyle, marginBottom: 4 }}>Circuit Lines</div>
+                    <div style={{ fontSize: '0.8rem', color: textSub }}>
+                      Declare known circuits even if unmonitored (no device attached) — this lets recommendations know when billing figures may be incomplete.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCircuitLineDrafts((rows) => [...rows, blankCircuitLine()])}
+                    style={buttonStyle(true)}
+                  >
+                    <Plus size={16} /> Add Line
+                  </button>
+                </div>
+
+                {circuitLineDrafts.length === 0 ? (
+                  <div style={{ padding: 18, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, fontSize: '0.82rem', color: textSub, marginBottom: 24 }}>
+                    No circuit lines declared yet. Add one here or skip and manage them later in site details.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 14, marginBottom: 24 }}>
+                    {circuitLineDrafts.map((row, index) => (
+                      <div key={index} style={{ padding: 16, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
+                        <div style={{ display: 'grid', gap: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>Circuit Line #{index + 1}</div>
+                            <button
+                              type="button"
+                              onClick={() => setCircuitLineDrafts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
+                              style={{ ...buttonStyle(true), padding: '8px 10px' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Circuit</label>
+                            <select
+                              value={row.circuit}
+                              onChange={(e) => setCircuitLineDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, circuit: e.target.value } : item))}
+                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
+                            >
+                              <option value="grid_direct">Grid line (outside inverter backup bus)</option>
+                              <option value="inverter_backup">Inverter backup bus</option>
+                              <option value="ev_line">Isolated EV charger circuit</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Label</label>
+                            <input
+                              value={row.label}
+                              onChange={(e) => setCircuitLineDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, label: e.target.value } : item))}
+                              style={inputStyle}
+                              placeholder="e.g. Garage EV charger"
                             />
                           </div>
                         </div>

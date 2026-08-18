@@ -1037,6 +1037,36 @@ class ApiService {
     });
   }
 
+  async getCircuitLines(siteId: string): Promise<any[]> {
+    try {
+      const data = await this.request(`/sites/${siteId}/circuit-lines/`);
+      return data ?? [];
+    } catch (error) {
+      console.warn('getCircuitLines error:', error);
+      return [];
+    }
+  }
+
+  async createCircuitLine(siteId: string, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/sites/${siteId}/circuit-lines/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCircuitLine(siteId: string, lineId: number, data: Record<string, unknown>): Promise<any> {
+    return this.request(`/sites/${siteId}/circuit-lines/${lineId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCircuitLine(siteId: string, lineId: number): Promise<any> {
+    return this.request(`/sites/${siteId}/circuit-lines/${lineId}/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getLatestEnergyMeter(siteId: string): Promise<CtMeterReading | null> {
     try {
       return await cacheService.dedup(`energy_meter_latest_${siteId}`, () => this.request(`/sites/${siteId}/energy-meter/latest/`), 15 * 1000);
