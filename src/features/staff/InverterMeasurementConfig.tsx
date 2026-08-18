@@ -68,6 +68,12 @@ export default function InverterMeasurementConfig({
   const [circuitLinesSaving, setCircuitLinesSaving] = useState(false);
   const [editingCircuitLineId, setEditingCircuitLineId] = useState<number | null>(null);
   const [circuitLineDraft, setCircuitLineDraft] = useState<CircuitLineForm>(blankCircuitLineForm());
+  // Fix round 1: mirror-pairing fields (mirrored_by_serials / mirrors_device_id /
+  // mirrors_device_serial) are NOT present on getDevices() list items — confirmed against
+  // src/services/api.ts. SiteDetail.tsx originally sourced these from getSiteStaffDetail(siteId)
+  // (site.gateway_device / site.energy_meters), so this component fetches that enriched,
+  // siteId-scoped object too, purely to read those three fields.
+  const [siteDetail, setSiteDetail] = useState<any>(null);
 
   // ── Style tokens (moved from SiteDetail.tsx:511-528) ──
   const surface     = 'var(--card)';
@@ -143,6 +149,16 @@ export default function InverterMeasurementConfig({
     }
   }, [siteId]);
 
+  const refreshSiteDetail = useCallback(async () => {
+    if (!siteId) return;
+    try {
+      const data = await apiService.getSiteStaffDetail(siteId);
+      setSiteDetail(data);
+    } catch {
+      setSiteDetail(null);
+    }
+  }, [siteId]);
+
   useEffect(() => {
     if (!siteId) return;
     const loadDevices = async () => {
@@ -173,7 +189,8 @@ export default function InverterMeasurementConfig({
     loadSites();
     refreshSmartDevices();
     refreshCircuitLines();
-  }, [siteId, refreshSmartDevices, refreshCircuitLines]);
+    refreshSiteDetail();
+  }, [siteId, refreshSmartDevices, refreshCircuitLines, refreshSiteDetail]);
 
   // ── Attach/detach/move (moved from SiteDetail.tsx:753-829, unchanged bodies except
   //    handleAttach fires onGatewayAttached for the gateway case) ──
@@ -189,6 +206,7 @@ export default function InverterMeasurementConfig({
       } else setEnergyMeterPk('');
       const devices = await apiService.getDevices('', 1, 100);
       setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Attach failed'); }
     finally { setBusy(false); }
   };
@@ -200,6 +218,7 @@ export default function InverterMeasurementConfig({
       await apiService.siteDetachDevice(siteId, deviceId);
       const devices = await apiService.getDevices('', 1, 100);
       setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Detach failed'); }
     finally { setBusy(false); }
   };
@@ -214,18 +233,21 @@ export default function InverterMeasurementConfig({
       setMoveTarget(''); setMoveSearch(''); setMoveDropdownOpen(false);
       const devices = await apiService.getDevices('', 1, 100);
       setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Move failed'); }
     finally { setBusy(false); }
   };
 
   // Manual data-source pairing override (mirrors SiteDetail.tsx's handleSetMirror, adapted to
-  // refresh from availableDevices instead of a `site` object this component doesn't fetch).
+  // refresh from availableDevices/siteDetail instead of a single `site` state this component
+  // doesn't otherwise hold).
   const handleSetMirror = async (deviceId: number, mirrorsDevicePk: number | null) => {
     setBusy(true); setError(null);
     try {
       await apiService.siteSetDeviceMirror(siteId, deviceId, mirrorsDevicePk);
       const devices = await apiService.getDevices('', 1, 100);
       setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed to update data-source pairing'); }
     finally { setBusy(false); }
   };
@@ -341,10 +363,22 @@ export default function InverterMeasurementConfig({
   const attachedGatewayDevices = availableDevices.filter((d: any) => d.site_id === siteId && (d.device_type || 'gateway') === 'gateway');
   const attachedEnergyMeterDevices = availableDevices.filter((d: any) => d.site_id === siteId && d.device_type === 'energy_meter');
   // Site-level UI (SiteDetail.tsx) keys these off `site.gateway_device`/`site.energy_meters`; this
-  // component has no `site` fetch (not in its API surface), so it derives the same single
-  // attached-gateway / attached-energy-meters view straight from `availableDevices` instead.
-  const gw = attachedGatewayDevices[0];
-  const energyMeters = attachedEnergyMeterDevices;
+  // component derives the base attached-gateway / attached-energy-meters view from
+  // `availableDevices` (getDevices()) instead, since that's what it already loads for the
+  // attach/detach dropdowns. getDevices() items do NOT carry mirror_by_serials /
+  // mirrors_device_id / mirrors_device_serial though (confirmed against src/services/api.ts) —
+  // those three fields only exist on the enriched getSiteStaffDetail(siteId) response, so they're
+  // merged in from `siteDetail` below. If that fetch hasn't completed or failed, `mirrorInfoReady`
+  // is false and the mirror-pairing badge/button render nothing rather than a false "unpaired".
+  const mirrorInfoReady = !!siteDetail;
+  const gwBase = attachedGatewayDevices[0];
+  const gw = gwBase ? { ...gwBase, mirrored_by_serials: siteDetail?.gateway_device?.mirrored_by_serials } : gwBase;
+  const energyMeters = attachedEnergyMeterDevices.map((m: any) => {
+    const match = Array.isArray(siteDetail?.energy_meters)
+      ? siteDetail.energy_meters.find((sm: any) => sm.device_id === m.id)
+      : null;
+    return { ...m, mirrors_device_id: match?.mirrors_device_id, mirrors_device_serial: match?.mirrors_device_serial };
+  });
   const heartbeatHealth = gw?.heartbeat_health;
 
   return (
@@ -489,7 +523,7 @@ export default function InverterMeasurementConfig({
                       <LinkIcon size={12} />
                       Normally relayed via <strong style={{ fontFamily: 'monospace' }}>{meter.mirrors_device_serial}</strong> — falls back to direct cloud publish if the gateway goes offline
                     </div>
-                  ) : gw ? (
+                  ) : gw && mirrorInfoReady ? (
                     <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.74rem', color: textMute }}>Not paired to the gateway's relay path.</span>
                       <button
