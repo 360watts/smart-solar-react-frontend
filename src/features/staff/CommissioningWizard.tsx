@@ -234,7 +234,7 @@ export default function CommissioningWizard() {
         has_desert_cooler: hasDesertCooler,
         appliance_notes: applianceNotes,
       });
-      setStep(3);
+      setStep(4);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save appliance data');
     } finally {
@@ -477,8 +477,6 @@ export default function CommissioningWizard() {
                 <InverterMeasurementConfig
                   siteId={sid}
                   ownerUserId={ownerUserId}
-                  onGatewayAttached={() => setStep(3)}
-                  variant="wizard"
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
                   <button type="button" onClick={() => setStep(3)} style={buttonStyle(true)}>

@@ -6,8 +6,8 @@ import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileSiteDetail from '../mobile/staff/MobileSiteDetail';
 import {
   ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
-  Settings, Save, AlertTriangle, Link as LinkIcon,
-  Unlink, ArrowRightLeft, RefreshCw, Zap, X,
+  Settings, Save, AlertTriangle,
+  RefreshCw, Zap, X,
   Plus, Pencil, Trash2, Sun,
 } from 'lucide-react';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -1118,7 +1118,7 @@ export default function SiteDetail() {
             {/* GATEWAY TAB */}
             {tab === 'gateway' && (
               <motion.div key="gateway" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
-                <InverterMeasurementConfig siteId={siteId} ownerUserId={site?.owner_user != null ? String(site.owner_user) : undefined} variant="tab" />
+                <InverterMeasurementConfig siteId={siteId} ownerUserId={site?.owner_user != null ? String(site.owner_user) : undefined} />
 
                   {/* Deye Cloud settings */}
                   <div style={{ marginTop: 20, padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>

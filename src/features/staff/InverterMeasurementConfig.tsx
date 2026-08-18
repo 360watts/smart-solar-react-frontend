@@ -35,14 +35,12 @@ export interface InverterMeasurementConfigProps {
   siteId: string;
   ownerUserId?: string;
   onGatewayAttached?: (devicePk: number) => void;
-  variant?: 'wizard' | 'tab';
 }
 
 export default function InverterMeasurementConfig({
   siteId,
   ownerUserId,
   onGatewayAttached,
-  variant = 'tab',
 }: InverterMeasurementConfigProps) {
   const { isDark } = useTheme();
   const [busy, setBusy] = useState(false);
@@ -159,20 +157,30 @@ export default function InverterMeasurementConfig({
     }
   }, [siteId]);
 
-  useEffect(() => {
-    if (!siteId) return;
-    const loadDevices = async () => {
-      setDevicesLoading(true);
-      try {
+  // Unattached-device pool for the attach dropdowns. When an owner is known (ownerUserId,
+  // passed by both call sites from the site's owner_user), scope to that owner's devices —
+  // restores the original pre-refactor CommissioningWizard step 2 behavior of only offering
+  // devices belonging to the site's owner, rather than the first 100 devices fleet-wide.
+  const loadAvailableDevices = useCallback(async () => {
+    setDevicesLoading(true);
+    try {
+      if (ownerUserId) {
+        const devices = await apiService.getUserDevices(parseInt(ownerUserId, 10));
+        setAvailableDevices(Array.isArray(devices) ? devices : []);
+      } else {
         const devices = await apiService.getDevices('', 1, 100);
         if (Array.isArray(devices)) setAvailableDevices(devices);
-        else if (devices.results) setAvailableDevices(devices.results);
-      } catch {
-        setAvailableDevices([]);
-      } finally {
-        setDevicesLoading(false);
+        else setAvailableDevices(devices.results ?? []);
       }
-    };
+    } catch {
+      setAvailableDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
+  }, [ownerUserId]);
+
+  useEffect(() => {
+    if (!siteId) return;
     const loadSites = async () => {
       setSitesLoading(true);
       try {
@@ -185,12 +193,12 @@ export default function InverterMeasurementConfig({
         setSitesLoading(false);
       }
     };
-    loadDevices();
+    loadAvailableDevices();
     loadSites();
     refreshSmartDevices();
     refreshCircuitLines();
     refreshSiteDetail();
-  }, [siteId, refreshSmartDevices, refreshCircuitLines, refreshSiteDetail]);
+  }, [siteId, loadAvailableDevices, refreshSmartDevices, refreshCircuitLines, refreshSiteDetail]);
 
   // ── Attach/detach/move (moved from SiteDetail.tsx:753-829, unchanged bodies except
   //    handleAttach fires onGatewayAttached for the gateway case) ──
@@ -204,8 +212,7 @@ export default function InverterMeasurementConfig({
         setGatewayDevicePk('');
         onGatewayAttached?.(pk);
       } else setEnergyMeterPk('');
-      const devices = await apiService.getDevices('', 1, 100);
-      setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      await loadAvailableDevices();
       refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Attach failed'); }
     finally { setBusy(false); }
@@ -216,8 +223,7 @@ export default function InverterMeasurementConfig({
     setBusy(true); setError(null);
     try {
       await apiService.siteDetachDevice(siteId, deviceId);
-      const devices = await apiService.getDevices('', 1, 100);
-      setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      await loadAvailableDevices();
       refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Detach failed'); }
     finally { setBusy(false); }
@@ -231,8 +237,7 @@ export default function InverterMeasurementConfig({
     try {
       await apiService.siteMoveDevice(target, deviceId, siteId);
       setMoveTarget(''); setMoveSearch(''); setMoveDropdownOpen(false);
-      const devices = await apiService.getDevices('', 1, 100);
-      setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      await loadAvailableDevices();
       refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Move failed'); }
     finally { setBusy(false); }
@@ -245,8 +250,7 @@ export default function InverterMeasurementConfig({
     setBusy(true); setError(null);
     try {
       await apiService.siteSetDeviceMirror(siteId, deviceId, mirrorsDevicePk);
-      const devices = await apiService.getDevices('', 1, 100);
-      setAvailableDevices(Array.isArray(devices) ? devices : devices.results ?? []);
+      await loadAvailableDevices();
       refreshSiteDetail();
     } catch (e) { setError(e instanceof Error ? e.message : 'Failed to update data-source pairing'); }
     finally { setBusy(false); }
@@ -356,29 +360,21 @@ export default function InverterMeasurementConfig({
   };
 
   // ── Derived ──
-  const hasGateway = availableDevices.some((d: any) => d.site_id === siteId && (d.device_type || 'gateway') === 'gateway');
-  const hasEnergyMeter = availableDevices.some((d: any) => d.site_id === siteId && d.device_type === 'energy_meter');
+  // "What's attached to THIS site" must come from siteDetail (getSiteStaffDetail(siteId) —
+  // site-scoped, always correct), not from availableDevices (getDevices() — a global,
+  // paginated, 100-item-capped list ordered by -provisioned_at that silently drops sites once
+  // the fleet grows or a site's gateway falls off page 1). availableDevices remains the correct
+  // source only for the "what's attachable" dropdowns below. siteDetail.gateway_device /
+  // siteDetail.energy_meters items use `device_id` as their PK field (not `id`, unlike
+  // availableDevices items) — confirmed against the pre-refactor SiteDetail.tsx that originally
+  // read `site.gateway_device` / `site.energy_meters` directly.
+  const mirrorInfoReady = !!siteDetail;
+  const hasGateway = !!siteDetail?.gateway_device;
+  const hasEnergyMeter = Array.isArray(siteDetail?.energy_meters) && siteDetail.energy_meters.length > 0;
   const availableGatewayDevices = availableDevices.filter((d: any) => !d.site_id && (d.device_type || 'gateway') === 'gateway');
   const availableEnergyMeterDevices = availableDevices.filter((d: any) => !d.site_id && d.device_type === 'energy_meter');
-  const attachedGatewayDevices = availableDevices.filter((d: any) => d.site_id === siteId && (d.device_type || 'gateway') === 'gateway');
-  const attachedEnergyMeterDevices = availableDevices.filter((d: any) => d.site_id === siteId && d.device_type === 'energy_meter');
-  // Site-level UI (SiteDetail.tsx) keys these off `site.gateway_device`/`site.energy_meters`; this
-  // component derives the base attached-gateway / attached-energy-meters view from
-  // `availableDevices` (getDevices()) instead, since that's what it already loads for the
-  // attach/detach dropdowns. getDevices() items do NOT carry mirror_by_serials /
-  // mirrors_device_id / mirrors_device_serial though (confirmed against src/services/api.ts) —
-  // those three fields only exist on the enriched getSiteStaffDetail(siteId) response, so they're
-  // merged in from `siteDetail` below. If that fetch hasn't completed or failed, `mirrorInfoReady`
-  // is false and the mirror-pairing badge/button render nothing rather than a false "unpaired".
-  const mirrorInfoReady = !!siteDetail;
-  const gwBase = attachedGatewayDevices[0];
-  const gw = gwBase ? { ...gwBase, mirrored_by_serials: siteDetail?.gateway_device?.mirrored_by_serials } : gwBase;
-  const energyMeters = attachedEnergyMeterDevices.map((m: any) => {
-    const match = Array.isArray(siteDetail?.energy_meters)
-      ? siteDetail.energy_meters.find((sm: any) => sm.device_id === m.id)
-      : null;
-    return { ...m, mirrors_device_id: match?.mirrors_device_id, mirrors_device_serial: match?.mirrors_device_serial };
-  });
+  const gw = siteDetail?.gateway_device ?? null;
+  const energyMeters = Array.isArray(siteDetail?.energy_meters) ? siteDetail.energy_meters : [];
   const heartbeatHealth = gw?.heartbeat_health;
 
   return (
@@ -389,18 +385,18 @@ export default function InverterMeasurementConfig({
         </div>
       )}
 
-      {/* Gateway section — attach/detach/move/mirror, ported verbatim from SiteDetail.tsx:1410-1516
-          (field names adapted: gw.device_id → gw.id, meter.device_id → meter.id, since this
-          component's `gw`/`energyMeters` come from availableDevices, not a `site` fetch) */}
+      {/* Gateway section — attach/detach/move/mirror, ported verbatim from SiteDetail.tsx:1410-1516.
+          `gw`/`energyMeters` come straight from siteDetail (getSiteStaffDetail(siteId)), so PKs
+          use `device_id`, matching the original SiteDetail.tsx source. */}
       {gw ? (
         <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.ok.border}`, background: palette.ok.bg }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: palette.ok.color, fontWeight: 700, marginBottom: 4, letterSpacing: '0.05em' }}>Attached Gateway</div>
               <div style={{ fontSize: '1.2rem', fontWeight: 600, color: textMain }}>{gw.device_serial}</div>
-              <div style={{ fontSize: '0.8rem', color: textSub, fontFamily: 'monospace' }}>PK: {gw.id} · Type: gateway</div>
+              <div style={{ fontSize: '0.8rem', color: textSub, fontFamily: 'monospace' }}>PK: {gw.device_id} · Type: gateway</div>
             </div>
-            <button type="button" disabled={busy} onClick={() => handleDetach(gw.id, gw.device_serial, 'gateway')} style={buttonStyle(false, true)}>
+            <button type="button" disabled={busy} onClick={() => handleDetach(gw.device_id, gw.device_serial, 'gateway')} style={buttonStyle(false, true)}>
               <Unlink size={14} /> Detach
             </button>
           </div>
@@ -473,7 +469,7 @@ export default function InverterMeasurementConfig({
                 </div>
               )}
             </div>
-            <button type="button" disabled={busy || !moveTarget.trim()} onClick={() => handleMove(gw.id, 'gateway')} style={buttonStyle(true)}>
+            <button type="button" disabled={busy || !moveTarget.trim()} onClick={() => handleMove(gw.device_id, 'gateway')} style={buttonStyle(true)}>
               <ArrowRightLeft size={14} /> Move Device
             </button>
           </div>
@@ -513,10 +509,10 @@ export default function InverterMeasurementConfig({
         {energyMeters.length > 0 ? (
           <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
             {energyMeters.map((meter: any) => (
-              <div key={meter.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div key={meter.device_id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontWeight: 700, color: textMain }}>{meter.device_serial}</div>
-                  <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>PK: {meter.id} · Type: energy_meter</div>
+                  <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>PK: {meter.device_id} · Type: energy_meter</div>
                   <div style={{ fontSize: '0.78rem', color: textSub }}>Last seen: {meter.last_seen_at ? new Date(meter.last_seen_at).toLocaleString() : 'Never'}</div>
                   {meter.mirrors_device_id && meter.mirrors_device_id === gw?.id ? (
                     <div style={{ fontSize: '0.76rem', color: palette.ok.color, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -529,7 +525,7 @@ export default function InverterMeasurementConfig({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => handleSetMirror(meter.id, gw.id)}
+                        onClick={() => handleSetMirror(meter.device_id, gw.device_id)}
                         style={{ ...buttonStyle(true), padding: '2px 8px', fontSize: '0.74rem' }}
                       >
                         <LinkIcon size={11} /> Pair to {gw.device_serial}
@@ -540,11 +536,11 @@ export default function InverterMeasurementConfig({
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" disabled={busy} onClick={() => {
                     const target = window.prompt(`Move energy meter ${meter.device_serial} to which site ID?`, '');
-                    if (target) handleMove(meter.id, `energy meter ${meter.device_serial}`, target);
+                    if (target) handleMove(meter.device_id, `energy meter ${meter.device_serial}`, target);
                   }} style={buttonStyle(true)}>
                     <ArrowRightLeft size={14} /> Move
                   </button>
-                  <button type="button" disabled={busy} onClick={() => handleDetach(meter.id, meter.device_serial, 'energy meter')} style={buttonStyle(false, true)}>
+                  <button type="button" disabled={busy} onClick={() => handleDetach(meter.device_id, meter.device_serial, 'energy meter')} style={buttonStyle(false, true)}>
                     <Unlink size={14} /> Detach
                   </button>
                 </div>
