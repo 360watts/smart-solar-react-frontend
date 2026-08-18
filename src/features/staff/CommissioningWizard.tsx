@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
-  CheckCircle2, ChevronRight, Server, Wifi, Check, 
+  CheckCircle2, ChevronRight, Server, Wifi, Check,
   ArrowRight, AlertTriangle, Loader2, Compass, LayoutDashboard,
-  Plus, Trash2, Zap
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import PageHeader from '../../shared/layout/PageHeader';
+import InverterMeasurementConfig from './InverterMeasurementConfig';
 
 // ── Components & Animations ──────────────────────────────────────────────────
 
@@ -21,27 +21,6 @@ const slideVariants = {
 
 export default function CommissioningWizard() {
   const { isDark } = useTheme();
-  type SmartDeviceDraft = {
-    device_type: string;
-    provider_device_id: string;
-    appliance_label: string;
-    display_name: string;
-  };
-  const blankSmartDevice = (): SmartDeviceDraft => ({
-    device_type: 'tuya_plug',
-    provider_device_id: '',
-    appliance_label: 'ev_charger',
-    display_name: '',
-  });
-
-  type CircuitLineDraft = {
-    circuit: string;
-    label: string;
-  };
-  const blankCircuitLine = (): CircuitLineDraft => ({
-    circuit: 'grid_direct',
-    label: '',
-  });
 
   // ── State ──
   const [step, setStep] = useState(1);
@@ -65,26 +44,12 @@ export default function CommissioningWizard() {
   const [timezoneValue, setTimezoneValue] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
   const [dataLoggerSerial, setDataLoggerSerial] = useState('');
-  const [devicePk, setDevicePk] = useState('');
-  const [availableDevices, setAvailableDevices] = useState<Array<{
-    id: number;
-    device_serial: string;
-    hw_id?: string;
-    model?: string;
-    is_online: boolean;
-    last_heartbeat?: string;
-    site_id?: number | null;
-  }>>([]);
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdSiteId, setCreatedSiteId] = useState<string | null>(null);
   const [usersBusy, setUsersBusy] = useState(false);
   const [idBusy, setIdBusy] = useState(false);
-  const [devicesBusy, setDevicesBusy] = useState(false);
-  const [smartDevicesBusy, setSmartDevicesBusy] = useState(false);
-  const [smartDeviceDrafts, setSmartDeviceDrafts] = useState<SmartDeviceDraft[]>([]);
-  const [circuitLineDrafts, setCircuitLineDrafts] = useState<CircuitLineDraft[]>([]);
 
   // ── Appliance Inventory (Step 3) ──
   const [numAcUnits, setNumAcUnits] = useState(0);
@@ -174,38 +139,6 @@ export default function CommissioningWizard() {
     return () => { mounted = false; };
   }, []);
 
-  // Fetch devices when owner is selected
-  useEffect(() => {
-    let mounted = true;
-    const fetchDevices = async () => {
-      if (!ownerUserId) {
-        setAvailableDevices([]);
-        return;
-      }
-      setDevicesBusy(true);
-      try {
-        const devices = await apiService.getUserDevices(parseInt(ownerUserId, 10));
-        if (!mounted) return;
-        // Filter to show only unattached devices (site_id is null)
-        const unattached = Array.isArray(devices)
-          ? devices.filter((d: any) => !d.site_id && (d.device_type || 'gateway') === 'gateway')
-          : [];
-        setAvailableDevices(unattached);
-        // Clear device selection if owner changes
-        setDevicePk('');
-      } catch (err) {
-        if (mounted) {
-          setAvailableDevices([]);
-          // Don't show error for devices fetch, just silently fail
-        }
-      } finally {
-        if (mounted) setDevicesBusy(false);
-      }
-    };
-    fetchDevices();
-    return () => { mounted = false; };
-  }, [ownerUserId]);
-
   const filteredOwnerUsers = useMemo(() => {
     const q = ownerSearch.trim().toLowerCase();
     if (!q) return ownerUsers.slice(0, 20);
@@ -273,26 +206,6 @@ export default function CommissioningWizard() {
     }
   };
 
-  const step2 = async () => {
-    const sid = createdSiteId || siteId.trim();
-    const pk = parseInt(devicePk, 10);
-    
-    if (!sid || !pk || Number.isNaN(pk)) {
-      setError('A valid numeric Device ID is required');
-      return;
-    }
-    
-    setBusy(true); setError(null);
-    try {
-      await apiService.siteAttachDevice(sid, pk);
-      setStep(3);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to attach gateway');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const step3 = async () => {
     // Save appliance data to SiteProfile
     const targetSiteId = createdSiteId || siteId.trim();
@@ -321,49 +234,11 @@ export default function CommissioningWizard() {
         has_desert_cooler: hasDesertCooler,
         appliance_notes: applianceNotes,
       });
-      setStep(4);
+      setStep(3);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save appliance data');
     } finally {
       setBusy(false);
-    }
-  };
-
-  const step4 = async () => {
-    const targetSiteId = createdSiteId || siteId.trim();
-    if (!targetSiteId) {
-      setError('Site ID required');
-      return;
-    }
-
-    const rows = smartDeviceDrafts
-      .map((row) => ({
-        device_type: row.device_type.trim(),
-        provider_device_id: row.provider_device_id.trim(),
-        appliance_label: row.appliance_label.trim(),
-        display_name: row.display_name.trim(),
-      }))
-      .filter((row) => row.provider_device_id);
-
-    const lineRows = circuitLineDrafts.map((row) => ({
-      circuit: row.circuit,
-      label: row.label.trim(),
-    }));
-
-    setSmartDevicesBusy(true);
-    setError(null);
-    try {
-      for (const row of rows) {
-        await apiService.createSmartDevice(targetSiteId, row);
-      }
-      for (const row of lineRows) {
-        await apiService.createCircuitLine(targetSiteId, row);
-      }
-      setStep(5);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save smart devices');
-    } finally {
-      setSmartDevicesBusy(false);
     }
   };
 
@@ -373,10 +248,9 @@ export default function CommissioningWizard() {
   const renderStepper = () => {
     const steps = [
       { num: 1, label: 'Create Site', icon: <Server size={14} /> },
-      { num: 2, label: 'Assign Gateway', icon: <Wifi size={14} /> },
+      { num: 2, label: 'Connectivity & Metering', icon: <Wifi size={14} /> },
       { num: 3, label: 'Appliances', icon: <LayoutDashboard size={14} /> },
-      { num: 4, label: 'Smart Devices', icon: <Zap size={14} /> },
-      { num: 5, label: 'Complete', icon: <CheckCircle2 size={14} /> }
+      { num: 4, label: 'Complete', icon: <CheckCircle2 size={14} /> }
     ];
 
     return (
@@ -436,13 +310,12 @@ export default function CommissioningWizard() {
         {/* Header Text */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: textMain, margin: '0 0 8px' }}>
-            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Establish Connectivity' : step === 3 ? 'Appliance Inventory' : step === 4 ? 'Map Smart Devices' : 'Commissioning Complete'}
+            {step === 1 ? 'Configure Site Details' : step === 2 ? 'Connectivity & Metering' : step === 3 ? 'Appliance Inventory' : 'Commissioning Complete'}
           </h2>
           <p style={{ fontSize: '0.9rem', color: textSub, margin: 0 }}>
             {step === 1 ? 'Establish the core record for this installation before assigning equipment.' :
-             step === 2 ? 'Link a physical gateway device to enable telemetry and monitoring.' :
+             step === 2 ? 'Link a gateway and configure smart devices to enable telemetry, monitoring, and load-side metering.' :
              step === 3 ? 'Document the major appliances at this site to improve load forecasting accuracy.' :
-             step === 4 ? 'Register smart devices and preserve the appliance each device powers, such as EV charging.' :
              'The site, gateway, appliances, and smart-device mappings are complete.'}
           </p>
         </div>
@@ -598,56 +471,18 @@ export default function CommissioningWizard() {
               </motion.div>
             )}
 
-            {/* ── STEP 2 ── */}
+            {/* ── STEP 2: CONNECTIVITY & METERING ── */}
             {step === 2 && (
-              <motion.div key="step2" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
-                
-                <div style={{ padding: '16px 20px', borderRadius: 10, background: inputBg, border: `1px solid ${inputBorder}`, marginBottom: 24 }}>
-                  <div style={{ fontSize: '0.75rem', color: textMute, marginBottom: 4 }}>Target Site</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 600, color: textMain, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Server size={14} color={primary} /> {sid}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={labelStyle}><Wifi size={12} /> Select Gateway Device</label>
-                  <p style={{ fontSize: '0.75rem', color: textSub, margin: '6px 0 12px' }}>
-                    Select an available device to attach to this site. Device must be owned by the same user assigned to the site. A site can only have one gateway device.
-                  </p>
-                  <select
-                    value={devicePk}
-                    onChange={(e) => setDevicePk(e.target.value)}
-                    style={{
-                      ...inputStyle,
-                      cursor: 'pointer',
-                      background: nativeSelectBg,
-                      color: nativeSelectFg,
-                    }}
-                    disabled={devicesBusy}
-                  >
-                    <option value="">
-                      {devicesBusy ? 'Loading devices...' : ownerUserId ? 'Select a device' : 'Select owner first'}
-                    </option>
-                    {availableDevices.map((device) => (
-                      <option key={device.id} value={device.id}>
-                        {device.device_serial} (ID: {device.id}){device.is_online ? ' — Online' : ' — Offline'}
-                      </option>
-                    ))}
-                  </select>
-                  {availableDevices.length === 0 && ownerUserId && !devicesBusy && (
-                    <div style={{ fontSize: '0.75rem', color: '#ff6b6b', marginTop: 8 }}>
-                      No unattached devices available for this owner.
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 32 }}>
-                  <button type="button" disabled={busy} onClick={step2} style={buttonStyle()}>
-                    {busy ? <Loader2 size={16} className="animate-spin" /> : 'Attach Gateway'}
-                    {!busy && <ArrowRight size={16} />}
-                  </button>
-                  <button type="button" disabled={busy} onClick={() => setStep(3)} style={buttonStyle(true)}>
-                    Continue to Appliances
+              <motion.div key="step2-connectivity" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
+                <InverterMeasurementConfig
+                  siteId={sid}
+                  ownerUserId={ownerUserId}
+                  onGatewayAttached={() => setStep(3)}
+                  variant="wizard"
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
+                  <button type="button" onClick={() => setStep(3)} style={buttonStyle(true)}>
+                    Continue
                   </button>
                 </div>
               </motion.div>
@@ -778,173 +613,9 @@ export default function CommissioningWizard() {
               </motion.div>
             )}
 
-            {/* ── STEP 4: SMART DEVICES ── */}
+            {/* ── STEP 4: COMPLETION ── */}
             {step === 4 && (
-              <motion.div key="step4-smart-devices" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12 }}>
-                  <div>
-                    <div style={{ ...labelStyle, marginBottom: 4 }}>Smart Device Mapping</div>
-                    <div style={{ fontSize: '0.8rem', color: textSub }}>
-                      Keep each smart device linked to the appliance it powers. EV chargers should remain mapped as <strong style={{ color: textMain }}>ev_charger</strong>.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSmartDeviceDrafts((rows) => [...rows, blankSmartDevice()])}
-                    style={buttonStyle(true)}
-                  >
-                    <Plus size={16} /> Add Device
-                  </button>
-                </div>
-
-                {smartDeviceDrafts.length === 0 ? (
-                  <div style={{ padding: 18, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, fontSize: '0.82rem', color: textSub, marginBottom: 24 }}>
-                    No smart devices added in commissioning yet. Add one here or skip and manage them later in site details.
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 14 }}>
-                    {smartDeviceDrafts.map((row, index) => (
-                      <div key={index} style={{ padding: 16, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-                        <div style={{ display: 'grid', gap: 14 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>Smart Device #{index + 1}</div>
-                            <button
-                              type="button"
-                              onClick={() => setSmartDeviceDrafts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
-                              style={{ ...buttonStyle(true, true), padding: '8px 10px' }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Provider Type</label>
-                            <select
-                              value={row.device_type}
-                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, device_type: e.target.value } : item))}
-                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
-                            >
-                              <option value="tuya_plug">Tuya Plug</option>
-                              <option value="tuya_switch">Tuya Switch</option>
-                              <option value="ct_clamp">CT Clamp</option>
-                              <option value="modbus_meter">Modbus Meter</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Provider Device ID</label>
-                            <input
-                              value={row.provider_device_id}
-                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, provider_device_id: e.target.value } : item))}
-                              style={inputStyle}
-                              placeholder="e.g. bf12ab34cd56"
-                            />
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Appliance Mapping</label>
-                            <select
-                              value={row.appliance_label}
-                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, appliance_label: e.target.value } : item))}
-                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
-                            >
-                              <option value="ev_charger">EV Charger</option>
-                              <option value="geyser">Geyser</option>
-                              <option value="ac_unit">AC Unit</option>
-                              <option value="water_pump">Water Pump</option>
-                              <option value="washing_machine">Washing Machine</option>
-                              <option value="other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Display Name</label>
-                            <input
-                              value={row.display_name}
-                              onChange={(e) => setSmartDeviceDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, display_name: e.target.value } : item))}
-                              style={inputStyle}
-                              placeholder="e.g. EV Charger Plug"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '28px 0 16px', gap: 12 }}>
-                  <div>
-                    <div style={{ ...labelStyle, marginBottom: 4 }}>Circuit Lines</div>
-                    <div style={{ fontSize: '0.8rem', color: textSub }}>
-                      Declare known circuits even if unmonitored (no device attached) — this lets recommendations know when billing figures may be incomplete.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCircuitLineDrafts((rows) => [...rows, blankCircuitLine()])}
-                    style={buttonStyle(true)}
-                  >
-                    <Plus size={16} /> Add Line
-                  </button>
-                </div>
-
-                {circuitLineDrafts.length === 0 ? (
-                  <div style={{ padding: 18, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, fontSize: '0.82rem', color: textSub, marginBottom: 24 }}>
-                    No circuit lines declared yet. Add one here or skip and manage them later in site details.
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 14, marginBottom: 24 }}>
-                    {circuitLineDrafts.map((row, index) => (
-                      <div key={index} style={{ padding: 16, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-                        <div style={{ display: 'grid', gap: 14 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>Circuit Line #{index + 1}</div>
-                            <button
-                              type="button"
-                              onClick={() => setCircuitLineDrafts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
-                              style={{ ...buttonStyle(true), padding: '8px 10px' }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Circuit</label>
-                            <select
-                              value={row.circuit}
-                              onChange={(e) => setCircuitLineDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, circuit: e.target.value } : item))}
-                              style={{ ...inputStyle, background: nativeSelectBg, color: nativeSelectFg }}
-                            >
-                              <option value="grid_direct">Grid line (outside inverter backup bus)</option>
-                              <option value="inverter_backup">Inverter backup bus</option>
-                              <option value="ev_line">Isolated EV charger circuit</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label style={labelStyle}>Label</label>
-                            <input
-                              value={row.label}
-                              onChange={(e) => setCircuitLineDrafts((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, label: e.target.value } : item))}
-                              style={inputStyle}
-                              placeholder="e.g. Garage EV charger"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
-                  <button type="button" disabled={smartDevicesBusy} onClick={step4} style={buttonStyle()}>
-                    {smartDevicesBusy ? <Loader2 size={16} className="animate-spin" /> : 'Save Smart Devices'}
-                    {!smartDevicesBusy && <ArrowRight size={16} />}
-                  </button>
-                  <button type="button" disabled={smartDevicesBusy} onClick={() => setStep(5)} style={buttonStyle(true)}>
-                    Skip for now
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ── STEP 5: COMPLETION ── */}
-            {step === 5 && (
-              <motion.div key="step5" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
+              <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
                 <div style={{ 
                   width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,166,62,0.1)', border: '1px solid rgba(0,166,62,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: primary
