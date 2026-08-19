@@ -305,11 +305,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     const poll = async () => {
       if (document.hidden) return;
       // Single batched call covers gateway status (realtime.is_online — a strict
-      // superset of the old getGatewayStatus response), weather, and smart devices,
-      // replacing what used to be 3 separate endpoints/pollers.
+      // superset of the old getGatewayStatus response), weather, smart devices,
+      // latest CT meter reading, and today's solar-day energy summary — replacing
+      // what used to be 5 separate endpoints/pollers (3 of them on this same 30s
+      // cadence) with one round-trip.
       const overview = await apiService.getStaffOverview(siteId);
       if (cancelled) return;
       setGatewayOnline(overview?.realtime?.is_online ?? null);
+      setCtLatest(overview?.energy_meter_latest ?? null);
+      setSolarDayToday(overview?.energy_summary_today ?? null);
       dispatchFetch({ type: 'OVERVIEW_SUCCESS', payload: {
         weather: overview?.weather ?? null,
         smartDevices: Array.isArray(overview?.smart_devices) ? overview.smart_devices : [],
@@ -320,39 +324,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     // backend's throttle. 30s cadence matches the backend's realtime fragment TTL.
     const kickoff = setTimeout(poll, 800);
     const iv = setInterval(poll, 30_000);
-    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
-  }, [siteId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!siteId) return;
-    const fetchCtLatest = () => {
-      if (document.hidden) return;
-      apiService.getLatestEnergyMeter(siteId)
-        .then(data => { if (!cancelled) setCtLatest(data ?? null); })
-        .catch(() => { if (!cancelled) setCtLatest(null); });
-    };
-    // Staggered initial fetch (avoid piling onto the mount burst), then poll at the
-    // same 30s cadence EnergyFlow's own poller used to run at — this is now the
-    // sole source for both PhaseLoadTab and the Overview tab's EnergyFlow, so it
-    // needs to stay fresh, not just fetch once at mount. Staleness (>15 min old)
-    // is discarded downstream in EnergyFlow, not here.
-    const kickoff = setTimeout(fetchCtLatest, 800);
-    const iv = setInterval(fetchCtLatest, 30_000);
-    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
-  }, [siteId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!siteId) return;
-    const fetchSolarDayToday = () => {
-      if (document.hidden) return;
-      apiService.getEnergySummaryCombined(siteId)
-        .then(data => { if (!cancelled) setSolarDayToday(data?.summary?.today ?? null); })
-        .catch(() => { if (!cancelled) setSolarDayToday(null); });
-    };
-    const kickoff = setTimeout(fetchSolarDayToday, 800);
-    const iv = setInterval(fetchSolarDayToday, 30_000);
     return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
   }, [siteId]);
 
