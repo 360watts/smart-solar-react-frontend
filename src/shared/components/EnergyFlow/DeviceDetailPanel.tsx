@@ -305,7 +305,7 @@ export default function DeviceDetailPanel({
                     isDark={isDark}
                   />
                   <MetricCard
-                    label="Energy Today"
+                    label="Total Energy"
                     value={`${fmt(latest?.energy_kwh)} kWh`}
                     isDark={isDark}
                   />

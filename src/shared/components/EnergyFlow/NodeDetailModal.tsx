@@ -564,9 +564,19 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     let cancelled = false;
     setSparkLoading(true);
 
-    const todayDate = new Date();
-    const today = todayDate.toISOString().slice(0, 10);
-    const tomorrow = new Date(todayDate.getTime() + 86400000).toISOString().slice(0, 10);
+    // Solar day: 06:00 IST -> next 06:00 IST (matches energy_summary.py's window;
+    // 6am IST = 00:30 UTC). Before that UTC instant today, the window still
+    // started yesterday.
+    const nowUtc = new Date();
+    const todayIstStart = new Date(Date.UTC(
+      nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 0, 30, 0,
+    ));
+    const windowStart = nowUtc >= todayIstStart
+      ? todayIstStart
+      : new Date(todayIstStart.getTime() - 86400000);
+    const windowEnd = new Date(windowStart.getTime() + 86400000);
+    const today = windowStart.toISOString();
+    const tomorrow = windowEnd.toISOString();
 
     const load = async () => {
       try {
@@ -650,7 +660,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
   const extraEntries: [string, string][] = [];
   if (node?.current_a != null) extraEntries.push(['Current', `${node.current_a.toFixed(2)} A`]);
   if (node?.voltage_v != null) extraEntries.push(['Voltage', `${node.voltage_v.toFixed(1)} V`]);
-  if (node?.energy_kwh != null) extraEntries.push(['Energy Today', `${node.energy_kwh.toFixed(3)} kWh`]);
+  if (node?.energy_kwh != null) extraEntries.push(['Total Energy', `${node.energy_kwh.toFixed(3)} kWh`]);
   if (node?.deviceType) extraEntries.push(['Device Type', node.deviceType.replace(/_/g, ' ')]);
   if (node?.circuit) extraEntries.push(['Circuit', node.circuit.replace(/_/g, ' ')]);
 
