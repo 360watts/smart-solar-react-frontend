@@ -10,6 +10,7 @@ interface SmartDeviceForm {
   circuit: string;
   display_name: string;
   is_active: boolean;
+  ingest_mode: string;
 }
 const blankSmartDeviceForm = (): SmartDeviceForm => ({
   device_type: 'tuya_plug',
@@ -18,6 +19,7 @@ const blankSmartDeviceForm = (): SmartDeviceForm => ({
   circuit: 'grid_direct',
   display_name: '',
   is_active: true,
+  ingest_mode: 'poll',
 });
 
 interface CircuitLineForm {
@@ -270,6 +272,7 @@ export default function InverterMeasurementConfig({
       circuit: device.circuit ?? 'grid_direct',
       display_name: device.display_name ?? '',
       is_active: device.is_active !== false,
+      ingest_mode: device.ingest_mode ?? 'poll',
     });
   };
   const saveSmartDevice = async () => {
@@ -281,6 +284,7 @@ export default function InverterMeasurementConfig({
       circuit: smartDeviceDraft.circuit,
       display_name: smartDeviceDraft.display_name.trim(),
       is_active: smartDeviceDraft.is_active,
+      ingest_mode: smartDeviceDraft.ingest_mode,
     };
     if (!payload.provider_device_id) {
       setError('Provider device ID is required for smart devices');
@@ -782,6 +786,18 @@ export default function InverterMeasurementConfig({
                 <option value="grid_direct">Grid Line</option>
                 <option value="inverter_backup">Inverter Backup</option>
                 <option value="ev_line">EV Line</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Ingest Mode</label>
+              <select
+                value={smartDeviceDraft.ingest_mode ?? 'poll'}
+                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, ingest_mode: e.target.value })}
+                disabled={smartDevicesSaving}
+                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
+              >
+                <option value="poll">Poll (5-min cron)</option>
+                <option value="pulsar">Pulsar push (real-time)</option>
               </select>
             </div>
             <div>
