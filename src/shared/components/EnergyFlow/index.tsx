@@ -330,14 +330,20 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
   const sdKw = (latest?.power_w ?? 0) / 1000;
   const deviceName = deviceLabel(device);
   const sdActive = device.is_active && sdKw > 0.001;
+  // is_online is Tuya's own deviceOnline/deviceOffline signal (pulsar-mode
+  // devices only) — a stronger, non-inferred connectivity check than
+  // reading-recency. Takes priority over the power-based active/inactive
+  // read: a device reporting is_online=false shouldn't show as "inactive"
+  // (implies it's just idle) when it's actually disconnected.
+  const offline = device.is_online === false;
 
   return {
     type: 'device',
     id: `device-${device.id}`,
     title: deviceName,
-    subtitle: 'Smart Device',
+    subtitle: offline ? 'Offline' : 'Smart Device',
     power_kw: sdKw,
-    status: sdActive ? 'active' : 'inactive',
+    status: offline ? 'offline' : (sdActive ? 'active' : 'inactive'),
     color: accentColor,
     icon: applIcon(device.appliance_label, accentColor),
     device,
@@ -526,18 +532,23 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         {devices.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 6 : 8 }}>
             {devices.map(device => {
+              const offline = device.is_online === false;
               const latest = freshLatest(device);
               const sdKw = (latest?.power_w ?? 0) / 1000;
               const sdFmt = fmtPower(sdKw);
-              const sdActive = device.is_active && sdKw > 0.001;
+              const sdActive = !offline && device.is_active && sdKw > 0.001;
               const deviceName = deviceLabel(device);
               const deviceColor = sdActive ? accentColor : isDark ? '#cbd5e1' : 'var(--text-dim)';
               return (
                 <SmartCard
                   key={device.id} label={deviceName}
                   icon={applIcon(device.appliance_label, deviceColor)}
-                  valueStr={sdFmt.valueStr} unit={sdFmt.unit}
-                  active={sdActive} isAnomalous={device.is_active && device.latest === null}
+                  // A disconnected device's last-known wattage is exactly
+                  // the kind of stale/untrustworthy reading fixed earlier —
+                  // show "Offline" instead of a number that may no longer
+                  // reflect reality.
+                  valueStr={offline ? 'Offline' : sdFmt.valueStr} unit={offline ? '' : sdFmt.unit}
+                  active={sdActive} isAnomalous={offline || (device.is_active && device.latest === null)}
                   isDark={isDark} accentColor={accentColor} compact={compact}
                   onClick={() => onDeviceClick(device)}
                 />
@@ -960,15 +971,15 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 type: 'device',
                 id: String(evLoads[0].id),
                 title: evLoads[0].display_name ?? 'EV Charger',
-                subtitle: evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                subtitle: evLoads[0].is_online === false ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
                 power_kw: evLoadPowerKw,
-                status: evLoadActive ? 'active' : 'inactive',
+                status: evLoads[0].is_online === false ? 'offline' : evLoadActive ? 'active' : 'inactive',
                 color: '#34d399',
                 icon: <Car size={24} color="#34d399" />,
                 details: {
                   'Charging Power': `${fmtPower(evLoadPowerKw).valueStr} ${fmtPower(evLoadPowerKw).unit}`,
                   'Voltage': evLoads[0].latest?.voltage_v != null ? `${evLoads[0].latest.voltage_v.toFixed(0)} V` : '—',
-                  'Status': evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                  'Status': evLoads[0].is_online === false ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
                 },
                 device: evLoads[0],
               })}

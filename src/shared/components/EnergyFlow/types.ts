@@ -27,6 +27,12 @@ export interface SmartDeviceNode {
   appliance_label: ApplianceLabel;
   display_name: string;
   is_active: boolean;
+  /**
+   * Connectivity state — only meaningful for pulsar-ingest devices, driven
+   * by Tuya's own deviceOnline/deviceOffline events (not a timeout guess).
+   * Always true for poll-mode devices, which have no equivalent signal.
+   */
+  is_online: boolean;
   latest: SmartDeviceReading | null;
   /** Which physical circuit the device is on. Defaults to heuristic if absent. */
   circuit?: 'grid_direct' | 'inverter_backup' | 'ev_line';
