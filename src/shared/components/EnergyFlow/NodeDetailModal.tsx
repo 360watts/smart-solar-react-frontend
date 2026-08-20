@@ -577,6 +577,12 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     const windowEnd = new Date(windowStart.getTime() + 86400000);
     const today = windowStart.toISOString();
     const tomorrow = windowEnd.toISOString();
+    // getSmartDeviceReadings only accepts a trailing `hours` lookback (no
+    // start_date/end_date), so the device/EV paths below approximate the
+    // same solar-day window by requesting exactly the hours elapsed since
+    // windowStart — data can't exist past "now" anyway, so this covers the
+    // same span getSiteHistory's today/tomorrow window resolves to.
+    const deviceHours = Math.max(1, Math.ceil((nowUtc.getTime() - windowStart.getTime()) / 3600000));
 
     const load = async () => {
       try {
@@ -585,7 +591,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
           new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         if (node.type === 'device' && node.device) {
-          const rows = await apiService.getSmartDeviceReadings(node.device.id, 24);
+          const rows = await apiService.getSmartDeviceReadings(node.device.id, deviceHours);
           points = rows
             .filter(r => r.power_w != null)
             .map(r => ({ t: fmtTime(r.timestamp), v: (r.power_w ?? 0) / 1000 }));
@@ -599,7 +605,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
           const extractLoad = HISTORY_EXTRACT.load!;
           const [histRows, evRows] = await Promise.all([
             apiService.getSiteHistory(siteId, { start_date: today, end_date: tomorrow, aggregate: '15min' }),
-            node.evDevice ? apiService.getSmartDeviceReadings(node.evDevice.id, 24) : Promise.resolve([]),
+            node.evDevice ? apiService.getSmartDeviceReadings(node.evDevice.id, deviceHours) : Promise.resolve([]),
           ]);
 
           const evMap = new Map<string, number>();
@@ -814,7 +820,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: DS.colors.textPrimary }}>
-              {node.title} · 24h Trend
+              {node.title} · Solar Day Trend
             </div>
             <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 2 }}>
               Drag to zoom · scroll to zoom · reset to restore
@@ -1120,7 +1126,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 <motion.div custom={4} variants={rowVariants} initial="hidden" animate="visible">
                   {/* Header row: label + fullscreen toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <SectionLabel style={{ marginBottom: 0 }}>24h Trend</SectionLabel>
+                    <SectionLabel style={{ marginBottom: 0 }}>Solar Day Trend</SectionLabel>
                     <button
                       onClick={() => setChartFullscreen(f => !f)}
                       title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
