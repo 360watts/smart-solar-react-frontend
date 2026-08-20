@@ -1018,23 +1018,29 @@ class ApiService {
   }
 
   async createSmartDevice(siteId: string, data: Record<string, unknown>): Promise<any> {
-    return this.request(`/sites/${siteId}/smart-devices/`, {
+    const result = await this.request(`/sites/${siteId}/smart-devices/`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    cacheService.clear(`smart_devices_${siteId}`);
+    return result;
   }
 
   async updateSmartDevice(deviceId: number, data: Record<string, unknown>): Promise<any> {
-    return this.request(`/smart-devices/${deviceId}/`, {
+    const result = await this.request(`/smart-devices/${deviceId}/`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+    cacheService.clearPattern(/^smart_devices_/);
+    return result;
   }
 
   async deleteSmartDevice(deviceId: number): Promise<any> {
-    return this.request(`/smart-devices/${deviceId}/`, {
+    const result = await this.request(`/smart-devices/${deviceId}/`, {
       method: 'DELETE',
     });
+    cacheService.clearPattern(/^smart_devices_/);
+    return result;
   }
 
   async getCircuitLines(siteId: string): Promise<any[]> {
