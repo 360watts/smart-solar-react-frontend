@@ -527,9 +527,45 @@ function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases | null;
 
 type SparkPoint = { t: string; v: number; grid?: number; ev?: number };
 
+function TrendRangeToggle({
+  value, onChange, isDark,
+}: { value: 'today' | '7d'; onChange: (v: 'today' | '7d') => void; isDark: boolean }) {
+  const options: { key: 'today' | '7d'; label: string }[] = [
+    { key: 'today', label: 'Today' },
+    { key: '7d', label: '7 Days' },
+  ];
+  return (
+    <div style={{
+      display: 'flex', gap: 2, padding: 2, borderRadius: 8,
+      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+    }}>
+      {options.map(opt => {
+        const active = value === opt.key;
+        return (
+          <button
+            key={opt.key}
+            onClick={() => onChange(opt.key)}
+            style={{
+              border: 'none', borderRadius: 6, cursor: 'pointer',
+              padding: '4px 10px', fontSize: 10, fontWeight: 600,
+              background: active ? (isDark ? 'rgba(255,255,255,0.14)' : '#fff') : 'transparent',
+              color: active ? DS.colors.textPrimary : DS.colors.textDim,
+              boxShadow: active ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeDetailModalProps) {
   const [sparkData, setSparkData] = useState<SparkPoint[]>([]);
   const [sparkLoading, setSparkLoading] = useState(false);
+  const [trendRange, setTrendRange] = useState<'today' | '7d'>('today');
   const [chartFullscreen, setChartFullscreen] = useState(false);
   const [visibleSeries, setVisibleSeries] = useState<Record<string, boolean>>({ v: true, grid: true, ev: true });
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -558,28 +594,39 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     return () => document.removeEventListener('keydown', handler);
   }, [node, onClose]);
 
-  // Fetch today's history for the trend chart
+  // Fetch history for the trend chart — either today's solar day (06:00 IST
+  // -> next 06:00 IST) or a trailing 7-day window, per trendRange.
   useEffect(() => {
     if (!node) { setSparkData([]); return; }
     let cancelled = false;
     setSparkLoading(true);
 
-    // Solar day: 06:00 IST -> next 06:00 IST (matches energy_summary.py's window;
-    // 6am IST = 00:30 UTC). Before that UTC instant today, the window still
-    // started yesterday.
     const nowUtc = new Date();
-    const todayIstStart = new Date(Date.UTC(
-      nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 0, 30, 0,
-    ));
-    const windowStart = nowUtc >= todayIstStart
-      ? todayIstStart
-      : new Date(todayIstStart.getTime() - 86400000);
-    const windowEnd = new Date(windowStart.getTime() + 86400000);
+    let windowStart: Date;
+    let windowEnd: Date;
+
+    if (trendRange === '7d') {
+      // Trailing 7 days ending now — a rolling window, not anchored to a
+      // calendar/solar-day boundary like the 'today' view below.
+      windowEnd = nowUtc;
+      windowStart = new Date(nowUtc.getTime() - 7 * 86400000);
+    } else {
+      // Solar day: 06:00 IST -> next 06:00 IST (matches energy_summary.py's
+      // window; 6am IST = 00:30 UTC). Before that UTC instant today, the
+      // window still started yesterday.
+      const todayIstStart = new Date(Date.UTC(
+        nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 0, 30, 0,
+      ));
+      windowStart = nowUtc >= todayIstStart
+        ? todayIstStart
+        : new Date(todayIstStart.getTime() - 86400000);
+      windowEnd = new Date(windowStart.getTime() + 86400000);
+    }
     const today = windowStart.toISOString();
     const tomorrow = windowEnd.toISOString();
     // getSmartDeviceReadings only accepts a trailing `hours` lookback (no
     // start_date/end_date), so the device/EV paths below approximate the
-    // same solar-day window by requesting exactly the hours elapsed since
+    // same window by requesting exactly the hours elapsed since
     // windowStart — data can't exist past "now" anyway, so this covers the
     // same span getSiteHistory's today/tomorrow window resolves to.
     const deviceHours = Math.max(1, Math.ceil((nowUtc.getTime() - windowStart.getTime()) / 3600000));
@@ -587,8 +634,14 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     const load = async () => {
       try {
         let points: SparkPoint[] = [];
+        // 7-day spans multiple calendar days, so labels need a date, not
+        // just a time, or points from different days become indistinguishable.
         const fmtTime = (ts: string) =>
-          new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+          trendRange === '7d'
+            ? new Date(ts).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+              })
+            : new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         if (node.type === 'device' && node.device) {
           const rows = await apiService.getSmartDeviceReadings(node.device.id, deviceHours);
@@ -654,7 +707,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
     load();
     return () => { cancelled = true; };
-  }, [node?.id, siteId]);
+  }, [node?.id, siteId, trendRange]);
 
   const pwr = node ? fmtPower(node.power_kw) : { value: '0.00', unit: 'kW' };
   const active = isActive(node?.status);
@@ -820,13 +873,14 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: DS.colors.textPrimary }}>
-              {node.title} · Solar Day Trend
+              {node.title} · {trendRange === '7d' ? '7-Day Trend' : 'Solar Day Trend'}
             </div>
             <div style={{ fontSize: 9, color: DS.colors.textDim, marginTop: 2 }}>
               Drag to zoom · scroll to zoom · reset to restore
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TrendRangeToggle value={trendRange} onChange={setTrendRange} isDark={isDark} />
             {isFsZoomed && (
               <button onClick={resetFsZoom} style={{
                 border: '1px solid rgba(0,166,62,0.35)', background: 'transparent',
@@ -1126,19 +1180,24 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                 <motion.div custom={4} variants={rowVariants} initial="hidden" animate="visible">
                   {/* Header row: label + fullscreen toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <SectionLabel style={{ marginBottom: 0 }}>Solar Day Trend</SectionLabel>
-                    <button
-                      onClick={() => setChartFullscreen(f => !f)}
-                      title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                      style={{
-                        background: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                        borderRadius: 6, cursor: 'pointer', padding: '3px 7px',
-                        color: DS.colors.textDim, fontSize: 10, fontWeight: 600,
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      {chartFullscreen ? '⊠ Exit' : '⛶ Expand'}
-                    </button>
+                    <SectionLabel style={{ marginBottom: 0 }}>
+                      {trendRange === '7d' ? '7-Day Trend' : 'Solar Day Trend'}
+                    </SectionLabel>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <TrendRangeToggle value={trendRange} onChange={setTrendRange} isDark={isDark} />
+                      <button
+                        onClick={() => setChartFullscreen(f => !f)}
+                        title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                        style={{
+                          background: 'none', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                          borderRadius: 6, cursor: 'pointer', padding: '3px 7px',
+                          color: DS.colors.textDim, fontSize: 10, fontWeight: 600,
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}
+                      >
+                        {chartFullscreen ? '⊠ Exit' : '⛶ Expand'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Series toggles (load node only) */}
