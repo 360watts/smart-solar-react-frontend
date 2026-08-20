@@ -646,7 +646,11 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
         if (node.type === 'device' && node.device) {
           const rows = await apiService.getSmartDeviceReadings(node.device.id, deviceHours);
           points = rows
-            .filter(r => r.power_w != null)
+            // deviceHours is a ceil()'d approximation of the elapsed time since
+            // windowStart, so the backend's trailing-hours fetch always over-fetches
+            // a bit — clip back to the real boundary or the chart shows a tail of
+            // yesterday's data (worst right after the solar day rolls over).
+            .filter(r => r.power_w != null && new Date(r.timestamp) >= windowStart)
             .map(r => ({ t: fmtTime(r.timestamp), v: (r.power_w ?? 0) / 1000 }));
 
         } else if (node.type === 'load' && siteId) {
@@ -663,7 +667,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
 
           const evMap = new Map<string, number>();
           for (const r of evRows) {
-            if (r.power_w == null) continue;
+            if (r.power_w == null || new Date(r.timestamp) < windowStart) continue;
             evMap.set(fmtTime(r.timestamp), (r.power_w ?? 0) / 1000);
           }
 
