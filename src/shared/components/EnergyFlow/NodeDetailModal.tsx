@@ -789,7 +789,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
     return { labels, datasets };
   };
 
-  const buildChartOptions = (fullscreen: boolean, _ref: React.MutableRefObject<any>, onZoom: () => void) => {
+  const buildChartOptionsRaw = (fullscreen: boolean, onZoom: () => void) => {
     const chartText = isDark ? '#AAB4C2' : 'rgba(18,21,26,0.62)';
     const chartTitle = resolveCssVar('--foreground');
 
@@ -828,30 +828,50 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
           },
         },
         zoom: {
-          wheel: { enabled: true, speed: 0.08 },
-          drag: {
-            enabled: true,
-            backgroundColor: 'rgba(0,166,62,0.14)',
-            borderColor: 'rgba(0,166,62,0.7)',
-            borderWidth: 1,
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(0,166,62,0.14)',
+              borderColor: 'rgba(0,166,62,0.7)',
+              borderWidth: 1,
+            },
+            pinch: { enabled: true },
+            mode: 'x' as const,
+            onZoomComplete: onZoom,
           },
-          pinch: { enabled: true },
-          mode: 'x' as const,
-          onZoomComplete: onZoom,
+          pan: { enabled: false, mode: 'x' as const },
         },
-        pan: { enabled: false, mode: 'x' as const },
       },
     };
   };
 
+  // Memoized per fullscreen/inline context: chartjs-plugin-zoom persists the
+  // zoomed range by mutating chart.options.scales.x.min/max on the live chart
+  // instance, but react-chartjs-2 replaces the whole options object whenever
+  // its reference changes — so a fresh object on every render (e.g. the
+  // re-render onZoomComplete itself triggers via setIsZoomed) wiped the zoom
+  // out immediately after applying it. Keeping identity stable across
+  // renders that don't actually need new options (sparkData polling, etc.)
+  // fixes that reset-on-zoom bug.
+  const onZoomInline = useCallback(() => setIsZoomed(true), []);
+  const onZoomFs = useCallback(() => setIsFsZoomed(true), []);
+  const inlineChartOptions = React.useMemo(
+    () => buildChartOptionsRaw(false, onZoomInline),
+    [isDark, accentColor, onZoomInline],
+  );
+  const fsChartOptions = React.useMemo(
+    () => buildChartOptionsRaw(true, onZoomFs),
+    [isDark, accentColor, onZoomFs],
+  );
+
   const renderChart = (isLoad: boolean, fullscreen: boolean) => {
     const ref = fullscreen ? fsChartRef : chartRef;
-    const onZoom = fullscreen ? () => setIsFsZoomed(true) : () => setIsZoomed(true);
     return (
       <CJLine
         ref={ref}
         data={buildChartData(isLoad)}
-        options={buildChartOptions(fullscreen, ref, onZoom) as any}
+        options={(fullscreen ? fsChartOptions : inlineChartOptions) as any}
       />
     );
   };

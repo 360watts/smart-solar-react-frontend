@@ -5,14 +5,17 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileSiteDetail from '../mobile/staff/MobileSiteDetail';
 import {
-  ArrowLeft, Battery, Cpu, Server, Wifi, Activity,
+  ArrowLeft, Battery, Server, Wifi, Activity,
   Settings, Save, AlertTriangle,
   RefreshCw, Zap, X,
   Plus, Pencil, Trash2, Sun,
 } from 'lucide-react';
-import { EmptyState } from '../../shared/components/EmptyState';
 import SavingsBillingEditor from './SavingsBillingEditor';
 import InverterMeasurementConfig from './InverterMeasurementConfig';
+import {
+  SetupCard, StatusChip, Field, controlStyle, Btn,
+  EmptyState as FriendlyEmptyState, useTokens as useUiTokens,
+} from './siteHardware/ui';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -132,7 +135,7 @@ const EqFormField: React.FC<{
   );
   return (
     <div>
-      <label style={eqLabel(isDark)}>{label}{required&&<span style={{color:'#ef4444'}}> *</span>}</label>
+      <label style={eqLabel(isDark)}>{label}{required&&<span style={{color:'var(--muted-foreground)',fontWeight:400}}> · required</span>}</label>
       <input type={type} value={value as string} onChange={e=>onChange(e.target.value)} style={eqInput(isDark)} required={required} placeholder={placeholder}/>
     </div>
   );
@@ -153,12 +156,12 @@ const EqDeleteModal: React.FC<{open:boolean;label:string;onConfirm:()=>void;onCa
   if (!open) return null;
   return ReactDOM.createPortal(
     <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{background:'var(--card)',borderRadius:12,padding:28,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
-        <h3 style={{margin:'0 0 10px',color:'var(--foreground)'}}>Delete {label}?</h3>
-        <p style={{margin:'0 0 22px',color:'var(--muted-foreground)',fontSize:'0.9rem'}}>This cannot be undone.</p>
+      <div style={{background:'var(--card)',borderRadius:14,padding:24,width:380,maxWidth:'95vw',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+        <h3 style={{margin:'0 0 8px',color:'var(--foreground)',fontSize:'1.05rem'}}>Remove {label}?</h3>
+        <p style={{margin:'0 0 20px',color:'var(--muted-foreground)',fontSize:'0.9rem'}}>It’ll be taken off this site. You can add it again later.</p>
         <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-          <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
-          <button onClick={onConfirm} className="btn" style={{background:'#ef4444',color:'#fff',border:'none'}}>Delete</button>
+          <button onClick={onCancel} className="btn btn-secondary">Keep it</button>
+          <button onClick={onConfirm} className="btn" style={{background:'#ef4444',color:'#fff',border:'none'}}>Remove</button>
         </div>
       </div>
     </div>, document.body,
@@ -180,13 +183,13 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
     <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Zap size={17}/>} title="Inverters" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No inverters" description="Add the inverter from the contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No inverters added yet" detail="Add the inverter listed on the customer’s contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>MPPT Range</th><th>Installed</th><th>Warranty</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(inv=>(
             <tr key={inv.id}>
               <td><div style={{fontWeight:600}}>{inv.make}</div>{inv.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{inv.model_name}</div>}</td>
-              <td><code style={{fontSize:'0.8rem'}}>{inv.serial_number}</code></td>
+              <td style={{fontSize:'0.83rem'}}>{inv.serial_number}</td>
               <td>{inv.capacity_kva} kVA</td>
               <td style={{fontSize:'0.8rem'}}>{inv.mppt_voltage_min_v&&inv.mppt_voltage_max_v?`${inv.mppt_voltage_min_v}–${inv.mppt_voltage_max_v} V`:'—'}</td>
               <td>{inv.installed_at||'—'}</td><td>{inv.warranty_expires_at||'—'}</td>
@@ -214,7 +217,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
                 <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required placeholder="e.g., INV-2026-0001"/>
                 <EqFormField label="Capacity (kVA)" value={form.capacity_kva} onChange={v=>f('capacity_kva',v)} type="number" isDark={isDark} required placeholder="e.g., 10"/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>DC Input Specs</div>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>DC input specs <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="Max Input Voltage (V)" value={form.max_input_voltage_v??''} onChange={v=>f('max_input_voltage_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Max Input Current (A)" value={form.max_input_current_a??''} onChange={v=>f('max_input_current_a',v)} type="number" isDark={isDark}/>
@@ -223,7 +226,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
                 <EqFormField label="Operating Min (V)" value={form.operating_voltage_min_v??''} onChange={v=>f('operating_voltage_min_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Operating Max (V)" value={form.operating_voltage_max_v??''} onChange={v=>f('operating_voltage_max_v',v)} type="number" isDark={isDark}/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>Installation</div>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Installation <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="TEDA Scheme" value={form.teda_scheme} onChange={v=>f('teda_scheme',v)} isDark={isDark}/>
                 <EqFormField label="Logger Serial" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
@@ -262,13 +265,13 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
     <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Battery size={17}/>} title="Batteries" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No batteries" description="Add the battery from the contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No batteries added yet" detail="Add the battery listed on the customer’s contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>Nominal Voltage</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(bat=>(
             <tr key={bat.id}>
               <td><div style={{fontWeight:600}}>{bat.make}</div>{bat.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{bat.model_name}</div>}</td>
-              <td><code style={{fontSize:'0.8rem'}}>{bat.serial_number}</code></td>
+              <td style={{fontSize:'0.83rem'}}>{bat.serial_number}</td>
               <td>{bat.capacity_kwh} kWh</td>
               <td>{bat.nominal_voltage_v?`${bat.nominal_voltage_v} V`:'—'}</td>
               <td>{bat.installed_at||'—'}</td>
@@ -296,7 +299,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
                 <EqFormField label="Serial Number" value={form.serial_number} onChange={v=>f('serial_number',v)} isDark={isDark} required/>
                 <EqFormField label="Capacity (kWh)" value={form.capacity_kwh} onChange={v=>f('capacity_kwh',v)} type="number" isDark={isDark} required/>
               </div>
-              <div style={{fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.05em',textTransform:'uppercase',color:'var(--info)',marginTop:4}}>Electrical Specs</div>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Electrical specs <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="Nominal Capacity (Ah)" value={form.nominal_capacity_ah??''} onChange={v=>f('nominal_capacity_ah',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Nominal Voltage (V)" value={form.nominal_voltage_v??''} onChange={v=>f('nominal_voltage_v',v)} type="number" isDark={isDark}/>
@@ -339,13 +342,13 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
       <EqSectionHeader icon={<Sun size={17}/>} title="Solar Panels" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:'var(--muted-foreground)',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:24}}><EmptyState title="No panels" description="Add panels from the contract. One row per physical panel."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No panels added yet" detail="Add panels from the contract — one row per physical panel."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity (Wp)</th><th>Technology</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(p=>(
             <tr key={p.id}>
               <td><div style={{fontWeight:600}}>{p.make}</div>{p.model_name&&<div style={{fontSize:'0.75rem',color:T.textM}}>{p.model_name}</div>}</td>
-              <td><code style={{fontSize:'0.8rem'}}>{p.serial_number}</code></td>
+              <td style={{fontSize:'0.83rem'}}>{p.serial_number}</td>
               <td>{eqToPanelWp(p.capacity_wp).toFixed(0)}</td>
               <td>{p.technology||'—'}</td>
               <td>{p.installed_at||'—'}</td>
@@ -463,6 +466,25 @@ export default function SiteDetail() {
   const [appliancesLoading, setAppliancesLoading] = useState(true);
 
   // ── Design Tokens ──
+  const ut = useUiTokens(isDark);
+  // Read-only-until-editing input style, in the friendly control shape.
+  const roStyle = (editing: boolean, extra: React.CSSProperties = {}): React.CSSProperties => ({
+    ...controlStyle(isDark), opacity: editing ? 1 : 0.65,
+    cursor: editing ? 'auto' : 'not-allowed', ...extra,
+  });
+  const ToggleRow = ({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) => (
+    <label style={{
+      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', borderRadius: 12,
+      border: `1.5px solid ${checked ? ut.good : ut.line}`, background: checked ? ut.goodBg : ut.card2,
+      cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1,
+    }}>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} disabled={disabled} style={{ accentColor: ut.good, width: 17, height: 17, marginTop: 1 }} />
+      <span>
+        <span style={{ fontSize: '0.88rem', fontWeight: 500, color: ut.ink }}>{label}</span>
+        {hint && <span style={{ display: 'block', fontSize: '0.78rem', color: ut.ink2, marginTop: 2 }}>{hint}</span>}
+      </span>
+    </label>
+  );
   const surface     = 'var(--card)';
   const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
@@ -490,6 +512,15 @@ export default function SiteDetail() {
       case 'draft': case 'archived': default: return palette.mute;
     }
   };
+
+  // Friendly, non-technical status wording + calm colour state (see UI_GUIDE.md).
+  const STATUS_WORD: Record<string, string> = {
+    draft: 'Draft', commissioning: 'Being set up', active: 'Live',
+    inactive: 'Paused', archived: 'Archived',
+  };
+  const statusWord = (s: string) => STATUS_WORD[s] ?? s;
+  const statusState = (s: string): 'good' | 'wait' | 'idle' =>
+    s === 'active' ? 'good' : (s === 'commissioning' || s === 'inactive') ? 'wait' : 'idle';
 
   // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {
@@ -835,22 +866,18 @@ export default function SiteDetail() {
 
         {/* ── Sub-header Profile Card ── */}
         {site && (
-          <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 20, marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center', justifyContent: 'space-between', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 10px rgba(0,166,62,0.03)' }}>
-            <div style={{ display: 'flex', gap: 24 }}>
-               <div>
-                  <div style={labelStyle}>Status</div>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', background: getStatusStyle(site.site_status).bg, color: getStatusStyle(site.site_status).color, border: `1px solid ${getStatusStyle(site.site_status).border}` }}>
-                    {site.site_status}
-                  </span>
-               </div>
-               <div>
-                  <div style={labelStyle}>Capacity</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: textMain }}>{site.capacity_kw} <span style={{ fontSize: '0.8rem', color: textMute }}>kW</span></div>
-               </div>
-               <div>
-                  <div style={labelStyle}>Owner</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 500, color: textMain }}>{site.owner_username || (site.owner_user != null ? `User #${site.owner_user}` : 'Unassigned')}</div>
-               </div>
+          <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: '18px 20px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'center', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 10px rgba(0,166,62,0.03)' }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: ut.ink2, marginBottom: 6 }}>Status</div>
+              <StatusChip isDark={isDark} state={statusState(site.site_status)}>{statusWord(site.site_status)}</StatusChip>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: ut.ink2, marginBottom: 4 }}>System size</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 600, color: textMain }}>{site.capacity_kw} <span style={{ fontSize: '0.8rem', color: textMute }}>kW</span></div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: ut.ink2, marginBottom: 4 }}>Customer</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 500, color: textMain }}>{site.owner_username || (site.owner_user != null ? `Customer #${site.owner_user}` : 'Not assigned yet')}</div>
             </div>
           </div>
         )}
@@ -860,9 +887,9 @@ export default function SiteDetail() {
           {[
             { id: 'overview', label: 'Overview', icon: <Activity size={14} /> },
             { id: 'equipment', label: 'Equipment', icon: <Server size={14} /> },
-            { id: 'gateway', label: 'Inverter & Measurement Config', icon: <Wifi size={14} /> },
-            { id: 'appliances', label: 'Appliances', icon: <Zap size={14} /> },
-            { id: 'lifecycle', label: 'Lifecycle Operations', icon: <Settings size={14} /> }
+            { id: 'gateway', label: 'Inverter & monitoring', icon: <Wifi size={14} /> },
+            { id: 'appliances', label: 'What’s in the home', icon: <Zap size={14} /> },
+            { id: 'lifecycle', label: 'Site status', icon: <Settings size={14} /> }
           ].map(t => (
             <button
               key={t.id} onClick={() => setTab(t.id as Tab)}
@@ -887,226 +914,87 @@ export default function SiteDetail() {
             {/* OVERVIEW TAB */}
             {tab === 'overview' && site && (
               <motion.div key="overview" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
-                <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>General Configuration</h2>
-                    {!editingDetails ? (
-                      <button type="button" disabled={busy} onClick={() => { setEditingDetails(true); loadOwnerUsers(); }} style={buttonStyle(true)}>
-                        <Settings size={14} /> Edit Details
-                      </button>
-                    ) : (
+                {(() => {
+                  const ro = (v: React.CSSProperties = {}): React.CSSProperties => ({
+                    ...controlStyle(isDark), opacity: editingDetails ? 1 : 0.65,
+                    cursor: editingDetails ? 'auto' : 'not-allowed', ...v,
+                  });
+                  return (
+                <SetupCard
+                  isDark={isDark}
+                  icon={<Server size={21} strokeWidth={1.8} />}
+                  title="Site details"
+                  purpose="The name, size and customer for this address."
+                  status={!editingDetails
+                    ? <Btn isDark={isDark} variant="soft" size="sm" disabled={busy} onClick={() => { setEditingDetails(true); loadOwnerUsers(); }}><Settings size={14} /> Edit</Btn>
+                    : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            resetDetailsForm();
-                            setEditingDetails(false);
-                          }}
-                          style={buttonStyle(true)}
-                        >
-                          Cancel
-                        </button>
-                        <button type="button" disabled={busy} onClick={saveSiteDetails} style={buttonStyle()}>
-                          <Save size={14} /> Save
-                        </button>
+                        <Btn isDark={isDark} variant="plain" size="sm" disabled={busy} onClick={() => { resetDetailsForm(); setEditingDetails(false); }}>Cancel</Btn>
+                        <Btn isDark={isDark} size="sm" disabled={busy} onClick={saveSiteDetails}><Save size={14} /> Save</Btn>
                       </div>
                     )}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 8 }}>
-                    <div>
-                      <label style={labelStyle}>Display Name</label>
-                      <input
-                        value={displayName}
-                        onChange={e => setDisplayName(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="Site Name"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Capacity (kW)</label>
-                      <div style={{
-                        display: 'flex', alignItems: 'center',
-                        border: `1px solid ${inputBorder}`, borderRadius: 8,
-                        background: inputBg, opacity: editingDetails ? 1 : 0.8,
-                        overflow: 'hidden',
-                      }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={capacityKw}
-                          onChange={e => { setCapacityKw(e.target.value); setCalcNote(null); }}
-                          style={{
-                            flex: 1, padding: '10px 14px', border: 'none', background: 'transparent',
-                            color: textMain, fontSize: '0.85rem', outline: 'none', minWidth: 0,
-                          }}
-                          placeholder="e.g. 5.5"
-                          disabled={!editingDetails || busy}
-                        />
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                    <Field isDark={isDark} label="Site name">
+                      <input value={displayName} onChange={e => setDisplayName(e.target.value)} style={ro()} placeholder="e.g. Ramesh — Coimbatore" disabled={!editingDetails || busy} />
+                    </Field>
+                    <Field isDark={isDark} label="System size" hint={calcNote ?? 'in kilowatts (kW)'}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input type="number" step="0.01" value={capacityKw} onChange={e => { setCapacityKw(e.target.value); setCalcNote(null); }} style={ro({ flex: 1 })} placeholder="e.g. 5.5" disabled={!editingDetails || busy} />
                         {editingDetails && (
-                          <button
-                            type="button"
-                            onClick={calcCapacityFromEquipment}
-                            disabled={calcBusy || busy}
-                            title="Calculate from equipment"
-                            style={{
-                              padding: '0 12px', height: '100%', border: 'none',
-                              borderLeft: `1px solid ${inputBorder}`,
-                              background: 'transparent', color: textSub,
-                              cursor: calcBusy ? 'not-allowed' : 'pointer',
-                              fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap',
-                              opacity: calcBusy ? 0.5 : 1, transition: 'opacity 150ms',
-                            }}
-                          >
-                            {calcBusy ? '…' : '⚡ Calc'}
-                          </button>
+                          <Btn isDark={isDark} variant="plain" size="sm" disabled={calcBusy || busy} onClick={calcCapacityFromEquipment}>
+                            {calcBusy ? '…' : 'Work it out'}
+                          </Btn>
                         )}
                       </div>
-                      {calcNote && (
-                        <div style={{ fontSize: '0.72rem', color: calcNote.startsWith('No') || calcNote.startsWith('Failed') ? '#f59e0b' : primary, marginTop: 4 }}>
-                          {calcNote}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Latitude</label>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        value={latitude}
-                        onChange={e => setLatitude(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. 11.0168"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Owner User</label>
-                      <select
-                        value={ownerUserId}
-                        onChange={e => setOwnerUserId(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8, cursor: editingDetails ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
-                        disabled={!editingDetails || busy || usersBusy}
-                      >
-                        <option value="">Unassigned</option>
+                    </Field>
+                    <Field isDark={isDark} label="Customer">
+                      <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={ro()} disabled={!editingDetails || busy || usersBusy}>
+                        <option value="">Not assigned yet</option>
                         {ownerUsers.map((u) => {
                           const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
                           const label = fullName ? `${fullName} (${u.username || `#${u.id}`})` : (u.username || `User #${u.id}`);
-                          return (
-                            <option key={u.id} value={String(u.id)}>
-                              {label}
-                            </option>
-                          );
+                          return <option key={u.id} value={String(u.id)}>{label}</option>;
                         })}
                       </select>
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Longitude</label>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        value={longitude}
-                        onChange={e => setLongitude(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. 76.9558"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
+                    </Field>
+                    <Field isDark={isDark} label="Latitude" hint="for weather & sun position">
+                      <input type="number" step="0.0001" value={latitude} onChange={e => setLatitude(e.target.value)} style={ro()} placeholder="e.g. 11.0168" disabled={!editingDetails || busy} />
+                    </Field>
+                    <Field isDark={isDark} label="Longitude">
+                      <input type="number" step="0.0001" value={longitude} onChange={e => setLongitude(e.target.value)} style={ro()} placeholder="e.g. 76.9558" disabled={!editingDetails || busy} />
+                    </Field>
                   </div>
 
-                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
-
-                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Vendor</h3>
+                  <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>Installer</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                    <div>
-                      <label style={labelStyle}>Vendor Name</label>
-                      <input
-                        value={vendorName}
-                        onChange={e => setVendorName(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. Beamz Energy Solutions"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>GST Number</label>
-                      <input
-                        value={vendorGst}
-                        onChange={e => setVendorGst(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. 33AAQFT4234R1ZH"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Phone</label>
-                      <input
-                        value={vendorPhone}
-                        onChange={e => setVendorPhone(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. +91 6379506240"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Email</label>
-                      <input
-                        type="email"
-                        value={vendorEmail}
-                        onChange={e => setVendorEmail(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        placeholder="e.g. info@beamzenergy.com"
-                        disabled={!editingDetails || busy}
-                      />
-                    </div>
+                    <Field isDark={isDark} label="Company name">
+                      <input value={vendorName} onChange={e => setVendorName(e.target.value)} style={ro()} placeholder="e.g. Beamz Energy Solutions" disabled={!editingDetails || busy} />
+                    </Field>
+                    <Field isDark={isDark} label="GST number">
+                      <input value={vendorGst} onChange={e => setVendorGst(e.target.value)} style={ro()} placeholder="e.g. 33AAQFT4234R1ZH" disabled={!editingDetails || busy} />
+                    </Field>
+                    <Field isDark={isDark} label="Phone">
+                      <input value={vendorPhone} onChange={e => setVendorPhone(e.target.value)} style={ro()} placeholder="e.g. +91 6379506240" disabled={!editingDetails || busy} />
+                    </Field>
+                    <Field isDark={isDark} label="Email">
+                      <input type="email" value={vendorEmail} onChange={e => setVendorEmail(e.target.value)} style={ro()} placeholder="e.g. info@beamzenergy.com" disabled={!editingDetails || busy} />
+                    </Field>
                   </div>
 
-                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
-
-                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Billing</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    <div>
-                      <label style={labelStyle}>Net metering commissioned on</label>
-                      <input
-                        type="date"
-                        value={commissionedOn}
-                        onChange={e => setCommissionedOn(e.target.value)}
-                        style={{ ...inputStyle, width: '100%', opacity: editingDetails ? 1 : 0.8 }}
-                        disabled={!editingDetails || busy}
-                      />
-                      <div style={{ fontSize: '0.7rem', color: textMute, marginTop: 4 }}>
-                        Date the DISCOM billed net metering from — not the physical install date.
-                        The first cycle&apos;s network charge is pro-rated from here; leave blank to charge the full cycle.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
-
-                  <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', color: textMain }}>Related Records</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    <button type="button" onClick={() => setTab('equipment')} style={{ textDecoration: 'none', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-                      <div style={{ padding: 16, borderRadius: 10, background: inputBg, border: `1px solid ${inputBorder}`, color: textMain, display: 'flex', alignItems: 'center', gap: 12, transition: 'background 150ms' }} onMouseEnter={e => e.currentTarget.style.background = palette.mute.bg} onMouseLeave={e => e.currentTarget.style.background = inputBg}>
-                        <div style={{ background: palette.info.bg, color: palette.info.color, padding: 8, borderRadius: 8 }}><Battery size={16} /></div>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Equipment Registry</div>
-                          <div style={{ fontSize: '0.7rem', color: textMute }}>Inverters, batteries & panels</div>
-                        </div>
-                      </div>
-                    </button>
-                    <Link to="/devices" style={{ textDecoration: 'none' }}>
-                       <div style={{ padding: 16, borderRadius: 10, background: inputBg, border: `1px solid ${inputBorder}`, color: textMain, display: 'flex', alignItems: 'center', gap: 12, transition: 'background 150ms' }} onMouseEnter={e => e.currentTarget.style.background = palette.mute.bg} onMouseLeave={e => e.currentTarget.style.background = inputBg}>
-                        <div style={{ background: palette.warn.bg, color: palette.warn.color, padding: 8, borderRadius: 8 }}><Cpu size={16} /></div>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Hardware Devices</div>
-                          <div style={{ fontSize: '0.7rem', color: textMute }}>View all devices</div>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
+                  <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>Billing</div>
+                  <Field
+                    isDark={isDark}
+                    label="Net metering started on"
+                    hint="The date the electricity board began billing net metering — not the install date. The first bill's network charge is worked out from here; leave blank to charge the whole cycle."
+                  >
+                    <input type="date" value={commissionedOn} onChange={e => setCommissionedOn(e.target.value)} style={ro({ maxWidth: 240 })} disabled={!editingDetails || busy} />
+                  </Field>
+                </SetupCard>
+                  );
+                })()}
 
                 {/* ── Savings & Billing Manual Entry ── */}
                 <div style={{ marginTop: 20 }}>
@@ -1120,180 +1008,92 @@ export default function SiteDetail() {
               <motion.div key="gateway" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
                 <InverterMeasurementConfig siteId={siteId} ownerUserId={site?.owner_user != null ? String(site.owner_user) : undefined} />
 
-                  {/* Deye Cloud settings */}
-                  <div style={{ marginTop: 20, padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Wifi size={18} color={primary} />
-                        <div>
-                          <div style={{ fontWeight: 700, color: textMain }}>Deye Cloud Settings</div>
-                          <div style={{ fontSize: '0.8rem', color: textSub }}>Used for Deye Cloud fallback /device/latest rich payloads.</div>
-                        </div>
-                      </div>
-                      {!editingDeyeSettings ? (
-                        <button type="button" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(true); }} style={buttonStyle(true)}>
-                          <Settings size={14} /> Edit
-                        </button>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button type="button" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(false); }} style={buttonStyle(true)}>
-                            Cancel
-                          </button>
-                          <button type="button" disabled={busy} onClick={saveDeyeSettings} style={buttonStyle()}>
-                            <Save size={14} /> Save
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 16 }}>
-                      <div>
-                        <label style={labelStyle}>Deye Station ID</label>
-                        <input
-                          type="number"
-                          value={deyeStationId}
-                          onChange={e => setDeyeStationId(e.target.value)}
-                          disabled={!editingDeyeSettings || busy}
-                          style={{ ...inputStyle, background: surface, opacity: !editingDeyeSettings ? 0.8 : 1 }}
-                          placeholder="e.g. 12616 (from Deye Cloud portal)"
-                        />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>Logger Serial (on Inverter)</label>
-                        <input
-                          value={loggerSerial}
-                          onChange={e => setLoggerSerial(e.target.value)}
-                          disabled={!editingDeyeSettings || busy}
-                          style={{ ...inputStyle, background: surface, opacity: !editingDeyeSettings ? 0.8 : 1 }}
-                          placeholder="e.g. 2509273375 (SolarmanV5/LSW3 dongle)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                {/* ── Inverter & Measurement Config ── */}
-                <div style={{ marginTop: 20, background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>Inverter & Measurement Config</h2>
-                    {!editingAppliances ? (
-                      <button type="button" disabled={busy || appliancesLoading} onClick={() => setEditingAppliances(true)} style={buttonStyle(true)}>
-                        <Settings size={14} /> Edit
-                      </button>
-                    ) : (
+                <div style={{ marginTop: 14 }}>
+                <SetupCard
+                  isDark={isDark}
+                  icon={<Wifi size={21} strokeWidth={1.8} />}
+                  title="Deye Cloud (backup data source)"
+                  purpose="Used to pull richer readings from Deye's own cloud when the on-site link is quiet."
+                  status={!editingDeyeSettings
+                    ? <Btn isDark={isDark} variant="soft" size="sm" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(true); }}><Settings size={14} /> Edit</Btn>
+                    : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" disabled={busy} onClick={() => { resetAppliancesForm(); setEditingAppliances(false); }} style={buttonStyle(true)}>Cancel</button>
-                        <button type="button" disabled={busy} onClick={saveAppliances} style={buttonStyle()}><Save size={14} /> Save</button>
+                        <Btn isDark={isDark} variant="plain" size="sm" disabled={busy} onClick={() => { resetDeyeSettingsForm(); setEditingDeyeSettings(false); }}>Cancel</Btn>
+                        <Btn isDark={isDark} size="sm" disabled={busy} onClick={saveDeyeSettings}><Save size={14} /> Save</Btn>
                       </div>
                     )}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                    <Field isDark={isDark} label="Deye station ID" hint="from the Deye Cloud portal">
+                      <input type="number" value={deyeStationId} onChange={e => setDeyeStationId(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 12616" />
+                    </Field>
+                    <Field isDark={isDark} label="Logger serial" hint="the Wi-Fi dongle on the inverter (SolarmanV5 / LSW3)">
+                      <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 2509273375" />
+                    </Field>
                   </div>
+                </SetupCard>
+                </div>
 
+                <div style={{ marginTop: 14 }}>
+                <SetupCard
+                  isDark={isDark}
+                  icon={<Settings size={21} strokeWidth={1.8} />}
+                  title="How the inverter is wired"
+                  purpose="Helps the forecast model understand what this inverter can and can't see."
+                  status={!editingAppliances
+                    ? <Btn isDark={isDark} variant="soft" size="sm" disabled={busy || appliancesLoading} onClick={() => setEditingAppliances(true)}><Settings size={14} /> Edit</Btn>
+                    : (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Btn isDark={isDark} variant="plain" size="sm" disabled={busy} onClick={() => { resetAppliancesForm(); setEditingAppliances(false); }}>Cancel</Btn>
+                        <Btn isDark={isDark} size="sm" disabled={busy} onClick={saveAppliances}><Save size={14} /> Save</Btn>
+                      </div>
+                    )}
+                >
                   {appliancesLoading ? (
-                    <div style={{ textAlign: 'center', padding: 24, color: textMute }}>
-                      <RefreshCw size={20} style={{ margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ textAlign: 'center', padding: 24, color: ut.ink2 }}>
+                      <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite' }} />
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-
-                      {/* Topology type */}
-                      <div>
-                        <label style={labelStyle}>Topology Type</label>
-                        <select
-                          value={applianceDraft.topology_type ?? ''}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, topology_type: e.target.value })}
-                          disabled={!editingAppliances || busy}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, background: nativeSelectBg, color: nativeSelectFg }}
-                        >
-                          <option value="unknown">Unknown</option>
-                          <option value="whole_home_backup">Whole-home Backup</option>
-                          <option value="partial_backup">Partial Backup</option>
-                          <option value="ac_coupled">AC Coupled</option>
-                          <option value="dc_coupled">DC Coupled</option>
-                          <option value="grid_tied">Grid-tied (no battery)</option>
-                        </select>
-                      </div>
-
-                      {/* Work mode */}
-                      <div>
-                        <label style={labelStyle}>Work Mode</label>
-                        <select
-                          value={applianceDraft.work_mode ?? ''}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, work_mode: e.target.value })}
-                          disabled={!editingAppliances || busy}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, background: nativeSelectBg, color: nativeSelectFg }}
-                        >
-                          <option value="">Unknown</option>
-                          <option value="zero_export">Zero Export</option>
-                          <option value="selling_first">Selling First (export surplus)</option>
-                          <option value="battery_first">Battery First</option>
-                          <option value="load_first">Load First</option>
-                        </select>
-                      </div>
-
-                      {/* CT Present toggle */}
-                      <div>
-                        <label style={labelStyle}>CT Clamp Installed</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.ct_present ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ct_present: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, CT clamp is installed</span>
-                        </div>
-                      </div>
-
-                      {/* CT Placement (conditional) */}
-                      {(applianceDraft.ct_present ?? false) && (
-                        <div>
-                          <label style={labelStyle}>CT Placement</label>
-                          <select
-                            value={applianceDraft.ct_placement ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ct_placement: e.target.value })}
-                            disabled={!editingAppliances || busy}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, background: nativeSelectBg, color: nativeSelectFg }}
-                          >
-                            <option value="">Select placement</option>
-                            <option value="grid_side">Grid side (main panel incoming)</option>
-                            <option value="load_side">Load side (after inverter)</option>
-                            <option value="pv_side">PV side</option>
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                        <Field isDark={isDark} label="Setup type">
+                          <select value={applianceDraft.topology_type ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, topology_type: e.target.value })} disabled={!editingAppliances || busy} style={roStyle(editingAppliances)}>
+                            <option value="unknown">Not sure yet</option>
+                            <option value="whole_home_backup">Whole-home backup</option>
+                            <option value="partial_backup">Some circuits on backup</option>
+                            <option value="ac_coupled">AC coupled</option>
+                            <option value="dc_coupled">DC coupled</option>
+                            <option value="grid_tied">Grid-tied (no battery)</option>
                           </select>
-                        </div>
-                      )}
-
-                      {/* Zero export */}
-                      <div>
-                        <label style={labelStyle}>Zero Export Enabled</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.zero_export_enabled ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, zero_export_enabled: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Inverter blocks grid export</span>
-                        </div>
+                        </Field>
+                        <Field isDark={isDark} label="Inverter mode">
+                          <select value={applianceDraft.work_mode ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, work_mode: e.target.value })} disabled={!editingAppliances || busy} style={roStyle(editingAppliances)}>
+                            <option value="">Not sure yet</option>
+                            <option value="zero_export">Never sends power to the grid</option>
+                            <option value="selling_first">Sends spare power to the grid</option>
+                            <option value="battery_first">Fills the battery first</option>
+                            <option value="load_first">Powers the home first</option>
+                          </select>
+                        </Field>
+                        {(applianceDraft.ct_present ?? false) && (
+                          <Field isDark={isDark} label="Where the clamp meter sits">
+                            <select value={applianceDraft.ct_placement ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ct_placement: e.target.value })} disabled={!editingAppliances || busy} style={roStyle(editingAppliances)}>
+                              <option value="">Choose one…</option>
+                              <option value="grid_side">On the main incoming supply</option>
+                              <option value="load_side">After the inverter</option>
+                              <option value="pv_side">On the solar side</option>
+                            </select>
+                          </Field>
+                        )}
                       </div>
-
-                      {/* Grid charge */}
-                      <div>
-                        <label style={labelStyle}>Grid Charging Enabled</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.grid_charge_enabled ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, grid_charge_enabled: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Battery can charge from grid</span>
-                        </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.ct_present ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, ct_present: v })} label="A clamp meter is fitted" hint="measures whole-home power" />
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.zero_export_enabled ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, zero_export_enabled: v })} label="Blocks power going to the grid" />
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.grid_charge_enabled ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, grid_charge_enabled: v })} label="Battery can charge from the grid" />
                       </div>
-
-                    </div>
+                    </>
                   )}
+                </SetupCard>
                 </div>
               </motion.div>
             )}
@@ -1301,471 +1101,181 @@ export default function SiteDetail() {
             {/* APPLIANCES TAB */}
             {tab === 'appliances' && (
               <motion.div key="appliances" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
-                <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>Appliance Inventory</h2>
-                    {!editingAppliances ? (
-                      <button type="button" disabled={busy || appliancesLoading} onClick={() => setEditingAppliances(true)} style={buttonStyle(true)}>
-                        <Settings size={14} /> Edit
-                      </button>
-                    ) : (
+                <SetupCard
+                  isDark={isDark}
+                  icon={<Zap size={21} strokeWidth={1.8} />}
+                  title="What’s in the home"
+                  purpose="The big appliances here. The forecast uses this to estimate what the home will use."
+                  status={!editingAppliances
+                    ? <Btn isDark={isDark} variant="soft" size="sm" disabled={busy || appliancesLoading} onClick={() => setEditingAppliances(true)}><Settings size={14} /> Edit</Btn>
+                    : (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            resetAppliancesForm();
-                            setEditingAppliances(false);
-                          }}
-                          style={buttonStyle(true)}
-                        >
-                          Cancel
-                        </button>
-                        <button type="button" disabled={busy} onClick={saveAppliances} style={buttonStyle()}>
-                          <Save size={14} /> Save
-                        </button>
+                        <Btn isDark={isDark} variant="plain" size="sm" disabled={busy} onClick={() => { resetAppliancesForm(); setEditingAppliances(false); }}>Cancel</Btn>
+                        <Btn isDark={isDark} size="sm" disabled={busy} onClick={saveAppliances}><Save size={14} /> Save</Btn>
                       </div>
                     )}
-                  </div>
-
+                >
                   {appliancesLoading ? (
-                    <div style={{ textAlign: 'center', padding: '40px 24px', color: textMute }}>
-                      <RefreshCw size={24} style={{ margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ textAlign: 'center', padding: '32px 24px', color: ut.ink2 }}>
+                      <RefreshCw size={22} style={{ animation: 'spin 1s linear infinite' }} />
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-                      {/* AC Units */}
-                      <div>
-                        <label style={labelStyle}>Number of AC Units</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={applianceDraft.num_ac_units ?? 0}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, num_ac_units: parseInt(e.target.value) || 0 })}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                          disabled={!editingAppliances || busy}
-                        />
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                        <Field isDark={isDark} label="Air conditioners">
+                          <input type="number" min="0" value={applianceDraft.num_ac_units ?? 0} onChange={e => setApplianceDraft({ ...applianceDraft, num_ac_units: parseInt(e.target.value) || 0 })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} />
+                        </Field>
+                        {(applianceDraft.num_ac_units ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Total AC size (kW)">
+                            <input type="number" min="0" step="0.1" value={applianceDraft.ac_total_capacity_kw ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ac_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 3, 5.5" />
+                          </Field>
+                        )}
+                        {(applianceDraft.num_ac_units ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Usual temperature setting (°C)">
+                            <input type="number" min="18" max="32" step="0.5" value={applianceDraft.ac_typical_setpoint_c ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ac_typical_setpoint_c: e.target.value ? parseFloat(e.target.value) : null })} style={roStyle(editingAppliances)} placeholder="e.g. 24" disabled={!editingAppliances || busy} />
+                          </Field>
+                        )}
+                        <Field isDark={isDark} label="Water heaters (geysers)">
+                          <input type="number" min="0" value={applianceDraft.num_geysers ?? 0} onChange={e => setApplianceDraft({ ...applianceDraft, num_geysers: parseInt(e.target.value) || 0 })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} />
+                        </Field>
+                        {(applianceDraft.num_geysers ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Total heater size (kW)">
+                            <input type="number" min="0" step="0.1" value={applianceDraft.geyser_total_capacity_kw ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, geyser_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 2, 4.5, 6" />
+                          </Field>
+                        )}
+                        {(applianceDraft.num_geysers ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Water heater type" hint="optional">
+                            <select value={applianceDraft.geyser_type ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, geyser_type: e.target.value })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy}>
+                              <option value="">Choose one…</option>
+                              <option value="instant">Instant (tankless)</option>
+                              <option value="storage_tank">Storage tank</option>
+                              <option value="solar_backup">Solar with backup</option>
+                            </select>
+                          </Field>
+                        )}
+                        <Field isDark={isDark} label="Fridges">
+                          <input type="number" min="0" value={applianceDraft.num_refrigerators ?? 0} onChange={e => setApplianceDraft({ ...applianceDraft, num_refrigerators: parseInt(e.target.value) || 0 })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} />
+                        </Field>
+                        <Field isDark={isDark} label="Washing machines">
+                          <input type="number" min="0" value={applianceDraft.num_washing_machines ?? 0} onChange={e => setApplianceDraft({ ...applianceDraft, num_washing_machines: parseInt(e.target.value) || 0 })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} />
+                        </Field>
+                        <Field isDark={isDark} label="EV chargers">
+                          <input type="number" min="0" value={applianceDraft.num_ev_chargers ?? 0} onChange={e => setApplianceDraft({ ...applianceDraft, num_ev_chargers: parseInt(e.target.value) || 0 })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} />
+                        </Field>
+                        {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Charger size (kW)">
+                            <input type="number" min="0" step="0.1" value={applianceDraft.ev_typical_charging_capacity_kw ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ev_typical_charging_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 3.3, 7, 11, 22" />
+                          </Field>
+                        )}
+                        {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
+                          <Field isDark={isDark} label="Vehicle type">
+                            <select value={applianceDraft.ev_type ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ev_type: e.target.value })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy}>
+                              <option value="">Choose one…</option>
+                              <option value="two_wheeler">Two-wheeler</option>
+                              <option value="three_wheeler">Three-wheeler</option>
+                              <option value="four_wheeler">Car</option>
+                            </select>
+                          </Field>
+                        )}
+                        {(applianceDraft.has_water_pump ?? false) && (
+                          <Field isDark={isDark} label="Pump size (HP)">
+                            <input type="number" min="0" step="0.1" value={applianceDraft.water_pump_capacity_hp ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, water_pump_capacity_hp: e.target.value ? parseFloat(e.target.value) : null })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 0.5, 1, 2, 3" />
+                          </Field>
+                        )}
                       </div>
 
-                      {/* AC Capacity (conditional) */}
-                      {(applianceDraft.num_ac_units ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>AC Capacity (kW)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={applianceDraft.ac_total_capacity_kw ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ac_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 3, 5.5"
-                          />
-                        </div>
-                      )}
-
-                      {/* AC Setpoint (conditional) */}
-                      {(applianceDraft.num_ac_units ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>AC Typical Setpoint (°C)</label>
-                          <input
-                            type="number"
-                            min="18"
-                            max="32"
-                            step="0.5"
-                            value={applianceDraft.ac_typical_setpoint_c ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ac_typical_setpoint_c: e.target.value ? parseFloat(e.target.value) : null })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            placeholder="e.g. 24"
-                            disabled={!editingAppliances || busy}
-                          />
-                        </div>
-                      )}
-
-                      {/* Geysers */}
-                      <div>
-                        <label style={labelStyle}>Number of Geysers</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={applianceDraft.num_geysers ?? 0}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, num_geysers: parseInt(e.target.value) || 0 })}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                          disabled={!editingAppliances || busy}
-                        />
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.has_water_pump ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, has_water_pump: v })} label="Water or irrigation pump" />
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.has_microwave ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, has_microwave: v })} label="Microwave" />
+                        <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.has_desert_cooler ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, has_desert_cooler: v })} label="Desert cooler" />
                       </div>
 
-                      {/* Geyser Capacity (conditional) */}
-                      {(applianceDraft.num_geysers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>Geyser Heating Capacity (kW)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={applianceDraft.geyser_total_capacity_kw ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, geyser_total_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 2, 4.5, 6"
+                      {/* What's on the inverter */}
+                      <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
+                      <div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>What’s on the inverter</div>
+                        <p style={{ margin: '4px 0 12px', fontSize: '0.82rem', color: ut.ink2, lineHeight: 1.5 }}>
+                          The inverter only sees what’s wired through it. Tell us how many of each run that way — the rest
+                          run off the grid. Without a clamp meter, the forecast leans on these.
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                          {(applianceDraft.num_ac_units ?? 0) > 0 && (
+                            <Field isDark={isDark} label="Air conditioners on the inverter" hint={`of ${applianceDraft.num_ac_units}`}>
+                              <input type="number" min="0" max={applianceDraft.num_ac_units ?? 0} value={applianceDraft.ac_units_on_inverter ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, ac_units_on_inverter: e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 0, applianceDraft.num_ac_units ?? 0) })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 3" />
+                            </Field>
+                          )}
+                          {(applianceDraft.num_geysers ?? 0) > 0 && (
+                            <Field isDark={isDark} label="Water heaters on the inverter" hint={`of ${applianceDraft.num_geysers}`}>
+                              <input type="number" min="0" max={applianceDraft.num_geysers ?? 0} value={applianceDraft.geysers_on_inverter ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, geysers_on_inverter: e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 0, applianceDraft.num_geysers ?? 0) })} style={roStyle(editingAppliances)} disabled={!editingAppliances || busy} placeholder="e.g. 0" />
+                            </Field>
+                          )}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+                          {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
+                            <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.ev_charger_on_inverter ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, ev_charger_on_inverter: v })} label="EV charger is on the inverter" />
+                          )}
+                          {(applianceDraft.has_water_pump ?? false) && (
+                            <ToggleRow disabled={!editingAppliances || busy} checked={applianceDraft.pump_on_inverter ?? false} onChange={v => setApplianceDraft({ ...applianceDraft, pump_on_inverter: v })} label="Pump is on the inverter" />
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: 14 }}>
+                          <ToggleRow
+                            disabled={!editingAppliances || busy || !(applianceDraft.ct_present ?? false)}
+                            checked={applianceDraft.ct_load_forecast_enabled ?? false}
+                            onChange={v => setApplianceDraft({ ...applianceDraft, ct_load_forecast_enabled: v })}
+                            label="Use the clamp meter for load forecasting"
+                            hint={(applianceDraft.ct_present ?? false)
+                              ? 'The forecast will use the clamp meter to predict the whole home’s usage, not just the inverter side.'
+                              : 'Needs a clamp meter fitted first — ask field ops to install one.'}
                           />
-                        </div>
-                      )}
-
-                      {/* Geyser Type (conditional) */}
-                      {(applianceDraft.num_geysers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>Primary Geyser Type <span style={{ fontSize: '0.85em', opacity: 0.6 }}>(Optional)</span></label>
-                          <select
-                            value={applianceDraft.geyser_type ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, geyser_type: e.target.value })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, cursor: editingAppliances ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
-                            disabled={!editingAppliances || busy}
-                          >
-                            <option value="">Select type</option>
-                            <option value="instant">Instant (Tankless)</option>
-                            <option value="storage_tank">Storage Tank</option>
-                            <option value="solar_backup">Solar with Backup</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Refrigerators */}
-                      <div>
-                        <label style={labelStyle}>Number of Refrigerators</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={applianceDraft.num_refrigerators ?? 0}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, num_refrigerators: parseInt(e.target.value) || 0 })}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                          disabled={!editingAppliances || busy}
-                        />
-                      </div>
-
-                      {/* Washing Machines */}
-                      <div>
-                        <label style={labelStyle}>Number of Washing Machines</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={applianceDraft.num_washing_machines ?? 0}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, num_washing_machines: parseInt(e.target.value) || 0 })}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                          disabled={!editingAppliances || busy}
-                        />
-                      </div>
-
-                      {/* EV Chargers */}
-                      <div>
-                        <label style={labelStyle}>Number of EV Chargers</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={applianceDraft.num_ev_chargers ?? 0}
-                          onChange={e => setApplianceDraft({ ...applianceDraft, num_ev_chargers: parseInt(e.target.value) || 0 })}
-                          style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                          disabled={!editingAppliances || busy}
-                        />
-                      </div>
-
-                      {/* EV Charger Capacity (conditional) */}
-                      {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>Charger Capacity (kW)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={applianceDraft.ev_typical_charging_capacity_kw ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ev_typical_charging_capacity_kw: e.target.value ? parseFloat(e.target.value) : null })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 3.3, 7, 11, 22"
-                          />
-                        </div>
-                      )}
-
-                      {/* EV Type (conditional) */}
-                      {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>Primary EV Type</label>
-                          <select
-                            value={applianceDraft.ev_type ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ev_type: e.target.value })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8, cursor: editingAppliances ? 'pointer' : 'not-allowed', background: nativeSelectBg, color: nativeSelectFg }}
-                            disabled={!editingAppliances || busy}
-                          >
-                            <option value="">Select type</option>
-                            <option value="two_wheeler">Two-wheeler</option>
-                            <option value="three_wheeler">Three-wheeler</option>
-                            <option value="four_wheeler">Four-wheeler</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Water Pump */}
-                      <div>
-                        <label style={labelStyle}>Has Water/Irrigation Pump</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.has_water_pump ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, has_water_pump: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has pump</span>
                         </div>
                       </div>
 
-                      {/* Pump Capacity (conditional) */}
-                      {(applianceDraft.has_water_pump ?? false) && (
-                        <div>
-                          <label style={labelStyle}>Pump Capacity (HP)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={applianceDraft.water_pump_capacity_hp ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, water_pump_capacity_hp: e.target.value ? parseFloat(e.target.value) : null })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 0.5, 1, 2, 3"
-                          />
-                        </div>
-                      )}
-
-                      {/* Microwave */}
-                      <div>
-                        <label style={labelStyle}>Has Microwave</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.has_microwave ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, has_microwave: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has microwave</span>
-                        </div>
-                      </div>
-
-                      {/* Desert Cooler */}
-                      <div>
-                        <label style={labelStyle}>Has Desert Cooler</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                          <input
-                            type="checkbox"
-                            checked={applianceDraft.has_desert_cooler ?? false}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, has_desert_cooler: e.target.checked })}
-                            disabled={!editingAppliances || busy}
-                            style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                          />
-                          <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, has desert cooler</span>
-                        </div>
-                      </div>
-                    </div>
+                      <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
+                      <Field isDark={isDark} label="Notes" hint="optional">
+                        <textarea value={applianceDraft.appliance_notes ?? ''} onChange={e => setApplianceDraft({ ...applianceDraft, appliance_notes: e.target.value })} style={{ ...roStyle(editingAppliances), minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} placeholder="Anything else worth noting about the appliances" disabled={!editingAppliances || busy} />
+                      </Field>
+                    </>
                   )}
-
-                  {/* Circuit Topology Section */}
-                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <h3 style={{ margin: 0, fontSize: '0.95rem', color: textMain }}>Inverter Circuit Topology</h3>
-                    </div>
-                    <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: textMute, lineHeight: 1.5 }}>
-                      Deye inverters only measure loads on the backup AC output bus. Specify how many of each appliance
-                      are wired to the inverter (vs. MSEB grid panel direct). The load forecast model uses these counts —
-                      not the totals above — when no CT clamp is installed.
-                    </p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-
-                      {/* AC units on inverter */}
-                      {(applianceDraft.num_ac_units ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>
-                            ACs on Inverter Bus
-                            <span style={{ marginLeft: 6, fontSize: '0.78rem', color: textMute }}>
-                              (of {applianceDraft.num_ac_units} total)
-                            </span>
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max={applianceDraft.num_ac_units ?? 0}
-                            value={applianceDraft.ac_units_on_inverter ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, ac_units_on_inverter: e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 0, applianceDraft.num_ac_units ?? 0) })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 3"
-                          />
-                        </div>
-                      )}
-
-                      {/* Geysers on inverter */}
-                      {(applianceDraft.num_geysers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>
-                            Geysers on Inverter Bus
-                            <span style={{ marginLeft: 6, fontSize: '0.78rem', color: textMute }}>
-                              (of {applianceDraft.num_geysers} total)
-                            </span>
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max={applianceDraft.num_geysers ?? 0}
-                            value={applianceDraft.geysers_on_inverter ?? ''}
-                            onChange={e => setApplianceDraft({ ...applianceDraft, geysers_on_inverter: e.target.value === '' ? null : Math.min(parseInt(e.target.value) || 0, applianceDraft.num_geysers ?? 0) })}
-                            style={{ ...inputStyle, width: '100%', opacity: editingAppliances ? 1 : 0.8 }}
-                            disabled={!editingAppliances || busy}
-                            placeholder="e.g. 0"
-                          />
-                        </div>
-                      )}
-
-                      {/* EV charger on inverter */}
-                      {(applianceDraft.num_ev_chargers ?? 0) > 0 && (
-                        <div>
-                          <label style={labelStyle}>EV Charger on Inverter Bus</label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                            <input
-                              type="checkbox"
-                              checked={applianceDraft.ev_charger_on_inverter ?? false}
-                              onChange={e => setApplianceDraft({ ...applianceDraft, ev_charger_on_inverter: e.target.checked })}
-                              disabled={!editingAppliances || busy}
-                              style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                            />
-                            <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, charger is on inverter</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pump on inverter */}
-                      {(applianceDraft.has_water_pump ?? false) && (
-                        <div>
-                          <label style={labelStyle}>Pump on Inverter Bus</label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                            <input
-                              type="checkbox"
-                              checked={applianceDraft.pump_on_inverter ?? false}
-                              onChange={e => setApplianceDraft({ ...applianceDraft, pump_on_inverter: e.target.checked })}
-                              disabled={!editingAppliances || busy}
-                              style={{ cursor: editingAppliances ? 'pointer' : 'not-allowed', width: 18, height: 18 }}
-                            />
-                            <span style={{ fontSize: '0.85rem', color: textSub }}>Yes, pump is on inverter</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* CT Load Forecast Toggle */}
-                    <div style={{
-                      marginTop: 20, padding: '14px 16px', borderRadius: 10,
-                      border: `1px solid ${applianceDraft.ct_load_forecast_enabled ? 'rgba(0,166,62,0.4)' : inputBorder}`,
-                      background: applianceDraft.ct_load_forecast_enabled ? 'rgba(0,166,62,0.06)' : inputBg,
-                      display: 'flex', alignItems: 'flex-start', gap: 12,
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={applianceDraft.ct_load_forecast_enabled ?? false}
-                        onChange={e => setApplianceDraft({ ...applianceDraft, ct_load_forecast_enabled: e.target.checked })}
-                        disabled={!editingAppliances || busy || !(applianceDraft.ct_present ?? false)}
-                        style={{ cursor: (editingAppliances && (applianceDraft.ct_present ?? false)) ? 'pointer' : 'not-allowed', width: 18, height: 18, marginTop: 2, flexShrink: 0 }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: textMain }}>
-                          CT-Based Total Load Forecast
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: textMute, marginTop: 3, lineHeight: 1.5 }}>
-                          {(applianceDraft.ct_present ?? false)
-                            ? 'When enabled, the load model predicts total household load (inverter + grid-direct) using the CT clamp signal.'
-                            : 'Requires a CT clamp to be installed and ct_present = True. Contact field ops to install a CT clamp before enabling.'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Notes Section */}
-                  <div style={{ height: 1, background: border, margin: '24px 0' }} />
-                  <div>
-                    <label style={labelStyle}>Notes</label>
-                    <textarea
-                      value={applianceDraft.appliance_notes ?? ''}
-                      onChange={e => setApplianceDraft({ ...applianceDraft, appliance_notes: e.target.value })}
-                      style={{
-                        width: '100%', minHeight: 100, padding: '10px 14px',
-                        borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg,
-                        color: textMain, fontSize: '0.85rem', fontFamily: 'inherit', outline: 'none',
-                        opacity: editingAppliances ? 1 : 0.8, resize: 'vertical',
-                        transition: 'border-color 150ms'
-                      }}
-                      placeholder="Additional notes about appliances (optional)"
-                      disabled={!editingAppliances || busy}
-                    />
-                  </div>
-                </div>
+                </SetupCard>
               </motion.div>
             )}
 
             {/* LIFECYCLE TAB */}
             {tab === 'lifecycle' && (
               <motion.div key="lifecycle" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
-                <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                    <Settings size={18} color={textMute} />
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: textMain }}>Lifecycle Management</h2>
-                  </div>
-                  <p style={{ fontSize: '0.85rem', color: textMute, margin: '0 0 24px' }}>
-                    Change the operational state of this site. Invalid API state transitions will be automatically rejected.
-                  </p>
-
-                  <div style={{ padding: 20, borderRadius: 12, background: inputBg, border: `1px solid ${inputBorder}` }}>
-                    <label style={labelStyle}>Target Status</label>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <select
-                        value={lifecycleTo} onChange={e => setLifecycleTo(e.target.value)}
-                        style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', background: nativeSelectBg, color: nativeSelectFg }}
-                      >
+                <SetupCard
+                  isDark={isDark}
+                  icon={<Settings size={21} strokeWidth={1.8} />}
+                  title="Site status"
+                  purpose="Where this site is in its life — from draft, through setup, to live."
+                  status={site && <StatusChip isDark={isDark} state={statusState(site.site_status)}>{statusWord(site.site_status)}</StatusChip>}
+                >
+                  <Field isDark={isDark} label="Change status to" hint="a step that doesn’t make sense will be turned down">
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <select value={lifecycleTo} onChange={e => setLifecycleTo(e.target.value)} style={{ ...controlStyle(isDark), flex: 1, minWidth: 180 }}>
                         {LIFECYCLE_OPTIONS.map(o => (
-                          <option key={o} value={o}>{o.toUpperCase()}</option>
+                          <option key={o} value={o}>{statusWord(o)}</option>
                         ))}
                       </select>
-                      <button type="button" disabled={busy || lifecycleTo === site?.site_status} onClick={handleLifecycle} style={buttonStyle()}>
-                        Apply Transition
-                      </button>
+                      <Btn isDark={isDark} disabled={busy || lifecycleTo === site?.site_status} onClick={handleLifecycle}>Update status</Btn>
                     </div>
-                  </div>
+                  </Field>
+                </SetupCard>
 
-                  <div style={{ marginTop: 24, padding: 20, borderRadius: 12, border: `2px solid ${palette.err.border}`, background: palette.err.bg }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                      <AlertTriangle size={18} color={palette.err.color} />
-                      <h3 style={{ margin: 0, fontSize: '1rem', color: palette.err.color }}>Delete Site</h3>
-                    </div>
-                    <p style={{ fontSize: '0.85rem', color: textSub, margin: '0 0 12px' }}>
-                      Permanently delete this site and all associated data. This action cannot be undone.
-                    </p>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => { setShowDeleteModal(true); setDeleteConfirmationText(''); }}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        border: 'none',
-                        background: palette.err.color,
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        opacity: busy ? 0.5 : 1,
-                      }}
-                    >
-                      Delete Site
-                    </button>
+                <SetupCard
+                  isDark={isDark}
+                  icon={<AlertTriangle size={21} strokeWidth={1.8} />}
+                  title="Remove this site"
+                  purpose="Deletes the site and everything recorded against it. This can’t be undone."
+                >
+                  <div>
+                    <Btn isDark={isDark} variant="plain" disabled={busy} onClick={() => { setShowDeleteModal(true); setDeleteConfirmationText(''); }}>
+                      <Trash2 size={14} /> Remove site…
+                    </Btn>
                   </div>
-                </div>
+                </SetupCard>
               </motion.div>
             )}
 
@@ -1795,7 +1305,7 @@ export default function SiteDetail() {
                     <div className="portal-modal-icon portal-modal-icon-danger">
                       <AlertTriangle size={22} color="white" />
                     </div>
-                    <span className="portal-modal-title">Delete Site</span>
+                    <span className="portal-modal-title">Remove site</span>
                   </div>
                   <button onClick={() => setShowDeleteModal(false)} className="portal-modal-close-btn">
                     <X size={16} />
@@ -1803,13 +1313,13 @@ export default function SiteDetail() {
                 </div>
                 <div className="portal-modal-body">
                   <p>
-                    Are you sure you want to permanently delete <strong>{site?.display_name || site?.site_id}</strong>?
+                    Remove <strong>{site?.display_name || site?.site_id}</strong> for good?
                   </p>
                   <div className="portal-modal-warning-box">
-                    <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Warning:</strong> This will permanently delete the site and all associated data. This action cannot be undone.
+                    <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Heads up:</strong> the site and everything recorded against it will be deleted. This can’t be undone.
                   </div>
                   <div style={{ marginTop: 16 }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: 8 }}>Type "delete" to confirm:</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: 8 }}>Type <em>delete</em> to confirm</label>
                     <input
                       type="text"
                       value={deleteConfirmationText}
@@ -1828,7 +1338,7 @@ export default function SiteDetail() {
                 </div>
                 <div className="portal-modal-footer">
                   <button onClick={() => setShowDeleteModal(false)} className="portal-modal-btn portal-modal-btn-cancel">
-                    Cancel
+                    Keep it
                   </button>
                   <button
                     onClick={handleDeleteSite}
@@ -1836,7 +1346,7 @@ export default function SiteDetail() {
                     className="portal-modal-btn portal-modal-btn-danger"
                     style={{ opacity: (deleteConfirmationText !== 'delete' || busy) ? 0.5 : 1 }}
                   >
-                    {busy ? 'Deleting...' : 'Yes, Delete Site'}
+                    {busy ? 'Removing…' : 'Remove site'}
                   </button>
                 </div>
               </div>

@@ -95,6 +95,16 @@ All API calls go through `src/services/`. Base URL from `VITE_API_BASE_URL`. Cal
 
 Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code colors — use Tailwind tokens or CSS variables.
 
+### UI Style — the friendly house style
+
+**All new staff-facing UI follows [`UI_GUIDE.md`](./UI_GUIDE.md).** Plain,
+non-technical language (the audience is field/ops staff, not engineers), calm
+status vocabulary ("Not set up yet" is amber, not red), appliance-first rows,
+guided flows closed by default, device codes behind an "Advanced details"
+expander. Shared primitives live in `src/features/staff/siteHardware/ui.tsx`;
+`InverterMeasurementConfig.tsx` is the reference page. When touching an older
+screen, migrate it toward this style rather than matching its old patterns.
+
 ### UI Theme + Select Migration
 
 See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration history and remaining native-`<select>` wave status. Note that doc still references pre-restructure paths (`src/components/...`, `src/ui/chart.tsx`); current locations are `src/features/staff/...` and `src/shared/ui/chart.tsx` respectively.

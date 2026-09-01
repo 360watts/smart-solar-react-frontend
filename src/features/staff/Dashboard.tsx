@@ -53,7 +53,7 @@ const Dashboard: React.FC = () => {
   const [sitesError, setSitesError] = useState<string | null>(null);
   const [alertsError, setAlertsError] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [alertsCollapsed, setAlertsCollapsed] = useState(false);
+  const [alertsCollapsed, setAlertsCollapsed] = useState(true);
   const [search, setSearch] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 

@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Wifi, Zap, Plus, Trash2, Pencil, RefreshCw, LinkIcon, Unlink, ArrowRightLeft } from 'lucide-react';
+import {
+  MonitorCog, Gauge, Zap, PlugZap, RefreshCw, Link2, Unlink, ArrowRightLeft, Plus,
+  Pencil, Trash2, Check,
+} from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import {
+  SetupShell, SetupCard, StatusChip, Item, Flow, Field, controlStyle, Btn, EmptyState,
+  InlineConfirm, useTokens, applianceIcon, applianceName,
+} from './siteHardware/ui';
+import SmartDeviceComposer from './siteHardware/SmartDeviceComposer';
 
 interface SmartDeviceForm {
   device_type: string;
@@ -15,8 +23,8 @@ interface SmartDeviceForm {
 const blankSmartDeviceForm = (): SmartDeviceForm => ({
   device_type: 'tuya_plug',
   provider_device_id: '',
-  appliance_label: 'ev_charger',
-  circuit: 'grid_direct',
+  appliance_label: 'fridge',
+  circuit: 'inverter_backup',
   display_name: '',
   is_active: true,
   ingest_mode: 'poll',
@@ -45,10 +53,10 @@ export default function InverterMeasurementConfig({
   onGatewayAttached,
 }: InverterMeasurementConfigProps) {
   const { isDark } = useTheme();
+  const t = useTokens(isDark);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── State (moved from SiteDetail.tsx:453-471) ──
   const [gatewayDevicePk, setGatewayDevicePk] = useState('');
   const [energyMeterPk, setEnergyMeterPk] = useState('');
   const [availableDevices, setAvailableDevices] = useState<any[]>([]);
@@ -63,77 +71,42 @@ export default function InverterMeasurementConfig({
   const [smartDevicesSaving, setSmartDevicesSaving] = useState(false);
   const [editingSmartDeviceId, setEditingSmartDeviceId] = useState<number | null>(null);
   const [smartDeviceDraft, setSmartDeviceDraft] = useState<SmartDeviceForm>(blankSmartDeviceForm());
+  const [tuyaCloudDevices, setTuyaCloudDevices] = useState<Array<{ id: string; name: string; product_name?: string; category?: string; online?: boolean; already_registered: boolean }>>([]);
+  const [tuyaCloudLoading, setTuyaCloudLoading] = useState(false);
+  const [tuyaCloudError, setTuyaCloudError] = useState<string | null>(null);
+  const [lastProvisioning, setLastProvisioning] = useState<{ ok?: boolean; error?: string | null; meters?: boolean } | null>(null);
+  const [smartComposerOpen, setSmartComposerOpen] = useState(false);
+  const [gatewayComposerOpen, setGatewayComposerOpen] = useState(false);
+  const [meterComposerOpen, setMeterComposerOpen] = useState(false);
+  const [circuitComposerOpen, setCircuitComposerOpen] = useState(false);
+  const [confirmDel, setConfirmDel] = useState<{ kind: string; id: number; label: string } | null>(null);
   const [circuitLines, setCircuitLines] = useState<any[]>([]);
   const [circuitLinesLoading, setCircuitLinesLoading] = useState(false);
   const [circuitLinesSaving, setCircuitLinesSaving] = useState(false);
   const [editingCircuitLineId, setEditingCircuitLineId] = useState<number | null>(null);
   const [circuitLineDraft, setCircuitLineDraft] = useState<CircuitLineForm>(blankCircuitLineForm());
-  // Fix round 1: mirror-pairing fields (mirrored_by_serials / mirrors_device_id /
-  // mirrors_device_serial) are NOT present on getDevices() list items — confirmed against
-  // src/services/api.ts. SiteDetail.tsx originally sourced these from getSiteStaffDetail(siteId)
-  // (site.gateway_device / site.energy_meters), so this component fetches that enriched,
-  // siteId-scoped object too, purely to read those three fields.
+  // mirror-pairing fields (mirrored_by_serials / mirrors_device_id / mirrors_device_serial) are
+  // NOT on getDevices() list items — they come from getSiteStaffDetail(siteId) (site-scoped).
   const [siteDetail, setSiteDetail] = useState<any>(null);
 
-  // ── Style tokens (moved from SiteDetail.tsx:511-528) ──
-  const surface     = 'var(--card)';
-  const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
-  const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
-  const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
-  const textMain    = 'var(--foreground)';
-  const textMute    = 'var(--muted-foreground)';
-  const textSub     = 'var(--muted-foreground)';
-  const primary     = '#00a63e';
-  const nativeSelectBg = 'var(--foreground)';
-  const nativeSelectFg = 'var(--foreground)';
-  const palette = {
-    ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
-    warn: { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: 'rgba(245,158,11,0.2)' },
-    err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
-    info: { bg: 'rgba(59,130,246,0.1)',  color: '#3b82f6', border: 'rgba(59,130,246,0.2)'  },
-    mute: { bg: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: textSub, border: inputBorder },
-  };
-  // Used by the move-target site search dropdown to badge a candidate site's status.
-  const getStatusStyle = (status: string) => {
+  const siteStatusStyle = (status: string) => {
     switch (status) {
-      case 'active': return palette.ok;
-      case 'commissioning': return palette.info;
-      case 'inactive': return palette.err;
-      case 'draft': case 'archived': default: return palette.mute;
+      case 'active': return { background: t.goodBg, color: t.goodInk };
+      case 'commissioning': return { background: 'rgba(59,130,246,0.14)', color: '#5a9bff' };
+      case 'inactive': return { background: 'rgba(229,72,77,0.14)', color: '#e5484d' };
+      default: return { background: t.idleBg, color: t.ink2 };
     }
   };
-  const inputStyle: React.CSSProperties = {
-    flex: 1, padding: '10px 14px', borderRadius: 8,
-    border: `1px solid ${inputBorder}`, background: inputBg, color: textMain,
-    fontSize: '0.85rem', outline: 'none', transition: 'border-color 150ms', minWidth: 180,
-  };
-  const labelStyle: React.CSSProperties = {
-    fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
-    letterSpacing: '0.05em', color: textMute, display: 'block', marginBottom: 6,
-  };
-  const buttonStyle = (isSecondary = false, isDanger = false): React.CSSProperties => ({
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: '10px 16px', borderRadius: 8, border: 'none', cursor: busy ? 'not-allowed' : 'pointer',
-    background: isDanger ? 'rgba(239,68,68,0.1)' : isSecondary ? palette.mute.bg : primary,
-    color: isDanger ? '#ef4444' : isSecondary ? textMain : '#fff',
-    borderStyle: 'solid', borderWidth: 1,
-    borderColor: isDanger ? 'rgba(239,68,68,0.2)' : isSecondary ? palette.mute.border : primary,
-    fontSize: '0.85rem', fontWeight: 600, transition: 'all 150ms', opacity: busy ? 0.7 : 1,
-    boxShadow: isSecondary || isDanger ? 'none' : '0 4px 12px rgba(0,166,62,0.2)',
-  });
 
-  // ── Data loading (moved from SiteDetail.tsx:539-563, 698-728) ──
+  // ── Data loading ──
   const refreshSmartDevices = useCallback(async () => {
     if (!siteId) return;
     setSmartDevicesLoading(true);
     try {
       const devices = await apiService.getSmartDevices(siteId);
       setSmartDevices(Array.isArray(devices) ? devices : []);
-    } catch {
-      setSmartDevices([]);
-    } finally {
-      setSmartDevicesLoading(false);
-    }
+    } catch { setSmartDevices([]); }
+    finally { setSmartDevicesLoading(false); }
   }, [siteId]);
 
   const refreshCircuitLines = useCallback(async () => {
@@ -142,11 +115,8 @@ export default function InverterMeasurementConfig({
     try {
       const lines = await apiService.getCircuitLines(siteId);
       setCircuitLines(Array.isArray(lines) ? lines : []);
-    } catch {
-      setCircuitLines([]);
-    } finally {
-      setCircuitLinesLoading(false);
-    }
+    } catch { setCircuitLines([]); }
+    finally { setCircuitLinesLoading(false); }
   }, [siteId]);
 
   const refreshSiteDetail = useCallback(async () => {
@@ -154,15 +124,9 @@ export default function InverterMeasurementConfig({
     try {
       const data = await apiService.getSiteStaffDetail(siteId);
       setSiteDetail(data);
-    } catch {
-      setSiteDetail(null);
-    }
+    } catch { setSiteDetail(null); }
   }, [siteId]);
 
-  // Unattached-device pool for the attach dropdowns. When an owner is known (ownerUserId,
-  // passed by both call sites from the site's owner_user), scope to that owner's devices —
-  // restores the original pre-refactor CommissioningWizard step 2 behavior of only offering
-  // devices belonging to the site's owner, rather than the first 100 devices fleet-wide.
   const loadAvailableDevices = useCallback(async () => {
     setDevicesLoading(true);
     try {
@@ -174,11 +138,8 @@ export default function InverterMeasurementConfig({
         if (Array.isArray(devices)) setAvailableDevices(devices);
         else setAvailableDevices(devices.results ?? []);
       }
-    } catch {
-      setAvailableDevices([]);
-    } finally {
-      setDevicesLoading(false);
-    }
+    } catch { setAvailableDevices([]); }
+    finally { setDevicesLoading(false); }
   }, [ownerUserId]);
 
   useEffect(() => {
@@ -189,11 +150,8 @@ export default function InverterMeasurementConfig({
         const sites = await apiService.getSitesList({ includeInactive: true });
         const list = Array.isArray(sites) ? sites : (sites as any).results ?? [];
         setAvailableSites(list.filter((s: any) => s.site_id !== siteId));
-      } catch {
-        setAvailableSites([]);
-      } finally {
-        setSitesLoading(false);
-      }
+      } catch { setAvailableSites([]); }
+      finally { setSitesLoading(false); }
     };
     loadAvailableDevices();
     loadSites();
@@ -202,68 +160,70 @@ export default function InverterMeasurementConfig({
     refreshSiteDetail();
   }, [siteId, loadAvailableDevices, refreshSmartDevices, refreshCircuitLines, refreshSiteDetail]);
 
-  // ── Attach/detach/move (moved from SiteDetail.tsx:753-829, unchanged bodies except
-  //    handleAttach fires onGatewayAttached for the gateway case) ──
+  // ── Attach / detach / move / mirror ──
   const handleAttach = async (rawPk: string, label: string) => {
     const pk = parseInt(rawPk, 10);
     if (!pk || Number.isNaN(pk)) return;
     setBusy(true); setError(null);
     try {
       await apiService.siteAttachDevice(siteId, pk);
-      if (label === 'gateway') {
-        setGatewayDevicePk('');
-        onGatewayAttached?.(pk);
-      } else setEnergyMeterPk('');
+      if (label === 'gateway') { setGatewayDevicePk(''); setGatewayComposerOpen(false); onGatewayAttached?.(pk); }
+      else { setEnergyMeterPk(''); setMeterComposerOpen(false); }
       await loadAvailableDevices();
       refreshSiteDetail();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Attach failed'); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't connect that device") ; }
     finally { setBusy(false); }
   };
 
-  const handleDetach = async (deviceId: number, deviceSerial: string, roleLabel: string) => {
-    if (!window.confirm(`Detach ${roleLabel} ${deviceSerial} from this site?`)) return;
+  const handleDetach = async (deviceId: number) => {
     setBusy(true); setError(null);
     try {
       await apiService.siteDetachDevice(siteId, deviceId);
       await loadAvailableDevices();
       refreshSiteDetail();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Detach failed'); }
-    finally { setBusy(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't disconnect that device"); }
+    finally { setBusy(false); setConfirmDel(null); }
   };
 
-  const handleMove = async (deviceId: number, deviceLabel: string, targetSiteId?: string) => {
+  const handleMove = async (deviceId: number, targetSiteId?: string) => {
     const target = targetSiteId ?? moveTarget.trim();
     if (!target) return;
-    if (!window.confirm(`Move ${deviceLabel} to site ${target}?`)) return;
     setBusy(true); setError(null);
     try {
       await apiService.siteMoveDevice(target, deviceId, siteId);
-      setMoveTarget(''); setMoveSearch(''); setMoveDropdownOpen(false);
+      setMoveTarget(''); setMoveSearch(''); setMoveDropdownOpen(false); setGatewayComposerOpen(false);
       await loadAvailableDevices();
       refreshSiteDetail();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Move failed'); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't move that device"); }
     finally { setBusy(false); }
   };
 
-  // Manual data-source pairing override (mirrors SiteDetail.tsx's handleSetMirror, adapted to
-  // refresh from availableDevices/siteDetail instead of a single `site` state this component
-  // doesn't otherwise hold).
   const handleSetMirror = async (deviceId: number, mirrorsDevicePk: number | null) => {
     setBusy(true); setError(null);
     try {
       await apiService.siteSetDeviceMirror(siteId, deviceId, mirrorsDevicePk);
       await loadAvailableDevices();
       refreshSiteDetail();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to update data-source pairing'); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't update the backup path"); }
     finally { setBusy(false); }
   };
 
-  // ── Smart-device CRUD (moved from SiteDetail.tsx:930-966ish, unchanged) ──
+  // ── Smart-device CRUD ──
   const resetSmartDeviceForm = () => {
     setEditingSmartDeviceId(null);
     setSmartDeviceDraft(blankSmartDeviceForm());
+    setSmartComposerOpen(false);
+    setTuyaCloudDevices([]);
+  };
+  const beginAddSmartDevice = () => {
+    setEditingSmartDeviceId(null);
+    setSmartDeviceDraft(blankSmartDeviceForm());
+    setTuyaCloudDevices([]);
+    setLastProvisioning(null);
+    setSmartComposerOpen(true);
   };
   const beginEditSmartDevice = (device: any) => {
+    setLastProvisioning(null);
     setEditingSmartDeviceId(device.id);
     setSmartDeviceDraft({
       device_type: device.device_type ?? 'tuya_plug',
@@ -274,6 +234,7 @@ export default function InverterMeasurementConfig({
       is_active: device.is_active !== false,
       ingest_mode: device.ingest_mode ?? 'poll',
     });
+    setSmartComposerOpen(true);
   };
   const saveSmartDevice = async () => {
     if (!siteId) return;
@@ -282,96 +243,84 @@ export default function InverterMeasurementConfig({
       provider_device_id: smartDeviceDraft.provider_device_id.trim(),
       appliance_label: smartDeviceDraft.appliance_label,
       circuit: smartDeviceDraft.circuit,
-      display_name: smartDeviceDraft.display_name.trim(),
+      display_name: smartDeviceDraft.display_name.trim() || applianceName(smartDeviceDraft.appliance_label),
       is_active: smartDeviceDraft.is_active,
       ingest_mode: smartDeviceDraft.ingest_mode,
     };
-    if (!payload.provider_device_id) {
-      setError('Provider device ID is required for smart devices');
-      return;
-    }
-    setSmartDevicesSaving(true); setError(null);
+    if (!payload.provider_device_id) { setError('Pick a plug first'); return; }
+    setSmartDevicesSaving(true); setError(null); setLastProvisioning(null);
     try {
-      if (editingSmartDeviceId != null) await apiService.updateSmartDevice(editingSmartDeviceId, payload);
-      else await apiService.createSmartDevice(siteId, payload);
+      if (editingSmartDeviceId != null) {
+        await apiService.updateSmartDevice(editingSmartDeviceId, payload);
+      } else {
+        const created = await apiService.createSmartDevice(siteId, payload);
+        if (created?.provisioning) setLastProvisioning(created.provisioning);
+      }
       resetSmartDeviceForm();
       await refreshSmartDevices();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save smart device');
-    } finally {
-      setSmartDevicesSaving(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't save that plug"); }
+    finally { setSmartDevicesSaving(false); }
   };
-  const removeSmartDevice = async (device: any) => {
-    if (!window.confirm(`Delete smart device ${device.display_name || device.provider_device_id || device.id}?`)) return;
+  const discoverTuyaDevices = useCallback(async () => {
+    if (!siteId) return;
+    setTuyaCloudLoading(true); setTuyaCloudError(null);
+    try {
+      setTuyaCloudDevices(await apiService.getTuyaCloudDevices(siteId));
+    } catch (e) {
+      setTuyaCloudError(e instanceof Error ? e.message : "Couldn't reach the plugs");
+      setTuyaCloudDevices([]);
+    } finally { setTuyaCloudLoading(false); }
+  }, [siteId]);
+  const removeSmartDevice = async (id: number) => {
     setSmartDevicesSaving(true); setError(null);
     try {
-      await apiService.deleteSmartDevice(device.id);
-      if (editingSmartDeviceId === device.id) resetSmartDeviceForm();
+      await apiService.deleteSmartDevice(id);
+      if (editingSmartDeviceId === id) resetSmartDeviceForm();
       await refreshSmartDevices();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete smart device');
-    } finally {
-      setSmartDevicesSaving(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't remove that plug"); }
+    finally { setSmartDevicesSaving(false); setConfirmDel(null); }
   };
 
-  // ── Circuit-line CRUD (moved from SiteDetail.tsx:979-1033ish, unchanged) ──
+  // ── Circuit-line CRUD ──
   const resetCircuitLineForm = () => {
     setEditingCircuitLineId(null);
     setCircuitLineDraft(blankCircuitLineForm());
+    setCircuitComposerOpen(false);
+  };
+  const beginAddCircuitLine = (preset?: { circuit: string; label: string }) => {
+    setEditingCircuitLineId(null);
+    setCircuitLineDraft({ ...blankCircuitLineForm(), ...(preset ?? {}) });
+    setCircuitComposerOpen(true);
   };
   const beginEditCircuitLine = (line: any) => {
     setEditingCircuitLineId(line.id);
-    setCircuitLineDraft({
-      circuit: line.circuit ?? 'ev_line',
-      label: line.label ?? '',
-      device: line.device ?? null,
-    });
+    setCircuitLineDraft({ circuit: line.circuit ?? 'ev_line', label: line.label ?? '', device: line.device ?? null });
+    setCircuitComposerOpen(true);
   };
   const saveCircuitLine = async () => {
     if (!siteId) return;
-    const payload = {
-      circuit: circuitLineDraft.circuit,
-      label: circuitLineDraft.label.trim(),
-      device: circuitLineDraft.device,
-    };
+    const payload = { circuit: circuitLineDraft.circuit, label: circuitLineDraft.label.trim(), device: circuitLineDraft.device };
     setCircuitLinesSaving(true); setError(null);
     try {
       if (editingCircuitLineId != null) await apiService.updateCircuitLine(siteId, editingCircuitLineId, payload);
       else await apiService.createCircuitLine(siteId, payload);
       resetCircuitLineForm();
       await refreshCircuitLines();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save circuit line');
-    } finally {
-      setCircuitLinesSaving(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't save that circuit"); }
+    finally { setCircuitLinesSaving(false); }
   };
-  const removeCircuitLine = async (line: any) => {
+  const removeCircuitLine = async (id: number) => {
     if (!siteId) return;
-    if (!window.confirm(`Delete circuit line ${line.label || line.circuit}?`)) return;
     setCircuitLinesSaving(true); setError(null);
     try {
-      await apiService.deleteCircuitLine(siteId, line.id);
-      if (editingCircuitLineId === line.id) resetCircuitLineForm();
+      await apiService.deleteCircuitLine(siteId, id);
+      if (editingCircuitLineId === id) resetCircuitLineForm();
       await refreshCircuitLines();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete circuit line');
-    } finally {
-      setCircuitLinesSaving(false);
-    }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't remove that circuit"); }
+    finally { setCircuitLinesSaving(false); setConfirmDel(null); }
   };
 
   // ── Derived ──
-  // "What's attached to THIS site" must come from siteDetail (getSiteStaffDetail(siteId) —
-  // site-scoped, always correct), not from availableDevices (getDevices() — a global,
-  // paginated, 100-item-capped list ordered by -provisioned_at that silently drops sites once
-  // the fleet grows or a site's gateway falls off page 1). availableDevices remains the correct
-  // source only for the "what's attachable" dropdowns below. siteDetail.gateway_device /
-  // siteDetail.energy_meters items use `device_id` as their PK field (not `id`, unlike
-  // availableDevices items) — confirmed against the pre-refactor SiteDetail.tsx that originally
-  // read `site.gateway_device` / `site.energy_meters` directly.
   const mirrorInfoReady = !!siteDetail;
   const hasGateway = !!siteDetail?.gateway_device;
   const hasEnergyMeter = Array.isArray(siteDetail?.energy_meters) && siteDetail.energy_meters.length > 0;
@@ -381,466 +330,405 @@ export default function InverterMeasurementConfig({
   const energyMeters = Array.isArray(siteDetail?.energy_meters) ? siteDetail.energy_meters : [];
   const heartbeatHealth = gw?.heartbeat_health;
 
+  const ago = (s?: string) => {
+    if (!s) return 'never';
+    const mins = Math.round((Date.now() - new Date(s).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    return new Date(s).toLocaleDateString();
+  };
+
+  const done = [hasGateway, hasEnergyMeter, hasGateway || hasEnergyMeter || circuitLines.length > 0, smartDevices.length > 0]
+    .filter(Boolean).length;
+
+  const siteName = siteDetail?.display_name || siteId;
+
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <SetupShell
+      isDark={isDark}
+      heading={`Let’s get ${siteName} monitored`}
+      sub="Connect the hardware and add a smart plug for each appliance you want to track. We’ll show you what’s working and what still needs a hand."
+      progress={{ done, total: 4 }}
+    >
       {error && (
-        <div style={{ padding: 12, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '0.82rem' }}>
+        <div style={{
+          padding: '11px 13px', borderRadius: 12, fontSize: '0.87rem',
+          background: 'rgba(229,72,77,0.1)', border: '1px solid rgba(229,72,77,0.28)', color: '#e5484d',
+        }}>
           {error}
         </div>
       )}
 
-      {/* Gateway section — attach/detach/move/mirror, ported verbatim from SiteDetail.tsx:1410-1516.
-          `gw`/`energyMeters` come straight from siteDetail (getSiteStaffDetail(siteId)), so PKs
-          use `device_id`, matching the original SiteDetail.tsx source. */}
-      {gw ? (
-        <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.ok.border}`, background: palette.ok.bg }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: palette.ok.color, fontWeight: 700, marginBottom: 4, letterSpacing: '0.05em' }}>Attached Gateway</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: textMain }}>{gw.device_serial}</div>
-              <div style={{ fontSize: '0.8rem', color: textSub, fontFamily: 'monospace' }}>PK: {gw.device_id} · Type: gateway</div>
-            </div>
-            <button type="button" disabled={busy} onClick={() => handleDetach(gw.device_id, gw.device_serial, 'gateway')} style={buttonStyle(false, true)}>
-              <Unlink size={14} /> Detach
-            </button>
-          </div>
-
-          <div style={{ height: 1, background: palette.ok.border, margin: '16px 0' }} />
-          <div style={{ fontSize: '0.84rem', color: textSub, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            <span><strong>Last seen:</strong> {gw.last_seen_at ? new Date(gw.last_seen_at).toLocaleString() : 'Never'}</span>
-            <span><strong>Signal:</strong> {gw.signal_strength_dbm != null ? `${gw.signal_strength_dbm}%` : 'N/A'}</span>
-            <span style={{ textTransform: 'capitalize' }}><strong>Health:</strong> {heartbeatHealth?.severity || 'ok'}</span>
-          </div>
-          {Array.isArray(gw.mirrored_by_serials) && gw.mirrored_by_serials.length > 0 && (
-            <div style={{ fontSize: '0.78rem', color: palette.ok.color, marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <LinkIcon size={12} />
-              Backed up by {gw.mirrored_by_serials.join(', ')} — it will publish directly if this gateway goes offline
-            </div>
-          )}
-
-          <div style={{ height: 1, background: palette.ok.border, margin: '20px 0' }} />
-
-          <label style={{ ...labelStyle, color: textMain }}>Reassign to another site</label>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
-              <input
-                value={moveSearch || (moveTarget && !moveDropdownOpen ? (() => { const s = availableSites.find(s => s.site_id === moveTarget); return s ? `${s.site_id}${s.display_name ? ' — ' + s.display_name : ''}` : moveTarget; })() : moveSearch)}
-                onChange={e => { setMoveSearch(e.target.value); setMoveTarget(''); setMoveDropdownOpen(true); }}
-                onFocus={() => setMoveDropdownOpen(true)}
-                onBlur={() => setTimeout(() => setMoveDropdownOpen(false), 150)}
-                placeholder={sitesLoading ? 'Loading sites…' : 'Search site ID or name…'}
-                disabled={sitesLoading}
-                style={{ ...inputStyle, width: '100%', background: surface, borderColor: palette.ok.border }}
-              />
-              {moveDropdownOpen && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                  background: surface, border: `1px solid ${palette.ok.border}`,
-                  borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: 'auto',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                }}>
-                  {availableSites
-                    .filter(s => {
-                      const q = moveSearch.toLowerCase();
-                      return !q || s.site_id.toLowerCase().includes(q) || (s.display_name || '').toLowerCase().includes(q);
-                    })
-                    .map(s => (
-                      <div
-                        key={s.site_id}
-                        onMouseDown={() => { setMoveTarget(s.site_id); setMoveSearch(''); setMoveDropdownOpen(false); }}
-                        style={{
-                          padding: '9px 14px', cursor: 'pointer', fontSize: '0.84rem',
-                          background: s.site_id === moveTarget ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.08)') : 'transparent',
-                          color: textMain,
-                          borderBottom: `1px solid ${border}`,
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = s.site_id === moveTarget ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.08)') : 'transparent')}
-                      >
-                        <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.site_id}</span>
-                        {s.display_name && <span style={{ color: textSub, marginLeft: 8 }}>{s.display_name}</span>}
-                        {s.site_status && (
-                          <span style={{ marginLeft: 8, fontSize: '0.72rem', padding: '1px 6px', borderRadius: 4, background: getStatusStyle(s.site_status).bg, color: getStatusStyle(s.site_status).color }}>
-                            {s.site_status}
-                          </span>
-                        )}
-                      </div>
-                    ))
-                  }
-                  {availableSites.filter(s => { const q = moveSearch.toLowerCase(); return !q || s.site_id.toLowerCase().includes(q) || (s.display_name || '').toLowerCase().includes(q); }).length === 0 && (
-                    <div style={{ padding: '10px 14px', fontSize: '0.84rem', color: textMute, textAlign: 'center' }}>No sites found</div>
-                  )}
-                </div>
-              )}
-            </div>
-            <button type="button" disabled={busy || !moveTarget.trim()} onClick={() => handleMove(gw.device_id, 'gateway')} style={buttonStyle(true)}>
-              <ArrowRightLeft size={14} /> Move Device
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: 24, borderRadius: 12, border: `1px dashed ${inputBorder}`, background: inputBg, textAlign: 'center' }}>
-          <Wifi size={28} color={textMute} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-          <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: textMain }}>No Gateway Attached</h3>
-          <p style={{ fontSize: '0.85rem', color: textSub, margin: '0 0 20px' }}>Select an available gateway to link hardware telemetry to this site.</p>
-
-          <div style={{ display: 'flex', gap: 12, maxWidth: 400, margin: '0 auto' }}>
-            <select value={gatewayDevicePk} onChange={e => setGatewayDevicePk(e.target.value)} disabled={devicesLoading || busy} style={{ ...inputStyle, flex: 1, background: nativeSelectBg, color: nativeSelectFg }}>
-              <option value="">-- Select Gateway --</option>
-              {availableGatewayDevices.map(d => (
-                <option key={d.id} value={String(d.id)}>
-                  {d.device_serial} (ID: {d.id})
-                </option>
-              ))}
-            </select>
-            <button type="button" disabled={busy || !gatewayDevicePk || devicesLoading} onClick={() => handleAttach(gatewayDevicePk, 'gateway')} style={buttonStyle()}>
-              <LinkIcon size={14} /> Attach
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Energy Meter section — ported verbatim from SiteDetail.tsx:1518-1585 */}
-      <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: textMute, fontWeight: 700, letterSpacing: '0.05em' }}>Energy Meters</div>
-            <div style={{ fontSize: '0.9rem', color: textSub }}>Attach one or more energy meters for site-level load and import/export measurements.</div>
-          </div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: textMain }}>{energyMeters.length} attached</div>
-        </div>
-
-        {energyMeters.length > 0 ? (
-          <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-            {energyMeters.map((meter: any) => (
-              <div key={meter.device_id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: textMain }}>{meter.device_serial}</div>
-                  <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>PK: {meter.device_id} · Type: energy_meter</div>
-                  <div style={{ fontSize: '0.78rem', color: textSub }}>Last seen: {meter.last_seen_at ? new Date(meter.last_seen_at).toLocaleString() : 'Never'}</div>
-                  {meter.mirrors_device_id && meter.mirrors_device_id === gw?.id ? (
-                    <div style={{ fontSize: '0.76rem', color: palette.ok.color, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <LinkIcon size={12} />
-                      Normally relayed via <strong style={{ fontFamily: 'monospace' }}>{meter.mirrors_device_serial}</strong> — falls back to direct cloud publish if the gateway goes offline
-                    </div>
-                  ) : gw && mirrorInfoReady ? (
-                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.74rem', color: textMute }}>Not paired to the gateway's relay path.</span>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleSetMirror(meter.device_id, gw.device_id)}
-                        style={{ ...buttonStyle(true), padding: '2px 8px', fontSize: '0.74rem' }}
-                      >
-                        <LinkIcon size={11} /> Pair to {gw.device_serial}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button type="button" disabled={busy} onClick={() => {
-                    const target = window.prompt(`Move energy meter ${meter.device_serial} to which site ID?`, '');
-                    if (target) handleMove(meter.device_id, `energy meter ${meter.device_serial}`, target);
-                  }} style={buttonStyle(true)}>
-                    <ArrowRightLeft size={14} /> Move
-                  </button>
-                  <button type="button" disabled={busy} onClick={() => handleDetach(meter.device_id, meter.device_serial, 'energy meter')} style={buttonStyle(false, true)}>
-                    <Unlink size={14} /> Detach
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ── INVERTER MONITOR ─────────────────────────────────────────── */}
+      <SetupCard
+        isDark={isDark}
+        index={0}
+        icon={<MonitorCog size={21} strokeWidth={1.8} />}
+        title="Inverter monitor"
+        purpose="The box on-site that reads your solar inverter."
+        status={hasGateway
+          ? <StatusChip isDark={isDark} state={heartbeatHealth?.severity === 'critical' ? 'wait' : 'good'}>
+              {heartbeatHealth?.severity === 'critical' ? 'Needs attention' : 'Connected'}
+            </StatusChip>
+          : <StatusChip isDark={isDark} state="wait">Not set up yet</StatusChip>}
+        action={!hasGateway && !gatewayComposerOpen && availableGatewayDevices.length > 0 && (
+          <Btn isDark={isDark} variant="soft" onClick={() => setGatewayComposerOpen(true)}><Plus size={15} /> Connect the monitor</Btn>
+        )}
+      >
+        {gw ? (
+          <Item
+            isDark={isDark}
+            icon={<MonitorCog size={19} strokeWidth={1.8} />}
+            title={`Monitor ${gw.device_serial}`}
+            status={
+              heartbeatHealth?.severity === 'critical'
+                ? <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting — last update {ago(gw.last_seen_at)}</span>
+                : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Reporting normally</span> · last update {ago(gw.last_seen_at)}</>
+            }
+            actions={[
+              { label: 'Move to another site', icon: <ArrowRightLeft size={14} />, onClick: () => setGatewayComposerOpen(true) },
+              { label: 'Disconnect', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'gateway', id: gw.device_id, label: `Monitor ${gw.device_serial}` }) },
+            ]}
+          />
         ) : (
-          <div style={{ fontSize: '0.84rem', color: textMute, marginBottom: 16 }}>No energy meters attached yet.</div>
+          !gatewayComposerOpen && (
+            <EmptyState
+              isDark={isDark}
+              headline="No monitor connected"
+              detail={availableGatewayDevices.length ? 'Connect the on-site box so we can read the inverter.' : 'No spare monitor is available to connect right now.'}
+              action={availableGatewayDevices.length > 0 && (
+                <Btn isDark={isDark} variant="soft" onClick={() => setGatewayComposerOpen(true)}><Plus size={15} /> Connect the monitor</Btn>
+              )}
+            />
+          )
         )}
 
-        <div style={{ display: 'flex', gap: 12, maxWidth: 420 }}>
-          <select value={energyMeterPk} onChange={e => setEnergyMeterPk(e.target.value)} disabled={devicesLoading || busy} style={{ ...inputStyle, flex: 1, background: nativeSelectBg, color: nativeSelectFg }}>
-            <option value="">-- Select Energy Meter --</option>
-            {availableEnergyMeterDevices.map(d => (
-              <option key={d.id} value={String(d.id)}>
-                {d.device_serial} (ID: {d.id})
-              </option>
-            ))}
-          </select>
-          <button type="button" disabled={busy || !energyMeterPk || devicesLoading} onClick={() => handleAttach(energyMeterPk, 'energy_meter')} style={buttonStyle()}>
-            <LinkIcon size={14} /> Attach
-          </button>
-        </div>
-      </div>
+        {gw && Array.isArray(gw.mirrored_by_serials) && gw.mirrored_by_serials.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: t.goodInk }}>
+            <Link2 size={13} /> Backed up by {gw.mirrored_by_serials.join(', ')} if this one goes offline
+          </div>
+        )}
 
-      {/* Circuit Lines section — two read-only status rows, then the ev_line-only list-builder */}
-      <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <Zap size={16} color={primary} />
-          <div>
-            <div style={{ fontWeight: 700, color: textMain }}>Circuit Lines</div>
-            <div style={{ fontSize: '0.8rem', color: textSub }}>Inverter backup and grid-line coverage are automatic once hardware is attached above. Declare any other known circuit (e.g. an EV charger) even if unmonitored.</div>
-          </div>
-        </div>
+        <Flow
+          isDark={isDark}
+          open={gatewayComposerOpen}
+          title={gw ? 'Move the monitor' : 'Connect the monitor'}
+          subtitle={gw ? `Send ${gw.device_serial} to a different site.` : 'Pick the on-site box for this address.'}
+          onClose={() => { setGatewayComposerOpen(false); setMoveSearch(''); setMoveTarget(''); }}
+          footer={
+            <>
+              <Btn isDark={isDark} variant="plain" onClick={() => { setGatewayComposerOpen(false); setMoveSearch(''); setMoveTarget(''); }}>Cancel</Btn>
+              {gw ? (
+                <Btn isDark={isDark} disabled={busy || !moveTarget.trim()} onClick={() => handleMove(gw.device_id)}><ArrowRightLeft size={14} /> Move</Btn>
+              ) : (
+                <Btn isDark={isDark} disabled={busy || !gatewayDevicePk} onClick={() => handleAttach(gatewayDevicePk, 'gateway')}><Link2 size={14} /> Connect</Btn>
+              )}
+            </>
+          }
+        >
+          {gw ? (
+            <Field isDark={isDark} label="Which site?">
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={moveSearch || (moveTarget && !moveDropdownOpen ? moveTarget : moveSearch)}
+                  onChange={e => { setMoveSearch(e.target.value); setMoveTarget(''); setMoveDropdownOpen(true); }}
+                  onFocus={() => setMoveDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setMoveDropdownOpen(false), 150)}
+                  placeholder={sitesLoading ? 'Loading sites…' : 'Search by name or ID…'}
+                  disabled={sitesLoading}
+                  style={controlStyle(isDark)}
+                />
+                {moveDropdownOpen && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50,
+                    border: `1px solid ${t.line}`, borderRadius: 11, background: t.card, maxHeight: 220,
+                    overflowY: 'auto', boxShadow: '0 14px 36px rgba(0,0,0,0.22)',
+                  }}>
+                    {availableSites
+                      .filter(s => { const q = moveSearch.toLowerCase(); return !q || s.site_id.toLowerCase().includes(q) || (s.display_name || '').toLowerCase().includes(q); })
+                      .map(s => (
+                        <div
+                          key={s.site_id}
+                          onMouseDown={() => { setMoveTarget(s.site_id); setMoveSearch(''); setMoveDropdownOpen(false); }}
+                          onMouseEnter={e => (e.currentTarget.style.background = t.card2)}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '0.87rem', color: t.ink, borderBottom: `1px solid ${t.line2}` }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{s.display_name || s.site_id}</span>
+                          {s.display_name && <span style={{ color: t.ink2, marginLeft: 8, fontSize: '0.8rem' }}>{s.site_id}</span>}
+                          {s.site_status && (
+                            <span style={{ marginLeft: 8, fontSize: '0.7rem', padding: '1px 6px', borderRadius: 5, ...siteStatusStyle(s.site_status) }}>{s.site_status}</span>
+                          )}
+                        </div>
+                      ))}
+                    {availableSites.filter(s => { const q = moveSearch.toLowerCase(); return !q || s.site_id.toLowerCase().includes(q) || (s.display_name || '').toLowerCase().includes(q); }).length === 0 && (
+                      <div style={{ padding: '10px 12px', fontSize: '0.85rem', color: t.ink2, textAlign: 'center' }}>No sites found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Field>
+          ) : (
+            <Field isDark={isDark} label="Which monitor?">
+              <select value={gatewayDevicePk} onChange={e => setGatewayDevicePk(e.target.value)} disabled={devicesLoading} style={controlStyle(isDark)}>
+                <option value="">Choose a monitor…</option>
+                {availableGatewayDevices.map(d => <option key={d.id} value={String(d.id)}>{d.device_serial}</option>)}
+              </select>
+            </Field>
+          )}
+        </Flow>
+      </SetupCard>
 
-        <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: surface }}>
-            <span style={{ fontSize: '0.82rem', color: textMain }}>Inverter backup bus</span>
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: hasGateway ? primary : palette.warn.color }}>
-              {hasGateway ? 'Covered by attached gateway' : 'Not covered — no gateway attached'}
-            </span>
+      {/* ── WHOLE-HOME METER ─────────────────────────────────────────── */}
+      <SetupCard
+        isDark={isDark}
+        index={1}
+        icon={<Gauge size={21} strokeWidth={1.8} />}
+        title="Whole-home meter"
+        purpose="Measures total electricity used and sent back to the grid."
+        status={hasEnergyMeter
+          ? <StatusChip isDark={isDark} state="good">Connected</StatusChip>
+          : <StatusChip isDark={isDark} state="wait">Not set up yet</StatusChip>}
+        action={!meterComposerOpen && availableEnergyMeterDevices.length > 0 && (
+          <Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn>
+        )}
+      >
+        {energyMeters.length > 0 ? (
+          energyMeters.map((meter: any) => {
+            const relayed = meter.mirrors_device_id && meter.mirrors_device_id === gw?.id;
+            return (
+              <Item
+                key={meter.device_id}
+                isDark={isDark}
+                icon={<Gauge size={19} strokeWidth={1.8} />}
+                title={`Meter ${meter.device_serial}`}
+                status={relayed
+                  ? <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · via the monitor</>
+                  : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · last update {ago(meter.last_seen_at)}</>}
+                actions={[
+                  ...(gw && mirrorInfoReady && !relayed ? [{ label: 'Route through the monitor', icon: <Link2 size={14} />, onClick: () => handleSetMirror(meter.device_id, gw.device_id) }] : []),
+                  { label: 'Move to another site', icon: <ArrowRightLeft size={14} />, onClick: () => {
+                    const target = window.prompt(`Move the meter to which site ID?`, '');
+                    if (target) handleMove(meter.device_id, target);
+                  } },
+                  { label: 'Disconnect', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'meter', id: meter.device_id, label: `Meter ${meter.device_serial}` }) },
+                ]}
+              />
+            );
+          })
+        ) : (
+          !meterComposerOpen && (
+            <EmptyState
+              isDark={isDark}
+              headline="No meter connected"
+              detail="Add a whole-home meter here to track total usage and what's sent to the grid."
+            />
+          )
+        )}
+
+        <Flow
+          isDark={isDark}
+          open={meterComposerOpen}
+          title="Add a whole-home meter"
+          onClose={() => setMeterComposerOpen(false)}
+          footer={
+            <>
+              <Btn isDark={isDark} variant="plain" onClick={() => setMeterComposerOpen(false)}>Cancel</Btn>
+              <Btn isDark={isDark} disabled={busy || !energyMeterPk} onClick={() => handleAttach(energyMeterPk, 'energy_meter')}><Link2 size={14} /> Connect</Btn>
+            </>
+          }
+        >
+          <Field isDark={isDark} label="Which meter?">
+            <select value={energyMeterPk} onChange={e => setEnergyMeterPk(e.target.value)} disabled={devicesLoading} style={controlStyle(isDark)}>
+              <option value="">Choose a meter…</option>
+              {availableEnergyMeterDevices.map(d => <option key={d.id} value={String(d.id)}>{d.device_serial}</option>)}
+            </select>
+          </Field>
+        </Flow>
+      </SetupCard>
+
+      {/* ── OTHER CIRCUITS ───────────────────────────────────────────── */}
+      <SetupCard
+        isDark={isDark}
+        index={2}
+        icon={<Zap size={21} strokeWidth={1.8} />}
+        title="Circuits"
+        purpose="What this site's power is split into. The inverter's backup output is always here; add the grid feed or an EV charger if you want them noted too."
+        action={!circuitComposerOpen && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'grid_direct', label: 'Grid' })}><Plus size={14} /> Add grid</Btn>
+            <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'ev_line', label: 'EV charger' })}><Plus size={14} /> Add EV</Btn>
+            <Btn isDark={isDark} variant="plain" size="sm" onClick={() => beginAddCircuitLine()}><Plus size={14} /> Something else</Btn>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: surface }}>
-            <span style={{ fontSize: '0.82rem', color: textMain }}>Grid line</span>
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: hasEnergyMeter ? primary : palette.warn.color }}>
-              {hasEnergyMeter ? 'Covered by attached energy meter' : 'Not covered — no energy meter attached'}
-            </span>
-          </div>
+        )}
+      >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          padding: '12px 14px', borderRadius: 12, border: `1px solid ${t.line}`, background: t.card2, fontSize: '0.88rem',
+        }}>
+          <span>Inverter</span>
+          {hasGateway
+            ? <span style={{ color: t.goodInk, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Check size={14} strokeWidth={2.6} /> Tracked</span>
+            : <span style={{ color: t.waitInk, fontWeight: 600 }}>Not tracked yet</span>}
         </div>
 
         {circuitLinesLoading ? (
-          <div style={{ fontSize: '0.84rem', color: textMute }}>Loading circuit lines…</div>
-        ) : circuitLines.length === 0 ? (
-          <div style={{ fontSize: '0.84rem', color: textMute }}>No other circuit lines declared for this site.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {circuitLines.map((line: any) => (
-              <div key={line.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: textMain }}>{line.label || line.circuit}</div>
-                    <div style={{ fontSize: '0.78rem', color: textSub }}>
-                      Circuit: <strong>EV line</strong>
-                      {' · '}
-                      <span style={{ color: line.is_monitored ? primary : palette.warn.color }}>
-                        {line.is_monitored ? 'Monitored' : 'Unmonitored'}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <button type="button" disabled={circuitLinesSaving} onClick={() => beginEditCircuitLine(line)} style={buttonStyle(true)}>
-                      <Pencil size={14} /> Edit
-                    </button>
-                    <button type="button" disabled={circuitLinesSaving} onClick={() => removeCircuitLine(line)} style={buttonStyle(false, true)}>
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <div style={{ fontSize: '0.85rem', color: t.ink2 }}>Loading…</div>
+        ) : circuitLines.map((line: any) => (
+          <Item
+            key={line.id}
+            isDark={isDark}
+            icon={<PlugZap size={19} strokeWidth={1.8} />}
+            title={line.label || 'Circuit'}
+            status={line.is_monitored ? <span style={{ color: t.goodInk, fontWeight: 600 }}>Being measured</span> : 'Noted — not measured'}
+            actions={[
+              { label: 'Edit', icon: <Pencil size={14} />, onClick: () => beginEditCircuitLine(line) },
+              { label: 'Remove', icon: <Trash2 size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'circuit', id: line.id, label: line.label || 'this circuit' }) },
+            ]}
+          />
+        ))}
 
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${border}`, display: 'grid', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>
-              {editingCircuitLineId != null ? 'Edit Circuit Line' : 'Add Circuit Line'}
-            </div>
-            {(editingCircuitLineId != null || circuitLineDraft.label) && (
-              <button type="button" disabled={circuitLinesSaving} onClick={resetCircuitLineForm} style={buttonStyle(true)}>
-                Cancel
-              </button>
-            )}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Label</label>
-              <input
-                value={circuitLineDraft.label}
-                onChange={e => setCircuitLineDraft({ ...circuitLineDraft, label: e.target.value })}
-                disabled={circuitLinesSaving}
-                style={{ ...inputStyle, width: '100%', background: surface }}
-                placeholder="e.g. Garage EV charger"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Monitoring Device</label>
+        <Flow
+          isDark={isDark}
+          open={circuitComposerOpen}
+          title={editingCircuitLineId != null ? 'Edit this circuit' : 'Note another circuit'}
+          subtitle="For anything wired on its own, like a garage EV charger."
+          onClose={resetCircuitLineForm}
+          footer={
+            <>
+              <Btn isDark={isDark} variant="plain" onClick={resetCircuitLineForm}>Cancel</Btn>
+              <Btn isDark={isDark} disabled={circuitLinesSaving} onClick={saveCircuitLine}>
+                {circuitLinesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} strokeWidth={3} />}
+                {editingCircuitLineId != null ? 'Save' : 'Add'}
+              </Btn>
+            </>
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+            <Field isDark={isDark} label="What is it?">
+              <input value={circuitLineDraft.label} onChange={e => setCircuitLineDraft({ ...circuitLineDraft, label: e.target.value })}
+                placeholder="e.g. Garage EV charger" style={controlStyle(isDark)} />
+            </Field>
+            <Field isDark={isDark} label="Measured by a plug?" hint="pick one on this circuit, or leave as not measured">
               <select
                 value={circuitLineDraft.device != null ? String(circuitLineDraft.device) : ''}
                 onChange={e => setCircuitLineDraft({ ...circuitLineDraft, device: e.target.value ? parseInt(e.target.value, 10) : null })}
-                disabled={circuitLinesSaving}
-                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
+                style={controlStyle(isDark)}
               >
-                <option value="">-- None (unmonitored) --</option>
-                {smartDevices.filter((d: any) => d.circuit === 'ev_line').map((d: any) => (
-                  <option key={d.id} value={String(d.id)}>{d.display_name || d.provider_device_id || d.id}</option>
+                <option value="">Not measured</option>
+                {smartDevices.filter((d: any) => d.circuit === circuitLineDraft.circuit).map((d: any) => (
+                  <option key={d.id} value={String(d.id)}>{d.display_name || applianceName(d.appliance_label)}</option>
                 ))}
               </select>
-            </div>
+            </Field>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="button" disabled={circuitLinesSaving} onClick={() => saveCircuitLine()} style={buttonStyle()}>
-              {circuitLinesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />}
-              {editingCircuitLineId != null ? 'Update Circuit Line' : 'Add Circuit Line'}
-            </button>
-          </div>
-        </div>
-      </div>
+        </Flow>
+      </SetupCard>
 
-      {/* Smart Devices section — ported verbatim from SiteDetail.tsx:1587-1737 (unchanged: still
-          offers grid_direct/inverter_backup/ev_line for the device's own `circuit` field — that
-          field describes which bus the physical device sits on, independent of whether a
-          SiteCircuitLine happens to reference it) */}
-      <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${inputBorder}`, background: inputBg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <Zap size={16} color={primary} />
-          <div>
-            <div style={{ fontWeight: 700, color: textMain }}>Smart Devices</div>
-            <div style={{ fontSize: '0.8rem', color: textSub }}>Mapped separately from hardware devices. Appliance mapping remains the source of truth for what each smart device powers.</div>
-          </div>
-        </div>
-        {smartDevicesLoading ? (
-          <div style={{ fontSize: '0.84rem', color: textMute }}>Loading smart devices…</div>
-        ) : smartDevices.length === 0 ? (
-          <div style={{ fontSize: '0.84rem', color: textMute }}>No smart devices mapped to this site.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {smartDevices.map((device: any) => (
-              <div key={device.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${border}`, background: surface }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: textMain }}>{device.display_name || device.appliance_label}</div>
-                    <div style={{ fontSize: '0.78rem', color: textSub }}>
-                      Provider type: <strong>{String(device.device_type || '').replace(/_/g, ' ') || 'unknown'}</strong>
-                      {' · '}
-                      Appliance: <strong>{String(device.appliance_label || '').replace(/_/g, ' ') || 'unmapped'}</strong>
-                      {' · '}
-                      Circuit: <strong>{device.circuit === 'inverter_backup' ? 'inverter backup' : device.circuit === 'ev_line' ? 'EV line' : 'grid line'}</strong>
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: textSub, fontFamily: 'monospace' }}>
-                      Provider ID: {device.provider_device_id || '—'}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: '0.78rem', color: textSub }}>
-                      {device.latest?.power_w != null ? `${(device.latest.power_w / 1000).toFixed(2)} kW` : 'No live power'}
-                    </div>
-                    <button type="button" disabled={smartDevicesSaving} onClick={() => beginEditSmartDevice(device)} style={buttonStyle(true)}>
-                      <Pencil size={14} /> Edit
-                    </button>
-                    <button type="button" disabled={smartDevicesSaving} onClick={() => removeSmartDevice(device)} style={buttonStyle(false, true)}>
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* ── SMART PLUGS ──────────────────────────────────────────────── */}
+      <SetupCard
+        isDark={isDark}
+        index={3}
+        icon={<PlugZap size={21} strokeWidth={1.8} />}
+        title="Smart plugs"
+        purpose="Add one for each appliance you want to see on its own."
+        status={<StatusChip isDark={isDark} state={smartDevices.length ? 'good' : 'idle'}>
+          {smartDevices.length} appliance{smartDevices.length === 1 ? '' : 's'}
+        </StatusChip>}
+        action={!smartComposerOpen && (
+          <Btn isDark={isDark} variant="soft" full onClick={beginAddSmartDevice}><Plus size={15} /> Add a smart plug</Btn>
+        )}
+      >
+        {lastProvisioning && !smartComposerOpen && (
+          <div style={{
+            display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '0.85rem', color: t.ink,
+            padding: '11px 13px', borderRadius: 12,
+            border: `1px solid ${lastProvisioning.ok ? t.good : t.wait}`,
+            background: lastProvisioning.ok ? t.goodBg : t.waitBg,
+          }}>
+            <span style={{ display: 'grid', placeItems: 'center', width: 20, height: 20, borderRadius: 999, flexShrink: 0, background: lastProvisioning.ok ? t.good : t.wait, color: '#fff' }}>
+              {lastProvisioning.ok ? <Check size={11} strokeWidth={3} /> : <RefreshCw size={11} />}
+            </span>
+            <span>
+              {lastProvisioning.ok
+                ? <>Plug added{lastProvisioning.meters === false ? ' — this one only shows on/off, not power' : ''}. It’ll start reporting shortly.</>
+                : <>Plug added, but we couldn’t set it up automatically. Check it’s online, then try again from the plug’s menu.</>}
+            </span>
           </div>
         )}
 
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${border}`, display: 'grid', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: textMain }}>
-                {editingSmartDeviceId != null ? 'Edit Smart Device' : 'Add Smart Device'}
-              </div>
-              <div style={{ fontSize: '0.78rem', color: textSub }}>
-                Keep the appliance mapping explicit. EV-linked devices should stay mapped as <strong style={{ color: textMain }}>ev_charger</strong>.
-              </div>
-            </div>
-            {(editingSmartDeviceId != null || smartDeviceDraft.provider_device_id || smartDeviceDraft.display_name) && (
-              <button type="button" disabled={smartDevicesSaving} onClick={resetSmartDeviceForm} style={buttonStyle(true)}>
-                Cancel
-              </button>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Provider Type</label>
-              <select
-                value={smartDeviceDraft.device_type}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, device_type: e.target.value })}
-                disabled={smartDevicesSaving}
-                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
-              >
-                <option value="tuya_plug">Tuya Plug</option>
-                <option value="tuya_switch">Tuya Switch</option>
-                <option value="ct_clamp">CT Clamp</option>
-                <option value="modbus_meter">Modbus Meter</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Appliance Mapping</label>
-              <select
-                value={smartDeviceDraft.appliance_label}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, appliance_label: e.target.value })}
-                disabled={smartDevicesSaving}
-                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
-              >
-                <option value="ev_charger">EV Charger</option>
-                <option value="geyser">Geyser</option>
-                <option value="ac_unit">AC Unit</option>
-                <option value="water_pump">Water Pump</option>
-                <option value="washing_machine">Washing Machine</option>
-                <option value="fridge">Fridge</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Circuit</label>
-              <select
-                value={smartDeviceDraft.circuit}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, circuit: e.target.value })}
-                disabled={smartDevicesSaving}
-                title="Which electrical circuit this device is on — grid line, inverter backup bus, or the isolated EV charger circuit"
-                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
-              >
-                <option value="grid_direct">Grid Line</option>
-                <option value="inverter_backup">Inverter Backup</option>
-                <option value="ev_line">EV Line</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Ingest Mode</label>
-              <select
-                value={smartDeviceDraft.ingest_mode ?? 'poll'}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, ingest_mode: e.target.value })}
-                disabled={smartDevicesSaving}
-                style={{ ...inputStyle, width: '100%', background: nativeSelectBg, color: nativeSelectFg }}
-              >
-                <option value="poll">Poll (5-min cron)</option>
-                <option value="pulsar">Pulsar push (real-time)</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Provider Device ID</label>
-              <input
-                value={smartDeviceDraft.provider_device_id}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, provider_device_id: e.target.value })}
-                disabled={smartDevicesSaving}
-                style={{ ...inputStyle, width: '100%', background: surface }}
-                placeholder="e.g. bf12ab34cd56"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Display Name</label>
-              <input
-                value={smartDeviceDraft.display_name}
-                onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, display_name: e.target.value })}
-                disabled={smartDevicesSaving}
-                style={{ ...inputStyle, width: '100%', background: surface }}
-                placeholder="e.g. EV Charger Plug"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input
-              id="smart-device-active"
-              type="checkbox"
-              checked={smartDeviceDraft.is_active}
-              onChange={e => setSmartDeviceDraft({ ...smartDeviceDraft, is_active: e.target.checked })}
-              disabled={smartDevicesSaving}
+        {smartDevicesLoading ? (
+          <div style={{ fontSize: '0.85rem', color: t.ink2 }}>Loading…</div>
+        ) : smartDevices.length === 0 ? (
+          !smartComposerOpen && (
+            <EmptyState
+              isDark={isDark}
+              headline="No smart plugs yet"
+              detail="Add one to start tracking an appliance on its own."
+              action={<Btn isDark={isDark} variant="soft" onClick={beginAddSmartDevice}><Plus size={15} /> Add the first plug</Btn>}
             />
-            <label htmlFor="smart-device-active" style={{ fontSize: '0.82rem', color: textSub }}>Active</label>
-          </div>
+          )
+        ) : (
+          smartDevices.map((device: any) => {
+            const seen = device.poller_last_seen_at ? new Date(device.poller_last_seen_at).getTime() : 0;
+            const local = device.ingest_mode === 'local';
+            const piFresh = seen > 0 && (Date.now() - seen) < 10 * 60 * 1000;
+            const power = device.latest?.power_w;
+            let status: React.ReactNode;
+            if (local && !piFresh) status = <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting</span>;
+            else if (power != null && power > 5) status = <><span style={{ color: t.goodInk, fontWeight: 600 }}>Live</span> · using {power >= 1000 ? `${(power / 1000).toFixed(1)} kW` : `${Math.round(power)} W`} right now</>;
+            else if (power != null) status = <>Idle · connected</>;
+            else status = <>Connected</>;
+            return (
+              <Item
+                key={device.id}
+                isDark={isDark}
+                iconTone="good"
+                icon={applianceIcon(device.appliance_label)}
+                title={device.display_name || applianceName(device.appliance_label)}
+                status={status}
+                actions={[
+                  { label: 'Edit', icon: <Pencil size={14} />, onClick: () => beginEditSmartDevice(device) },
+                  { label: 'Remove', icon: <Trash2 size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'smart', id: device.id, label: device.display_name || applianceName(device.appliance_label) }) },
+                ]}
+              />
+            );
+          })
+        )}
 
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button type="button" disabled={smartDevicesSaving} onClick={saveSmartDevice} style={buttonStyle()}>
-              {smartDevicesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={14} />}
-              {editingSmartDeviceId != null ? 'Update Smart Device' : 'Add Smart Device'}
-            </button>
-          </div>
+        <SmartDeviceComposer
+          isDark={isDark}
+          open={smartComposerOpen}
+          editing={editingSmartDeviceId != null}
+          saving={smartDevicesSaving}
+          draft={smartDeviceDraft}
+          setDraft={setSmartDeviceDraft}
+          onClose={resetSmartDeviceForm}
+          onSave={saveSmartDevice}
+          scanDevices={tuyaCloudDevices}
+          scanLoading={tuyaCloudLoading}
+          scanError={tuyaCloudError}
+          onScan={discoverTuyaDevices}
+        />
+      </SetupCard>
+
+      {/* ── remove confirmation ──────────────────────────────────────── */}
+      {confirmDel && (
+        <div style={{ position: 'sticky', bottom: 12, zIndex: 30 }}>
+          <InlineConfirm
+            isDark={isDark}
+            message={`Remove ${confirmDel.label}?`}
+            onCancel={() => setConfirmDel(null)}
+            onConfirm={() => {
+              if (confirmDel.kind === 'smart') removeSmartDevice(confirmDel.id);
+              else if (confirmDel.kind === 'circuit') removeCircuitLine(confirmDel.id);
+              else handleDetach(confirmDel.id);
+            }}
+          />
         </div>
-      </div>
-    </div>
+      )}
+    </SetupShell>
   );
 }

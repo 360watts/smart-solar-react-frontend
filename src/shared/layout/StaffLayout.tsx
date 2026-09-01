@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
   LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
-  Zap, CalendarCheck, MessageCircle,
+  Zap, CalendarCheck, MessageCircle, TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -36,6 +36,7 @@ const NAV_STAFF = [
 const NAV_ADMIN = [
   { path: '/employees',   label: 'Employees',   icon: Briefcase },
   { path: '/departments', label: 'Departments', icon: Users     },
+  { path: '/analytics',   label: 'Analytics',   icon: TrendingUp },
 ];
 
 const STAFF_SIDEBAR_EXPANDED  = 236;

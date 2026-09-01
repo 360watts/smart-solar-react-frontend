@@ -1026,6 +1026,15 @@ class ApiService {
     return result;
   }
 
+  /** Tuya devices on the cloud project, each flagged `already_registered` for this site. */
+  async getTuyaCloudDevices(siteId: string): Promise<Array<{
+    id: string; name: string; product_name?: string; category?: string;
+    online?: boolean; icon?: string; already_registered: boolean;
+  }>> {
+    const data = await this.request(`/sites/${siteId}/tuya-cloud-devices/`);
+    return Array.isArray(data) ? data : [];
+  }
+
   async updateSmartDevice(deviceId: number, data: Record<string, unknown>): Promise<any> {
     const result = await this.request(`/smart-devices/${deviceId}/`, {
       method: 'PATCH',
@@ -1118,7 +1127,7 @@ class ApiService {
    * midnight boundary, unlike the inverter's own *_today_kwh registers
    * (reset at IST midnight, wrong 00:00–06:00) or a naive midnight-midnight sum.
    */
-  async getEnergySummaryCombined(siteId: string): Promise<{ summary?: { today?: Record<string, number> } } | null> {
+  async getEnergySummaryCombined(siteId: string): Promise<{ summary?: { today?: Record<string, number>; weekly?: Record<string, number>; monthly?: Record<string, number> } } | null> {
     const cacheKey = `energy_summary_combined_${siteId}`;
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/energy-summary/?combined=true`), 55 * 1000);
   }
