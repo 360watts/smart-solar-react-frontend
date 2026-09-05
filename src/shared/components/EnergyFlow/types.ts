@@ -28,11 +28,25 @@ export interface SmartDeviceNode {
   display_name: string;
   is_active: boolean;
   /**
-   * Connectivity state — only meaningful for pulsar-ingest devices, driven
-   * by Tuya's own deviceOnline/deviceOffline events (not a timeout guess).
+   * Tuya's own cloud-side deviceOnline/deviceOffline signal (pushed for
+   * pulsar AND local devices, project-wide) — whether the plug's WiFi chip
+   * has a live connection to Tuya's servers over the internet. This can
+   * stay true while a `local`-mode device is genuinely unreachable on the
+   * site LAN (a different network, checked separately below) — Tuya's
+   * offline detection has its own lag and only reflects internet
+   * connectivity, not whether our on-site Pi can actually reach the plug.
    * Always true for poll-mode devices, which have no equivalent signal.
    */
   is_online: boolean;
+  /**
+   * Consecutive failed local-poll attempts by the on-site Pi (`local`-mode
+   * devices only; always 0 otherwise). Mirrors the backend's own
+   * `smart_device_offline` incident logic (LOCAL_POLLER_OFFLINE_FAILURE_THRESHOLD,
+   * default 3) — the more trustworthy "is this appliance actually off"
+   * signal for a locally-polled device than `is_online` alone, since it
+   * reflects real LAN reachability rather than Tuya's cloud-side view.
+   */
+  poller_consecutive_failures?: number;
   latest: SmartDeviceReading | null;
   /** Which physical circuit the device is on. Defaults to heuristic if absent. */
   circuit?: 'grid_direct' | 'inverter_backup' | 'ev_line';

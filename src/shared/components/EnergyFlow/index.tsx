@@ -191,6 +191,15 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
 };
 
 const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine', 'fridge'];
+
+// Mirrors the backend's smart_device_offline incident threshold
+// (LOCAL_POLLER_OFFLINE_FAILURE_THRESHOLD, default 3) — a `local`-mode
+// device can hold is_online=true (Tuya's cloud still sees its WiFi chip)
+// while being genuinely unreachable on the site LAN, so a run of failed
+// local polls is the more trustworthy "actually off" signal here.
+const LOCAL_POLLER_OFFLINE_FAILURES = 3;
+const isDeviceOffline = (d: SmartDeviceNode): boolean =>
+  d.is_online === false || (d.poller_consecutive_failures ?? 0) >= LOCAL_POLLER_OFFLINE_FAILURES;
 const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' => {
   if (d.circuit === 'inverter_backup') return 'solar';
   if (d.circuit === 'grid_direct' || d.circuit === 'ev_line') return 'grid';
@@ -330,12 +339,11 @@ function createDeviceNodeData(device: SmartDeviceNode, accentColor: string): Nod
   const sdKw = (latest?.power_w ?? 0) / 1000;
   const deviceName = deviceLabel(device);
   const sdActive = device.is_active && sdKw > 0.001;
-  // is_online is Tuya's own deviceOnline/deviceOffline signal (pulsar-mode
-  // devices only) — a stronger, non-inferred connectivity check than
-  // reading-recency. Takes priority over the power-based active/inactive
-  // read: a device reporting is_online=false shouldn't show as "inactive"
-  // (implies it's just idle) when it's actually disconnected.
-  const offline = device.is_online === false;
+  // Takes priority over the power-based active/inactive read: an offline
+  // device shouldn't show as "inactive" (implies it's just idle) when it's
+  // actually disconnected. See isDeviceOffline's doc comment for why this
+  // isn't just is_online — Tuya's cloud flag can lag a real LAN outage.
+  const offline = isDeviceOffline(device);
 
   return {
     type: 'device',
@@ -532,7 +540,7 @@ function SubSection({ title, icon, accentColor, devices, isDark, onDeviceClick,
         {devices.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 6 : 8 }}>
             {devices.map(device => {
-              const offline = device.is_online === false;
+              const offline = isDeviceOffline(device);
               const latest = freshLatest(device);
               const sdKw = (latest?.power_w ?? 0) / 1000;
               const sdFmt = fmtPower(sdKw);
@@ -971,15 +979,15 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 type: 'device',
                 id: String(evLoads[0].id),
                 title: evLoads[0].display_name ?? 'EV Charger',
-                subtitle: evLoads[0].is_online === false ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                subtitle: isDeviceOffline(evLoads[0]) ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
                 power_kw: evLoadPowerKw,
-                status: evLoads[0].is_online === false ? 'offline' : evLoadActive ? 'active' : 'inactive',
+                status: isDeviceOffline(evLoads[0]) ? 'offline' : evLoadActive ? 'active' : 'inactive',
                 color: '#34d399',
                 icon: <Car size={24} color="#34d399" />,
                 details: {
                   'Charging Power': `${fmtPower(evLoadPowerKw).valueStr} ${fmtPower(evLoadPowerKw).unit}`,
                   'Voltage': evLoads[0].latest?.voltage_v != null ? `${evLoads[0].latest.voltage_v.toFixed(0)} V` : '—',
-                  'Status': evLoads[0].is_online === false ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
+                  'Status': isDeviceOffline(evLoads[0]) ? 'Offline' : evLoadActive ? 'Charging' : evLoads[0].latest?.switch_on ? 'Plugged in' : 'Idle',
                 },
                 device: evLoads[0],
               })}

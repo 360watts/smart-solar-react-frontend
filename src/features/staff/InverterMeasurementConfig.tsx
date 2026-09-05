@@ -635,7 +635,9 @@ export default function InverterMeasurementConfig({
         title="Smart plugs"
         purpose="Add one for each appliance you want to see on its own."
         status={<StatusChip isDark={isDark} state={smartDevices.length ? 'good' : 'idle'}>
-          {smartDevices.length} appliance{smartDevices.length === 1 ? '' : 's'}
+          {smartDevices.length
+            ? `${smartDevices.filter((d: any) => d.is_online !== false && (d.poller_consecutive_failures ?? 0) < 3).length} of ${smartDevices.length} online`
+            : '0 appliances'}
         </StatusChip>}
         action={!smartComposerOpen && (
           <Btn isDark={isDark} variant="soft" full onClick={beginAddSmartDevice}><Plus size={15} /> Add a smart plug</Btn>
@@ -676,8 +678,16 @@ export default function InverterMeasurementConfig({
             const local = device.ingest_mode === 'local';
             const piFresh = seen > 0 && (Date.now() - seen) < 10 * 60 * 1000;
             const power = device.latest?.power_w;
+            // is_online alone can miss this: it's Tuya's cloud-side WiFi check,
+            // which can stay true while the Pi genuinely can't reach the plug
+            // on the site LAN. poller_last_seen_at also can't catch it — the Pi
+            // refreshes it on every push for every device it status-reports on,
+            // failing ones included. A run of failed local polls
+            // (poller_consecutive_failures) is the reliable "actually off" signal.
+            const online = device.is_online !== false && (device.poller_consecutive_failures ?? 0) < 3;
             let status: React.ReactNode;
-            if (local && !piFresh) status = <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting</span>;
+            if (!online) status = <>Offline · appliance switched off or unplugged</>;
+            else if (local && !piFresh) status = <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting</span>;
             else if (power != null && power > 5) status = <><span style={{ color: t.goodInk, fontWeight: 600 }}>Live</span> · using {power >= 1000 ? `${(power / 1000).toFixed(1)} kW` : `${Math.round(power)} W`} right now</>;
             else if (power != null) status = <>Idle · connected</>;
             else status = <>Connected</>;
