@@ -192,14 +192,6 @@ const applIcon = (label: ApplianceLabel, color: string, size = 15) => {
 
 const GRID_APPLIANCES: ApplianceLabel[] = ['geyser', 'ac_unit', 'washing_machine', 'fridge'];
 
-// Mirrors the backend's smart_device_offline incident threshold
-// (LOCAL_POLLER_OFFLINE_FAILURE_THRESHOLD, default 3) — a `local`-mode
-// device can hold is_online=true (Tuya's cloud still sees its WiFi chip)
-// while being genuinely unreachable on the site LAN, so a run of failed
-// local polls is the more trustworthy "actually off" signal here.
-const LOCAL_POLLER_OFFLINE_FAILURES = 3;
-const isDeviceOffline = (d: SmartDeviceNode): boolean =>
-  d.is_online === false || (d.poller_consecutive_failures ?? 0) >= LOCAL_POLLER_OFFLINE_FAILURES;
 const circuitOf = (d: SmartDeviceNode): 'solar' | 'grid' => {
   if (d.circuit === 'inverter_backup') return 'solar';
   if (d.circuit === 'grid_direct' || d.circuit === 'ev_line') return 'grid';
@@ -211,6 +203,18 @@ const isFreshReading = (timestamp?: string | null) =>
   !!timestamp && Date.now() - new Date(timestamp).getTime() <= 5 * 60 * 1000;
 const freshLatest = (device: SmartDeviceNode) =>
   device.latest && isFreshReading(device.latest.timestamp) ? device.latest : null;
+
+// Ground truth for "is this device actually delivering data" — mirrors
+// check_local_poller_health()'s own gate (maintenance_tasks.py): a stale/
+// missing SmartDeviceReading is what the backend itself trusts, and only
+// consults is_online/poller_consecutive_failures afterward to classify
+// *why*, never as an independent trigger. An earlier version of this
+// check used is_online/poller_consecutive_failures directly and missed
+// coim_002's AC(NEW) plug for hours — Tuya's cloud flag never flipped,
+// and the Pi's failure counter kept resetting to 0-1 on intermittent
+// partial connectivity, while its last real reading sat over 21 hours
+// stale (Sep 5 2026). Reading recency doesn't have that failure mode.
+export const isDeviceOffline = (d: SmartDeviceNode): boolean => !isFreshReading(d.latest?.timestamp);
 
 // ── SVG beam primitives ───────────────────────────────────────────────────────
 

@@ -30,21 +30,21 @@ export interface SmartDeviceNode {
   /**
    * Tuya's own cloud-side deviceOnline/deviceOffline signal (pushed for
    * pulsar AND local devices, project-wide) — whether the plug's WiFi chip
-   * has a live connection to Tuya's servers over the internet. This can
-   * stay true while a `local`-mode device is genuinely unreachable on the
-   * site LAN (a different network, checked separately below) — Tuya's
-   * offline detection has its own lag and only reflects internet
-   * connectivity, not whether our on-site Pi can actually reach the plug.
-   * Always true for poll-mode devices, which have no equivalent signal.
+   * has a live connection to Tuya's servers over the internet. Informational
+   * only here: it can stay true while a `local`-mode device is genuinely
+   * unreachable on the site LAN, and its own offline detection has real
+   * lag — see EnergyFlow/index.tsx's isDeviceOffline for the actual
+   * "is this device delivering data" check, which uses reading recency
+   * instead (the same ground truth the backend's own health check trusts).
    */
   is_online: boolean;
   /**
    * Consecutive failed local-poll attempts by the on-site Pi (`local`-mode
-   * devices only; always 0 otherwise). Mirrors the backend's own
-   * `smart_device_offline` incident logic (LOCAL_POLLER_OFFLINE_FAILURE_THRESHOLD,
-   * default 3) — the more trustworthy "is this appliance actually off"
-   * signal for a locally-polled device than `is_online` alone, since it
-   * reflects real LAN reachability rather than Tuya's cloud-side view.
+   * devices only; always 0 otherwise). Informational only — it resets on
+   * any single successful poll, so a plug with intermittent partial
+   * connectivity can sit at 0-1 indefinitely while genuinely not reporting
+   * for hours (confirmed on coim_002's AC(NEW), Sep 5 2026). Don't use this
+   * to decide "is this device offline" — see isDeviceOffline in index.tsx.
    */
   poller_consecutive_failures?: number;
   latest: SmartDeviceReading | null;

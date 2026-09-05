@@ -11,6 +11,12 @@ import {
 } from './siteHardware/ui';
 import SmartDeviceComposer from './siteHardware/SmartDeviceComposer';
 
+// Same 5-min window as EnergyFlow's isDeviceOffline (index.tsx) — kept as a
+// standalone copy rather than a shared import since the two components live
+// in different feature trees; keep them in sync if this window ever changes.
+const isReadingFresh = (timestamp?: string | null) =>
+  !!timestamp && Date.now() - new Date(timestamp).getTime() <= 5 * 60 * 1000;
+
 interface SmartDeviceForm {
   device_type: string;
   provider_device_id: string;
@@ -636,7 +642,7 @@ export default function InverterMeasurementConfig({
         purpose="Add one for each appliance you want to see on its own."
         status={<StatusChip isDark={isDark} state={smartDevices.length ? 'good' : 'idle'}>
           {smartDevices.length
-            ? `${smartDevices.filter((d: any) => d.is_online !== false && (d.poller_consecutive_failures ?? 0) < 3).length} of ${smartDevices.length} online`
+            ? `${smartDevices.filter((d: any) => isReadingFresh(d.latest?.timestamp)).length} of ${smartDevices.length} online`
             : '0 appliances'}
         </StatusChip>}
         action={!smartComposerOpen && (
@@ -674,23 +680,24 @@ export default function InverterMeasurementConfig({
           )
         ) : (
           smartDevices.map((device: any) => {
-            const seen = device.poller_last_seen_at ? new Date(device.poller_last_seen_at).getTime() : 0;
-            const local = device.ingest_mode === 'local';
-            const piFresh = seen > 0 && (Date.now() - seen) < 10 * 60 * 1000;
+            // Ground truth for "is this appliance actually delivering data" —
+            // mirrors EnergyFlow's isDeviceOffline and the backend's own
+            // check_local_poller_health() gate (a stale/missing
+            // SmartDeviceReading, not is_online or poller_consecutive_failures
+            // directly). Both of those proved unreliable in isolation:
+            // is_online is Tuya's cloud-side WiFi check and can lag a real LAN
+            // outage, and poller_consecutive_failures resets on any single
+            // successful poll — coim_002's AC(NEW) sat at is_online=true,
+            // 0-1 failures for hours while its last real reading was 21+
+            // hours stale (Sep 5 2026). poller_last_seen_at can't catch it
+            // either — the Pi refreshes it on every push for every device it
+            // status-reports on, failing ones included.
+            const online = isReadingFresh(device.latest?.timestamp);
             const power = device.latest?.power_w;
-            // is_online alone can miss this: it's Tuya's cloud-side WiFi check,
-            // which can stay true while the Pi genuinely can't reach the plug
-            // on the site LAN. poller_last_seen_at also can't catch it — the Pi
-            // refreshes it on every push for every device it status-reports on,
-            // failing ones included. A run of failed local polls
-            // (poller_consecutive_failures) is the reliable "actually off" signal.
-            const online = device.is_online !== false && (device.poller_consecutive_failures ?? 0) < 3;
             let status: React.ReactNode;
             if (!online) status = <>Offline · appliance switched off or unplugged</>;
-            else if (local && !piFresh) status = <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting</span>;
             else if (power != null && power > 5) status = <><span style={{ color: t.goodInk, fontWeight: 600 }}>Live</span> · using {power >= 1000 ? `${(power / 1000).toFixed(1)} kW` : `${Math.round(power)} W`} right now</>;
-            else if (power != null) status = <>Idle · connected</>;
-            else status = <>Connected</>;
+            else status = <>Idle · connected</>;
             return (
               <Item
                 key={device.id}
