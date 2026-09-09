@@ -13,6 +13,9 @@ Faults specific to the React dashboard UI.
 | [F-003-UI](#f-003-ui) | `import.meta.env` TypeScript error — `vite/client` types missing from tsconfig | Low | Fixed |
 | [F-004-UI](#f-004-ui) | Local dev hitting Railway cold-start — `.env.local` not present | Medium | Fixed |
 | [F-005-UI](#f-005-ui) | `refreshToken()` linter rewrite — always returns `true` on failure | High | Fixed |
+| [F-006-UI](#f-006-ui) | Site-hardware `⋯` menu items clipped by card `overflow: hidden` — "Disconnect" invisible | High | Fixed |
+| [F-007-UI](#f-007-ui) | "Add grid" circuit-line button always 400s — backend rejects `grid_direct` | Medium | Fixed |
+| [F-008-UI](#f-008-ui) | Dev-only: every write 401s after a page reload — in-memory CSRF token lost | Medium | Mitigated |
 
 ---
 
@@ -178,6 +181,120 @@ The `!` non-null assertion is safe — `refreshTokenPromise` is assigned one lin
 
 ---
 
+## F-006-UI
+
+### Site-Hardware `⋯` Menu Items Clipped by Card `overflow: hidden` — "Disconnect" Invisible
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-09-08 |
+| **Severity** | High |
+| **Status** | Fixed 2026-09-08 |
+
+#### Symptom
+On SiteDetail → **Inverter & monitoring**, the monitor / meter row's `⋯` menu
+showed only "Move to another site" — the **"Disconnect"** action (detach device
+from site) was not visible. Reported as "there is only a move option".
+
+#### Root Cause
+`Item`'s dropdown (`siteHardware/ui.tsx`) was `position: absolute` inside
+`SetupCard`, whose `<section>` sets `overflow: hidden` for its `borderRadius: 18`
+corners. The monitor row is the last element in the card, so the menu opened
+into the ~30 px of padding below it and the rest was clipped by the ancestor —
+"Move" (item 1) rendered in the visible strip, "Disconnect" (item 2) fell
+entirely inside the clipped region. Menu doesn't scroll; nothing surfaced.
+
+#### Fix Applied
+Rebuilt the menu in `siteHardware/ui.tsx` as `OverflowMenu`:
+- Renders into a **portal on `document.body`**, positioned from the trigger's
+  `getBoundingClientRect()` — no ancestor can clip it.
+- Flips above the trigger when it would run past the viewport bottom.
+- Repositions on scroll/resize; closes on outside `pointerdown`, `Escape`
+  (returns focus to trigger), `Tab`.
+- Arrow-key roving focus, `Home`/`End`, `role="menu"` / `menuitem`.
+- Per-action optional `hint` second line; destructive actions grouped below a
+  divider. Reveal springs from the trigger corner, `prefers-reduced-motion` aware.
+
+#### References
+- `src/features/staff/siteHardware/ui.tsx` — `OverflowMenu`, `Item`
+- `src/features/staff/InverterMeasurementConfig.tsx` — monitor / meter menus (now
+  carry `hint` copy clarifying detach ≠ delete)
+
+---
+
+## F-007-UI
+
+### "Add Grid" Circuit-Line Button Always 400s — Backend Rejects `grid_direct`
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-09-08 |
+| **Severity** | Medium |
+| **Status** | Fixed 2026-09-08 |
+
+#### Symptom
+Circuits card → "Add grid" → Add → **"Validation failed"** / "Couldn't save that
+circuit". Every attempt. `POST /api/sites/<id>/circuit-lines/` → 400.
+
+#### Root Cause
+"Add grid" seeded the composer with `circuit: 'grid_direct'`. The backend
+`SiteCircuitLineSerializer.validate_circuit` (`api/serializers.py`) **explicitly
+rejects `grid_direct` and `inverter_backup`** — those buses are implicit in the
+inverter/gateway hardware and must not be declared as a `SiteCircuitLine`. The
+only value the serializer accepts is `ev_line`, so the button could never succeed.
+
+#### Fix Applied
+`src/features/staff/InverterMeasurementConfig.tsx`:
+- Removed the "Add grid" quick-action; corrected the card `purpose` copy
+  (grid / backup are covered by hardware, not declarable).
+- Pinned `saveCircuitLine`'s payload to `circuit: 'ev_line'` so no form path can
+  POST an invalid choice.
+
+#### References
+- `src/features/staff/InverterMeasurementConfig.tsx` — `saveCircuitLine`, Circuits card
+- Backend: `api/serializers.py` `SiteCircuitLineSerializer.validate_circuit`
+
+---
+
+## F-008-UI
+
+### Dev-Only: Every Write 401s After a Page Reload — In-Memory CSRF Token Lost
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-09-08 |
+| **Severity** | Medium (local dev only) |
+| **Status** | Mitigated 2026-09-08 (workaround); durable fix proposed |
+
+#### Symptom
+In local dev (Vite proxy → backend), reads work but **every** write —
+`detach`, `circuit-lines`, etc. — returns `401 Unauthorized`. Backend logs show
+`Unauthorized: /api/sites/.../circuit-lines/` and a benign
+`_verify_cron_secret … got='(empty)'` on `/profile/`.
+
+#### Root Cause
+`CookieJWTAuthentication` (`api/cookie_auth.py`) enforces a double-submit CSRF
+check on unsafe methods: the `csrf_token` **cookie** must equal the `X-CSRFToken`
+**header**, else the request falls back to anonymous → the endpoint's permission
+check returns 401 (not 403). The header value is `inMemoryCsrfToken` in
+`src/services/api.ts` — **held in memory only** (captured from the login response
+body), wiped on every page reload while the httpOnly `access_token` cookie
+survives. Post-reload: reads keep working, writes 401 until re-login. The
+auto-refresh in `request()` re-captures the token, so a single 401 should
+self-heal — if it doesn't, the `refresh_token` cookie is also expired.
+
+#### Fix Applied / Workaround
+Workaround: **log out and back in** on the dev tab. Proposed durable fix (local
+dev is same-origin through the proxy, so the `httponly=False` `csrf_token` cookie
+is readable): have `getCsrfToken()` fall back to `document.cookie` when the
+in-memory copy is empty — no-op in production (cross-origin, unreadable).
+
+#### References
+- `src/services/api.ts` — `inMemoryCsrfToken`, `getCsrfToken()`, `getAuthHeaders()`
+- Backend: `api/cookie_auth.py` `CookieJWTAuthentication.authenticate`
+
+---
+
 ## Severity / Status Definitions
 
 | Level | Meaning |
@@ -194,4 +311,4 @@ The `!` non-null assertion is safe — `refreshTokenPromise` is assigned one lin
 | **Open** | Known issue, fix not yet implemented |
 
 ---
-*Last updated: 2026-04-04 (F-002-UI through F-005-UI added)*
+*Last updated: 2026-09-08 (F-006-UI through F-008-UI added — site-hardware UI pass)*

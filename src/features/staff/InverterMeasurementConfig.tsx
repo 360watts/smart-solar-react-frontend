@@ -7,7 +7,7 @@ import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
   SetupShell, SetupCard, StatusChip, Item, Flow, Field, controlStyle, Btn, EmptyState,
-  InlineConfirm, useTokens, applianceIcon, applianceName,
+  ConfirmDialog, useTokens, applianceIcon, applianceName, smartDeviceKindLabel,
 } from './siteHardware/ui';
 import SmartDeviceComposer from './siteHardware/SmartDeviceComposer';
 
@@ -305,7 +305,11 @@ export default function InverterMeasurementConfig({
   };
   const saveCircuitLine = async () => {
     if (!siteId) return;
-    const payload = { circuit: circuitLineDraft.circuit, label: circuitLineDraft.label.trim(), device: circuitLineDraft.device };
+    // A SiteCircuitLine can only ever be an isolated circuit — the backend
+    // serializer rejects grid_direct / inverter_backup outright (they're
+    // implicit in the inverter/gateway hardware). Pin it so no form path can
+    // POST an invalid choice.
+    const payload = { circuit: 'ev_line', label: circuitLineDraft.label.trim(), device: circuitLineDraft.device };
     setCircuitLinesSaving(true); setError(null);
     try {
       if (editingCircuitLineId != null) await apiService.updateCircuitLine(siteId, editingCircuitLineId, payload);
@@ -394,8 +398,8 @@ export default function InverterMeasurementConfig({
                 : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Reporting normally</span> · last update {ago(gw.last_seen_at)}</>
             }
             actions={[
-              { label: 'Move to another site', icon: <ArrowRightLeft size={14} />, onClick: () => setGatewayComposerOpen(true) },
-              { label: 'Disconnect', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'gateway', id: gw.device_id, label: `Monitor ${gw.device_serial}` }) },
+              { label: 'Move to another site', hint: 'Unlink here and attach it elsewhere', icon: <ArrowRightLeft size={14} />, onClick: () => setGatewayComposerOpen(true) },
+              { label: 'Disconnect', hint: 'Unlink from this site — the monitor stays registered', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'gateway', id: gw.device_id, label: `Monitor ${gw.device_serial}` }) },
             ]}
           />
         ) : (
@@ -514,12 +518,12 @@ export default function InverterMeasurementConfig({
                   ? <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · via the monitor</>
                   : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · last update {ago(meter.last_seen_at)}</>}
                 actions={[
-                  ...(gw && mirrorInfoReady && !relayed ? [{ label: 'Route through the monitor', icon: <Link2 size={14} />, onClick: () => handleSetMirror(meter.device_id, gw.device_id) }] : []),
-                  { label: 'Move to another site', icon: <ArrowRightLeft size={14} />, onClick: () => {
+                  ...(gw && mirrorInfoReady && !relayed ? [{ label: 'Route through the monitor', hint: 'Read this meter over the monitor’s connection', icon: <Link2 size={14} />, onClick: () => handleSetMirror(meter.device_id, gw.device_id) }] : []),
+                  { label: 'Move to another site', hint: 'Unlink here and attach it elsewhere', icon: <ArrowRightLeft size={14} />, onClick: () => {
                     const target = window.prompt(`Move the meter to which site ID?`, '');
                     if (target) handleMove(meter.device_id, target);
                   } },
-                  { label: 'Disconnect', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'meter', id: meter.device_id, label: `Meter ${meter.device_serial}` }) },
+                  { label: 'Disconnect', hint: 'Unlink from this site — the meter stays registered', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'meter', id: meter.device_id, label: `Meter ${meter.device_serial}` }) },
                 ]}
               />
             );
@@ -561,11 +565,10 @@ export default function InverterMeasurementConfig({
         index={2}
         icon={<Zap size={21} strokeWidth={1.8} />}
         title="Circuits"
-        purpose="What this site's power is split into. The inverter's backup output is always here; add the grid feed or an EV charger if you want them noted too."
+        purpose="What this site's power is split into. The inverter's backup output and the grid feed are always covered by the hardware — add an EV charger or another isolated circuit here if you want it tracked on its own."
         action={!circuitComposerOpen && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'grid_direct', label: 'Grid' })}><Plus size={14} /> Add grid</Btn>
-            <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'ev_line', label: 'EV charger' })}><Plus size={14} /> Add EV</Btn>
+            <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'ev_line', label: 'EV charger' })}><Plus size={14} /> Add EV charger</Btn>
             <Btn isDark={isDark} variant="plain" size="sm" onClick={() => beginAddCircuitLine()}><Plus size={14} /> Something else</Btn>
           </div>
         )}
@@ -588,7 +591,13 @@ export default function InverterMeasurementConfig({
             isDark={isDark}
             icon={<PlugZap size={19} strokeWidth={1.8} />}
             title={line.label || 'Circuit'}
-            status={line.is_monitored ? <span style={{ color: t.goodInk, fontWeight: 600 }}>Being measured</span> : 'Noted — not measured'}
+            status={(() => {
+              if (!line.is_monitored) return 'Noted — not measured';
+              const meter = smartDevices.find((d: any) => d.id === line.device);
+              return meter
+                ? <><span style={{ color: t.goodInk, fontWeight: 600 }}>Measured</span> · {smartDeviceKindLabel(meter.device_type)}</>
+                : <span style={{ color: t.goodInk, fontWeight: 600 }}>Being measured</span>;
+            })()}
             actions={[
               { label: 'Edit', icon: <Pencil size={14} />, onClick: () => beginEditCircuitLine(line) },
               { label: 'Remove', icon: <Trash2 size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'circuit', id: line.id, label: line.label || 'this circuit' }) },
@@ -617,7 +626,7 @@ export default function InverterMeasurementConfig({
               <input value={circuitLineDraft.label} onChange={e => setCircuitLineDraft({ ...circuitLineDraft, label: e.target.value })}
                 placeholder="e.g. Garage EV charger" style={controlStyle(isDark)} />
             </Field>
-            <Field isDark={isDark} label="Measured by a plug?" hint="pick one on this circuit, or leave as not measured">
+            <Field isDark={isDark} label="Measured by" hint="a plug, clamp meter, or wired meter on this circuit — or leave as not measured">
               <select
                 value={circuitLineDraft.device != null ? String(circuitLineDraft.device) : ''}
                 onChange={e => setCircuitLineDraft({ ...circuitLineDraft, device: e.target.value ? parseInt(e.target.value, 10) : null })}
@@ -625,7 +634,9 @@ export default function InverterMeasurementConfig({
               >
                 <option value="">Not measured</option>
                 {smartDevices.filter((d: any) => d.circuit === circuitLineDraft.circuit).map((d: any) => (
-                  <option key={d.id} value={String(d.id)}>{d.display_name || applianceName(d.appliance_label)}</option>
+                  <option key={d.id} value={String(d.id)}>
+                    {(d.display_name || applianceName(d.appliance_label))} — {smartDeviceKindLabel(d.device_type)}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -731,21 +742,34 @@ export default function InverterMeasurementConfig({
         />
       </SetupCard>
 
-      {/* ── remove confirmation ──────────────────────────────────────── */}
-      {confirmDel && (
-        <div style={{ position: 'sticky', bottom: 12, zIndex: 30 }}>
-          <InlineConfirm
-            isDark={isDark}
-            message={`Remove ${confirmDel.label}?`}
-            onCancel={() => setConfirmDel(null)}
-            onConfirm={() => {
-              if (confirmDel.kind === 'smart') removeSmartDevice(confirmDel.id);
-              else if (confirmDel.kind === 'circuit') removeCircuitLine(confirmDel.id);
-              else handleDetach(confirmDel.id);
-            }}
-          />
-        </div>
-      )}
+      {/* ── remove / disconnect confirmation ─────────────────────────── */}
+      <ConfirmDialog
+        isDark={isDark}
+        open={!!confirmDel}
+        busy={busy || smartDevicesSaving || circuitLinesSaving}
+        title={
+          !confirmDel ? ''
+            : confirmDel.kind === 'gateway' || confirmDel.kind === 'meter'
+              ? `Disconnect ${confirmDel.label}?`
+              : `Remove ${confirmDel.label}?`
+        }
+        body={
+          !confirmDel ? undefined
+            : confirmDel.kind === 'gateway' || confirmDel.kind === 'meter'
+              ? `It’ll be unlinked from ${siteName}, but the ${confirmDel.kind === 'gateway' ? 'monitor' : 'meter'} stays registered — you can reconnect it here or on another site whenever you need.`
+              : confirmDel.kind === 'smart'
+                ? `This plug stops being tracked for ${siteName}. Add it back anytime — its readings are kept.`
+                : `This circuit will be removed from ${siteName}.`
+        }
+        confirmLabel={confirmDel && (confirmDel.kind === 'gateway' || confirmDel.kind === 'meter') ? 'Disconnect' : 'Remove'}
+        onCancel={() => setConfirmDel(null)}
+        onConfirm={() => {
+          if (!confirmDel) return;
+          if (confirmDel.kind === 'smart') removeSmartDevice(confirmDel.id);
+          else if (confirmDel.kind === 'circuit') removeCircuitLine(confirmDel.id);
+          else handleDetach(confirmDel.id);
+        }}
+      />
     </SetupShell>
   );
 }

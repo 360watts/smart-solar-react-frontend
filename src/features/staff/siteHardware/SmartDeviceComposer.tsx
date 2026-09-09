@@ -3,7 +3,7 @@ import { RefreshCw, Check } from 'lucide-react';
 import FoundPlugs, { TuyaCloudDevice } from './FoundPlugs';
 import {
   Flow, FlowStep, ChoiceGrid, RadioCards, Field, controlStyle, Btn, DetailsToggle,
-  applianceIcon, APPLIANCE_OPTIONS, useTokens,
+  applianceIcon, APPLIANCE_OPTIONS, SMART_DEVICE_KINDS, useTokens,
 } from './ui';
 
 export interface SmartDeviceDraft {
@@ -204,10 +204,7 @@ export default function SmartDeviceComposer({
               </Field>
               <Field isDark={isDark} label="Device kind">
                 <select value={draft.device_type} onChange={e => set({ device_type: e.target.value })} style={controlStyle(isDark)}>
-                  <option value="tuya_plug">Smart plug</option>
-                  <option value="tuya_switch">Smart switch</option>
-                  <option value="ct_clamp">Clamp meter</option>
-                  <option value="modbus_meter">Wired meter</option>
+                  {SMART_DEVICE_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
                 </select>
               </Field>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: t.ink2 }}>

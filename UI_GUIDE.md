@@ -88,7 +88,12 @@ All from `useTokens(isDark)` in `ui.tsx`. Never hard-code a hex in a screen.
   a `StatusChip`, and a single primary `action`.
 - **`Item`** — icon-first row. Lead with the **appliance icon**, then the name,
   then a plain-language status line. Secondary actions live behind a `⋯` menu,
-  never as a row of buttons.
+  never as a row of buttons. The menu renders in a **portal** (so a card's
+  `overflow: hidden` can't clip its lower items — that once hid a whole
+  "Disconnect" action), flips above the trigger near the viewport edge, and is
+  arrow-key navigable. Each action takes an optional `hint` second line — use it
+  when a short verb could be misread (`Disconnect` → "Unlink from this site — the
+  monitor stays registered"). Destructive actions sit below a divider.
 - **`Flow`** — guided composer. **Closed by default**, opens in place with an
   `✕`, reads as numbered questions (`FlowStep`), exactly one primary button in
   the footer. Every expandable thing has a way back.
@@ -96,8 +101,17 @@ All from `useTokens(isDark)` in `ui.tsx`. Never hard-code a hex in a screen.
   (appliances, "which part of the home"). Use instead of a `<select>` of jargon.
 - **`DetailsToggle`** — "Advanced details" expander. Device codes, ingest mode,
   device kind, display-name overrides all live *inside* this, collapsed.
-- **`InlineConfirm`** — replaces `window.confirm`. Buttons say "Keep it" /
-  "Remove", shown as a sticky bar, not a modal.
+- **`ConfirmDialog`** — the destructive-action confirm. Replaces `window.confirm`.
+  Centered portal modal with a dimmed backdrop, focus trap, and Esc-to-close —
+  the app's standard dialog convention (`EqDeleteModal` / `AccessibleModal`), not
+  a sticky bar (the old `InlineConfirm` rendered far from the row you clicked).
+  Amber warning disc, Outfit title, a calm `body` line that resolves the "does
+  this delete it?" question, `busy` → spinner + disabled buttons. Verbs:
+  "Keep it" / "Remove" (or "Disconnect" for hardware).
+- **`SMART_DEVICE_KINDS` / `smartDeviceKindLabel()`** — the one place the
+  smart-device kinds (`Smart plug` / `Smart switch` / `Clamp meter` /
+  `Wired meter`) get their user-facing names. Anything that lists or labels a
+  measuring device reads from here.
 - **`EmptyState`** — dashed card, one headline, one detail line, optional single
   action. Calm, not an alarm.
 
@@ -106,7 +120,10 @@ All from `useTokens(isDark)` in `ui.tsx`. Never hard-code a hex in a screen.
 - Monospace device IDs / serials in the primary view — hide behind Advanced details
 - `UPPERCASE` field labels or eyebrows
 - Always-open forms — everything editable opens from a trigger and closes again
-- `window.confirm` / `window.alert` / `window.prompt` for anything routine
+- `window.confirm` / `window.alert` / `window.prompt` for anything routine — use
+  `ConfirmDialog` (the meter's "Move" prompt is a known holdout, migrate it)
+- A confirm shown as a sticky bar far from its trigger — `ConfirmDialog` is a
+  centered modal for exactly this reason
 - Red for "not configured" / "no data yet"
 - Schematic / wiring-diagram metaphors, connection "spines", panel "ledgers"
 - A row of 3+ inline action buttons — collapse into the `⋯` menu

@@ -8,9 +8,10 @@
  *   - calm status: Connected / Not set up yet / Needs attention (amber, not red)
  *   - guided flows that read like questions, closed by default, one primary action
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import {
-  MoreVertical, X, Check, ChevronRight,
+  MoreVertical, X, Check, ChevronRight, AlertTriangle,
   Refrigerator, Flame, AirVent, Droplets, WashingMachine, Plug, CarFront, HelpCircle,
 } from 'lucide-react';
 
@@ -41,6 +42,8 @@ const KEYFRAMES = `
 @keyframes fs-pop  { from { opacity: 0; transform: scale(0.98) translateY(-4px); } to { opacity: 1; transform: none; } }
 @keyframes fs-grow { from { width: 0; } }
 @keyframes fs-spin { to { transform: rotate(360deg); } }
+@keyframes fs-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fs-dialog { from { opacity: 0; transform: scale(0.95) translateY(6px); } to { opacity: 1; transform: none; } }
 `;
 
 // ── page shell ──────────────────────────────────────────────────────────────
@@ -160,24 +163,271 @@ export function applianceName(label: string): string {
     ?? (String(label || '').replace(/_/g, ' ') || 'Appliance');
 }
 
-// ── list item ───────────────────────────────────────────────────────────────
+/** The measuring-device kinds a SmartDevice can be — and therefore what can
+ *  meter a circuit line (its `device` FK points at SmartDevice). Not just
+ *  plugs: a clamp meter or a wired DIN-rail meter counts too. */
+export const SMART_DEVICE_KINDS: { value: string; label: string }[] = [
+  { value: 'tuya_plug', label: 'Smart plug' },
+  { value: 'tuya_switch', label: 'Smart switch' },
+  { value: 'ct_clamp', label: 'Clamp meter' },
+  { value: 'modbus_meter', label: 'Wired meter' },
+];
+export function smartDeviceKindLabel(type?: string): string {
+  return SMART_DEVICE_KINDS.find(k => k.value === type)?.label
+    ?? (String(type || '').replace(/_/g, ' ') || 'Device');
+}
+
+// ── list item + its overflow menu ──────────────────────────────────────────
+
+const DANGER = '#e5484d';
+
+export type ItemAction = {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  icon?: React.ReactNode;
+  /** Optional second line — say what the action does (or doesn't) so a
+   *  destructive-sounding label like "Disconnect" isn't mistaken for a delete. */
+  hint?: string;
+};
+
+function usePrefersReducedMotion() {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setReduce(mq.matches);
+    sync();
+    mq.addEventListener?.('change', sync);
+    return () => mq.removeEventListener?.('change', sync);
+  }, []);
+  return reduce;
+}
+
+/**
+ * Row overflow menu.
+ *
+ * Rendered into a portal on `document.body` and positioned from the trigger's
+ * rect — the setup cards clip their overflow for clean corners, which used to
+ * swallow the lower menu items (a "Disconnect" action could sit entirely in the
+ * clipped strip and never show). The panel also flips above the trigger when it
+ * would run past the viewport, and animates in from the corner it hangs off.
+ */
+function OverflowMenu({ isDark, actions }: { isDark: boolean; actions: ItemAction[] }) {
+  const t = useTokens(isDark);
+  const reduceMotion = usePrefersReducedMotion();
+  const [render, setRender] = useState(false);
+  const [shown, setShown] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; maxH: number; place: 'top' | 'bottom' }>(
+    { top: 0, left: 0, maxH: 0, place: 'bottom' },
+  );
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const PANEL_W = 224;
+  const estHeight =
+    10 + actions.reduce((s, a) => s + (a.hint ? 50 : 40), 0)
+    + actions.filter((a, i) => i > 0 && !!a.danger && !actions[i - 1].danger).length * 11;
+
+  const place = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const spaceBelow = vh - r.bottom - 12;
+    const spaceAbove = r.top - 12;
+    const flip = spaceBelow < estHeight && spaceAbove > spaceBelow;
+    setPos({
+      place: flip ? 'top' : 'bottom',
+      top: flip ? r.top - 8 : r.bottom + 8,
+      left: Math.round(Math.min(Math.max(8, r.right - PANEL_W), vw - PANEL_W - 8)),
+      maxH: Math.max(160, (flip ? spaceAbove : spaceBelow)),
+    });
+  }, [estHeight]);
+
+  const openMenu = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    place();
+    setRender(true);
+    setShown(false);
+    // paint the closed state once, then transition in — also covers the
+    // reopen-before-exit-finishes case, where `render` never toggles.
+    requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
+  };
+  const closeMenu = useCallback((returnFocus = true) => {
+    setShown(false);
+    if (returnFocus) triggerRef.current?.focus();
+    closeTimer.current = setTimeout(() => setRender(false), reduceMotion ? 0 : 150);
+  }, [reduceMotion]);
+
+  useLayoutEffect(() => { if (render) place(); }, [render, place]);
+
+  useEffect(() => {
+    if (!render) return;
+    const reposition = () => place();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); closeMenu(); }
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      closeMenu(false);
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    const focusId = requestAnimationFrame(() => itemRefs.current[0]?.focus());
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      cancelAnimationFrame(focusId);
+    };
+  }, [render, place, closeMenu]);
+
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+
+  const roveFocus = (e: React.KeyboardEvent) => {
+    const n = actions.length;
+    if (!n) return;
+    const cur = itemRefs.current.findIndex(el => el === document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); itemRefs.current[(cur + 1 + n) % n]?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); itemRefs.current[(cur - 1 + n) % n]?.focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); itemRefs.current[0]?.focus(); }
+    else if (e.key === 'End') { e.preventDefault(); itemRefs.current[n - 1]?.focus(); }
+    else if (e.key === 'Tab') { closeMenu(false); }
+  };
+
+  const setRowBg = (el: HTMLElement, on: boolean, danger?: boolean) => {
+    el.style.background = on
+      ? (danger
+        ? (isDark ? 'rgba(229,72,77,0.16)' : 'rgba(229,72,77,0.10)')
+        : t.card2)
+      : 'transparent';
+  };
+
+  itemRefs.current = [];
+
+  return (
+    <div style={{ flexShrink: 0, lineHeight: 0 }}>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={render}
+        aria-label="More actions"
+        onClick={() => (render ? closeMenu() : openMenu())}
+        onKeyDown={e => {
+          if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMenu(); }
+        }}
+        style={{
+          width: 32, height: 32, borderRadius: 9, display: 'grid', placeItems: 'center', cursor: 'pointer',
+          border: `1px solid ${render ? 'transparent' : t.line}`,
+          background: render ? (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)') : t.card,
+          color: render ? t.ink : t.ink2,
+          transition: 'background 130ms ease, color 130ms ease, border-color 130ms ease',
+        }}
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {render && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed', top: pos.top, left: pos.left, zIndex: 1400,
+            transform: pos.place === 'top' ? 'translateY(-100%)' : undefined,
+          }}
+        >
+          <div
+            ref={panelRef}
+            role="menu"
+            aria-orientation="vertical"
+            onKeyDown={roveFocus}
+            style={{
+              minWidth: PANEL_W, maxWidth: 288, padding: 5,
+              maxHeight: pos.maxH, overflowY: 'auto',
+              borderRadius: 14, background: t.card,
+              border: `1px solid ${t.line}`,
+              boxShadow: isDark
+                ? '0 0 0 1px rgba(0,0,0,0.55), 0 10px 24px -6px rgba(0,0,0,0.6), 0 30px 60px -14px rgba(0,0,0,0.55)'
+                : '0 1px 2px rgba(17,24,39,0.08), 0 12px 28px -8px rgba(17,24,39,0.20), 0 30px 56px -18px rgba(17,24,39,0.16)',
+              transformOrigin: pos.place === 'bottom' ? 'top right' : 'bottom right',
+              opacity: shown ? 1 : 0,
+              transform: shown
+                ? 'none'
+                : `scale(0.94) translateY(${pos.place === 'bottom' ? -6 : 6}px)`,
+              transition: reduceMotion
+                ? 'opacity 120ms ease'
+                : 'opacity 140ms ease, transform 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}
+          >
+            {actions.map((a, i) => {
+              const groupBreak = i > 0 && !!a.danger && !actions[i - 1].danger;
+              return (
+                <React.Fragment key={i}>
+                  {groupBreak && <div style={{ height: 1, background: t.line2, margin: '5px 9px' }} />}
+                  <button
+                    ref={el => { itemRefs.current[i] = el; }}
+                    type="button"
+                    role="menuitem"
+                    tabIndex={-1}
+                    onClick={() => { closeMenu(false); a.onClick(); }}
+                    onMouseEnter={e => setRowBg(e.currentTarget, true, a.danger)}
+                    onMouseLeave={e => setRowBg(e.currentTarget, false, a.danger)}
+                    onFocus={e => setRowBg(e.currentTarget, true, a.danger)}
+                    onBlur={e => setRowBg(e.currentTarget, false, a.danger)}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '18px 1fr', columnGap: 11, alignItems: 'center',
+                      width: '100%', textAlign: 'left', padding: '9px 12px', borderRadius: 9,
+                      border: 'none', background: 'transparent', cursor: 'pointer', outline: 'none',
+                      fontFamily: t.body, color: a.danger ? DANGER : t.ink,
+                      transition: 'background 120ms ease',
+                    }}
+                  >
+                    <span style={{
+                      display: 'grid', placeItems: 'center',
+                      color: a.danger ? DANGER : t.ink2,
+                    }}>
+                      {a.icon}
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, letterSpacing: '-0.005em' }}>
+                        {a.label}
+                      </span>
+                      {a.hint && (
+                        <span style={{
+                          display: 'block', marginTop: 1, fontSize: '0.75rem', lineHeight: 1.35,
+                          color: a.danger ? (isDark ? 'rgba(242,150,153,0.85)' : 'rgba(180,42,47,0.8)') : t.ink2,
+                        }}>
+                          {a.hint}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
 
 export function Item({
   isDark, icon, iconTone = 'plain', title, status, actions,
 }: {
   isDark: boolean; icon: React.ReactNode; iconTone?: 'plain' | 'good';
   title: React.ReactNode; status: React.ReactNode;
-  actions: { label: string; onClick: () => void; danger?: boolean; icon?: React.ReactNode }[];
+  actions: ItemAction[];
 }) {
   const t = useTokens(isDark);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 13,
@@ -195,40 +445,7 @@ export function Item({
         <div style={{ fontSize: '0.96rem', fontWeight: 600 }}>{title}</div>
         <div style={{ marginTop: 1, fontSize: '0.82rem', color: t.ink2 }}>{status}</div>
       </div>
-      {actions.length > 0 && (
-        <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            type="button" onClick={() => setOpen(v => !v)} aria-label="Options"
-            style={{ width: 32, height: 32, borderRadius: 9, display: 'grid', placeItems: 'center', border: `1px solid ${t.line}`, background: t.card, color: t.ink2, cursor: 'pointer' }}
-          >
-            <MoreVertical size={16} />
-          </button>
-          {open && (
-            <div style={{
-              position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 40, minWidth: 160,
-              border: `1px solid ${t.line}`, borderRadius: 11, background: t.card, overflow: 'hidden',
-              boxShadow: '0 14px 36px rgba(0,0,0,0.22)',
-            }}>
-              {actions.map((a, i) => (
-                <button
-                  key={i} type="button"
-                  onClick={() => { setOpen(false); a.onClick(); }}
-                  onMouseEnter={e => (e.currentTarget.style.background = t.card2)}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-                    padding: '10px 13px', border: 'none', background: 'transparent', cursor: 'pointer',
-                    fontFamily: t.body, fontSize: '0.85rem', color: a.danger ? '#e5484d' : t.ink,
-                    borderTop: i === 0 ? 'none' : `1px solid ${t.line2}`,
-                  }}
-                >
-                  {a.icon}{a.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {actions.length > 0 && <OverflowMenu isDark={isDark} actions={actions} />}
     </div>
   );
 }
@@ -421,27 +638,138 @@ export function DetailsToggle({ isDark, open, onToggle }: { isDark: boolean; ope
   );
 }
 
-export function InlineConfirm({ isDark, message, onConfirm, onCancel }: {
-  isDark: boolean; message: string; onConfirm: () => void; onCancel: () => void;
+/**
+ * Centered confirmation dialog — the app's standard destructive-action pattern
+ * (portal + dimmed backdrop + focus trap + Esc), matched to this surface's
+ * voice. Replaces the old bottom-sticky InlineConfirm, which rendered far from
+ * the row you clicked (e.g. below the smart-plugs section).
+ */
+export function ConfirmDialog({
+  isDark, open, title, body,
+  confirmLabel = 'Remove', cancelLabel = 'Keep it', tone = 'danger',
+  busy = false, onConfirm, onCancel,
+}: {
+  isDark: boolean; open: boolean; title: string; body?: React.ReactNode;
+  confirmLabel?: string; cancelLabel?: string; tone?: 'danger' | 'primary';
+  busy?: boolean; onConfirm: () => void; onCancel: () => void;
 }) {
   const t = useTokens(isDark);
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-      padding: '11px 13px', borderRadius: 12,
-      border: `1px solid ${isDark ? 'rgba(229,72,77,0.4)' : 'rgba(229,72,77,0.35)'}`,
-      background: isDark ? 'rgba(229,72,77,0.12)' : 'rgba(229,72,77,0.07)',
-      boxShadow: '0 12px 30px rgba(0,0,0,0.2)', fontFamily: t.body, fontSize: '0.87rem', color: t.ink,
-    }}>
-      <span style={{ flex: 1, minWidth: 170 }}>{message}</span>
-      <Btn isDark={isDark} size="sm" variant="plain" onClick={onCancel}>Keep it</Btn>
-      <button
-        type="button" onClick={onConfirm}
-        style={{ padding: '8px 13px', borderRadius: 10, border: '1px solid rgba(229,72,77,0.4)', background: 'rgba(229,72,77,0.14)', color: '#e5484d', fontFamily: t.body, fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer' }}
+  const reduceMotion = usePrefersReducedMotion();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const cbs = useRef({ onConfirm, onCancel });
+  cbs.current = { onConfirm, onCancel };
+
+  useEffect(() => {
+    if (!open) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusId = requestAnimationFrame(() => cancelRef.current?.focus());
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); cbs.current.onCancel(); return; }
+      if (e.key === 'Tab') {
+        const a = cancelRef.current, b = confirmRef.current;
+        if (!a || !b) return;
+        const el = document.activeElement;
+        if (e.shiftKey && el === a) { e.preventDefault(); b.focus(); }
+        else if (!e.shiftKey && el === b) { e.preventDefault(); a.focus(); }
+        else if (el !== a && el !== b) { e.preventDefault(); a.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      document.body.style.overflow = prevOverflow;
+      cancelAnimationFrame(focusId);
+      prevFocus?.focus?.();
+    };
+  }, [open]);
+
+  if (!open) return null;
+  const danger = tone === 'danger';
+
+  return ReactDOM.createPortal(
+    <div
+      onMouseDown={e => { if (e.target === e.currentTarget && !busy) onCancel(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000, display: 'grid', placeItems: 'center', padding: 20,
+        background: isDark ? 'rgba(6,8,11,0.66)' : 'rgba(17,24,39,0.42)',
+        backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
+        animation: reduceMotion ? undefined : 'fs-fade 130ms ease both',
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+        style={{
+          width: 'min(400px, 100%)', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto',
+          background: t.card, borderRadius: 18, border: `1px solid ${t.line}`, padding: '22px 22px 18px',
+          boxShadow: isDark
+            ? '0 0 0 1px rgba(0,0,0,0.5), 0 28px 72px rgba(0,0,0,0.62)'
+            : '0 24px 70px rgba(17,24,39,0.22)',
+          animation: reduceMotion ? undefined : 'fs-dialog 200ms cubic-bezier(0.2,0.9,0.3,1) both',
+        }}
       >
-        Remove
-      </button>
-    </div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <span style={{
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'grid', placeItems: 'center',
+            background: danger ? (isDark ? 'rgba(229,72,77,0.16)' : 'rgba(229,72,77,0.10)') : t.goodBg,
+            color: danger ? DANGER : t.goodInk,
+          }}>
+            <AlertTriangle size={19} strokeWidth={1.9} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+            <div style={{ fontFamily: t.head, fontSize: '1.04rem', fontWeight: 600, letterSpacing: '-0.01em', color: t.ink }}>
+              {title}
+            </div>
+            {body && (
+              <p style={{ margin: '7px 0 0', fontSize: '0.86rem', lineHeight: 1.5, color: t.ink2 }}>{body}</p>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+          <button
+            ref={cancelRef}
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            style={{
+              padding: '8px 14px', borderRadius: 11, border: `1px solid ${t.line}`,
+              background: 'transparent', color: t.ink, fontFamily: t.body, fontSize: '0.86rem', fontWeight: 600,
+              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1,
+            }}
+          >
+            {cancelLabel}
+          </button>
+          <button
+            ref={confirmRef}
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '8px 15px', borderRadius: 11, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.75 : 1,
+              fontFamily: t.body, fontSize: '0.86rem', fontWeight: 600,
+              border: `1px solid ${danger ? 'rgba(229,72,77,0.45)' : t.good}`,
+              background: danger ? (isDark ? 'rgba(229,72,77,0.18)' : 'rgba(229,72,77,0.12)') : t.good,
+              color: danger ? DANGER : '#fff',
+            }}
+          >
+            {busy && (
+              <span style={{
+                width: 13, height: 13, borderRadius: '50%', display: 'inline-block',
+                border: `2px solid ${danger ? 'rgba(229,72,77,0.35)' : 'rgba(255,255,255,0.45)'}`,
+                borderTopColor: danger ? DANGER : '#fff', animation: 'fs-spin 700ms linear infinite',
+              }} />
+            )}
+            {busy ? 'Working…' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

@@ -91,6 +91,8 @@ JWT auth via `AuthContext`. Access token stored in memory; refresh token in loca
 
 All API calls go through `src/services/`. Base URL from `VITE_API_BASE_URL`. Calls the Django backend at `smart-solar-django-backend`.
 
+**Backend infra (2026-09-08):** the Django backend moved off Railway (Singapore) to self-hosted **AWS Mumbai `ap-south-1`** for MNRE data-residency compliance. The public URL `https://api.360watts.com` is unchanged. If `VITE_API_BASE_URL` still points at the Vercel proxy (`smart-solar-django-backend.vercel.app`), that proxy's `vercel.json` must be repointed at `api.360watts.com` before Railway is decommissioned — better: set `VITE_API_BASE_URL=https://api.360watts.com/api` directly and drop the Vercel hop.
+
 ### Theming
 
 Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code colors — use Tailwind tokens or CSS variables.
@@ -101,9 +103,13 @@ Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code color
 non-technical language (the audience is field/ops staff, not engineers), calm
 status vocabulary ("Not set up yet" is amber, not red), appliance-first rows,
 guided flows closed by default, device codes behind an "Advanced details"
-expander. Shared primitives live in `src/features/staff/siteHardware/ui.tsx`;
-`InverterMeasurementConfig.tsx` is the reference page. When touching an older
-screen, migrate it toward this style rather than matching its old patterns.
+expander, destructive actions confirmed in a centred `ConfirmDialog` modal
+(never `window.confirm` or a sticky bar). Row secondary-actions live in a
+portaled `⋯` menu (`Item` / `OverflowMenu` — a portal so a card's
+`overflow: hidden` can't clip it). Shared primitives live in
+`src/features/staff/siteHardware/ui.tsx`; `InverterMeasurementConfig.tsx` is the
+reference page. When touching an older screen, migrate it toward this style
+rather than matching its old patterns.
 
 ### UI Theme + Select Migration
 
