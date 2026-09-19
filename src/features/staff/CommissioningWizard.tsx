@@ -474,10 +474,7 @@ export default function CommissioningWizard() {
             {/* ── STEP 2: CONNECTIVITY & METERING ── */}
             {step === 2 && (
               <motion.div key="step2-connectivity" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }}>
-                <InverterMeasurementConfig
-                  siteId={sid}
-                  ownerUserId={ownerUserId}
-                />
+                <InverterMeasurementConfig siteId={sid} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 24 }}>
                   <button type="button" onClick={() => setStep(3)} style={buttonStyle(true)}>
                     Continue

@@ -1006,7 +1006,7 @@ export default function SiteDetail() {
             {/* GATEWAY TAB */}
             {tab === 'gateway' && (
               <motion.div key="gateway" variants={tabVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: MOTION_EASE }}>
-                <InverterMeasurementConfig siteId={siteId} ownerUserId={site?.owner_user != null ? String(site.owner_user) : undefined} />
+                <InverterMeasurementConfig siteId={siteId} />
 
                 <div style={{ marginTop: 14 }}>
                 <SetupCard

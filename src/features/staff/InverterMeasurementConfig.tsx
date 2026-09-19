@@ -49,13 +49,11 @@ const blankCircuitLineForm = (): CircuitLineForm => ({
 
 export interface InverterMeasurementConfigProps {
   siteId: string;
-  ownerUserId?: string;
   onGatewayAttached?: (devicePk: number) => void;
 }
 
 export default function InverterMeasurementConfig({
   siteId,
-  ownerUserId,
   onGatewayAttached,
 }: InverterMeasurementConfigProps) {
   const { isDark } = useTheme();
@@ -136,17 +134,15 @@ export default function InverterMeasurementConfig({
   const loadAvailableDevices = useCallback(async () => {
     setDevicesLoading(true);
     try {
-      if (ownerUserId) {
-        const devices = await apiService.getUserDevices(parseInt(ownerUserId, 10));
-        setAvailableDevices(Array.isArray(devices) ? devices : []);
-      } else {
-        const devices = await apiService.getDevices('', 1, 100);
-        if (Array.isArray(devices)) setAvailableDevices(devices);
-        else setAvailableDevices(devices.results ?? []);
-      }
+      // Spare hardware has no site (and so no owner) yet, so it must come from the
+      // full device list — /users/<id>/devices/ only returns already-assigned devices
+      // and omits device_type / site_id.
+      const devices = await apiService.getDevices('', 1, 100);
+      if (Array.isArray(devices)) setAvailableDevices(devices);
+      else setAvailableDevices(devices.results ?? []);
     } catch { setAvailableDevices([]); }
     finally { setDevicesLoading(false); }
-  }, [ownerUserId]);
+  }, []);
 
   useEffect(() => {
     if (!siteId) return;
