@@ -501,7 +501,7 @@ export default function InverterMeasurementConfig({
         status={hasEnergyMeter
           ? <StatusChip isDark={isDark} state="good">Connected</StatusChip>
           : <StatusChip isDark={isDark} state="wait">Not set up yet</StatusChip>}
-        action={!meterComposerOpen && availableEnergyMeterDevices.length > 0 && (
+        action={!meterComposerOpen && (
           <Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn>
         )}
       >
@@ -534,6 +534,7 @@ export default function InverterMeasurementConfig({
               isDark={isDark}
               headline="No meter connected"
               detail="Add a whole-home meter here to track total usage and what's sent to the grid."
+              action={<Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn>}
             />
           )
         )}
@@ -550,7 +551,13 @@ export default function InverterMeasurementConfig({
             </>
           }
         >
-          <Field isDark={isDark} label="Which meter?">
+          <Field
+            isDark={isDark}
+            label="Which meter?"
+            hint={!devicesLoading && availableEnergyMeterDevices.length === 0
+              ? 'No spare meter is available right now. Once a meter is powered on and registered (Devices page → Manage Provisions), it will show up here.'
+              : undefined}
+          >
             <select value={energyMeterPk} onChange={e => setEnergyMeterPk(e.target.value)} disabled={devicesLoading} style={controlStyle(isDark)}>
               <option value="">Choose a meter…</option>
               {availableEnergyMeterDevices.map(d => <option key={d.id} value={String(d.id)}>{d.device_serial}</option>)}
