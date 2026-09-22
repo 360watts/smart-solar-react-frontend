@@ -841,8 +841,8 @@ const Users: React.FC = () => {
                 padding: '8px',
                 border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
                 borderRadius: '6px',
-                background: 'var(--foreground)',
-                color: 'var(--muted-foreground)',
+                background: 'var(--input)',
+                color: 'var(--foreground)',
                 cursor: 'pointer',
                 fontSize: '0.875rem'
               }}

@@ -244,7 +244,7 @@ const Modal: React.FC<{
       zIndex: 9999, padding: 20,
     }}>
       <div style={{
-        background: 'var(--foreground)',
+        background: 'var(--card)',
         borderRadius: 16,
         border: `1px solid ${tok.border(isDark)}`,
         boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
