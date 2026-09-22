@@ -79,8 +79,8 @@ export default function CommissioningWizard() {
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
-  const nativeSelectBg = 'var(--foreground)';
-  const nativeSelectFg = 'var(--foreground)';
+  const nativeSelectBg = inputBg;
+  const nativeSelectFg = textMain;
 
   // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {

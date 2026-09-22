@@ -595,8 +595,8 @@ const Alerts: React.FC = () => {
           return (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
               ...btnBase,
-              background: active ? ('var(--foreground)') : 'transparent',
-              color: active ? txt : sub,
+              background: active ? tok.textPrimary(isDark) : 'transparent',
+              color: active ? tok.bgCard(isDark) : sub,
               boxShadow: active ? '0 1px 6px rgba(0,0,0,0.15)' : 'none',
               padding: '8px 16px',
               border: 'none',

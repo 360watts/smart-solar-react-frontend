@@ -493,8 +493,8 @@ export default function SiteDetail() {
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
   const primary     = '#00a63e';
-  const nativeSelectBg = 'var(--foreground)';
-  const nativeSelectFg = 'var(--foreground)';
+  const nativeSelectBg = inputBg;
+  const nativeSelectFg = textMain;
 
   const palette = {
     ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
