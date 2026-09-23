@@ -1,4 +1,4 @@
-import { isDeviceOffline } from './index';
+import { isDeviceOffline, anomalousDevices } from './index';
 import type { SmartDeviceNode, SmartDeviceReading } from './types';
 
 function reading(overrides: Partial<SmartDeviceReading>): SmartDeviceReading {
@@ -55,5 +55,30 @@ describe('isDeviceOffline', () => {
 
   it('ignores poller_consecutive_failures when the reading is fresh', () => {
     expect(isDeviceOffline(device({ poller_consecutive_failures: 20, latest: reading({ timestamp: minutesAgo(0) }) }))).toBe(false);
+  });
+});
+
+describe('anomalousDevices', () => {
+  it('does not flag a never-reported device when a sibling is live (the AC(NEW) case)', () => {
+    // AC(NEW): is_active, zero readings ever. Fridge: reporting normally.
+    const ac = device({ id: 9, display_name: 'AC(NEW)', latest: null });
+    const fridge = device({ id: 6, display_name: 'Fridge 1', latest: reading({ timestamp: minutesAgo(0) }) });
+    expect(anomalousDevices([ac, fridge])).toEqual([]);
+  });
+
+  it('flags a never-reported device when NO device at the site is live (feed looks down)', () => {
+    const ac = device({ id: 9, display_name: 'AC(NEW)', latest: null });
+    const fridge = device({ id: 6, display_name: 'Fridge 1', latest: reading({ timestamp: minutesAgo(30) }) });
+    expect(anomalousDevices([ac, fridge])).toEqual(['AC(NEW)']);
+  });
+
+  it('never flags an inactive device', () => {
+    const ac = device({ id: 9, display_name: 'AC(NEW)', is_active: false, latest: null });
+    expect(anomalousDevices([ac])).toEqual([]);
+  });
+
+  it('never flags a device that has a (possibly stale) reading — that is isDeviceOffline\'s job, not this banner\'s', () => {
+    const stale = device({ id: 4, display_name: 'Geyser 1', latest: reading({ timestamp: minutesAgo(60) }) });
+    expect(anomalousDevices([stale])).toEqual([]);
   });
 });

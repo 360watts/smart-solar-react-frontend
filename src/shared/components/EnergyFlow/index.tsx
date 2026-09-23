@@ -216,6 +216,21 @@ const freshLatest = (device: SmartDeviceNode) =>
 // stale (Sep 5 2026). Reading recency doesn't have that failure mode.
 export const isDeviceOffline = (d: SmartDeviceNode): boolean => !isFreshReading(d.latest?.timestamp);
 
+// Devices to flag in the anomaly banner. A device that has NEVER reported
+// isn't a data anomaly (no reading was ever *wrong* — there just isn't one) —
+// it's frequently a rarely-used appliance whose supply is normally switched
+// off (coim_002's AC(NEW): is_active, zero readings ever, expected). Mirrors
+// check_local_poller_health()'s dormancy exception (maintenance_tasks.py):
+// only surface it if no sibling smart device at the site has reported
+// recently either, i.e. this looks like the whole feed being down, not one
+// plug's own normal silence. Without this gate, AC(NEW) banner'd on every
+// load forever regardless of backend incident state — confirmed live, Sep 2026.
+export const anomalousDevices = (devices: SmartDeviceNode[]): string[] => {
+  const siteIsLive = devices.some(d => isFreshReading(d.latest?.timestamp));
+  if (siteIsLive) return [];
+  return devices.filter(d => d.is_active && d.latest === null).map(deviceLabel);
+};
+
 // ── SVG beam primitives ───────────────────────────────────────────────────────
 
 // Flowing dashed-line beam — no particles, no blinking.
@@ -677,7 +692,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
 
   const gridFmt = fmtPower(grid);
 
-  const anomalous = nonGridDevices.filter(d => d.is_active && d.latest === null).map(deviceLabel);
+  const anomalous = anomalousDevices(nonGridDevices);
   const bgColor   = 'var(--card)';
 
   const handleNodeClick = (nodeData: NodeData) => {
