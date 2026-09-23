@@ -1,0 +1,146 @@
+/* AI Diagnostics — a "test bench" aesthetic (oscilloscope / schematic). Dark is the primary
+   identity (an instrument panel reads best dark); .diag-light below is a recolored variant of
+   the exact same structure for the app's light mode, applied by index.tsx from useTheme(). */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+.diag-root {
+  --diag-bg: #0a0d12;
+  --diag-panel: #111720;
+  --diag-raised: #161d28;
+  --diag-border: #232c38;
+  --diag-border-bright: #34404f;
+  --diag-text: #e7edf3;
+  /* dim/muted are a desaturated teal, never neutral grey - reads as "dim signal", not "disabled" */
+  --diag-dim: #6fa89e;
+  --diag-muted: #4a7d76;
+  --diag-amber: #ffb020;
+  --diag-amber-dim: rgba(255, 176, 32, 0.14);
+  --diag-cyan: #35e0c4;
+  --diag-cyan-dim: rgba(53, 224, 196, 0.12);
+  --diag-danger: #ff5c5c;
+  --diag-danger-dim: rgba(255, 92, 92, 0.13);
+  --diag-success: #3ee08f;
+  --diag-success-dim: rgba(62, 224, 143, 0.13);
+  --diag-glow-1: rgba(53, 224, 196, 0.06);
+  --diag-glow-2: rgba(255, 176, 32, 0.05);
+  --diag-grid-line: rgba(53, 224, 196, 0.045);
+  --diag-amber-on: #0a0d12; /* text color for solid-amber surfaces, e.g. the RUN button */
+
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -10%, var(--diag-glow-1), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, var(--diag-glow-2), transparent 55%),
+    var(--diag-bg);
+  color: var(--diag-text);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  border-radius: 16px;
+  padding: 22px 22px 28px;
+  position: relative;
+  isolation: isolate;
+  /* NOT overflow:hidden - a sticky child (the event-list panel) needs the page's real scroll
+     container to remain reachable; overflow:hidden here would make .diag-root itself the
+     nearest scroll-container ancestor, which never actually scrolls, silently breaking sticky.
+     The grid background below already fades out via mask-image well before reaching the
+     rounded corners, so there's nothing here that actually needs clipping. */
+}
+
+/* Light mode: same schematic-instrument structure, recolored for a white/cool-grey "lab bench
+   under fluorescent light" surface instead of a dark CRT - darker, more saturated accents for
+   contrast on white (a pastel cyan/amber that pops on black reads as washed-out on white). */
+.diag-root.diag-light {
+  --diag-bg: #f4f7f8;
+  --diag-panel: #ffffff;
+  --diag-raised: #eef3f4;
+  --diag-border: #d7e0e2;
+  --diag-border-bright: #b7c4c7;
+  --diag-text: #16232a;
+  --diag-dim: #2f6e66;
+  --diag-muted: #6c8985;
+  --diag-amber: #b3690a;
+  --diag-amber-dim: rgba(179, 105, 10, 0.1);
+  --diag-cyan: #0e8c78;
+  --diag-cyan-dim: rgba(14, 140, 120, 0.1);
+  --diag-danger: #c23b3b;
+  --diag-danger-dim: rgba(194, 59, 59, 0.08);
+  --diag-success: #1f8a55;
+  --diag-success-dim: rgba(31, 138, 85, 0.08);
+  --diag-glow-1: rgba(14, 140, 120, 0.05);
+  --diag-glow-2: rgba(179, 105, 10, 0.04);
+  --diag-grid-line: rgba(22, 35, 42, 0.05);
+  --diag-amber-on: #fff8ec;
+}
+
+.diag-root::before {
+  /* schematic grid */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--diag-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--diag-grid-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 40%, transparent 90%);
+}
+
+.diag-root > * { position: relative; z-index: 1; }
+
+.diag-display {
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.diag-mono-label {
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  font-size: 0.65rem;
+  color: var(--diag-dim);
+}
+
+.diag-scroll::-webkit-scrollbar { width: 8px; }
+.diag-scroll::-webkit-scrollbar-track { background: transparent; }
+.diag-scroll::-webkit-scrollbar-thumb { background: var(--diag-border-bright); border-radius: 8px; }
+.diag-scroll::-webkit-scrollbar-thumb:hover { background: var(--diag-cyan); }
+
+@keyframes diag-blink {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes diag-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+
+@keyframes diag-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0.45); }
+  100% { box-shadow: 0 0 0 8px rgba(255, 176, 32, 0); }
+}
+
+@keyframes diag-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.diag-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: var(--diag-amber);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: diag-blink 1s step-end infinite;
+}
+
+.diag-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--diag-border-bright);
+}
+.diag-corner.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.diag-corner.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+.diag-corner.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+.diag-corner.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
