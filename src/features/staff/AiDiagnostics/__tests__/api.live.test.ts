@@ -41,7 +41,8 @@ describe('api.ts against the live backend', () => {
     expect(result.ts_start).toBe('2024-11-12T07:00:00');
     expect(result.metric_summary).toContain('86.7');
     expect(Array.isArray(result.citations)).toBe(true);
-  }, 30000); // real LLM calls - longer timeout than Jest's 5s default
+  }, 65000); // real LLM calls, real-world latency variance observed exceeding 30s - matches the
+  // other live tests' headroom above api.ts's own 60s idle timeout, not just this one test.
 
   test('streamDiagnosis on a known-clean question answers directly instead of a dead end', async () => {
     // The backend no longer hard-stops with a canned "no anomaly" message once it confirms
@@ -59,5 +60,7 @@ describe('api.ts against the live backend', () => {
     expect(result).not.toBeNull();
     expect(typeof result.plain_answer).toBe('string');
     expect(result.plain_answer.length).toBeGreaterThan(0);
-  }, 30000);
+  }, 65000); // this specific question can run ~10 sequential LLM calls in one agent loop with
+  // zero intermediate SSE bytes (LangGraph only streams after a node finishes) - measured live
+  // exceeding 30s; give it real headroom above api.ts's own 60s idle timeout.
 });

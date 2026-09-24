@@ -42,6 +42,16 @@ export interface StreamDiagnosisCallbacks {
   onError: (message: string) => void;
 }
 
+// No byte for this long => treat the connection as hung, not just "the current LLM call is
+// slow" - an *idle* timeout reset on every chunk, not a flat overall one. Caught by code review:
+// this stream previously had no timeout at all, so a stalled backend left the UI spinning
+// forever. 60s, not something tighter: LangGraph only streams a node's output once it finishes
+// (see main.py), so a single free-text question can run one Data Analyst agent loop with many
+// sequential tool calls and zero intermediate bytes - measured live at ~10 LLM round-trips for
+// one question, comfortably over 30s with no chunk in between. A tighter timeout was tried first
+// and false-positived on exactly this case.
+const IDLE_TIMEOUT_MS = 60_000;
+
 /**
  * Streams /diagnose's SSE response. Reader-loop structure copied from AiChat.tsx's sendMessage
  * (same getReader()/TextDecoder/buffer-split-on-'\n'/'data: '-prefix/[DONE]/[KEEPALIVE]/[ERROR]
@@ -51,51 +61,70 @@ export interface StreamDiagnosisCallbacks {
  * final report is valid JSON), no extra protocol needed.
  */
 export async function streamDiagnosis(req: DiagnoseRequest, callbacks: StreamDiagnosisCallbacks): Promise<void> {
+  const controller = new AbortController();
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const bumpIdleTimer = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => controller.abort(), IDLE_TIMEOUT_MS);
+  };
+
   let res: Response;
   try {
+    bumpIdleTimer();
     res = await fetch(`${BASE_URL}/diagnose`, {
       method: 'POST',
       credentials: 'omit',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req),
+      signal: controller.signal,
     });
   } catch {
+    clearTimeout(idleTimer);
     callbacks.onError('Connection failed.');
     return;
   }
   if (!res.ok) {
+    clearTimeout(idleTimer);
     const text = await res.text().catch(() => res.statusText);
     callbacks.onError(`diag-ai API ${res.status}: ${text}`);
     return;
   }
   const reader = res.body?.getReader();
   if (!reader) {
+    clearTimeout(idleTimer);
     callbacks.onError('No response body.');
     return;
   }
   const dec = new TextDecoder();
   let buf = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split('\n');
-    buf = lines.pop() || '';
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const token = line.slice(6);
-      if (token === '[DONE]') return;
-      if (token === '[KEEPALIVE]') continue;
-      if (token.startsWith('[ERROR]')) {
-        callbacks.onError(token.slice(8));
-        return;
-      }
-      try {
-        const result = JSON.parse(token) as DiagnoseResult;
-        callbacks.onResult(result);
-      } catch {
-        callbacks.onTrace(token); // not JSON - a plain-text node_trace label
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      bumpIdleTimer();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const token = line.slice(6);
+        if (token === '[DONE]') return;
+        if (token === '[KEEPALIVE]') continue;
+        if (token.startsWith('[ERROR]')) {
+          callbacks.onError(token.slice(8));
+          return;
+        }
+        try {
+          const result = JSON.parse(token) as DiagnoseResult;
+          callbacks.onResult(result);
+        } catch {
+          callbacks.onTrace(token); // not JSON - a plain-text node_trace label
+        }
       }
     }
+  } catch {
+    callbacks.onError('Connection timed out.');
+  } finally {
+    clearTimeout(idleTimer);
   }
 }

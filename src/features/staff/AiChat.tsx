@@ -9,15 +9,24 @@ import {
   ClipboardCopy, ClipboardCheck, Bot, Signal,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { getCsrfToken, apiService } from '../../services/api';
+import { isPlainAnswer } from './AiDiagnostics/types';
+import type { DiagnoseResult } from './AiDiagnostics/types';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   ts: number;
   isError?: boolean;
+  diagnosticResult?: DiagnoseResult;
 }
+
+// Admin-only, explicit trigger (not LLM-routed) — see api/views/ai_diagnose.py on the backend
+// for why: AiChat has no tool-calling loop to hook a real agentic route into. Demo/synthetic-data
+// scope only (that backend runs on Gemini, not Bedrock) - see the service module's own docstring.
+const DIAGNOSE_PREFIX = '/diagnose ';
 
 type PanelSize = 'compact' | 'fullscreen';
 
@@ -76,8 +85,44 @@ function extractStreamText(payload: string): string | null {
   }
 }
 
+const SEVERITY_COLOR: Record<string, string> = { high: '#dc2626', medium: '#d97706', low: 'var(--primary)' };
+
+/** Renders a diagnose_site result inline in the chat transcript. House style (CSS variables,
+ * inline styles) matches this component's existing conventions, not AiDiagnostics' oscilloscope
+ * theme - that theme is deliberately scoped to its own standalone page, not reused here. */
+function DiagnosticResultCard({ result }: { result: DiagnoseResult }) {
+  if (!result) return null;
+  if (isPlainAnswer(result)) {
+    return <div className="aif-md">{result.plain_answer}</div>;
+  }
+  const sevColor = SEVERITY_COLOR[result.severity] ?? 'var(--primary)';
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: '0.85rem' }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{result.headline}</div>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: '0.74rem', color: 'var(--muted-foreground)' }}>
+        <span>Severity: <strong style={{ color: sevColor, textTransform: 'capitalize' }}>{result.severity}</strong></span>
+        <span>Confidence: {Math.round(result.confidence * 100)}%</span>
+        <span>{result.metric_summary}</span>
+      </div>
+      <div style={{ marginBottom: 8, lineHeight: 1.55 }}>{result.root_cause_text}</div>
+      {result.citations.length > 0 && (
+        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {result.citations.map(c => (
+            <span key={c.index}>[{c.index}] {c.source} · {c.ref}: {c.text}</span>
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: '0.8rem' }}><strong>Recommended:</strong> {result.recommended_action}</div>
+      <div style={{ marginTop: 8, fontSize: '0.66rem', color: 'var(--muted-foreground)', letterSpacing: '0.03em' }}>
+        PROTOTYPE · SYNTHETIC DATA
+      </div>
+    </div>
+  );
+}
+
 const AiChat: React.FC = () => {
   const { isDark } = useTheme();
+  const { isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [panelSize, setPanelSize] = useState<PanelSize>('compact');
@@ -123,9 +168,83 @@ const AiChat: React.FC = () => {
     });
   };
 
+  // Admin-only diagnostic command - proxied through the real backend (api/views/ai_diagnose.py)
+  // to the standalone solar-grid-diagnostic-ai service. Structural mirror of sendMessage's own
+  // fetch/refresh/SSE-reader pattern, diverging only in payload shape and final-frame handling:
+  // the last non-sentinel frame is JSON (a DiagnosticReport or PlainAnswer), not a text token.
+  const sendDiagnoseCommand = useCallback(async (question: string) => {
+    const userMsg: Message = { role: 'user', content: `/diagnose ${question}`, ts: Date.now() };
+    const asstMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
+    setMessages(prev => [...prev, userMsg, asstMsg]);
+    setStreaming(true);
+    isStreamingRef.current = true;
+    try {
+      const body = JSON.stringify({ question });
+      let res = await fetch(`${API_BASE_URL}/ai/diagnose-site/`, {
+        method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
+      });
+      if (res.status === 401) {
+        const refreshed = await apiService.refreshToken();
+        if (refreshed) {
+          res = await fetch(`${API_BASE_URL}/ai/diagnose-site/`, {
+            method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
+          });
+        }
+      }
+      if (!res.ok) {
+        const err = await res.text();
+        setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });
+        return;
+      }
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const token = line.slice(6);
+          if (token === '[DONE]') break;
+          if (token === '[KEEPALIVE]') continue;
+          if (token.startsWith('[ERROR]')) {
+            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: token.slice(8), ts: Date.now(), isError: true }; return n; });
+            break;
+          }
+          try {
+            const result = JSON.parse(token) as DiagnoseResult;
+            setMessages(prev => {
+              const n = [...prev];
+              n[n.length - 1] = { ...n[n.length - 1], content: '', diagnosticResult: result };
+              return n;
+            });
+          } catch {
+            // not JSON - a plain-text node_trace label, shown as a live status line
+            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { ...n[n.length - 1], content: token }; return n; });
+          }
+        }
+      }
+    } catch {
+      setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: 'Connection failed.', ts: Date.now(), isError: true }; return n; });
+    } finally {
+      setStreaming(false);
+      isStreamingRef.current = false;
+    }
+  }, []);
+
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
+    if (isAdmin && trimmed.toLowerCase().startsWith(DIAGNOSE_PREFIX)) {
+      const question = trimmed.slice(DIAGNOSE_PREFIX.length).trim();
+      setInput('');
+      if (question) await sendDiagnoseCommand(question);
+      return;
+    }
     const userMsg: Message = { role: 'user', content: trimmed, ts: Date.now() };
     const updated = [...messagesRef.current, userMsg];
     const asstMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
@@ -197,7 +316,7 @@ const AiChat: React.FC = () => {
       setStreaming(false);
       isStreamingRef.current = false;
     }
-  }, [streaming]);
+  }, [streaming, isAdmin, sendDiagnoseCommand]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -297,7 +416,9 @@ const AiChat: React.FC = () => {
                       <span className="aif-msg__prompt aif-msg__prompt--ai">buddy</span>
                       <span className="aif-msg__ts" key={ticks}>{timeAgo(msg.ts)}</span>
                     </div>
-                    {msg.content === '' ? (
+                    {msg.diagnosticResult ? (
+                      <DiagnosticResultCard result={msg.diagnosticResult} />
+                    ) : msg.content === '' ? (
                       <div className="aif-typing"><span /><span /><span /></div>
                     ) : (
                       <div className={`aif-md ${msg.isError ? 'aif-md--err' : ''}`}>
