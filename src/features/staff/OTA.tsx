@@ -223,6 +223,33 @@ const StatusBadge: React.FC<{ status: DeviceStatus['status'] }> = ({ status }) =
   );
 };
 
+const CHIP_NAMES: Record<number, string> = {
+  0: 'ESP32', 2: 'ESP32-S2', 5: 'ESP32-C3', 9: 'ESP32-S3', 12: 'ESP32-C2', 13: 'ESP32-C6', 16: 'ESP32-H2',
+};
+
+interface FirmwareInfo { chip: string | null; version: string; usageType: 'gateway' | 'energymeter' | null; name: string }
+
+// Best-effort read of an ESP-IDF app image: chip from the header, version/usage/name from embedded strings.
+function inspectFirmwareBin(buf: ArrayBuffer, fileName: string): FirmwareInfo | null {
+  const u8 = new Uint8Array(buf);
+  if (u8.length < 24 || u8[0] !== 0xE9) return null;
+  const chip = CHIP_NAMES[u8[12] | (u8[13] << 8)] ?? null;
+  let text = '';
+  for (let i = 0; i < u8.length; i += 32768) text += String.fromCharCode(...u8.subarray(i, i + 32768));
+  const runs = text.match(/[\x20-\x7e]{4,80}/g) ?? [];
+  const semver = /^v?(\d+\.\d+\.\d+)(?:-[\w.]+)?$/;
+  const verRun = runs.find(r => /^v\d/.test(r) && semver.test(r)) ?? runs.find(r => semver.test(r));
+  const meterRun = runs.find(r => /energy ?meter/i.test(r) && !/[{}"<>%/]/.test(r));
+  const usageType = meterRun || runs.some(r => /\bEM\d{2}\b/.test(r)) ? 'energymeter'
+    : runs.some(r => /gateway/i.test(r)) ? 'gateway' : null;
+  return {
+    chip,
+    version: verRun ? verRun.match(semver)![1] : '',
+    usageType,
+    name: (meterRun ?? fileName.replace(/\.bin$/i, '')).trim(),
+  };
+}
+
 const Modal: React.FC<{
   show: boolean;
   onClose: () => void;
@@ -295,6 +322,7 @@ export const OTA: React.FC = () => {
     releaseNotes: '', file: null as File | null,
   });
   const [dragOver, setDragOver] = useState(false);
+  const [detected, setDetected] = useState<FirmwareInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>({
@@ -445,7 +473,20 @@ export const OTA: React.FC = () => {
 
   const handleFileSelect = useCallback(async (file: File) => {
     setUploadForm(f => ({ ...f, file }));
-    try { await calculateSHA256(file); } catch { /* silent */ }
+    setDetected(null);
+    try {
+      const info = inspectFirmwareBin(await file.arrayBuffer(), file.name);
+      if (!info) return;
+      setDetected(info);
+      // only fill blanks so anything already typed (or edited later) is kept
+      setUploadForm(f => ({
+        ...f,
+        name: f.name || info.name,
+        version: f.version || info.version,
+        deviceModel: info.chip ?? f.deviceModel,
+        deviceType: info.usageType ?? f.deviceType,
+      }));
+    } catch { /* silent */ }
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -733,6 +774,7 @@ export const OTA: React.FC = () => {
                 <select value={uploadForm.deviceModel} onChange={e => setUploadForm(f => ({ ...f, deviceModel: e.target.value }))}
                   style={inputStyle(isDark)}>
                   <option value="ESP32-S3">ESP32-S3</option>
+                  <option value="ESP32-C6">ESP32-C6</option>
                   <option value="ESP32">ESP32</option>
                   <option value="STM32">STM32</option>
                   <option value="nRF52">nRF52</option>
@@ -759,6 +801,15 @@ export const OTA: React.FC = () => {
                 placeholder="Bug fixes, improvements…" rows={3}
                 style={{ ...inputStyle(isDark), resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
+
+            {detected && (
+              <div style={{ marginBottom: 12, fontSize: '0.75rem', color: tok.textSecondary(isDark) }}>
+                Read from file: {detected.chip ?? 'unknown chip'}
+                {detected.version && ` · v${detected.version}`}
+                {detected.usageType && ` · ${detected.usageType === 'energymeter' ? 'Energy Meter' : 'Gateway'}`}
+                {' '}— fields above were filled in; edit if anything is wrong.
+              </div>
+            )}
 
             {/* Drag & Drop Zone */}
             <div

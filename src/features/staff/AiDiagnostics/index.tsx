@@ -55,6 +55,10 @@ export default function AiDiagnostics() {
   };
 
   const handleSelectEvent = (event: UnderperformanceEvent, index: number) => {
+    // QueryBox already disables itself while streaming; the event list didn't, so a click
+    // mid-run started a second concurrent stream writing into the same state, with the first
+    // one never aborted. Ignoring clicks until the current run ends is the minimal fix.
+    if (streaming) return;
     setSelectedIndex(index);
     runDiagnosis({
       site_id: event.site_id, ts_start: event.ts_start, ts_end: event.ts_end,
