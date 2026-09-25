@@ -12,8 +12,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { getCsrfToken, apiService } from '../../services/api';
-import { isPlainAnswer } from './AiDiagnostics/types';
-import type { DiagnoseResult } from './AiDiagnostics/types';
+import { isPlainAnswer } from './aiDiagnoseTypes';
+import type { DiagnoseResult } from './aiDiagnoseTypes';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -87,9 +87,7 @@ function extractStreamText(payload: string): string | null {
 
 const SEVERITY_COLOR: Record<string, string> = { high: '#dc2626', medium: '#d97706', low: 'var(--primary)' };
 
-/** Renders a diagnose_site result inline in the chat transcript. House style (CSS variables,
- * inline styles) matches this component's existing conventions, not AiDiagnostics' oscilloscope
- * theme - that theme is deliberately scoped to its own standalone page, not reused here. */
+/** Renders a diagnose_site result inline in the chat transcript (CSS variables, inline styles). */
 function DiagnosticResultCard({ result }: { result: DiagnoseResult }) {
   if (!result) return null;
   if (isPlainAnswer(result)) {
@@ -192,7 +190,10 @@ const AiChat: React.FC = () => {
         }
       }
       if (!res.ok) {
-        const err = await res.text();
+        const raw = await res.text();
+        // API error envelope is {"error": "...", "code": "..."} - show the message, not the JSON
+        let err = raw;
+        try { err = JSON.parse(raw).error ?? raw; } catch { /* not JSON, show as-is */ }
         setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });
         return;
       }
