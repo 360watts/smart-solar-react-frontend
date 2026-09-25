@@ -896,6 +896,21 @@ const Devices: React.FC = () => {
     return <div className="error">Error: {error}</div>;
   }
 
+  // Rendered in both the list and the detail return below: the detail view returns early, so a
+  // modal mounted only in the list return would never appear when Edit is clicked from detail.
+  const editDeviceModal = (
+    <EditDeviceModal
+      isOpen={showEditModal}
+      device={modalDevice}
+      isDark={isDark}
+      presets={presets}
+      onClose={() => {
+        setShowEditModal(false);
+        setModalDevice(null);
+      }}
+      onSave={handleEditModalSave}
+    />
+  );
 
   if (selectedDevice) {
 
@@ -2580,6 +2595,7 @@ const Devices: React.FC = () => {
           document.body
         )}
 
+        {editDeviceModal}
       </div>
     );
   }
@@ -3260,17 +3276,7 @@ const Devices: React.FC = () => {
       </AccessibleModal>
     )}
 
-    <EditDeviceModal
-      isOpen={showEditModal}
-      device={modalDevice}
-      isDark={isDark}
-      presets={presets}
-      onClose={() => {
-        setShowEditModal(false);
-        setModalDevice(null);
-      }}
-      onSave={handleEditModalSave}
-    />
+    {editDeviceModal}
 
     </div>
   );
