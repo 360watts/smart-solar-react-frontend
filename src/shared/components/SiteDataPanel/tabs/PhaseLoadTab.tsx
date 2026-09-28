@@ -829,6 +829,13 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     });
   }, [filteredLoadChartData, hours, selectedLoadDate, smartDevices, latest, ctLatest]);
 
+  // Kept in sync every render (not a dep of phaseLoadChartOptions below) so the
+  // tooltip callback reads live data without rebuilding the options object on
+  // every telemetry poll — a fresh options object wipes chartjs-plugin-zoom's
+  // in-progress drag state, breaking drag-to-zoom (see chartUtils.ts comment).
+  const resolvedLoadChartDataRef = useRef(resolvedLoadChartData);
+  resolvedLoadChartDataRef.current = resolvedLoadChartData;
+
   const hasInverterPhaseBreakdown = useMemo(
     () => resolvedLoadChartData.some((row: any) => Math.abs(Number(row.inverterL2 ?? 0)) > 0.001 || Math.abs(Number(row.inverterL3 ?? 0)) > 0.001),
     [resolvedLoadChartData]
@@ -1012,7 +1019,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
         callbacks: {
           title: (items: TooltipItem<'line'>[]) => {
-            const row = resolvedLoadChartData[items[0]?.dataIndex ?? -1];
+            const row = resolvedLoadChartDataRef.current[items[0]?.dataIndex ?? -1];
             if (!row) return '';
             return loadChartHasMultipleDays ? `${row.dateLabel} · ${row.time}` : row.time;
           },
@@ -1050,7 +1057,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark, loadChartHasMultipleDays, resolvedLoadChartData, loadChartCumulative, loadChartUseWatts]);
+  }), [isDark, loadChartHasMultipleDays, loadChartCumulative, loadChartUseWatts]);
 
   const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },

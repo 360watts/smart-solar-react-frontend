@@ -347,6 +347,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       if (showWifi && formData.wifi_password) {
         payload.wifi_password = formData.wifi_password;
       }
+      console.log('[EditDeviceModal] saving', { ...payload, wifi_password: payload.wifi_password ? '(set)' : undefined });
       await onSave(payload);
       setSaved(true);
       setTimeout(() => { setSaved(false); onClose(); }, 1400);
