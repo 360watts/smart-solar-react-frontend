@@ -15,23 +15,27 @@ export function makeGradient(
   return gradient;
 }
 
+// Returns the value for `options.plugins.zoom` directly (NOT `{ zoom: ... }`) —
+// callers assign it as `plugins: { ..., zoom: createDragZoomPlugins(cb) }`.
+// Wrapping this in an extra `zoom:` key here previously produced
+// `plugins.zoom.zoom.zoom.*` (three levels deep) instead of the
+// `plugins.zoom.zoom.*` chartjs-plugin-zoom actually reads, so it silently
+// found nothing to enable — no error, drag/wheel just did nothing.
 export function createDragZoomPlugins(onZoomComplete: () => void) {
   return {
     zoom: {
-      zoom: {
-        wheel:  { enabled: true, speed: 0.08 },
-        drag: {
-          enabled: true,
-          backgroundColor: 'rgba(0,166,62,0.14)',
-          borderColor:     'rgba(0,166,62,0.7)',
-          borderWidth: 1,
-        },
-        pinch:  { enabled: true },
-        mode:   'x' as const,
-        onZoomComplete,
+      wheel:  { enabled: true, speed: 0.08 },
+      drag: {
+        enabled: true,
+        backgroundColor: 'rgba(0,166,62,0.14)',
+        borderColor:     'rgba(0,166,62,0.7)',
+        borderWidth: 1,
       },
-      pan: { enabled: false, mode: 'x' as const },
+      pinch:  { enabled: true },
+      mode:   'x' as const,
+      onZoomComplete,
     },
+    pan: { enabled: false, mode: 'x' as const },
   };
 }
 
