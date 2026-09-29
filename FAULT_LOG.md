@@ -16,6 +16,7 @@ Faults specific to the React dashboard UI.
 | [F-006-UI](#f-006-ui) | Site-hardware `⋯` menu items clipped by card `overflow: hidden` — "Disconnect" invisible | High | Fixed |
 | [F-007-UI](#f-007-ui) | "Add grid" circuit-line button always 400s — backend rejects `grid_direct` | Medium | Fixed |
 | [F-008-UI](#f-008-ui) | Dev-only: every write 401s after a page reload — in-memory CSRF token lost | Medium | Mitigated |
+| [F-009-UI](#f-009-ui) | Drag/wheel zoom silently does nothing on Solar, Load, Weather tabs & staff Analytics charts | Medium | Fixed |
 
 ---
 
@@ -295,6 +296,72 @@ in-memory copy is empty — no-op in production (cross-origin, unreadable).
 
 ---
 
+## F-009-UI
+
+### Drag/Wheel Zoom Silently Does Nothing on Solar, Load, Weather Tabs & Staff Analytics Charts
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-09-28 |
+| **Severity** | Medium |
+| **Status** | Fixed 2026-09-28 |
+
+#### Symptom
+In `SiteDataPanel`, drag-to-zoom and wheel-zoom worked on the History tab but
+did nothing on the Solar and Load tabs (no selection rectangle, no console
+error, tooltip/hover still worked normally). Same silent failure on the
+Weather tab and the staff Analytics dashboard charts, though those weren't
+reported until this was traced.
+
+#### Root Cause
+`createDragZoomPlugins()` (`src/shared/components/SiteDataPanel/chartUtils.ts`)
+returned `{ zoom: { zoom: {wheel, drag, pinch, mode, onZoomComplete}, pan: {...} } }`
+— i.e. it already included the outer `zoom:` key meant to sit directly under
+`options.plugins`. Every one of its 16 call sites (across `ForecastTab.tsx`,
+`PhaseLoadTab.tsx`, `WeatherTab.tsx`, and the staff Analytics `shared.tsx`)
+used it as `plugins: { ..., zoom: createDragZoomPlugins(cb) }`, which wrapped
+it in *another* `zoom:` key — producing `plugins.zoom.zoom.zoom.*` (three
+levels deep) instead of the `plugins.zoom.zoom.*` that `chartjs-plugin-zoom`
+actually reads. `plugins.zoom.zoom` therefore resolved to `{zoom: {...}, pan:
+{...}}` with no `wheel`/`drag`/`pinch`/`mode` at the level the plugin expects,
+so it found nothing to enable and did nothing — a shape mismatch, not a
+crash, hence no console error.
+
+The History tab (`SiteDataPanel/index.tsx`) and `EnergyFlow/NodeDetailModal.tsx`
+never used this helper — they wrote the zoom config inline at the correct
+nesting depth — which is why they worked and the others didn't.
+
+A misdiagnosis en route: a real but unrelated bug was found and fixed first —
+`PhaseLoadTab.tsx`'s `phaseLoadChartOptions` `useMemo` had `resolvedLoadChartData`
+(a live-polling value) in its deps, rebuilding the whole options object (and
+therefore the zoom plugin config) on every ~30s telemetry poll. That's a real
+options-identity-churn bug worth having fixed (same class as a prior fix in
+`NodeDetailModal.tsx`), but it wasn't the cause of this symptom — deploying it
+alone did not restore zoom, which is what led to finding the actual double-
+nesting bug above.
+
+#### Fix Applied
+- `chartUtils.ts`: `createDragZoomPlugins()` now returns `{ zoom: {...}, pan:
+  {...} }` directly (no extra wrapping `zoom:` key), matching how every caller
+  assigns it (`plugins: { zoom: createDragZoomPlugins(cb) }`). One-line fix in
+  the shared helper corrects all 16 call sites at once.
+- `PhaseLoadTab.tsx`: `resolvedLoadChartData` moved to a ref
+  (`resolvedLoadChartDataRef`) read inside the tooltip callback instead of
+  being a `useMemo` dependency, so `phaseLoadChartOptions` no longer rebuilds
+  on every telemetry poll. Kept as a legitimate fix even though it wasn't the
+  root cause of this particular symptom.
+
+#### References
+- `src/shared/components/SiteDataPanel/chartUtils.ts` — `createDragZoomPlugins`
+- `src/shared/components/SiteDataPanel/tabs/PhaseLoadTab.tsx`
+- `src/shared/components/SiteDataPanel/tabs/ForecastTab.tsx`
+- `src/shared/components/SiteDataPanel/tabs/WeatherTab.tsx`
+- `src/features/staff/Analytics/sections/shared.tsx`
+- `src/shared/components/SiteDataPanel/index.tsx` (unaffected — inlines config correctly)
+- `src/shared/components/EnergyFlow/NodeDetailModal.tsx` (unaffected — inlines config correctly)
+
+---
+
 ## Severity / Status Definitions
 
 | Level | Meaning |
@@ -311,4 +378,4 @@ in-memory copy is empty — no-op in production (cross-origin, unreadable).
 | **Open** | Known issue, fix not yet implemented |
 
 ---
-*Last updated: 2026-09-08 (F-006-UI through F-008-UI added — site-hardware UI pass)*
+*Last updated: 2026-09-28 (F-009-UI added — chart zoom double-nesting bug)*

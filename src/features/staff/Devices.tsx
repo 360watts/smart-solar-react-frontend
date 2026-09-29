@@ -10,6 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from '../../shared/components/SiteDataPanel';
+import EnergyMeterDashboard from '../../shared/components/EnergyMeterDashboard';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { SkeletonDeviceList } from '../../shared/components/SkeletonLoader';
 import { AccessibleModal } from '../../shared/components/AccessibleModal';
@@ -1261,7 +1262,10 @@ const Devices: React.FC = () => {
             <span style={{ fontSize: '0.875rem' }}>Loading site energy data…</span>
           </div>
         )}
-        {siteDetails && (
+        {siteDetails && selectedDevice.device_type === 'energy_meter' && (
+          <EnergyMeterDashboard key={siteDetails.site_id} siteId={siteDetails.site_id} autoRefresh />
+        )}
+        {siteDetails && selectedDevice.device_type !== 'energy_meter' && (
           <div style={{ marginBottom: 24 }}>
             <SiteDataPanel
               key={siteDetails.site_id}
