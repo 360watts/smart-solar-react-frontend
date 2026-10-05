@@ -362,6 +362,32 @@ nesting bug above.
 
 ---
 
+## F-010-UI
+
+### Chart Canvas Shifts/Shrinks on Zoom (Energy Meter "Power (24h)" and Other `ZoomResetButton` Charts)
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-10-05 |
+| **Severity** | Low |
+| **Status** | Fixed 2026-10-05 |
+
+#### Symptom
+Dragging to zoom on `EnergyMeterDashboard`'s "Power (24h)" chart (and other charts using the same inline reset-button pattern) shifted and compressed the canvas downward the moment the zoom completed.
+
+#### Root Cause
+`ZoomResetButton` (`chartUtils.ts`) returned `null` when not zoomed, so its row only existed in the DOM once zoomed. That row sits inside `ChartCard`'s fixed-height content box, directly above the canvas — its sudden appearance shrank and shifted the canvas down. (A first-pass fix that always reserved the row's height instead overcorrected: the chart was then permanently shorter, even unzoomed, since the fixed-height box now always gave up space to the button row.)
+
+#### Fix Applied
+- `ZoomResetButton` gained an `overlay?: boolean` prop. When set, the button is `position: absolute` (zero layout footprint) instead of occupying a row — used only where the button sits directly above a chart canvas (`EnergyMeterDashboard`). Left as a normal inline button elsewhere (e.g. `HistoryTab.tsx`'s toolbar row, where it sits alongside other buttons in real flow and isn't the cause of any shift).
+- `EnergyMeterDashboard/index.tsx`: removed the wrapping flex row; the button now renders as a direct sibling of the canvas inside `ChartCard`'s already-`position: relative` content box.
+
+#### Residual
+- `ForecastTab.tsx`'s kt chart (~line 508) has the identical inline-row-above-canvas pattern and the same latent bug — not reported, not fixed in this pass.
+- Not committed/deployed.
+
+---
+
 ## Severity / Status Definitions
 
 | Level | Meaning |
@@ -378,4 +404,4 @@ nesting bug above.
 | **Open** | Known issue, fix not yet implemented |
 
 ---
-*Last updated: 2026-09-28 (F-009-UI added — chart zoom double-nesting bug)*
+*Last updated: 2026-10-05 (F-010-UI added — chart-shift-on-zoom bug)*
