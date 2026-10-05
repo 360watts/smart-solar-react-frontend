@@ -323,10 +323,10 @@ export default function CommissioningWizard() {
         {renderStepper()}
 
         {/* Form Container */}
-        <div style={{ 
-          background: surface, border: `1px solid ${border}`, borderRadius: 16, 
+        <div style={{
+          background: surface, border: `1px solid ${border}`, borderRadius: 16,
           padding: 32, boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,166,62,0.04)',
-          maxWidth: 500, margin: '0 auto', position: 'relative', overflow: 'hidden'
+          width: '100%', position: 'relative', overflow: 'hidden'
         }}>
           
           {error && (
