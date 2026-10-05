@@ -14,10 +14,15 @@ import '../../App.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+const DEVICE_TYPE_LABELS: Record<string, string> = { gateway: 'Gateway', energymeter: 'Energy Meter' };
+const DEVICE_TYPE_ORDER = ['gateway', 'energymeter', 'unspecified'];
+const deviceTypeLabel = (key: string) => DEVICE_TYPE_LABELS[key] || (key === 'unspecified' ? 'Unspecified' : key);
+
 interface FirmwareVersion {
   id: number;
   name: string;
   version: string;
+  deviceType: string | null;
   deviceModel: string;
   minBootloaderVersion: string;
   file: File | null;
@@ -354,6 +359,9 @@ export const OTA: React.FC = () => {
   const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [errorModal, setErrorModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [firmwareSearch, setFirmwareSearch] = useState('');
+  const [firmwareTypeFilter, setFirmwareTypeFilter] = useState('all');
+  const [firmwareStatusFilter, setFirmwareStatusFilter] = useState('all');
+  const [firmwareSort, setFirmwareSort] = useState<'date_desc' | 'date_asc' | 'version'>('date_desc');
   const [idleDeviceSearch, setIdleDeviceSearch] = useState('');
   const [rollbackDeviceSearch, setRollbackDeviceSearch] = useState('');
 
@@ -373,8 +381,9 @@ export const OTA: React.FC = () => {
       const response = await apiService.getFirmwareVersions(false);
       const transformed: FirmwareVersion[] = (response.results || response || []).map((fw: any) => ({
         id: fw.id,
-        name: fw.version ? `Firmware v${fw.version}` : 'Firmware',
+        name: fw.version ? `v${fw.version}` : 'Firmware',
         version: fw.version,
+        deviceType: fw.device_type || null,
         deviceModel: fw.description?.match(/(?:ESP32|STM32|[A-Z0-9-]+)/i)?.[0] || 'Unknown',
         minBootloaderVersion: '1.0.0',
         file: null,
@@ -885,13 +894,27 @@ export const OTA: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div style={sectionPill('linear-gradient(135deg, #6366F1, #8B5CF6)')} />
               <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#818CF8', flex: 1 }}>Available Versions</span>
+              <select value={firmwareTypeFilter} onChange={e => setFirmwareTypeFilter(e.target.value)} style={{ ...inputStyle(isDark, { width: 128 }) }}>
+                <option value="all">All types</option>
+                {DEVICE_TYPE_ORDER.map(t => <option key={t} value={t}>{deviceTypeLabel(t)}</option>)}
+              </select>
+              <select value={firmwareStatusFilter} onChange={e => setFirmwareStatusFilter(e.target.value)} style={{ ...inputStyle(isDark, { width: 100 }) }}>
+                <option value="all">All status</option>
+                <option value="stable">Stable</option>
+                <option value="draft">Draft</option>
+              </select>
+              <select value={firmwareSort} onChange={e => setFirmwareSort(e.target.value as typeof firmwareSort)} style={{ ...inputStyle(isDark, { width: 128 }) }}>
+                <option value="date_desc">Newest first</option>
+                <option value="date_asc">Oldest first</option>
+                <option value="version">Version</option>
+              </select>
               <div style={{ position: 'relative' }}>
                 <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: sub }} />
                 <input
                   placeholder="Search…"
                   value={firmwareSearch}
                   onChange={e => setFirmwareSearch(e.target.value)}
-                  style={{ ...inputStyle(isDark, { paddingLeft: 28, width: 180 }) }}
+                  style={{ ...inputStyle(isDark, { paddingLeft: 28, width: 150 }) }}
                 />
               </div>
             </div>
@@ -906,10 +929,34 @@ export const OTA: React.FC = () => {
                 <div style={{ fontWeight: 600 }}>No firmware uploaded yet</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {firmwares
-                  .filter(fw => !firmwareSearch.trim() || fw.name.toLowerCase().includes(firmwareSearch.toLowerCase()) || fw.version.toLowerCase().includes(firmwareSearch.toLowerCase()))
-                  .map(fw => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {Object.entries(
+                  firmwares
+                    .filter(fw => !firmwareSearch.trim() || fw.name.toLowerCase().includes(firmwareSearch.toLowerCase()) || fw.version.toLowerCase().includes(firmwareSearch.toLowerCase()))
+                    .filter(fw => firmwareTypeFilter === 'all' || (fw.deviceType || 'unspecified') === firmwareTypeFilter)
+                    .filter(fw => firmwareStatusFilter === 'all' || fw.status === firmwareStatusFilter)
+                    .sort((a, b) => {
+                      if (firmwareSort === 'version') return a.version.localeCompare(b.version, undefined, { numeric: true });
+                      const diff = new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
+                      return firmwareSort === 'date_asc' ? diff : -diff;
+                    })
+                    .reduce((groups: Record<string, FirmwareVersion[]>, fw) => {
+                      const key = fw.deviceType || 'unspecified';
+                      (groups[key] ||= []).push(fw);
+                      return groups;
+                    }, {})
+                )
+                  .sort(([a], [b]) => DEVICE_TYPE_ORDER.indexOf(a) - DEVICE_TYPE_ORDER.indexOf(b))
+                  .map(([deviceType, group]) => (
+                  <div key={deviceType}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: sub }}>
+                        {deviceTypeLabel(deviceType)}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: sub, background: tok.bgSub(isDark), borderRadius: 20, padding: '1px 7px' }}>{group.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {group.map(fw => (
                     <div key={fw.id} style={{
                       background: tok.bgSub(isDark),
                       borderRadius: 10,
@@ -963,7 +1010,10 @@ export const OTA: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
