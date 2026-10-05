@@ -179,9 +179,7 @@ const EnergyMeterDashboard: React.FC<Props> = ({ siteId, autoRefresh = true }) =
       <ChartCard title="Power (24h)" subtitle="Per-phase active power · drag to zoom" isDark={isDark} height={220} accentColor="#f59e0b" isLoading={loading}>
         {history.length > 0 ? (
           <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-              <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} />
-            </div>
+            <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} overlay />
             <CJLine ref={zoom.chartRef} data={chartData} options={chartOptions} />
           </>
         ) : (

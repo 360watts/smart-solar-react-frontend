@@ -62,13 +62,20 @@ const zoomResetButtonStyle: React.CSSProperties = {
   fontFamily:   'Poppins, sans-serif',
 };
 
-// Always rendered (never unmounted) so its row keeps reserving layout space —
-// toggling via visibility/pointerEvents instead of mounting/unmounting stops
-// the chart canvas from shifting down inside ChartCard's fixed-height box
-// when a zoom starts.
-export const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void }> = ({ visible, onClick }) => {
-  return React.createElement('button', {
-    onClick,
-    style: { ...zoomResetButtonStyle, visibility: visible ? 'visible' : 'hidden', pointerEvents: visible ? 'auto' : 'none' },
-  }, 'Reset Zoom');
+/**
+ * `overlay`: use when this button sits directly above the chart canvas,
+ * inside ChartCard's fixed-height content box — there, giving it its own
+ * row (even conditionally) shifts/shrinks the canvas on zoom. Overlay mode
+ * makes it `position: absolute` so it has zero layout footprint; it needs a
+ * `position: relative` ancestor, which ChartCard's content wrapper already
+ * is. Don't use overlay when the button sits in a toolbar row alongside
+ * other controls (e.g. HistoryTab's series-toggle row) — there it's meant
+ * to occupy normal flow space, not float over anything.
+ */
+export const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void; overlay?: boolean }> = ({ visible, onClick, overlay }) => {
+  if (!visible) return null;
+  const style = overlay
+    ? { ...zoomResetButtonStyle, position: 'absolute' as const, top: -2, right: 0, zIndex: 2 }
+    : zoomResetButtonStyle;
+  return React.createElement('button', { onClick, style }, 'Reset Zoom');
 };
