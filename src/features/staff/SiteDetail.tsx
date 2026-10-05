@@ -437,6 +437,15 @@ export default function SiteDetail() {
   const [loggerSerial, setLoggerSerial] = useState('');
   const [savedLoggerSerial, setSavedLoggerSerial] = useState('');
   const [activeInverterId, setActiveInverterId] = useState<number | null>(null);
+  // Shown inline when saveDeyeSettings finds no inverter to attach Logger Serial to —
+  // lets staff create a minimal Inverter record right there instead of hitting a dead-end
+  // error and having to go find the Equipment tab themselves.
+  const [needsInverterForLogger, setNeedsInverterForLogger] = useState(false);
+  const [newInvMake, setNewInvMake] = useState('');
+  const [newInvSerial, setNewInvSerial] = useState('');
+  const [newInvCapacityKva, setNewInvCapacityKva] = useState('');
+  const [creatingInverter, setCreatingInverter] = useState(false);
+  const [createInverterError, setCreateInverterError] = useState<string | null>(null);
   const [vendorName, setVendorName] = useState('');
   const [vendorGst, setVendorGst] = useState('');
   const [vendorPhone, setVendorPhone] = useState('');
@@ -773,6 +782,9 @@ export default function SiteDetail() {
   const resetDeyeSettingsForm = () => {
     setDeyeStationId(site?.deye_station_id != null ? String(site.deye_station_id) : '');
     setLoggerSerial(savedLoggerSerial);
+    setNeedsInverterForLogger(false);
+    setCreateInverterError(null);
+    setNewInvMake(''); setNewInvSerial(''); setNewInvCapacityKva('');
   };
 
   const saveDeyeSettings = async () => {
@@ -797,7 +809,13 @@ export default function SiteDetail() {
         await apiService.updateInverter(siteId, activeInverterId, { logger_serial: value });
         setSavedLoggerSerial(value ?? '');
       } else if (value !== null) {
-        throw new Error('No active inverter on this site — add one on the Equipment tab before setting Logger Serial');
+        // No inverter to attach Logger Serial to yet — Deye Station ID above
+        // already saved (setSite(data) ran). Offer to create one inline
+        // instead of just erroring and leaving the user to find the
+        // Equipment tab themselves.
+        setNeedsInverterForLogger(true);
+        setCreateInverterError(null);
+        return;
       }
 
       setEditingDeyeSettings(false);
@@ -805,6 +823,40 @@ export default function SiteDetail() {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const createInverterForLogger = async () => {
+    const make = newInvMake.trim();
+    const serial = newInvSerial.trim();
+    const capacity = newInvCapacityKva.trim();
+    if (!make || !serial || !capacity) {
+      setCreateInverterError('Make, serial number, and capacity are required.');
+      return;
+    }
+    const capacityNum = Number(capacity);
+    if (Number.isNaN(capacityNum) || capacityNum <= 0) {
+      setCreateInverterError('Capacity must be a positive number.');
+      return;
+    }
+
+    setCreatingInverter(true);
+    setCreateInverterError(null);
+    try {
+      const value = loggerSerial.trim() === '' ? null : loggerSerial.trim();
+      const inverter = await apiService.createInverter(siteId, {
+        make, serial_number: serial, capacity_kva: capacityNum,
+        logger_serial: value, is_active: true,
+      });
+      setActiveInverterId(inverter.id);
+      setSavedLoggerSerial(value ?? '');
+      setNeedsInverterForLogger(false);
+      setNewInvMake(''); setNewInvSerial(''); setNewInvCapacityKva('');
+      setEditingDeyeSettings(false);
+    } catch (e) {
+      setCreateInverterError(e instanceof Error ? e.message : 'Failed to create inverter');
+    } finally {
+      setCreatingInverter(false);
     }
   };
 
@@ -1031,6 +1083,34 @@ export default function SiteDetail() {
                       <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 2509273375" />
                     </Field>
                   </div>
+
+                  {needsInverterForLogger && (
+                    <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: palette.err.bg, border: `1px solid ${palette.err.border}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: palette.err.color, fontSize: '0.85rem', fontWeight: 600 }}>
+                        <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                        This site doesn't have an inverter record yet — add one to attach the Logger Serial
+                      </div>
+                      {createInverterError && (
+                        <div style={{ marginBottom: 10, color: palette.err.color, fontSize: '0.8rem' }}>{createInverterError}</div>
+                      )}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                        <Field isDark={isDark} label="Make">
+                          <input value={newInvMake} onChange={e => setNewInvMake(e.target.value)} disabled={creatingInverter} style={roStyle(true)} placeholder="e.g. Deye" />
+                        </Field>
+                        <Field isDark={isDark} label="Serial number">
+                          <input value={newInvSerial} onChange={e => setNewInvSerial(e.target.value)} disabled={creatingInverter} style={roStyle(true)} placeholder="e.g. SG05LP3-001" />
+                        </Field>
+                        <Field isDark={isDark} label="Capacity (kVA)">
+                          <input type="number" value={newInvCapacityKva} onChange={e => setNewInvCapacityKva(e.target.value)} disabled={creatingInverter} style={roStyle(true)} placeholder="e.g. 5" />
+                        </Field>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <Btn isDark={isDark} size="sm" disabled={creatingInverter} onClick={createInverterForLogger}>
+                          {creatingInverter ? 'Creating…' : 'Create inverter & save Logger Serial'}
+                        </Btn>
+                      </div>
+                    </div>
+                  )}
                 </SetupCard>
                 </div>
 

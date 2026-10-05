@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
+import {
   CheckCircle2, ChevronRight, Server, Wifi, Check,
   ArrowRight, AlertTriangle, Loader2, Compass, LayoutDashboard,
 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import PageHeader from '../../shared/layout/PageHeader';
 import InverterMeasurementConfig from './InverterMeasurementConfig';
+import { ConfirmDialog } from './siteHardware/ui';
 
 // ── Components & Animations ──────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ const slideVariants = {
 
 export default function CommissioningWizard() {
   const { isDark } = useTheme();
+  const navigate = useNavigate();
 
   // ── State ──
   const [step, setStep] = useState(1);
@@ -43,11 +45,13 @@ export default function CommissioningWizard() {
   const [azimuthDeg, setAzimuthDeg] = useState('');
   const [timezoneValue, setTimezoneValue] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
-  const [dataLoggerSerial, setDataLoggerSerial] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createdSiteId, setCreatedSiteId] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [usersBusy, setUsersBusy] = useState(false);
   const [idBusy, setIdBusy] = useState(false);
 
@@ -57,11 +61,11 @@ export default function CommissioningWizard() {
   const [acSetpointC, setAcSetpointC] = useState<number | null>(null);
   const [numGeysers, setNumGeysers] = useState(0);
   const [geyserTotalCapacityKw, setGeyserTotalCapacityKw] = useState<number | null>(null);
-  const [geyserType, setGeyserType] = useState('');
+  const [geyserType, setGeyserType] = useState<'' | 'instant' | 'storage_tank' | 'solar_backup'>('');
   const [numRefrigerators, setNumRefrigerators] = useState(0);
   const [numWashingMachines, setNumWashingMachines] = useState(0);
   const [numEvChargers, setNumEvChargers] = useState(0);
-  const [evType, setEvType] = useState('');
+  const [evType, setEvType] = useState<'' | 'two_wheeler' | 'three_wheeler' | 'four_wheeler'>('');
   const [evChargingCapacityKw, setEvChargingCapacityKw] = useState<number | null>(null);
   const [hasWaterPump, setHasWaterPump] = useState(false);
   const [waterPumpCapacityHp, setWaterPumpCapacityHp] = useState<number | null>(null);
@@ -172,7 +176,6 @@ export default function CommissioningWizard() {
       const tilt = tiltDeg.trim() === '' ? undefined : parseFloat(tiltDeg);
       const azimuth = azimuthDeg.trim() === '' ? undefined : parseFloat(azimuthDeg);
       const logger = loggerSerial.trim() === '' ? undefined : parseInt(loggerSerial, 10);
-      const dataLogger = dataLoggerSerial.trim() === '' ? undefined : dataLoggerSerial.trim();
 
       if (!siteId.trim() || !owner || Number.isNaN(owner)) throw new Error('Site ID and Owner User ID are required');
       if (Number.isNaN(lat) || Number.isNaN(lon)) throw new Error('Invalid coordinates');
@@ -192,8 +195,9 @@ export default function CommissioningWizard() {
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
       if (timezoneValue.trim()) payload.timezone = timezoneValue.trim();
       if (logger !== undefined) payload.deye_station_id = logger;
-      // logger_serial is now set on Device, not Site — skip it during site creation
-      // It will be set when the device is attached to the site
+      // logger_serial (SolarmanV5/LSW3 dongle) lives on Inverter, not Site — no
+      // Inverter exists yet at site-creation time, so it's set later from the
+      // Equipment tab or SiteDetail's Deye Settings panel, not in this wizard.
 
       const res = await apiService.createSiteStaff(payload);
       
@@ -203,6 +207,33 @@ export default function CommissioningWizard() {
       setError(e instanceof Error ? e.message : 'Failed to create site');
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Step 1 already wrote the draft SolarSite row to the DB. Cancel used to be
+  // a plain <Link to="/sites"> that only navigated away, leaving that draft
+  // orphaned forever (site_status stuck at 'draft', never touched again —
+  // found via a stale SS-00001 row). If a draft exists and commissioning
+  // hasn't completed (step < 4), confirm then soft-delete it before leaving.
+  const requestCancel = () => {
+    if (createdSiteId && step < 4) {
+      setConfirmCancel(true);
+    } else {
+      navigate('/sites');
+    }
+  };
+
+  const confirmCancelDiscard = async () => {
+    if (!createdSiteId) { navigate('/sites'); return; }
+    setCancelBusy(true);
+    setCancelError(null);
+    try {
+      await apiService.deleteSite(createdSiteId);
+      navigate('/sites');
+    } catch (e) {
+      setCancelError(e instanceof Error ? e.message : 'Failed to discard the draft site');
+    } finally {
+      setCancelBusy(false);
     }
   };
 
@@ -292,16 +323,27 @@ export default function CommissioningWizard() {
         title="Commissioning Wizard"
         subtitle="Configure site details, hardware, and appliance-linked smart devices"
         rightSlot={
-          <Link to="/sites" style={{ textDecoration: 'none' }}>
-            <button style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8,
-              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}`,
-              color: textMain, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600
-            }}>
-               Cancel
-            </button>
-          </Link>
+          <button onClick={requestCancel} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8,
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}`,
+            color: textMain, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600
+          }}>
+             Cancel
+          </button>
         }
+      />
+
+      <ConfirmDialog
+        isDark={isDark}
+        open={confirmCancel}
+        busy={cancelBusy}
+        title="Discard this draft site?"
+        body={cancelError || "This site hasn't been fully commissioned yet. Discarding it removes the draft — you can always start a new one."}
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        tone="danger"
+        onConfirm={confirmCancelDiscard}
+        onCancel={() => { setConfirmCancel(false); setCancelError(null); }}
       />
 
       {/* ── Main Content ── */}
@@ -441,10 +483,9 @@ export default function CommissioningWizard() {
                       <div>
                         <label style={labelStyle}>Deye Station ID</label>
                         <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 12616 (from Deye Cloud portal)" />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>Logger Serial</label>
-                        <input value={dataLoggerSerial} onChange={e => setDataLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 2509273375 (SolarmanV5/LSW3 dongle)" />
+                        <p style={{ fontSize: '0.7rem', color: textSub, margin: '6px 0 0' }}>
+                          The SolarmanV5/LSW3 dongle's Logger Serial is set on the inverter record — add it from the Equipment tab after this site is created.
+                        </p>
                       </div>
                       <div>
                         <label style={labelStyle}>Tilt (deg)</label>
@@ -520,7 +561,7 @@ export default function CommissioningWizard() {
                       </div>
                       <div>
                         <label style={labelStyle}>Geyser Type <span style={{ fontSize: '0.85em', opacity: 0.6 }}>(Optional)</span></label>
-                        <select value={geyserType} onChange={(e) => setGeyserType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', background: nativeSelectBg, color: nativeSelectFg }}>
+                        <select value={geyserType} onChange={(e) => setGeyserType(e.target.value as typeof geyserType)} style={{ ...inputStyle, cursor: 'pointer', background: nativeSelectBg, color: nativeSelectFg }}>
                           <option value="">-- Select --</option>
                           <option value="instant">Instant (Tankless)</option>
                           <option value="storage_tank">Storage Tank</option>
@@ -555,7 +596,7 @@ export default function CommissioningWizard() {
                       </div>
                       <div>
                         <label style={labelStyle}>EV Type</label>
-                        <select value={evType} onChange={(e) => setEvType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <select value={evType} onChange={(e) => setEvType(e.target.value as typeof evType)} style={{ ...inputStyle, cursor: 'pointer' }}>
                           <option value="">-- Select --</option>
                           <option value="two_wheeler">2-wheeler (e-scooter)</option>
                           <option value="three_wheeler">3-wheeler (auto-rickshaw)</option>
