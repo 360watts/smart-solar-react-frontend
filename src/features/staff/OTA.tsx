@@ -759,7 +759,7 @@ export const OTA: React.FC = () => {
           subtitle="Upload binaries and manage firmware versions"
         />
 
-        <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.4fr)', gap: '2rem' }}>
+        <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           {/* Upload Form */}
           <form onSubmit={handleUploadFirmware} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -890,7 +890,7 @@ export const OTA: React.FC = () => {
           </form>
 
           {/* Firmware List */}
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div style={sectionPill('linear-gradient(135deg, #6366F1, #8B5CF6)')} />
               <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#818CF8', flex: 1 }}>Available Versions</span>
@@ -900,8 +900,8 @@ export const OTA: React.FC = () => {
               </select>
               <select value={firmwareStatusFilter} onChange={e => setFirmwareStatusFilter(e.target.value)} style={{ ...inputStyle(isDark, { width: 100 }) }}>
                 <option value="all">All status</option>
-                <option value="stable">Stable</option>
-                <option value="draft">Draft</option>
+                <option value="stable">Active</option>
+                <option value="draft">Inactive</option>
               </select>
               <select value={firmwareSort} onChange={e => setFirmwareSort(e.target.value as typeof firmwareSort)} style={{ ...inputStyle(isDark, { width: 128 }) }}>
                 <option value="date_desc">Newest first</option>
@@ -929,7 +929,7 @@ export const OTA: React.FC = () => {
                 <div style={{ fontWeight: 600 }}>No firmware uploaded yet</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxHeight: 480, overflowY: 'auto', paddingRight: 4 }}>
                 {Object.entries(
                   firmwares
                     .filter(fw => !firmwareSearch.trim() || fw.name.toLowerCase().includes(firmwareSearch.toLowerCase()) || fw.version.toLowerCase().includes(firmwareSearch.toLowerCase()))
@@ -982,7 +982,7 @@ export const OTA: React.FC = () => {
                             background: fw.status === 'stable' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
                             color: fw.status === 'stable' ? '#22C55E' : '#F59E0B',
                           }}>
-                            {fw.status === 'stable' ? 'STABLE' : 'DRAFT'}
+                            {fw.status === 'stable' ? 'ACTIVE' : 'INACTIVE'}
                           </span>
                           {fw.signatureValid && <Check size={12} color="#22C55E" />}
                         </div>
