@@ -62,7 +62,13 @@ const zoomResetButtonStyle: React.CSSProperties = {
   fontFamily:   'Poppins, sans-serif',
 };
 
+// Always rendered (never unmounted) so its row keeps reserving layout space —
+// toggling via visibility/pointerEvents instead of mounting/unmounting stops
+// the chart canvas from shifting down inside ChartCard's fixed-height box
+// when a zoom starts.
 export const ZoomResetButton: React.FC<{ visible: boolean; onClick: () => void }> = ({ visible, onClick }) => {
-  if (!visible) return null;
-  return React.createElement('button', { onClick, style: zoomResetButtonStyle }, 'Reset Zoom');
+  return React.createElement('button', {
+    onClick,
+    style: { ...zoomResetButtonStyle, visibility: visible ? 'visible' : 'hidden', pointerEvents: visible ? 'auto' : 'none' },
+  }, 'Reset Zoom');
 };
