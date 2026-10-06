@@ -1023,6 +1023,13 @@ export default function SiteDetail() {
                         )}
                       </div>
                     </Field>
+                    <Field isDark={isDark} label="Grid type" hint="decides which alerts and dashboard cards apply">
+                      <select value={gridType} onChange={e => setGridType(e.target.value)} style={ro()} disabled={!editingDetails || busy}>
+                        <option value="on_grid">On-grid (no battery)</option>
+                        <option value="off_grid">Off-grid (battery, no grid)</option>
+                        <option value="hybrid">Hybrid (grid + battery)</option>
+                      </select>
+                    </Field>
                     <Field isDark={isDark} label="Customer">
                       <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={ro()} disabled={!editingDetails || busy || usersBusy}>
                         <option value="">Not assigned yet</option>
@@ -1060,17 +1067,6 @@ export default function SiteDetail() {
 
                   <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>Billing</div>
-                  <Field
-                    isDark={isDark}
-                    label="Grid type"
-                    hint="On-grid: no battery. Off-grid: battery, no grid. Hybrid: both. Decides which alerts and dashboard cards apply."
-                  >
-                    <select value={gridType} onChange={e => setGridType(e.target.value)} style={ro({ maxWidth: 240 })} disabled={!editingDetails || busy}>
-                      <option value="on_grid">On-grid</option>
-                      <option value="off_grid">Off-grid</option>
-                      <option value="hybrid">Hybrid</option>
-                    </select>
-                  </Field>
                   <Field
                     isDark={isDark}
                     label="Net metering started on"
