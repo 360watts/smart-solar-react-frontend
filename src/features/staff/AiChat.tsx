@@ -13,19 +13,26 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { getCsrfToken, apiService } from '../../services/api';
 import { isPlainAnswer } from './aiDiagnoseTypes';
+import { buildHistory, httpErrorMessage, parseSSEBuffer } from './aiChatStream';
 import type { DiagnoseResult } from './aiDiagnoseTypes';
 
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   ts: number;
   isError?: boolean;
+  /** The stream ended before the answer was complete (connection drop, no [DONE] frame). */
+  cutOff?: boolean;
   diagnosticResult?: DiagnoseResult;
 }
 
+let _msgSeq = 0;
+const makeId = () => `m${Date.now().toString(36)}${(_msgSeq++).toString(36)}`;
+
 // Admin-only, explicit trigger (not LLM-routed) — see api/views/ai_diagnose.py on the backend
-// for why: AiChat has no tool-calling loop to hook a real agentic route into. Demo/synthetic-data
-// scope only (that backend runs on Gemini, not Bedrock) - see the service module's own docstring.
+// for why: AiChat has no tool-calling loop to hook a real agentic route into. Synthetic-data scope
+// only (the diagnostic service runs on Bedrock ap-south-1 but reads only synthetic telemetry).
 const DIAGNOSE_PREFIX = '/diagnose ';
 
 type PanelSize = 'compact' | 'fullscreen';
@@ -166,158 +173,186 @@ const AiChat: React.FC = () => {
     });
   };
 
-  // Admin-only diagnostic command - proxied through the real backend (api/views/ai_diagnose.py)
-  // to the standalone solar-grid-diagnostic-ai service. Structural mirror of sendMessage's own
-  // fetch/refresh/SSE-reader pattern, diverging only in payload shape and final-frame handling:
-  // the last non-sentinel frame is JSON (a DiagnosticReport or PlainAnswer), not a text token.
-  const sendDiagnoseCommand = useCallback(async (question: string) => {
-    const userMsg: Message = { role: 'user', content: `/diagnose ${question}`, ts: Date.now() };
-    const asstMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
-    setMessages(prev => [...prev, userMsg, asstMsg]);
+  // ── Streaming ────────────────────────────────────────────────────────────────────────────────
+  // One request path for both the chat and the /diagnose command. Tokens are batched into one state
+  // update per animation frame (a full ReactMarkdown + syntax-highlighter re-render per token was
+  // janky on long answers), the request is abortable (Clear / unmount), a dropped or unfinished
+  // stream keeps the partial answer with a "cut off" marker instead of wiping it, and error bubbles
+  // never go back to the model as history.
+  const abortRef = useRef<AbortController | null>(null);
+  const streamingRef = useRef(false);
+  const pendingRef = useRef('');
+  const rafRef = useRef<number | null>(null);
+  const activeIdRef = useRef<string | null>(null);
+
+  const patchMessage = useCallback((id: string, patch: Partial<Message> | ((m: Message) => Partial<Message>)) => {
+    setMessages(prev => {
+      const i = prev.findIndex(m => m.id === id);
+      if (i === -1) return prev; // cleared while streaming: nothing to update, nothing to crash
+      const n = [...prev];
+      n[i] = { ...n[i], ...(typeof patch === 'function' ? patch(n[i]) : patch) };
+      return n;
+    });
+  }, []);
+
+  const flushPending = useCallback(() => {
+    rafRef.current = null;
+    const id = activeIdRef.current;
+    if (!pendingRef.current || !id) return;
+    const chunk = pendingRef.current;
+    pendingRef.current = '';
+    patchMessage(id, m => ({ content: m.content + chunk }));
+  }, [patchMessage]);
+
+  const scheduleFlush = useCallback(() => {
+    if (rafRef.current === null) rafRef.current = requestAnimationFrame(flushPending);
+  }, [flushPending]);
+
+  /** POST with the same one-shot 401 refresh api.ts's request() does; the caller owns abort. */
+  const postWithRefresh = useCallback(async (path: string, body: string, signal: AbortSignal) => {
+    const doFetch = () => fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST', credentials: 'include', headers: getAuthHeaders(), body, signal,
+    });
+    let res = await doFetch();
+    if (res.status === 401 && await apiService.refreshToken()) res = await doFetch();
+    return res;
+  }, []);
+
+  /**
+   * Shared stream lifecycle. `onToken` handles one non-sentinel frame; returning true means the frame
+   * produced content (so "no response" can be told apart from a real answer).
+   */
+  const runStream = useCallback(async (
+    path: string,
+    payload: unknown,
+    userMsg: Message,
+    opts: { unescapeNewlines: boolean; onFrame: (text: string, id: string) => boolean },
+    historyBefore: Message[],
+  ) => {
+    if (streamingRef.current) return;
+    streamingRef.current = true;
+    const asstId = makeId();
+    activeIdRef.current = asstId;
+    pendingRef.current = '';
+    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    setMessages([...historyBefore, userMsg, { id: asstId, role: 'assistant', content: '', ts: Date.now() }]);
     setStreaming(true);
     isStreamingRef.current = true;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let gotContent = false;
+    let sawDone = false;
     try {
-      const body = JSON.stringify({ question });
-      let res = await fetch(`${API_BASE_URL}/ai/diagnose-site/`, {
-        method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
-      });
-      if (res.status === 401) {
-        const refreshed = await apiService.refreshToken();
-        if (refreshed) {
-          res = await fetch(`${API_BASE_URL}/ai/diagnose-site/`, {
-            method: 'POST', credentials: 'include', headers: getAuthHeaders(), body,
-          });
-        }
-      }
+      const res = await postWithRefresh(path, JSON.stringify(payload), controller.signal);
       if (!res.ok) {
-        const raw = await res.text();
-        // API error envelope is {"error": "...", "code": "..."} - show the message, not the JSON
-        let err = raw;
-        try { err = JSON.parse(raw).error ?? raw; } catch { /* not JSON, show as-is */ }
-        setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });
+        patchMessage(asstId, { content: httpErrorMessage(res.status, await res.text()), isError: true });
         return;
       }
       const reader = res.body?.getReader();
-      if (!reader) return;
+      if (!reader) {
+        patchMessage(asstId, { content: 'Could not read the response. Please try again.', isError: true });
+        return;
+      }
       const dec = new TextDecoder();
       let buf = '';
-      while (true) {
+      let failed = false;
+      read: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const token = line.slice(6);
-          if (token === '[DONE]') break;
-          if (token === '[KEEPALIVE]') continue;
-          if (token.startsWith('[ERROR]')) {
-            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: token.slice(8), ts: Date.now(), isError: true }; return n; });
-            break;
+        const parsed = parseSSEBuffer(buf, { unescapeNewlines: opts.unescapeNewlines });
+        buf = parsed.remainder;
+        for (const ev of parsed.events) {
+          if (ev.type === 'done') { sawDone = true; continue; }
+          if (ev.type === 'error') {
+            pendingRef.current = ''; // unflushed partial text must not land after the error notice
+            patchMessage(asstId, { content: ev.message, isError: true });
+            failed = true;
+            break read;
           }
-          try {
-            const result = JSON.parse(token) as DiagnoseResult;
-            setMessages(prev => {
-              const n = [...prev];
-              n[n.length - 1] = { ...n[n.length - 1], content: '', diagnosticResult: result };
-              return n;
-            });
-          } catch {
-            // not JSON - a plain-text node_trace label, shown as a live status line
-            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { ...n[n.length - 1], content: token }; return n; });
-          }
+          if (opts.onFrame(ev.text, asstId)) gotContent = true;
         }
       }
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      flushPending();
+      if (failed) return;
+      if (!gotContent) patchMessage(asstId, { content: 'No response generated. Please try again.', isError: true });
+      else if (!sawDone) patchMessage(asstId, { cutOff: true });
     } catch {
-      setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: 'Connection failed.', ts: Date.now(), isError: true }; return n; });
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      flushPending();
+      if (controller.signal.aborted) {
+        // Deliberate cancel (Clear / unmount): keep a partial answer if there is one, else drop the bubble.
+        if (gotContent) patchMessage(asstId, { cutOff: true });
+        else setMessages(prev => prev.filter(m => m.id !== asstId));
+      } else if (gotContent) {
+        patchMessage(asstId, { cutOff: true });
+      } else {
+        patchMessage(asstId, { content: 'Connection failed. Check your network and try again.', isError: true });
+      }
     } finally {
+      activeIdRef.current = null;
+      abortRef.current = null;
+      streamingRef.current = false;
       setStreaming(false);
       isStreamingRef.current = false;
     }
-  }, []);
+  }, [patchMessage, flushPending, postWithRefresh]);
+
+  // Admin-only diagnostic command - proxied through the backend (api/views/ai_diagnose.py) to the
+  // standalone solar-grid-diagnostic-ai service. Frames are plain-text status labels while it works,
+  // then one JSON frame (a DiagnosticReport or a PlainAnswer). JSON keeps its `\n` escapes: they must
+  // not be turned into raw newlines before JSON.parse.
+  const sendDiagnoseCommand = useCallback(async (question: string) => {
+    const userMsg: Message = { id: makeId(), role: 'user', content: `/diagnose ${question}`, ts: Date.now() };
+    await runStream('/ai/diagnose-site/', { question }, userMsg, {
+      unescapeNewlines: false,
+      onFrame: (text, id) => {
+        try {
+          const result = JSON.parse(text) as DiagnoseResult;
+          patchMessage(id, { content: '', diagnosticResult: result });
+          return true;
+        } catch {
+          patchMessage(id, { content: text }); // live status label ("Checking fault manual...")
+          return false;
+        }
+      },
+    }, messagesRef.current);
+  }, [runStream, patchMessage]);
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || streaming) return;
+    if (!trimmed || streamingRef.current) return;
     if (isAdmin && trimmed.toLowerCase().startsWith(DIAGNOSE_PREFIX)) {
       const question = trimmed.slice(DIAGNOSE_PREFIX.length).trim();
       setInput('');
       if (question) await sendDiagnoseCommand(question);
       return;
     }
-    const userMsg: Message = { role: 'user', content: trimmed, ts: Date.now() };
-    const updated = [...messagesRef.current, userMsg];
-    const asstMsg: Message = { role: 'assistant', content: '', ts: Date.now() };
-    setMessages([...updated, asstMsg]);
+    const userMsg: Message = { id: makeId(), role: 'user', content: trimmed, ts: Date.now() };
     setInput('');
-    setStreaming(true);
-    isStreamingRef.current = true;
-    try {
-      const body = JSON.stringify({ messages: updated.map(m => ({ role: m.role, content: m.content })) });
-      let res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: getAuthHeaders(),
-        body,
-      });
-      if (res.status === 401) {
-        // Mirrors api.ts's request() 401-retry: the access-token cookie may
-        // have expired (or the in-memory CSRF token hasn't been populated
-        // yet this page load) — refresh once and retry before giving up,
-        // instead of surfacing the raw backend error text as a chat reply.
-        const refreshed = await apiService.refreshToken();
-        if (refreshed) {
-          res = await fetch(`${API_BASE_URL}/ai/internal-chat/`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: getAuthHeaders(),
-            body,
-          });
-        }
-      }
-      if (!res.ok) {
-        const err = await res.text();
-        setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: `Error: ${err}`, ts: Date.now(), isError: true }; return n; });
-        return;
-      }
-      const reader = res.body?.getReader();
-      if (!reader) return;
-      const dec = new TextDecoder();
-      let buf = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const token = line.slice(6);
-          if (token === '[DONE]') break;
-          if (token === '[KEEPALIVE]') continue;
-          if (token.startsWith('[ERROR]')) {
-            setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: token.slice(8), ts: Date.now(), isError: true }; return n; });
-            break;
-          }
-          const text = normalizeStreamFragment(token.replace(/\\n/g, '\n'));
-          if (!text) continue;
-          setMessages(prev => { const n = [...prev]; const last = n[n.length - 1]; n[n.length - 1] = { ...last, content: last.content + text }; return n; });
-        }
-      }
-      setMessages(prev => {
-        const n = [...prev]; const last = n[n.length - 1];
-        if (last?.role === 'assistant' && !last.isError && !normalizeAssistantContent(last.content))
-          n[n.length - 1] = { ...last, content: 'No response generated. Please try again.' };
-        return n;
-      });
-    } catch {
-      setMessages(prev => { const n = [...prev]; n[n.length - 1] = { role: 'assistant', content: 'Connection failed.', ts: Date.now(), isError: true }; return n; });
-    } finally {
-      setStreaming(false);
-      isStreamingRef.current = false;
-    }
-  }, [streaming, isAdmin, sendDiagnoseCommand]);
+    await runStream('/ai/internal-chat/', { messages: buildHistory([...messagesRef.current, userMsg]) }, userMsg, {
+      unescapeNewlines: true,
+      onFrame: (t, id) => {
+        pendingRef.current += t;
+        activeIdRef.current = id;
+        scheduleFlush();
+        return true;
+      },
+    }, messagesRef.current);
+  }, [isAdmin, sendDiagnoseCommand, runStream, scheduleFlush]);
+
+  const clearChat = useCallback(() => {
+    abortRef.current?.abort();
+    setMessages([]);
+  }, []);
+
+  // Abort an in-flight request when the chat unmounts (route change away from the staff shell).
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -367,7 +402,7 @@ const AiChat: React.FC = () => {
             </div>
             <div className="aif-hdr__right">
               {messages.length > 0 && (
-                <button className="aif-hdr-btn" onClick={() => setMessages([])}>CLR</button>
+                <button className="aif-hdr-btn" onClick={clearChat}>CLR</button>
               )}
               <button className="aif-hdr-btn aif-hdr-btn--icon" onClick={() => setPanelSize(s => s === 'compact' ? 'fullscreen' : 'compact')}>
                 {isFS ? <Shrink size={12} /> : <Expand size={12} />}
@@ -404,7 +439,7 @@ const AiChat: React.FC = () => {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} className={`aif-msg aif-msg--${msg.role}`}>
+              <div key={msg.id} className={`aif-msg aif-msg--${msg.role}`}>
                 {msg.role === 'user' ? (
                   <div className="aif-msg__user">
                     <span className="aif-msg__prompt">you</span>
@@ -452,6 +487,7 @@ const AiChat: React.FC = () => {
                         >
                           {normalizeAssistantContent(msg.content)}
                         </ReactMarkdown>
+                        {msg.cutOff && <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 4 }}>(response cut off)</div>}
                       </div>
                     )}
                   </div>

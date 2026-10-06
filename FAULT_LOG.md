@@ -388,6 +388,64 @@ Dragging to zoom on `EnergyMeterDashboard`'s "Power (24h)" chart (and other char
 
 ---
 
+## F-011-UI
+
+### Commissioning Wizard "Cancel" Leaves Orphaned Draft Sites Forever
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-10-05 (found via a stale `SS-00001` DB row: `created_at` == `updated_at`, never touched again) |
+| **Severity** | Low: no data-loss or user-facing breakage, but a real data-hygiene bug — every abandoned wizard leaves a permanent `draft` row. |
+| **Status** | Fixed 2026-10-05, not committed/deployed. |
+
+#### Symptom
+A user reported sites they'd "deleted" were still in the DB with `site_status='draft'`.
+
+#### Root Cause
+`CommissioningWizard.tsx`'s Cancel button was a plain `<Link to="/sites">` — it only navigated away, never called the delete/archive endpoint. Step 1 (`site_staff_create`) already writes the draft `SolarSite` row to the DB immediately, before any later step runs. Any wizard abandoned at step 2+ via Cancel leaves that draft permanently orphaned — `site_status` stuck at `draft`, `updated_at` frozen at creation time.
+
+#### Fix Applied
+- Cancel now calls `requestCancel()`: if a draft was created (`createdSiteId` set) and commissioning hasn't completed (`step < 4`), it opens the house-style `ConfirmDialog` ("Discard this draft site?") instead of navigating immediately.
+- Confirming calls `apiService.deleteSite(createdSiteId)` — the same soft-delete the Sites list already uses (`DELETE /sites/<id>/`, sets `site_status='archived'`, recoverable) — then navigates to `/sites`.
+- Step 1 (nothing created yet) or step 4 (already complete) still navigate immediately with no prompt.
+- On delete failure, the error shows inline in the dialog and the wizard stays open instead of silently navigating away while the draft might still exist.
+- Test-scenario doc added: `docs/test-scenarios/commissioning-wizard-cancel-cleanup.md`.
+
+#### Residual
+- Existing orphaned drafts (e.g. `SS-00001`) are not cleaned up by this fix — it only prevents new ones going forward.
+- Not committed/deployed.
+
+## F-012-UI
+
+### Commissioning Wizard's "Logger Serial" Field Silently Discarded Whatever Was Typed In
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-10-05 |
+| **Severity** | Low: no error shown, but the field has complete false affordance — anything typed in vanishes. |
+| **Status** | Fixed 2026-10-05 (wizard side), not committed/deployed. Related `SiteDetail.tsx` dead-end also fixed same day. |
+
+#### Symptom
+Staff reported the Logger Serial field in the Commissioning Wizard "doesn't save."
+
+#### Root Cause
+Three stacked issues, found while tracing the full flow:
+1. `CommissioningWizard.tsx` step 1 had a field labeled "Logger Serial" (`dataLoggerSerial`) that was parsed into a local variable and then never included in any API payload — no `Inverter` record exists yet at that point in the wizard for it to attach to.
+2. A stale code comment blamed the wrong model ("logger_serial is now set on Device, not Site") — migration `0107_remove_logger_serial_from_device.py` actually moved it to `Inverter`, not `Device`.
+3. The real, current Logger Serial editor (`SiteDetail.tsx`'s Deye Settings panel) requires an existing active `Inverter` to attach to, and throws `"No active inverter on this site — add one on the Equipment tab before setting Logger Serial"` otherwise. Since nothing in the Commissioning Wizard ever creates an `Inverter`, this throws on the very first save attempt for any freshly-commissioned site.
+
+#### Fix Applied
+- Removed the dead field from the wizard; added a one-line note under the (correctly-saving) Deye Station ID field pointing to where Logger Serial actually gets set.
+- Corrected the stale comment.
+- Closed two unrelated pre-existing type-safety gaps found in the same file while editing (`geyserType`/`evType` typed as plain `string` against a stricter API contract — narrowed to match their `<select>` options).
+- `SiteDetail.tsx`: per the user's explicit choice between two fix options, implemented the inline-create path — when saving Logger Serial fails because no `Inverter` exists, an inline mini-form (Make / Serial Number / Capacity kVA — the model's actual required fields) appears in the same card, and submitting it creates the `Inverter` with `logger_serial` set in one request instead of erroring out.
+
+#### Residual
+- Not committed/deployed.
+- Not visually verified in a browser.
+
+---
+
 ## Severity / Status Definitions
 
 | Level | Meaning |
@@ -404,4 +462,4 @@ Dragging to zoom on `EnergyMeterDashboard`'s "Power (24h)" chart (and other char
 | **Open** | Known issue, fix not yet implemented |
 
 ---
-*Last updated: 2026-10-05 (F-010-UI added — chart-shift-on-zoom bug)*
+*Last updated: 2026-10-05 (F-011-UI, F-012-UI added — orphaned draft sites, Logger Serial data-loss bug)*
