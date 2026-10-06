@@ -45,6 +45,9 @@ export default function CommissioningWizard() {
   const [azimuthDeg, setAzimuthDeg] = useState('');
   const [timezoneValue, setTimezoneValue] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
+  // Inverter record created right after the site, so Deye Cloud can fetch full readings from day one.
+  const [inverterMake, setInverterMake] = useState('Deye');
+  const [inverterSerial, setInverterSerial] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -183,7 +186,12 @@ export default function CommissioningWizard() {
       if (invCap !== undefined && Number.isNaN(invCap)) throw new Error('Invalid inverter capacity');
       if (tilt !== undefined && Number.isNaN(tilt)) throw new Error('Invalid tilt angle');
       if (azimuth !== undefined && Number.isNaN(azimuth)) throw new Error('Invalid azimuth angle');
-      if (logger !== undefined && Number.isNaN(logger)) throw new Error('Invalid logger serial');
+      if (logger !== undefined && Number.isNaN(logger)) throw new Error('Invalid Deye station ID');
+      const invSerial = inverterSerial.trim();
+      if (invSerial && (invCap === undefined || invCap <= 0)) {
+        throw new Error('Enter the inverter capacity (kW) too — it is needed to save the inverter serial.');
+      }
+      if (invSerial && !inverterMake.trim()) throw new Error('Enter the inverter make (e.g. Deye).');
 
       const payload: Record<string, unknown> = {
         site_id: siteId.trim(), owner_user_id: owner, display_name: displayName.trim(),
@@ -195,13 +203,24 @@ export default function CommissioningWizard() {
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
       if (timezoneValue.trim()) payload.timezone = timezoneValue.trim();
       if (logger !== undefined) payload.deye_station_id = logger;
-      // logger_serial (SolarmanV5/LSW3 dongle) lives on Inverter, not Site — no
-      // Inverter exists yet at site-creation time, so it's set later from the
-      // Equipment tab or SiteDetail's Deye Settings panel, not in this wizard.
-
+      // Serial numbers live on the Inverter, not the Site, so the inverter is created right after the site.
       const res = await apiService.createSiteStaff(payload);
-      
       setCreatedSiteId(res.site_id);
+
+      if (invSerial) {
+        try {
+          await apiService.createInverter(res.site_id, {
+            make: inverterMake.trim(), serial_number: invSerial,
+            // kVA ~ kW at unity power factor; editable later in the Equipment tab.
+            capacity_kva: invCap, is_active: true,
+          });
+        } catch (invErr) {
+          // The site already exists: don't make the user re-submit step 1 (that would collide on Site ID).
+          setError(`Site created, but the inverter serial could not be saved (${invErr instanceof Error ? invErr.message : 'unknown error'}). Add it from the site's Deye settings.`);
+          setStep(2);
+          return;
+        }
+      }
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create site');
@@ -481,10 +500,21 @@ export default function CommissioningWizard() {
                         <input value={inverterCapacityKw} onChange={e => setInverterCapacityKw(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g., 8" />
                       </div>
                       <div>
+                        <label style={labelStyle}>Inverter serial number</label>
+                        <input value={inverterSerial} onChange={e => setInverterSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 2509273375" />
+                        <p style={{ fontSize: '0.7rem', color: textSub, margin: '6px 0 0' }}>
+                          The number on the inverter's label. Deye Cloud uses it to send full readings (needs the inverter capacity above).
+                        </p>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Inverter make</label>
+                        <input value={inverterMake} onChange={e => setInverterMake(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. Deye" />
+                      </div>
+                      <div>
                         <label style={labelStyle}>Deye Station ID</label>
                         <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 12616 (from Deye Cloud portal)" />
                         <p style={{ fontSize: '0.7rem', color: textSub, margin: '6px 0 0' }}>
-                          The SolarmanV5/LSW3 dongle's Logger Serial is set on the inverter record — add it from the Equipment tab after this site is created.
+                          A separate Wi-Fi dongle serial is optional — add it later from the site's Deye settings if Deye needs it.
                         </p>
                       </div>
                       <div>
