@@ -229,7 +229,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
               <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Installation <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <EqFormField label="TEDA Scheme" value={form.teda_scheme} onChange={v=>f('teda_scheme',v)} isDark={isDark}/>
-                <EqFormField label="Logger Serial" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
+                <EqFormField label="Logger Serial (optional)" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
                 <EqFormField label="Installed Date" value={form.installed_at??''} onChange={v=>f('installed_at',v)} type="date" isDark={isDark}/>
                 <EqFormField label="Warranty Expires" value={form.warranty_expires_at??''} onChange={v=>f('warranty_expires_at',v)} type="date" isDark={isDark}/>
               </div>
@@ -436,6 +436,10 @@ export default function SiteDetail() {
   const [deyeStationId, setDeyeStationId] = useState('');
   const [loggerSerial, setLoggerSerial] = useState('');
   const [savedLoggerSerial, setSavedLoggerSerial] = useState('');
+  // The inverter's own serial (Inverter.serial_number). Deye Cloud's per-device readings are fetched with
+  // it (or the logger field above, whichever Deye accepts), so it is editable right here, not only in Equipment.
+  const [inverterSerial, setInverterSerial] = useState('');
+  const [savedInverterSerial, setSavedInverterSerial] = useState('');
   const [activeInverterId, setActiveInverterId] = useState<number | null>(null);
   // Shown inline when saveDeyeSettings finds no inverter to attach Logger Serial to —
   // lets staff create a minimal Inverter record right there instead of hitting a dead-end
@@ -583,10 +587,14 @@ export default function SiteDetail() {
         setActiveInverterId(activeInv?.id ?? null);
         setLoggerSerial(activeInv?.logger_serial ?? '');
         setSavedLoggerSerial(activeInv?.logger_serial ?? '');
+        setInverterSerial(activeInv?.serial_number ?? '');
+        setSavedInverterSerial(activeInv?.serial_number ?? '');
       } catch {
         setActiveInverterId(null);
         setLoggerSerial('');
         setSavedLoggerSerial('');
+        setInverterSerial('');
+        setSavedInverterSerial('');
       }
       setVendorName(data.vendor_name ?? '');
       setVendorGst(data.vendor_gst ?? '');
@@ -782,6 +790,7 @@ export default function SiteDetail() {
   const resetDeyeSettingsForm = () => {
     setDeyeStationId(site?.deye_station_id != null ? String(site.deye_station_id) : '');
     setLoggerSerial(savedLoggerSerial);
+    setInverterSerial(savedInverterSerial);
     setNeedsInverterForLogger(false);
     setCreateInverterError(null);
     setNewInvMake(''); setNewInvSerial(''); setNewInvCapacityKva('');
@@ -803,16 +812,24 @@ export default function SiteDetail() {
       const data = await apiService.patchSiteStaff(siteId, sitePayload);
       setSite(data);
 
-      // Logger Serial lives on the site's active inverter
+      // Inverter serial and Logger serial both live on the site's active inverter
       const value = loggerSerial.trim() === '' ? null : loggerSerial.trim();
+      const invSerial = inverterSerial.trim();
       if (activeInverterId != null) {
-        await apiService.updateInverter(siteId, activeInverterId, { logger_serial: value });
+        if (invSerial === '') {
+          throw new Error('Inverter serial is required — use the number on the inverter label.');
+        }
+        const inverterPayload: Record<string, unknown> = { logger_serial: value };
+        if (invSerial !== savedInverterSerial) inverterPayload.serial_number = invSerial;
+        await apiService.updateInverter(siteId, activeInverterId, inverterPayload);
         setSavedLoggerSerial(value ?? '');
-      } else if (value !== null) {
-        // No inverter to attach Logger Serial to yet — Deye Station ID above
-        // already saved (setSite(data) ran). Offer to create one inline
-        // instead of just erroring and leaving the user to find the
-        // Equipment tab themselves.
+        setSavedInverterSerial(invSerial);
+      } else if (value !== null || invSerial !== '') {
+        // No inverter to attach the serials to yet — Deye Station ID above already saved
+        // (setSite(data) ran). Offer to create one inline (pre-filled with what was typed)
+        // instead of just erroring and leaving the user to find the Equipment tab themselves.
+        setNewInvSerial(invSerial);
+        setNewInvMake(prev => prev || 'Deye');
         setNeedsInverterForLogger(true);
         setCreateInverterError(null);
         return;
@@ -850,6 +867,8 @@ export default function SiteDetail() {
       });
       setActiveInverterId(inverter.id);
       setSavedLoggerSerial(value ?? '');
+      setInverterSerial(serial);
+      setSavedInverterSerial(serial);
       setNeedsInverterForLogger(false);
       setNewInvMake(''); setNewInvSerial(''); setNewInvCapacityKva('');
       setEditingDeyeSettings(false);
@@ -1079,8 +1098,11 @@ export default function SiteDetail() {
                     <Field isDark={isDark} label="Deye station ID" hint="from the Deye Cloud portal">
                       <input type="number" value={deyeStationId} onChange={e => setDeyeStationId(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 12616" />
                     </Field>
-                    <Field isDark={isDark} label="Logger serial" hint="the Wi-Fi dongle on the inverter (SolarmanV5 / LSW3)">
-                      <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 2509273375" />
+                    <Field isDark={isDark} label="Inverter serial" hint="the number on the inverter's label — Deye uses it to send full readings">
+                      <input value={inverterSerial} onChange={e => setInverterSerial(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. 2509273375" />
+                    </Field>
+                    <Field isDark={isDark} label="Logger serial (optional)" hint="the Wi-Fi dongle's serial — tried first if filled in; leave blank to use the inverter serial">
+                      <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} disabled={!editingDeyeSettings || busy} style={roStyle(editingDeyeSettings)} placeholder="e.g. D25728371890" />
                     </Field>
                   </div>
 
@@ -1088,7 +1110,7 @@ export default function SiteDetail() {
                     <div style={{ marginTop: 16, padding: 16, borderRadius: 10, background: palette.err.bg, border: `1px solid ${palette.err.border}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: palette.err.color, fontSize: '0.85rem', fontWeight: 600 }}>
                         <AlertTriangle size={15} style={{ flexShrink: 0 }} />
-                        This site doesn't have an inverter record yet — add one to attach the Logger Serial
+                        This site doesn't have an inverter record yet — add one to save the serial numbers
                       </div>
                       {createInverterError && (
                         <div style={{ marginBottom: 10, color: palette.err.color, fontSize: '0.8rem' }}>{createInverterError}</div>
@@ -1106,7 +1128,7 @@ export default function SiteDetail() {
                       </div>
                       <div style={{ marginTop: 12 }}>
                         <Btn isDark={isDark} size="sm" disabled={creatingInverter} onClick={createInverterForLogger}>
-                          {creatingInverter ? 'Creating…' : 'Create inverter & save Logger Serial'}
+                          {creatingInverter ? 'Creating…' : 'Create inverter & save serials'}
                         </Btn>
                       </div>
                     </div>
