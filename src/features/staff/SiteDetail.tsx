@@ -455,6 +455,7 @@ export default function SiteDetail() {
   const [vendorPhone, setVendorPhone] = useState('');
   const [vendorEmail, setVendorEmail] = useState('');
   const [commissionedOn, setCommissionedOn] = useState('');
+  const [gridType, setGridType] = useState('hybrid');
   const [editingDeyeSettings, setEditingDeyeSettings] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -601,6 +602,7 @@ export default function SiteDetail() {
       setVendorPhone(data.vendor_phone ?? '');
       setVendorEmail(data.vendor_email ?? '');
       setCommissionedOn(data.commissioned_on ?? '');
+      setGridType(data.grid_type ?? 'hybrid');
     } catch (e) {
       setSite(null);
       setError(e instanceof Error ? e.message : 'Failed to load site');
@@ -721,6 +723,7 @@ export default function SiteDetail() {
     setVendorName(site?.vendor_name ?? '');
     setVendorGst(site?.vendor_gst ?? '');
     setCommissionedOn(site?.commissioned_on ?? '');
+    setGridType(site?.grid_type ?? 'hybrid');
     setVendorPhone(site?.vendor_phone ?? '');
     setVendorEmail(site?.vendor_email ?? '');
     setCalcNote(null);
@@ -773,6 +776,7 @@ export default function SiteDetail() {
       if (capacityKw.trim() !== '' && Number.isFinite(parsedCapacity)) payload.capacity_kw = parsedCapacity;
       if (latitude.trim() !== '' && Number.isFinite(parsedLatitude)) payload.latitude = parsedLatitude;
       if (longitude.trim() !== '' && Number.isFinite(parsedLongitude)) payload.longitude = parsedLongitude;
+      payload.grid_type = gridType;
       payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
       payload.vendor_name = vendorName.trim();
       payload.vendor_gst = vendorGst.trim();
@@ -1056,6 +1060,17 @@ export default function SiteDetail() {
 
                   <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>Billing</div>
+                  <Field
+                    isDark={isDark}
+                    label="Grid type"
+                    hint="On-grid: no battery. Off-grid: battery, no grid. Hybrid: both. Decides which alerts and dashboard cards apply."
+                  >
+                    <select value={gridType} onChange={e => setGridType(e.target.value)} style={ro({ maxWidth: 240 })} disabled={!editingDetails || busy}>
+                      <option value="on_grid">On-grid</option>
+                      <option value="off_grid">Off-grid</option>
+                      <option value="hybrid">Hybrid</option>
+                    </select>
+                  </Field>
                   <Field
                     isDark={isDark}
                     label="Net metering started on"

@@ -44,6 +44,7 @@ export default function CommissioningWizard() {
   const [tiltDeg, setTiltDeg] = useState('');
   const [azimuthDeg, setAzimuthDeg] = useState('');
   const [timezoneValue, setTimezoneValue] = useState('');
+  const [gridType, setGridType] = useState('hybrid');
   const [loggerSerial, setLoggerSerial] = useState('');
   // Inverter record created right after the site, so Deye Cloud can fetch full readings from day one.
   const [inverterMake, setInverterMake] = useState('Deye');
@@ -202,6 +203,7 @@ export default function CommissioningWizard() {
       if (tilt !== undefined) payload.tilt_deg = tilt;
       if (azimuth !== undefined) payload.azimuth_deg = azimuth;
       if (timezoneValue.trim()) payload.timezone = timezoneValue.trim();
+      payload.grid_type = gridType;
       if (logger !== undefined) payload.deye_station_id = logger;
       // Serial numbers live on the Inverter, not the Site, so the inverter is created right after the site.
       const res = await apiService.createSiteStaff(payload);
@@ -525,6 +527,14 @@ export default function CommissioningWizard() {
                         <label style={labelStyle}>Azimuth (deg)</label>
                         <input value={azimuthDeg} onChange={e => setAzimuthDeg(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g., 180" />
                       </div>
+                    </div>
+                    <div style={{ marginTop: 16 }}>
+                      <label style={labelStyle}>Grid type</label>
+                      <select value={gridType} onChange={e => setGridType(e.target.value)} style={{ ...inputStyle, marginTop: 6 }}>
+                        <option value="on_grid">On-grid (no battery)</option>
+                        <option value="off_grid">Off-grid (battery, no grid)</option>
+                        <option value="hybrid">Hybrid (grid + battery)</option>
+                      </select>
                     </div>
                     <div style={{ marginTop: 16 }}>
                       <label style={labelStyle}>Timezone</label>
