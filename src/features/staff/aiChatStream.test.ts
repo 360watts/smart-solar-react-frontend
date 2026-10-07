@@ -63,3 +63,10 @@ describe('httpErrorMessage', () => {
     expect(httpErrorMessage(500, '')).toContain('Something went wrong');
   });
 });
+
+describe('parseSSEBuffer follow-up chips', () => {
+  it('emits suggest events and ignores bad JSON', () => {
+    expect(parseSSEBuffer(': suggest ["A","B"]\n').events).toEqual([{ type: 'suggest', items: ['A', 'B'] }]);
+    expect(parseSSEBuffer(': suggest {x\n').events).toEqual([]);
+  });
+});

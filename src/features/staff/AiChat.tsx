@@ -24,6 +24,8 @@ interface Message {
   isError?: boolean;
   /** The stream ended before the answer was complete (connection drop, no [DONE] frame). */
   cutOff?: boolean;
+  /** Tappable follow-up questions offered after a short answer. */
+  suggestions?: string[];
   diagnosticResult?: DiagnoseResult;
 }
 
@@ -265,6 +267,7 @@ const AiChat: React.FC = () => {
         buf = parsed.remainder;
         for (const ev of parsed.events) {
           if (ev.type === 'done') { sawDone = true; continue; }
+          if (ev.type === 'suggest') { patchMessage(asstId, { suggestions: ev.items }); continue; }
           if (ev.type === 'error') {
             pendingRef.current = ''; // unflushed partial text must not land after the error notice
             patchMessage(asstId, { content: ev.message, isError: true });
@@ -494,6 +497,13 @@ const AiChat: React.FC = () => {
                 )}
               </div>
             ))}
+            {!streaming && messages[messages.length - 1]?.suggestions?.length ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 0' }}>
+                {messages[messages.length - 1].suggestions!.map(s => (
+                  <button key={s} className="aif-cmd" onClick={() => sendMessage(s)}>{s}</button>
+                ))}
+              </div>
+            ) : null}
             <div ref={bottomRef} />
           </div>
 

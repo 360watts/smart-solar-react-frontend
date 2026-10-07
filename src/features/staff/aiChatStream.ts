@@ -9,6 +9,7 @@
 export type SSEEvent =
   | { type: 'token'; text: string }
   | { type: 'error'; message: string }
+  | { type: 'suggest'; items: string[] }
   | { type: 'done' };
 
 /** Backend keeps the last 10 turns; sending more is dead payload. */
@@ -37,6 +38,14 @@ export function parseSSEBuffer(
 
   for (const raw of lines) {
     const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    // `: suggest ["a","b"]` is an SSE comment frame carrying tappable follow-ups (older clients ignore it).
+    if (line.startsWith(': suggest ')) {
+      try {
+        const items = (JSON.parse(line.slice(10)) as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 3);
+        if (items.length) events.push({ type: 'suggest', items });
+      } catch { /* malformed chip frame: show the answer without chips */ }
+      continue;
+    }
     if (!line.startsWith('data: ')) continue;
     const token = line.slice(6);
     if (token === '[DONE]') {
