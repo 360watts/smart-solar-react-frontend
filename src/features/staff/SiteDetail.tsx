@@ -1023,7 +1023,7 @@ export default function SiteDetail() {
                         )}
                       </div>
                     </Field>
-                    <Field isDark={isDark} label="Grid type" hint="decides which alerts and dashboard cards apply">
+                    <Field isDark={isDark} label="Grid type">
                       <select value={gridType} onChange={e => setGridType(e.target.value)} style={ro()} disabled={!editingDetails || busy}>
                         <option value="on_grid">On-grid (no battery)</option>
                         <option value="off_grid">Off-grid (battery, no grid)</option>

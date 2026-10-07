@@ -505,6 +505,7 @@ const AiChat: React.FC = () => {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
+                maxLength={3000} // the API rejects a message over 4000 characters
                 placeholder="ask about fleet, devices, alerts, telemetry…"
                 className="aif-textarea"
                 disabled={streaming}
