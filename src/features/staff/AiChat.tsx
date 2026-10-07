@@ -500,7 +500,7 @@ const AiChat: React.FC = () => {
             {!streaming && messages[messages.length - 1]?.suggestions?.length ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 0' }}>
                 {messages[messages.length - 1].suggestions!.map(s => (
-                  <button key={s} className="aif-cmd" onClick={() => sendMessage(s)}>{s}</button>
+                  <button key={s} className="aif-cmd" onClick={() => { setInput(s); inputRef.current?.focus(); }}>{s}</button>
                 ))}
               </div>
             ) : null}

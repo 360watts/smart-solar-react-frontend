@@ -2191,6 +2191,10 @@ export interface SiteSavingsData {
     ebExportUnits: number;
     evUnits: number;
   };
+  energyWallet?: {
+    balanceKwh: number;
+    projectedBalanceKwh: number;
+  };
   savings: {
     billWithoutSolar: number;
     savingsAmount: number;
@@ -2210,6 +2214,7 @@ export interface UpdateSavingsRecordPayload {
   eb_bill_amount?: number | null;
   upfront_investment?: number;
   payment_status?: string;
+  wallet_balance_kwh?: number;
 }
 
 // ─── Hardware Health ──────────────────────────────────────────────────────────

@@ -26,8 +26,10 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   const [ebBill, setEbBill] = useState('');
   const [investment, setInvestment] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('due');
+  const [walletKwh, setWalletKwh] = useState('');
 
   const syncFields = (d: SiteSavingsData) => {
+    setWalletKwh(d.energyWallet ? String(d.energyWallet.balanceKwh) : '');
     setEbBill(d.electricityBill.amount != null ? String(d.electricityBill.amount) : '');
     setInvestment(d.investment.upfrontAmount != null ? String(d.investment.upfrontAmount) : '');
     setPaymentStatus(d.electricityBill.status || 'due');
@@ -57,6 +59,9 @@ export default function SavingsBillingEditor({ siteId }: Props) {
       if (ebBill !== '') payload.eb_bill_amount = parseFloat(ebBill);
       if (investment !== '') payload.upfront_investment = parseFloat(investment);
       payload.payment_status = paymentStatus;
+      // Only send when changed, so saving a bill doesn't overwrite the ledger.
+      const current = data?.energyWallet?.balanceKwh;
+      if (walletKwh !== '' && parseFloat(walletKwh) !== current) payload.wallet_balance_kwh = parseFloat(walletKwh);
       const res = await apiService.updateSavingsRecord(siteId, payload);
       setData(res);
       syncFields(res);
@@ -324,6 +329,21 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                   />
                 </div>
                 <div>
+                  <div style={sectionLabel}>Energy Wallet — credit brought into this period (kWh)</div>
+                  <input
+                    type="number"
+                    step="0.001"
+                    style={inputStyle}
+                    value={walletKwh}
+                    onChange={e => setWalletKwh(e.target.value)}
+                    placeholder="Banked units on the previous TANGEDCO bill"
+                  />
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                    Enter the banked units carried forward on the bill BEFORE {data.electricityBill.period}.
+                    This period's own surplus is added automatically when the next period starts.
+                  </div>
+                </div>
+                <div>
                   <div style={sectionLabel}>Payment Status</div>
                   <select style={selectStyle} value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)}>
                     {PAYMENT_STATUS_OPTIONS.map(o => (
@@ -361,6 +381,15 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                   <div style={sectionLabel}>Cumulative Savings</div>
                   <div style={{ ...valueAmt, color: '#2FBF71' }}>₹{fmt(data.investment.savedAmount)}</div>
                 </div>
+                {data.energyWallet && (
+                  <div>
+                    <div style={sectionLabel}>Energy Wallet (brought in)</div>
+                    <div style={valueMuted}>
+                      {fmt(data.energyWallet.balanceKwh, 1)} kWh
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}> → {fmt(data.energyWallet.projectedBalanceKwh, 1)} projected</span>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <div style={sectionLabel}>Payment Status</div>
                   <div style={{ ...valueMuted, color: statusColor(data.electricityBill.status), fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
