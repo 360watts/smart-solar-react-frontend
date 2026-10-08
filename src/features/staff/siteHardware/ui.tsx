@@ -213,7 +213,7 @@ function usePrefersReducedMotion() {
  * clipped strip and never show). The panel also flips above the trigger when it
  * would run past the viewport, and animates in from the corner it hangs off.
  */
-function OverflowMenu({ isDark, actions }: { isDark: boolean; actions: ItemAction[] }) {
+export function OverflowMenu({ isDark, actions, label = 'More actions' }: { isDark: boolean; actions: ItemAction[]; label?: string }) {
   const t = useTokens(isDark);
   const reduceMotion = usePrefersReducedMotion();
   const [render, setRender] = useState(false);
@@ -320,7 +320,7 @@ function OverflowMenu({ isDark, actions }: { isDark: boolean; actions: ItemActio
         type="button"
         aria-haspopup="menu"
         aria-expanded={render}
-        aria-label="More actions"
+        aria-label={label}
         onClick={() => (render ? closeMenu() : openMenu())}
         onKeyDown={e => {
           if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMenu(); }
@@ -625,7 +625,7 @@ export function controlStyle(isDark: boolean): React.CSSProperties {
   };
 }
 
-export function DetailsToggle({ isDark, open, onToggle }: { isDark: boolean; open: boolean; onToggle: () => void }) {
+export function DetailsToggle({ isDark, open, onToggle, label = 'Advanced details' }: { isDark: boolean; open: boolean; onToggle: () => void; label?: string }) {
   const t = useTokens(isDark);
   return (
     <button
@@ -633,7 +633,7 @@ export function DetailsToggle({ isDark, open, onToggle }: { isDark: boolean; ope
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, cursor: 'pointer', fontFamily: t.body, fontSize: '0.82rem', color: t.ink2 }}
     >
       <ChevronRight size={13} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }} />
-      Advanced details
+      {label}
     </button>
   );
 }

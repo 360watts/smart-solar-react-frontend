@@ -36,7 +36,7 @@ const NAV_STAFF = [
 
 const NAV_ADMIN = [
   { path: '/employees',   label: 'Employees',   icon: Briefcase },
-  { path: '/departments', label: 'Departments', icon: Users     },
+  { path: '/teams', label: 'Teams', icon: Users     },
   { path: '/analytics',   label: 'Analytics',   icon: TrendingUp },
 ];
 

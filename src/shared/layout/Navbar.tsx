@@ -44,7 +44,7 @@ const STAFF_CONFIG_NAV = [
 
 const ADMIN_NAV = [
   { path: '/employees', label: 'Employees', icon: <Briefcase {...iconProps} /> },
-  { path: '/departments', label: 'Departments', icon: <Users {...iconProps} /> },
+  { path: '/teams', label: 'Teams', icon: <Users {...iconProps} /> },
 ];
 
 const STAFF_NAV = [

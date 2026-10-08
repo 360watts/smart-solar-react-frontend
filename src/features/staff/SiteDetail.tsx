@@ -49,6 +49,7 @@ interface EqInverter {
   anti_islanding: boolean; teda_scheme: string;
   installed_at: string | null; warranty_expires_at: string | null; is_active: boolean; notes: string;
   logger_serial: string | null;
+  startup_voltage_v: string | null; rated_pv_voltage_v: string | null; max_short_circuit_current_a: string | null; mppt_count: string | null; strings_per_mppt: string | null; operating_temp_min_c: string | null; operating_temp_max_c: string | null; warranty_years: string | null; rated_ac_power_kw: string | null; rated_ac_current_a: string | null; max_ac_current_a: string | null; max_efficiency_pct: string | null; mppt_efficiency_pct: string | null; rated_output_voltage: string;
 }
 interface EqBattery {
   id: number; site: number;
@@ -68,7 +69,7 @@ interface EqPanel {
 }
 interface EqBundle { inverters: EqInverter[]; batteries: EqBattery[]; panels: EqPanel[]; }
 
-const EQ_TEXT_FIELDS = new Set(['make','model_name','serial_number','teda_scheme','technology','notes','logger_serial']);
+const EQ_TEXT_FIELDS = new Set(['make','model_name','serial_number','teda_scheme','technology','notes','logger_serial','rated_output_voltage']);
 const eqCleanNulls = (obj: Record<string, any>) =>
   Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, v !== '' ? v : EQ_TEXT_FIELDS.has(k) ? '' : null]));
 const eqIsBlank = (v: unknown) => String(v ?? '').trim() === '';
@@ -94,6 +95,7 @@ const blankEqInverter = (): Omit<EqInverter,'id'|'site'> => ({
   max_input_voltage_v:'',mppt_voltage_min_v:'',mppt_voltage_max_v:'',
   operating_voltage_min_v:'',operating_voltage_max_v:'',max_input_current_a:'',
   anti_islanding:true,teda_scheme:'',installed_at:'',warranty_expires_at:'',is_active:true,notes:'',logger_serial:'',
+  startup_voltage_v:'',rated_pv_voltage_v:'',max_short_circuit_current_a:'',mppt_count:'',strings_per_mppt:'',operating_temp_min_c:'',operating_temp_max_c:'',warranty_years:'',rated_ac_power_kw:'',rated_ac_current_a:'',max_ac_current_a:'',max_efficiency_pct:'',mppt_efficiency_pct:'',rated_output_voltage:'',
 });
 const blankEqBattery = (): Omit<EqBattery,'id'|'site'> => ({
   make:'',model_name:'',serial_number:'',capacity_kwh:'',
@@ -225,6 +227,26 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
                 <EqFormField label="MPPT Max (V)" value={form.mppt_voltage_max_v??''} onChange={v=>f('mppt_voltage_max_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Operating Min (V)" value={form.operating_voltage_min_v??''} onChange={v=>f('operating_voltage_min_v',v)} type="number" isDark={isDark}/>
                 <EqFormField label="Operating Max (V)" value={form.operating_voltage_max_v??''} onChange={v=>f('operating_voltage_max_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Start-up Voltage (V)" value={form.startup_voltage_v??''} onChange={v=>f('startup_voltage_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Rated PV Input Voltage (V)" value={form.rated_pv_voltage_v??''} onChange={v=>f('rated_pv_voltage_v',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Max Short-circuit Current (A)" value={form.max_short_circuit_current_a??''} onChange={v=>f('max_short_circuit_current_a',v)} type="number" isDark={isDark}/>
+                <EqFormField label="No. of MPP Trackers" value={form.mppt_count??''} onChange={v=>f('mppt_count',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Strings per MPP Tracker" value={form.strings_per_mppt??''} onChange={v=>f('strings_per_mppt',v)} type="number" isDark={isDark}/>
+              </div>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>AC output <span style={{fontWeight:400}}>· optional</span></div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Rated AC Power (kW)" value={form.rated_ac_power_kw??''} onChange={v=>f('rated_ac_power_kw',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Rated AC Current (A)" value={form.rated_ac_current_a??''} onChange={v=>f('rated_ac_current_a',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Max AC Current (A)" value={form.max_ac_current_a??''} onChange={v=>f('max_ac_current_a',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Rated Output Voltage / Range" value={form.rated_output_voltage??''} onChange={v=>f('rated_output_voltage',v)} isDark={isDark} placeholder="e.g., 230/400V, 0.85Un-1.1Un"/>
+              </div>
+              <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Efficiency, temperature &amp; warranty <span style={{fontWeight:400}}>· optional</span></div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <EqFormField label="Max Efficiency (%)" value={form.max_efficiency_pct??''} onChange={v=>f('max_efficiency_pct',v)} type="number" isDark={isDark}/>
+                <EqFormField label="MPPT Efficiency (%)" value={form.mppt_efficiency_pct??''} onChange={v=>f('mppt_efficiency_pct',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Operating Temp Min (°C)" value={form.operating_temp_min_c??''} onChange={v=>f('operating_temp_min_c',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Operating Temp Max (°C)" value={form.operating_temp_max_c??''} onChange={v=>f('operating_temp_max_c',v)} type="number" isDark={isDark}/>
+                <EqFormField label="Warranty (years)" value={form.warranty_years??''} onChange={v=>f('warranty_years',v)} type="number" isDark={isDark}/>
               </div>
               <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Installation <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>

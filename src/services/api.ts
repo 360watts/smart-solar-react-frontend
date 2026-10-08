@@ -896,18 +896,31 @@ class ApiService {
     return this.request(`/auth/check-contact/?${param}`);
   }
 
-  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<any> {
-    const cacheKey = `employees_${search || 'all'}_${page}_${pageSize}`;
+  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE, role?: string): Promise<any> {
+    const cacheKey = `employees_${search || 'all'}_${role || 'any'}_${page}_${pageSize}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
     const params = new URLSearchParams();
     if (search) params.set('search', search);
+    if (role) params.set('role', role);
     params.set('page', String(page));
     params.set('page_size', String(pageSize));
     const data = await this.request(`/employees/?${params.toString()}`);
     cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
+  }
+
+  /** Tab counts for the Employees page: one tiny request per role (only `count` is used). */
+  async getEmployeeRoleCounts(): Promise<{ all: number; admin: number; employee: number; viewer: number }> {
+    const one = async (role?: string): Promise<number> => {
+      const params = new URLSearchParams({ page: '1', page_size: '1' });
+      if (role) params.set('role', role);
+      const data = await this.request(`/employees/?${params.toString()}`);
+      return data?.count ?? 0;
+    };
+    const [all, admin, employee, viewer] = await Promise.all([one(), one('admin'), one('employee'), one('viewer')]);
+    return { all, admin, employee, viewer };
   }
 
   async createEmployee(employeeData: any): Promise<any> {
@@ -931,9 +944,12 @@ class ApiService {
   }
 
   async deleteEmployee(id: number): Promise<any> {
-    return this.request(`/employees/${id}/`, {
+    const result = await this.request(`/employees/${id}/`, {
       method: 'DELETE',
     });
+    cacheService.clearPattern(/^users_/);
+    cacheService.clearPattern(/^employees_/);
+    return result;
   }
   
   async getUserDevices(userId: number): Promise<any[]> {
@@ -1941,28 +1957,28 @@ class ApiService {
     return this.request(`/fleet-health/daily-report/${query}`);
   }
 
-  // ─── Departments ────────────────────────────────────────────────────────────
+  // ─── Teams ──────────────────────────────────────────────────────────────────
 
-  async getDepartments(): Promise<{ results: any[]; count?: number; total_pages?: number }> {
-    return this.request('/departments/');
+  async getTeams(): Promise<{ results: any[]; count?: number; total_pages?: number }> {
+    return this.request('/teams/');
   }
 
-  async createDepartment(data: { name: string; slug: string; description?: string }): Promise<any> {
-    return this.request('/departments/', {
+  async createTeam(data: { name: string; slug?: string; description?: string }): Promise<any> {
+    return this.request('/teams/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateDepartment(id: number, data: { name?: string; slug?: string; description?: string; is_active?: boolean }): Promise<any> {
-    return this.request(`/departments/${id}/`, {
+  async updateTeam(id: number, data: { name?: string; slug?: string; description?: string; is_active?: boolean }): Promise<any> {
+    return this.request(`/teams/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteDepartment(id: number): Promise<any> {
-    return this.request(`/departments/${id}/`, {
+  async deleteTeam(id: number): Promise<any> {
+    return this.request(`/teams/${id}/`, {
       method: 'DELETE',
     });
   }

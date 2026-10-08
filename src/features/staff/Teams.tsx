@@ -16,12 +16,12 @@ import {
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import MobileDepartments from '../mobile/staff/MobileDepartments';
+import MobileTeams from '../mobile/staff/MobileTeams';
 import PageHeader from '../../shared/layout/PageHeader';
 import { getDesignTokens } from '../../shared/theme';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../shared/ui/sheet';
 
-interface Department {
+interface Team {
   id: number;
   name: string;
   slug: string;
@@ -30,7 +30,7 @@ interface Department {
   created_at: string;
 }
 
-interface EmployeeDepartment {
+interface EmployeeTeam {
   id: number;
   name: string;
 }
@@ -41,10 +41,10 @@ interface Employee {
   last_name?: string;
   email?: string;
   is_active?: boolean;
-  department?: EmployeeDepartment | null;
+  team?: EmployeeTeam | null;
 }
 
-interface DepartmentFormState {
+interface TeamFormState {
   name: string;
   slug: string;
   description: string;
@@ -54,13 +54,13 @@ interface DepartmentFormState {
 type SortKey = 'name' | 'slug' | 'members' | 'status' | 'created';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
-type DepartmentRow = Department & {
+type TeamRow = Team & {
   memberCount: number;
   activeMemberCount: number;
   coverageTone: 'empty' | 'light' | 'full';
 };
 
-const initialForm: DepartmentFormState = {
+const initialForm: TeamFormState = {
   name: '',
   slug: '',
   description: '',
@@ -90,13 +90,13 @@ const fullName = (employee: Employee) => {
   return name || employee.email || `Employee #${employee.id}`;
 };
 
-const Departments: React.FC = () => {
+const Teams: React.FC = () => {
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileDepartments />;
+  if (isMobile) return <MobileTeams />;
 
   const { isDark } = useTheme();
   const tokens = getDesignTokens(isDark);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -105,25 +105,25 @@ const Departments: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentRow | null>(null);
-  const [form, setForm] = useState<DepartmentFormState>(initialForm);
+  const [selectedTeam, setSelectedTeam] = useState<TeamRow | null>(null);
+  const [form, setForm] = useState<TeamFormState>(initialForm);
   const [slugTouched, setSlugTouched] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   const fetchPageData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [departmentResponse, employeeResponse] = await Promise.all([
-        apiService.getDepartments(),
+      const [teamResponse, employeeResponse] = await Promise.all([
+        apiService.getTeams(),
         apiService.getEmployees(undefined, 1, 500),
       ]);
-      setDepartments(Array.isArray(departmentResponse.results) ? departmentResponse.results : []);
+      setTeams(Array.isArray(teamResponse.results) ? teamResponse.results : []);
       setEmployees(Array.isArray(employeeResponse.results) ? employeeResponse.results : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load departments');
+      setError(err instanceof Error ? err.message : 'Failed to load teams');
     } finally {
       setLoading(false);
     }
@@ -136,51 +136,51 @@ const Departments: React.FC = () => {
   const memberMap = useMemo(() => {
     const map = new Map<number, Employee[]>();
     for (const employee of employees) {
-      const departmentId = employee.department?.id;
-      if (!departmentId) continue;
-      const current = map.get(departmentId) ?? [];
+      const teamId = employee.team?.id;
+      if (!teamId) continue;
+      const current = map.get(teamId) ?? [];
       current.push(employee);
-      map.set(departmentId, current);
+      map.set(teamId, current);
     }
     return map;
   }, [employees]);
 
-  const rows = useMemo<DepartmentRow[]>(() => {
-    return departments.map((department) => {
-      const departmentEmployees = memberMap.get(department.id) ?? [];
-      const activeMemberCount = departmentEmployees.filter((employee) => employee.is_active !== false).length;
-      const memberCount = departmentEmployees.length;
-      let coverageTone: DepartmentRow['coverageTone'] = 'empty';
+  const rows = useMemo<TeamRow[]>(() => {
+    return teams.map((team) => {
+      const teamEmployees = memberMap.get(team.id) ?? [];
+      const activeMemberCount = teamEmployees.filter((employee) => employee.is_active !== false).length;
+      const memberCount = teamEmployees.length;
+      let coverageTone: TeamRow['coverageTone'] = 'empty';
       if (memberCount >= 5) coverageTone = 'full';
       else if (memberCount > 0) coverageTone = 'light';
 
       return {
-        ...department,
+        ...team,
         memberCount,
         activeMemberCount,
         coverageTone,
       };
     });
-  }, [departments, memberMap]);
+  }, [teams, memberMap]);
 
   const stats = useMemo(() => {
-    const departmentsWithMembers = rows.filter((row) => row.memberCount > 0).length;
-    const unassignedEmployees = employees.filter((employee) => !employee.department?.id).length;
+    const teamsWithMembers = rows.filter((row) => row.memberCount > 0).length;
+    const unassignedEmployees = employees.filter((employee) => !employee.team?.id).length;
     return {
       total: rows.length,
       active: rows.filter((row) => row.is_active).length,
-      staffed: departmentsWithMembers,
+      staffed: teamsWithMembers,
       unassignedEmployees,
     };
   }, [employees, rows]);
 
-  const filteredDepartments = useMemo(() => {
+  const filteredTeams = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = rows.filter((department) => {
-      if (statusFilter === 'active' && !department.is_active) return false;
-      if (statusFilter === 'inactive' && department.is_active) return false;
+    const filtered = rows.filter((team) => {
+      if (statusFilter === 'active' && !team.is_active) return false;
+      if (statusFilter === 'inactive' && team.is_active) return false;
       if (!term) return true;
-      return [department.name, department.slug, department.description ?? '']
+      return [team.name, team.slug, team.description ?? '']
         .some((value) => value.toLowerCase().includes(term));
     });
 
@@ -206,30 +206,30 @@ const Departments: React.FC = () => {
 
   const selectedIdRef = useRef<number | null>(null);
   useEffect(() => {
-    selectedIdRef.current = selectedDepartment?.id ?? null;
-  }, [selectedDepartment]);
+    selectedIdRef.current = selectedTeam?.id ?? null;
+  }, [selectedTeam]);
 
   useEffect(() => {
     if (selectedIdRef.current === null) return;
     const next = rows.find((row) => row.id === selectedIdRef.current) ?? null;
-    setSelectedDepartment(next);
+    setSelectedTeam(next);
   }, [rows]);
 
   const openCreate = () => {
-    setEditingDepartment(null);
+    setEditingTeam(null);
     setForm(initialForm);
     setSlugTouched(false);
     setError(null);
     setFormOpen(true);
   };
 
-  const openEdit = (department: Department) => {
-    setEditingDepartment(department);
+  const openEdit = (team: Team) => {
+    setEditingTeam(team);
     setForm({
-      name: department.name,
-      slug: department.slug,
-      description: department.description ?? '',
-      is_active: department.is_active,
+      name: team.name,
+      slug: team.slug,
+      description: team.description ?? '',
+      is_active: team.is_active,
     });
     setSlugTouched(true);
     setError(null);
@@ -238,12 +238,12 @@ const Departments: React.FC = () => {
 
   const closeForm = () => {
     setFormOpen(false);
-    setEditingDepartment(null);
+    setEditingTeam(null);
     setForm(initialForm);
     setSlugTouched(false);
   };
 
-  const handleFormChange = <K extends keyof DepartmentFormState>(field: K, value: DepartmentFormState[K]) => {
+  const handleFormChange = <K extends keyof TeamFormState>(field: K, value: TeamFormState[K]) => {
     setForm((current) => {
       const next = { ...current, [field]: value };
       if (field === 'name' && !slugTouched) {
@@ -255,7 +255,7 @@ const Departments: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.slug.trim()) {
-      setError('Department name and slug are required.');
+      setError('Team name and slug are required.');
       return;
     }
 
@@ -269,10 +269,10 @@ const Departments: React.FC = () => {
         is_active: form.is_active,
       };
 
-      if (editingDepartment) {
-        await apiService.updateDepartment(editingDepartment.id, payload);
+      if (editingTeam) {
+        await apiService.updateTeam(editingTeam.id, payload);
       } else {
-        await apiService.createDepartment({
+        await apiService.createTeam({
           name: payload.name,
           slug: payload.slug,
           description: payload.description || undefined,
@@ -282,7 +282,7 @@ const Departments: React.FC = () => {
       closeForm();
       await fetchPageData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save department');
+      setError(err instanceof Error ? err.message : 'Failed to save team');
     } finally {
       setSaving(false);
     }
@@ -293,33 +293,33 @@ const Departments: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      await apiService.deleteDepartment(deleteTarget.id);
-      if (selectedDepartment?.id === deleteTarget.id) {
-        setSelectedDepartment(null);
+      await apiService.deleteTeam(deleteTarget.id);
+      if (selectedTeam?.id === deleteTarget.id) {
+        setSelectedTeam(null);
       }
       setDeleteTarget(null);
       await fetchPageData();
     } catch (err) {
       setDeleteTarget(null);
-      setError(err instanceof Error ? err.message : 'Failed to delete department');
+      setError(err instanceof Error ? err.message : 'Failed to delete team');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleToggleActive = async (department: Department) => {
+  const handleToggleActive = async (team: Team) => {
     setSaving(true);
     setError(null);
     try {
-      await apiService.updateDepartment(department.id, {
-        name: department.name,
-        slug: department.slug,
-        description: department.description ?? '',
-        is_active: !department.is_active,
+      await apiService.updateTeam(team.id, {
+        name: team.name,
+        slug: team.slug,
+        description: team.description ?? '',
+        is_active: !team.is_active,
       });
       await fetchPageData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update department status');
+      setError(err instanceof Error ? err.message : 'Failed to update team status');
     } finally {
       setSaving(false);
     }
@@ -343,7 +343,7 @@ const Departments: React.FC = () => {
 
   const statCards = [
     {
-      label: 'Departments',
+      label: 'Teams',
       value: stats.total,
       meta: `${stats.active} active`,
       icon: Building2,
@@ -351,7 +351,7 @@ const Departments: React.FC = () => {
       tint: tokens.primarySoft,
     },
     {
-      label: 'Staffed Teams',
+      label: 'Teams with people',
       value: stats.staffed,
       meta: `${stats.total - stats.staffed} without members`,
       icon: Users,
@@ -361,24 +361,24 @@ const Departments: React.FC = () => {
     {
       label: 'Unassigned Staff',
       value: stats.unassignedEmployees,
-      meta: 'Need department mapping',
+      meta: 'Need a team',
       icon: ShieldCheck,
       accent: tokens.warning,
       tint: tokens.warningSoft,
     },
   ];
 
-  const selectedMembers = selectedDepartment ? memberMap.get(selectedDepartment.id) ?? [] : [];
+  const selectedMembers = selectedTeam ? memberMap.get(selectedTeam.id) ?? [] : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
       <PageHeader
-        title="Departments"
-        subtitle="Admin workspace for operational ownership, staffing structure, and assignment readiness."
+        title="Teams"
+        subtitle="Create teams and see who is on each one."
         rightSlot={(
           <button onClick={openCreate} style={primaryButtonStyle(tokens)}>
             <Plus size={14} />
-            Create Department
+            Create Team
           </button>
         )}
       />
@@ -421,7 +421,7 @@ const Departments: React.FC = () => {
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
               }}>
-                Staff Ops Structure
+                Teams
               </div>
               <h2 style={{
                 margin: '14px 0 10px',
@@ -432,7 +432,7 @@ const Departments: React.FC = () => {
                 color: tokens.text,
                 maxWidth: 560,
               }}>
-                Run departments like operational queues, not static labels.
+                Keep teams up to date so every teammate knows who they work with.
               </h2>
               <p style={{ margin: 0, fontSize: '0.96rem', lineHeight: 1.65, color: tokens.textDim, maxWidth: 620 }}>
                 The strongest desktop pattern here is a compact command surface: quick search, fast sorting, visible staffing coverage, and a right-side panel for audit details and ownership edits.
@@ -492,7 +492,7 @@ const Departments: React.FC = () => {
           flexWrap: 'wrap',
         }}>
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: tokens.text }}>Department Directory</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: tokens.text }}>Team Directory</div>
             <div style={{ marginTop: 4, fontSize: '0.84rem', color: tokens.textMuted }}>
               Click a row to inspect staffing, audit timing, and ownership readiness.
             </div>
@@ -547,7 +547,7 @@ const Departments: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${tokens.border}` }}>
-                <HeaderCell label="Department" onClick={() => toggleSort('name')} tokens={tokens} active={sortKey === 'name'} />
+                <HeaderCell label="Team" onClick={() => toggleSort('name')} tokens={tokens} active={sortKey === 'name'} />
                 <HeaderCell label="Code" onClick={() => toggleSort('slug')} tokens={tokens} active={sortKey === 'slug'} />
                 <HeaderCell label="Coverage" onClick={() => toggleSort('members')} tokens={tokens} active={sortKey === 'members'} />
                 <HeaderCell label="Status" onClick={() => toggleSort('status')} tokens={tokens} active={sortKey === 'status'} />
@@ -559,10 +559,10 @@ const Departments: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '34px 14px', color: tokens.textMuted, textAlign: 'center' }}>
-                    Loading departments…
+                    Loading teams…
                   </td>
                 </tr>
-              ) : filteredDepartments.length === 0 ? (
+              ) : filteredTeams.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '40px 14px' }}>
                     <div style={{
@@ -573,22 +573,22 @@ const Departments: React.FC = () => {
                       color: tokens.textMuted,
                     }}>
                       <Building2 size={20} />
-                      <div style={{ color: tokens.text, fontWeight: 700 }}>No departments match this view</div>
-                      <div style={{ fontSize: '0.84rem' }}>Clear filters or create a new department to get started.</div>
+                      <div style={{ color: tokens.text, fontWeight: 700 }}>No teams match this view</div>
+                      <div style={{ fontSize: '0.84rem' }}>Clear filters or create a new team to get started.</div>
                       <button onClick={openCreate} style={{ ...primaryButtonStyle(tokens), marginTop: 8 }}>
                         <Plus size={14} />
-                        Create Department
+                        Create Team
                       </button>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredDepartments.map((department) => {
-                  const isSelected = selectedDepartment?.id === department.id;
+                filteredTeams.map((team) => {
+                  const isSelected = selectedTeam?.id === team.id;
                   return (
                     <tr
-                      key={department.id}
-                      onClick={() => setSelectedDepartment(department)}
+                      key={team.id}
+                      onClick={() => setSelectedTeam(team)}
                       style={{
                         borderBottom: `1px solid ${tokens.border}`,
                         background: isSelected ? tokens.primarySoft : 'transparent',
@@ -604,17 +604,17 @@ const Departments: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: department.is_active ? tokens.primarySoft : tokens.surfaceMuted,
-                            color: department.is_active ? tokens.primary : tokens.textMuted,
+                            background: team.is_active ? tokens.primarySoft : tokens.surfaceMuted,
+                            color: team.is_active ? tokens.primary : tokens.textMuted,
                             border: `1px solid ${tokens.border}`,
                             flexShrink: 0,
                           }}>
                             <Building2 size={17} />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, color: tokens.text, fontSize: '0.92rem' }}>{department.name}</div>
+                            <div style={{ fontWeight: 700, color: tokens.text, fontSize: '0.92rem' }}>{team.name}</div>
                             <div style={{ marginTop: 4, fontSize: '0.8rem', color: tokens.textDim, lineHeight: 1.45 }}>
-                              {department.description || 'No operational note recorded.'}
+                              {team.description || 'No operational note recorded.'}
                             </div>
                           </div>
                         </div>
@@ -631,20 +631,20 @@ const Departments: React.FC = () => {
                           fontSize: '0.8rem',
                           color: tokens.text,
                         }}>
-                          {department.slug}
+                          {team.slug}
                         </div>
                       </td>
                       <td style={bodyCellStyle(tokens)}>
-                        <CoverageMeter department={department} tokens={tokens} />
+                        <CoverageMeter team={team} tokens={tokens} />
                       </td>
                       <td style={bodyCellStyle(tokens)}>
-                        <span style={statusChipStyle(tokens, department.is_active)}>
-                          {department.is_active ? 'Active' : 'Inactive'}
+                        <span style={statusChipStyle(tokens, team.is_active)}>
+                          {team.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td style={bodyCellStyle(tokens)}>
                         <div style={{ fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums', fontSize: '0.82rem', color: tokens.text }}>
-                          {formatDate(department.created_at)}
+                          {formatDate(team.created_at)}
                         </div>
                       </td>
                       <td
@@ -652,20 +652,20 @@ const Departments: React.FC = () => {
                         onClick={(event) => event.stopPropagation()}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                          <button onClick={() => openEdit(department)} style={iconButtonStyle(tokens)} aria-label={`Edit ${department.name}`}>
+                          <button onClick={() => openEdit(team)} style={iconButtonStyle(tokens)} aria-label={`Edit ${team.name}`}>
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => setDeleteTarget(department)}
+                            onClick={() => setDeleteTarget(team)}
                             style={{ ...iconButtonStyle(tokens), color: tokens.danger, background: tokens.dangerSoft, border: `1px solid ${tokens.danger}` }}
-                            aria-label={`Delete ${department.name}`}
+                            aria-label={`Delete ${team.name}`}
                           >
                             <Trash2 size={14} />
                           </button>
                           <button
-                            onClick={() => setSelectedDepartment(department)}
+                            onClick={() => setSelectedTeam(team)}
                             style={{ ...iconButtonStyle(tokens), width: 40 }}
-                            aria-label={`Open ${department.name}`}
+                            aria-label={`Open ${team.name}`}
                           >
                             <ChevronRight size={14} />
                           </button>
@@ -681,9 +681,9 @@ const Departments: React.FC = () => {
       </section>
 
       <Sheet
-        open={selectedDepartment !== null}
+        open={selectedTeam !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedDepartment(null);
+          if (!open) setSelectedTeam(null);
         }}
       >
         <SheetContent
@@ -702,7 +702,7 @@ const Departments: React.FC = () => {
             overflowY: 'auto',
           }}
         >
-          {selectedDepartment && (
+          {selectedTeam && (
             <>
               <SheetHeader
                 style={{
@@ -731,7 +731,7 @@ const Departments: React.FC = () => {
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                   }}>
-                    Department Details
+                    Team Details
                   </div>
                   <SheetTitle
                     style={{
@@ -743,14 +743,14 @@ const Departments: React.FC = () => {
                       letterSpacing: '-0.03em',
                     }}
                   >
-                    {selectedDepartment.name}
+                    {selectedTeam.name}
                   </SheetTitle>
                   <SheetDescription style={{ margin: '10px 0 0', color: tokens.textDim, fontSize: '0.86rem', lineHeight: 1.6 }}>
-                    Ownership snapshot, staffing coverage, and department metadata for admin review.
+                    Ownership snapshot, staffing coverage, and team metadata for admin review.
                   </SheetDescription>
                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={statusChipStyle(tokens, selectedDepartment.is_active)}>
-                      {selectedDepartment.is_active ? 'Active' : 'Inactive'}
+                    <span style={statusChipStyle(tokens, selectedTeam.is_active)}>
+                      {selectedTeam.is_active ? 'Active' : 'Inactive'}
                     </span>
                     <span style={{
                       display: 'inline-flex',
@@ -763,7 +763,7 @@ const Departments: React.FC = () => {
                       fontSize: '0.78rem',
                       color: tokens.text,
                     }}>
-                      {selectedDepartment.slug}
+                      {selectedTeam.slug}
                     </span>
                   </div>
                 </div>
@@ -774,22 +774,22 @@ const Departments: React.FC = () => {
                 <div style={detailBlockStyle(tokens)}>
                   <MetricRow
                     label="Staff assigned"
-                    value={String(selectedDepartment.memberCount)}
-                    sub={`${selectedDepartment.activeMemberCount} active`}
+                    value={String(selectedTeam.memberCount)}
+                    sub={`${selectedTeam.activeMemberCount} active`}
                     tokens={tokens}
                   />
                   <MetricRow
                     label="Created"
-                    value={formatDate(selectedDepartment.created_at)}
-                    sub="Department record start"
+                    value={formatDate(selectedTeam.created_at)}
+                    sub="Team record start"
                     tokens={tokens}
                   />
                 </div>
 
                 <div style={detailBlockStyle(tokens)}>
                   <SectionTitle icon={<FileText size={15} />} label="Operational note" tokens={tokens} />
-                  <p style={{ margin: 0, color: selectedDepartment.description ? tokens.textDim : tokens.textMuted, lineHeight: 1.65, fontSize: '0.9rem' }}>
-                    {selectedDepartment.description || 'No department note has been added. Use this space for ownership, workflow, or escalation context.'}
+                  <p style={{ margin: 0, color: selectedTeam.description ? tokens.textDim : tokens.textMuted, lineHeight: 1.65, fontSize: '0.9rem' }}>
+                    {selectedTeam.description || 'No team note has been added. Use this space for ownership, workflow, or escalation context.'}
                   </p>
                 </div>
 
@@ -797,7 +797,7 @@ const Departments: React.FC = () => {
                   <SectionTitle icon={<Users size={15} />} label="Assigned staff" tokens={tokens} />
                   {selectedMembers.length === 0 ? (
                     <div style={{ color: tokens.textMuted, fontSize: '0.84rem', lineHeight: 1.55 }}>
-                      No employees currently point to this department. This is a good candidate for staffing or cleanup.
+                      No employees currently point to this team. This is a good candidate for staffing or cleanup.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -840,19 +840,19 @@ const Departments: React.FC = () => {
                   paddingTop: 2,
                   borderTop: `1px solid ${tokens.border}`,
                 }}>
-                  <button onClick={() => openEdit(selectedDepartment)} style={secondaryButtonStyle(tokens)}>
+                  <button onClick={() => openEdit(selectedTeam)} style={secondaryButtonStyle(tokens)}>
                     <Pencil size={14} />
                     Edit
                   </button>
                   <button
-                    onClick={() => handleToggleActive(selectedDepartment)}
+                    onClick={() => handleToggleActive(selectedTeam)}
                     disabled={saving}
-                    style={selectedDepartment.is_active ? warningButtonStyle(tokens) : primaryButtonStyle(tokens)}
+                    style={selectedTeam.is_active ? warningButtonStyle(tokens) : primaryButtonStyle(tokens)}
                   >
                     <ShieldCheck size={14} />
-                    {saving ? 'Updating…' : selectedDepartment.is_active ? 'Deactivate' : 'Activate'}
+                    {saving ? 'Updating…' : selectedTeam.is_active ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button onClick={() => setDeleteTarget(selectedDepartment)} style={dangerButtonStyle(tokens)}>
+                  <button onClick={() => setDeleteTarget(selectedTeam)} style={dangerButtonStyle(tokens)}>
                     <Trash2 size={14} />
                     Delete
                   </button>
@@ -863,15 +863,15 @@ const Departments: React.FC = () => {
         </SheetContent>
       </Sheet>
 
-      <DepartmentDialog
+      <TeamDialog
         open={formOpen}
         onClose={closeForm}
         tokens={tokens}
-        eyebrow={editingDepartment ? 'Edit Structure' : 'New Structure'}
-        title={editingDepartment ? 'Edit department' : 'Create department'}
-        description={editingDepartment
+        eyebrow={editingTeam ? 'Edit team' : 'New team'}
+        title={editingTeam ? 'Edit team' : 'Create team'}
+        description={editingTeam
           ? 'Refine naming, assignment context, and availability without leaving the directory.'
-          : 'Create an operational team bucket for employee assignment, workflow ownership, and reporting.'}
+          : 'Create a team to group people who work together.'}
         tone="default"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -886,10 +886,10 @@ const Departments: React.FC = () => {
           }}>
             <div>
               <div style={{ fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
-                Structure intent
+                About this team
               </div>
               <div style={{ marginTop: 8, color: tokens.text, fontWeight: 700 }}>
-                {editingDepartment ? 'Update department metadata' : 'Create a new team bucket'}
+                {editingTeam ? 'Update team details' : 'Create a new team'}
               </div>
               <div style={{ marginTop: 6, color: tokens.textDim, fontSize: '0.82rem', lineHeight: 1.55 }}>
                 Use concise names and descriptions that help admins understand ownership fast.
@@ -906,13 +906,13 @@ const Departments: React.FC = () => {
                 Preview code
               </div>
               <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: '0.84rem', color: tokens.text }}>
-                {form.slug || 'department-slug'}
+                {form.slug || 'team-slug'}
               </div>
             </div>
           </div>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: tokens.text, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Department name</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: tokens.text, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Team name</span>
             <input
               value={form.name}
               onChange={(event) => handleFormChange('name', event.target.value)}
@@ -922,7 +922,7 @@ const Departments: React.FC = () => {
           </label>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: tokens.text, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Department code</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: tokens.text, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Team code</span>
             <input
               value={form.slug}
               onChange={(event) => {
@@ -945,7 +945,7 @@ const Departments: React.FC = () => {
             />
           </label>
 
-          {editingDepartment && (
+          {editingTeam && (
             <label style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -962,7 +962,7 @@ const Departments: React.FC = () => {
                 checked={form.is_active}
                 onChange={(event) => handleFormChange('is_active', event.target.checked)}
               />
-              Active department
+              Active team
             </label>
           )}
 
@@ -971,19 +971,19 @@ const Departments: React.FC = () => {
               Cancel
             </button>
             <button onClick={handleSave} disabled={saving} style={primaryButtonStyle(tokens)}>
-              {saving ? 'Saving…' : editingDepartment ? 'Save Changes' : 'Create Department'}
+              {saving ? 'Saving…' : editingTeam ? 'Save Changes' : 'Create Team'}
             </button>
           </div>
         </div>
-      </DepartmentDialog>
+      </TeamDialog>
 
-      <DepartmentDialog
+      <TeamDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         tokens={tokens}
         eyebrow="Destructive Action"
-        title="Delete department"
-        description="This removes the department record from the admin directory. Review staff assignment impact before confirming."
+        title="Delete team"
+        description="This removes the team record from the admin directory. Review staff assignment impact before confirming."
         tone="danger"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -997,11 +997,11 @@ const Departments: React.FC = () => {
               Removal impact
             </div>
             <p style={{ margin: '10px 0 0', color: tokens.text, lineHeight: 1.6, fontSize: '0.9rem' }}>
-              Any staff linked to this department will lose that mapping until reassigned.
+              Anyone on this team will have no team until you assign them to another.
             </p>
           </div>
           <p style={{ margin: 0, color: tokens.textDim, lineHeight: 1.6 }}>
-            Delete <strong style={{ color: tokens.text }}>{deleteTarget?.name}</strong>? This cannot be undone.
+            Delete <strong style={{ color: tokens.text }}>{deleteTarget?.name}</strong>? You can only remove a team with no one on it. It stays in the list as Inactive.
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 12, borderTop: `1px solid ${tokens.border}` }}>
             <button onClick={() => setDeleteTarget(null)} style={secondaryButtonStyle(tokens)}>
@@ -1012,7 +1012,7 @@ const Departments: React.FC = () => {
             </button>
           </div>
         </div>
-      </DepartmentDialog>
+      </TeamDialog>
     </div>
   );
 };
@@ -1076,28 +1076,28 @@ function HeaderCell({
 }
 
 function CoverageMeter({
-  department,
+  team,
   tokens,
 }: {
-  department: DepartmentRow;
+  team: TeamRow;
   tokens: ReturnType<typeof getDesignTokens>;
 }) {
-  const fill = department.coverageTone === 'full' ? tokens.success : department.coverageTone === 'light' ? tokens.info : tokens.warning;
-  const track = department.coverageTone === 'full' ? tokens.successSoft : department.coverageTone === 'light' ? tokens.infoSoft : tokens.warningSoft;
+  const fill = team.coverageTone === 'full' ? tokens.success : team.coverageTone === 'light' ? tokens.info : tokens.warning;
+  const track = team.coverageTone === 'full' ? tokens.successSoft : team.coverageTone === 'light' ? tokens.infoSoft : tokens.warningSoft;
   const segments = [
-    department.memberCount > 0,
-    department.memberCount > 2,
-    department.memberCount > 4,
+    team.memberCount > 0,
+    team.memberCount > 2,
+    team.memberCount > 4,
   ];
 
   return (
     <div style={{ minWidth: 180 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <span style={{ fontWeight: 700, color: tokens.text, fontVariantNumeric: 'tabular-nums' }}>
-          {department.memberCount} member{department.memberCount === 1 ? '' : 's'}
+          {team.memberCount} member{team.memberCount === 1 ? '' : 's'}
         </span>
         <span style={{ fontSize: '0.76rem', color: tokens.textMuted }}>
-          {department.coverageTone === 'full' ? 'Staffed' : department.coverageTone === 'light' ? 'Partial' : 'Empty'}
+          {team.coverageTone === 'full' ? 'Staffed' : team.coverageTone === 'light' ? 'Partial' : 'Empty'}
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginTop: 8 }}>
@@ -1293,7 +1293,7 @@ const detailBlockStyle = (tokens: ReturnType<typeof getDesignTokens>): React.CSS
   boxShadow: tokens.shadow,
 });
 
-function DepartmentDialog({
+function TeamDialog({
   open,
   onClose,
   title,
@@ -1401,4 +1401,4 @@ function DepartmentDialog({
   );
 }
 
-export default Departments;
+export default Teams;

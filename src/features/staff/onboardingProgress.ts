@@ -5,7 +5,7 @@ const filled = (v: unknown) => v !== null && v !== undefined && v !== '' && v !=
 /** Fields that count toward each section's "n of m filled" strip. */
 export const SITE_FIELDS = [
   'display_name', 'latitude', 'longitude', 'capacity_kw', 'inverter_capacity_kw',
-  'commissioned_on', 'eb_consumer_number',
+  'commissioned_on',
 ] as const;
 
 export interface OnboardingData {
@@ -30,6 +30,6 @@ export function sectionProgress(d: OnboardingData): Record<SectionKey, { filled:
         .filter(v => v !== null && v !== undefined).length,
       total: 5,
     },
-    billing: count([d.billingAnchor, d.savings?.energyWallet?.balanceKwh]),
+    billing: count([d.billingAnchor, d.savings?.energyWallet?.balanceKwh, s.eb_consumer_number, s.eb_registered_mobile]),
   };
 }

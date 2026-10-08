@@ -6,8 +6,8 @@ describe('sectionProgress', () => {
   it('reports nothing filled for an empty site', () => {
     const p = sectionProgress(empty);
     expect(p.customer).toEqual({ filled: 0, total: 4 });
-    expect(p.site).toEqual({ filled: 0, total: 7 });
-    expect(p.billing).toEqual({ filled: 0, total: 2 });
+    expect(p.site).toEqual({ filled: 0, total: 6 });
+    expect(p.billing).toEqual({ filled: 0, total: 4 });
   });
 
   it('treats 0 and empty string as unfilled for site/customer fields', () => {

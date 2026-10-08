@@ -25,7 +25,10 @@ const SITE_FIELDS: FieldDef[] = [
   { key: 'longitude', label: 'Longitude', type: 'number' },
   { key: 'grid_type', label: 'Grid type', type: 'select', options: ['hybrid', 'on_grid', 'off_grid'] },
   { key: 'commissioned_on', label: 'Commissioning date', type: 'date', hint: 'Date net metering went live' },
+];
+const EB_FIELDS: FieldDef[] = [
   { key: 'eb_consumer_number', label: 'EB consumer number', hint: 'Printed on the meter and the bill' },
+  { key: 'eb_registered_mobile', label: 'Mobile number registered with EB', hint: 'The number the electricity board sends bill SMS/OTP to' },
 ];
 const APPLIANCE_FIELDS: FieldDef[] = [
   { key: 'num_ac_units', label: 'Air conditioners', type: 'number', hint: 'Enter 0 if none' },
@@ -94,7 +97,7 @@ export default function SiteOnboarding() {
     setErrors(errs);
     const next = {
       customer: toDraft(o, CUSTOMER_FIELDS),
-      site: toDraft(s.status === 'fulfilled' ? s.value : null, SITE_FIELDS),
+      site: toDraft(s.status === 'fulfilled' ? s.value : null, [...SITE_FIELDS, ...EB_FIELDS]),
       appliances: toDraft(p.status === 'fulfilled' ? p.value : null, APPLIANCE_FIELDS),
     };
     setDrafts(next); setSaved(next);
@@ -201,7 +204,15 @@ export default function SiteOnboarding() {
             owner ? 'customer' : undefined)}
           {section('site', 'Site & system', renderFields('site', SITE_FIELDS), 'site')}
           {section('appliances', 'Appliances & metering', renderFields('appliances', APPLIANCE_FIELDS), 'appliances')}
-          {section('billing', 'Billing & energy wallet', <SavingsBillingEditor key={siteId} siteId={siteId} />)}
+          {section('billing', 'Billing & energy wallet', <>
+            {renderFields('site', EB_FIELDS)}
+            <div style={{ margin: '12px 0 20px' }}>
+              <Btn isDark={isDark} onClick={() => save('site')} disabled={!dirty('site') || busy === 'site'}>
+                {busy === 'site' ? 'Saving…' : 'Save EB account'}
+              </Btn>
+            </div>
+            <SavingsBillingEditor key={siteId} siteId={siteId} />
+          </>)}
         </>
       )}
 

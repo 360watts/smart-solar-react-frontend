@@ -53,8 +53,8 @@ const Devices = lazy(() => import('../features/staff/Devices'));
 const Configuration = lazy(() => import('../features/staff/Configuration'));
 const Alerts = lazy(() => import('../features/staff/Alerts'));
 const Users = lazy(() => import('../features/staff/Users'));
-const Employees = lazy(() => import('../features/staff/Employees'));
-const Departments = lazy(() => import('../features/staff/Departments'));
+const Employees = lazy(() => import('../features/staff/employees/EmployeesPage'));
+const Teams = lazy(() => import('../features/staff/Teams'));
 const DevicePresets = lazy(() => import('../features/staff/DevicePresets'));
 const Profile = lazy(() => import('../features/staff/Profile'));
 const OTA = lazy(() => import('../features/staff/OTA').then(m => ({ default: m.OTA })));
@@ -133,7 +133,8 @@ function App() {
                 <Route path="/support-inbox" element={<Suspense fallback={<SkeletonDashboard />}><SupportInbox /></Suspense>} />
                 <Route path="/users" element={<Suspense fallback={<SkeletonDashboard />}><Users /></Suspense>} />
                 <Route path="/employees" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Employees /></Suspense></AdminRoute>} />
-                <Route path="/departments" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Departments /></Suspense></AdminRoute>} />
+                <Route path="/teams" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Teams /></Suspense></AdminRoute>} />
+                <Route path="/departments" element={<Navigate to="/teams" replace />} />
                 <Route path="/device-presets" element={<Suspense fallback={<SkeletonDashboard />}><DevicePresets /></Suspense>} />
                 <Route path="/ota" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><OTA /></Suspense></AdminRoute>} />
                 <Route path="/analytics" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Analytics /></Suspense></AdminRoute>} />
