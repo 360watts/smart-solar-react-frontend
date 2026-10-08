@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { pdf } from '@react-pdf/renderer';
+import { useState, createElement } from 'react';
 import { toast } from 'sonner';
 import type { QuotationData } from '../types/quotation';
-import { ProposalDocument } from '../components/pdf/ProposalDocument';
 
 async function toBase64(url: string): Promise<string> {
   const res = await fetch(url);
@@ -17,6 +15,11 @@ async function toBase64(url: string): Promise<string> {
 
 /** Renders the proposal as a PDF Blob without downloading it. */
 export async function generatePdfBlob(data: QuotationData): Promise<{ blob: Blob; filename: string }> {
+  // @react-pdf/renderer + the proposal template are ~1.5 MB; load them only when a PDF is actually built.
+  const [{ pdf }, { ProposalDocument }] = await Promise.all([
+    import('@react-pdf/renderer'),
+    import('../components/pdf/ProposalDocument'),
+  ]);
   const origin = window.location.origin;
   const logoUrl = `${origin}/logo_with_font.png`;
   const finalLogoUrl = `${origin}/finalLogo.png`;
@@ -30,7 +33,7 @@ export async function generatePdfBlob(data: QuotationData): Promise<{ blob: Blob
     toBase64(`${origin}/20kw_ref.png`),
   ]);
 
-  const doc = React.createElement(ProposalDocument, { data, logoUrl, finalLogoUrl, qrCodeUrl, appScreen1, appScreen2, phoneCover, ref6kw, ref8kw, ref20kw }) as any;
+  const doc = createElement(ProposalDocument, { data, logoUrl, finalLogoUrl, qrCodeUrl, appScreen1, appScreen2, phoneCover, ref6kw, ref8kw, ref20kw }) as any;
   const blob = await pdf(doc).toBlob();
   const date = new Date().toISOString().slice(0, 10);
   const name = (data.customer.name || 'customer').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();

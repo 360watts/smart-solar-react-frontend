@@ -1,8 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
   Cpu, X, CornerDownLeft, ShieldAlert, WifiOff, BatteryWarning,
   BarChart3, Network, ArrowUpCircle, Expand, Shrink,
@@ -15,6 +13,8 @@ import { getCsrfToken, apiService } from '../../services/api';
 import { isPlainAnswer } from './aiDiagnoseTypes';
 import { buildHistory, httpErrorMessage, parseSSEBuffer } from './aiChatStream';
 import type { DiagnoseResult } from './aiDiagnoseTypes';
+
+const CodeBlock = lazy(() => import('./CodeBlock'));
 
 interface Message {
   id: string;
@@ -476,7 +476,9 @@ const AiChat: React.FC = () => {
                                       {copiedId === cid ? <><ClipboardCheck size={11} /> copied</> : <><ClipboardCopy size={11} /> copy</>}
                                     </button>
                                   </div>
-                                  <SyntaxHighlighter style={isDark ? oneDark : oneLight} language={match[1]} PreTag="div" wrapLongLines customStyle={{ margin: 0, borderRadius: '0 0 6px 6px', fontSize: '0.74rem' }}>{codeStr}</SyntaxHighlighter>
+                                  <Suspense fallback={<pre className="aif-code__fallback" style={{ margin: 0, fontSize: '0.74rem', whiteSpace: 'pre-wrap' }}>{codeStr}</pre>}>
+                                    <CodeBlock code={codeStr} language={match[1]} isDark={isDark} />
+                                  </Suspense>
                                 </div>
                               );
                               return <code className={`aif-inline-code ${className || ''}`} {...props}>{children}</code>;

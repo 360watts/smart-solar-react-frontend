@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
@@ -9,7 +9,7 @@ import { StepSizing } from './components/steps/StepSizing';
 import { StepBom, newRows } from './components/steps/StepBom';
 import { Step4Review } from './components/steps/Step4Review';
 import { LiveSummaryRail } from './components/LiveSummaryRail';
-import { PdfPreviewModal } from './components/PdfPreviewModal';
+const PdfPreviewModal = lazy(() => import('./components/PdfPreviewModal').then((m) => ({ default: m.PdfPreviewModal })));
 import { usePdfExport, generatePdfBlob } from './hooks/usePdfExport';
 import { useSaveDraft } from './hooks/useSaveDraft';
 import { calcEbBill, calcEvSizing, getEffectiveSystemKw } from './utils/roiCalculator';
@@ -488,7 +488,9 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
 
     </div>
     {showPreview && (
-      <PdfPreviewModal data={form.getValues()} onClose={() => setShowPreview(false)} />
+      <Suspense fallback={null}>
+        <PdfPreviewModal data={form.getValues()} onClose={() => setShowPreview(false)} />
+      </Suspense>
     )}
     </>
   );
