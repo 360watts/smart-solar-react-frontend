@@ -61,6 +61,7 @@ const OTA = lazy(() => import('../features/staff/OTA').then(m => ({ default: m.O
 const Equipment = lazy(() => import('../features/staff/Equipment'));
 const Sites = lazy(() => import('../features/staff/Sites'));
 const SiteDetail = lazy(() => import('../features/staff/SiteDetail'));
+const SiteOnboarding = lazy(() => import('../features/staff/SiteOnboarding'));
 const CommissioningWizard = lazy(() => import('../features/staff/CommissioningWizard'));
 const QuotationPage = lazy(() => import('../features/quotation/QuotationPage'));
 const ServiceBookings = lazy(() => import('../features/staff/ServiceBookings'));
@@ -137,6 +138,7 @@ function App() {
                 <Route path="/ota" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><OTA /></Suspense></AdminRoute>} />
                 <Route path="/analytics" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Analytics /></Suspense></AdminRoute>} />
                 <Route path="/sites/commissioning" element={<Suspense fallback={<SkeletonDashboard />}><CommissioningWizard /></Suspense>} />
+                <Route path="/sites/onboarding" element={<Suspense fallback={<SkeletonDashboard />}><SiteOnboarding /></Suspense>} />
                 <Route path="/sites/:siteId" element={<Suspense fallback={<SkeletonDashboard />}><SiteDetail /></Suspense>} />
                 <Route path="/sites" element={<Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense>} />
                 <Route path="/equipment" element={<Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense>} />

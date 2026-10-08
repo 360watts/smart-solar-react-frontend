@@ -2157,6 +2157,13 @@ class ApiService {
     return res.data ?? res;
   }
 
+  async updateBillingConfig(siteId: string, payload: { billing_anchor?: string }): Promise<any> {
+    return this.request(`/sites/${siteId}/savings/config/`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
   async updateSavingsRecord(siteId: string, payload: UpdateSavingsRecordPayload): Promise<SiteSavingsData> {
     const res = await this.request(`/sites/${siteId}/savings/record/`, {
       method: 'PATCH',
@@ -2191,6 +2198,7 @@ export interface SiteSavingsData {
     ebExportUnits: number;
     evUnits: number;
   };
+  billingAnchor?: string | null;
   energyWallet?: {
     balanceKwh: number;
     projectedBalanceKwh: number;

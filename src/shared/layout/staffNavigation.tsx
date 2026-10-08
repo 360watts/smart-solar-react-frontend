@@ -172,6 +172,15 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
 
 const STAFF_ROUTE_MATCHERS: Array<{ pattern: string; meta: StaffRouteMeta }> = [
   {
+    pattern: '/sites/onboarding',
+    meta: {
+      title: 'Site Onboarding',
+      subtitle: 'Fill in customer, system and billing details for a site',
+      group: 'Monitor',
+      density: 'workflow',
+    },
+  },
+  {
     pattern: '/sites/commissioning',
     meta: {
       title: 'Site Commissioning',

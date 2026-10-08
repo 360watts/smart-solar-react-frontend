@@ -27,8 +27,10 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   const [investment, setInvestment] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('due');
   const [walletKwh, setWalletKwh] = useState('');
+  const [anchor, setAnchor] = useState('');
 
   const syncFields = (d: SiteSavingsData) => {
+    setAnchor(d.billingAnchor ?? '');
     setWalletKwh(d.energyWallet ? String(d.energyWallet.balanceKwh) : '');
     setEbBill(d.electricityBill.amount != null ? String(d.electricityBill.amount) : '');
     setInvestment(d.investment.upfrontAmount != null ? String(d.investment.upfrontAmount) : '');
@@ -62,6 +64,10 @@ export default function SavingsBillingEditor({ siteId }: Props) {
       // Only send when changed, so saving a bill doesn't overwrite the ledger.
       const current = data?.energyWallet?.balanceKwh;
       if (walletKwh !== '' && parseFloat(walletKwh) !== current) payload.wallet_balance_kwh = parseFloat(walletKwh);
+      if (anchor && anchor !== (data?.billingAnchor ?? '')) {
+        // Config first: the cycle boundaries the record is built from depend on the anchor.
+        await apiService.updateBillingConfig(siteId, { billing_anchor: anchor });
+      }
       const res = await apiService.updateSavingsRecord(siteId, payload);
       setData(res);
       syncFields(res);
@@ -327,6 +333,13 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                     onChange={e => setInvestment(e.target.value)}
                     placeholder="System installation cost"
                   />
+                </div>
+                <div>
+                  <div style={sectionLabel}>Latest EB bill date</div>
+                  <input type="date" style={inputStyle} value={anchor} onChange={e => setAnchor(e.target.value)} />
+                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                    The date printed on your most recent TANGEDCO bill. Billing periods run 2 months from it.
+                  </div>
                 </div>
                 <div>
                   <div style={sectionLabel}>Energy Wallet — credit brought into this period (kWh)</div>

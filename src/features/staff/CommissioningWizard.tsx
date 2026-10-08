@@ -705,6 +705,9 @@ export default function CommissioningWizard() {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <Link to={`/sites/onboarding?site=${encodeURIComponent(sid)}`} style={{ color: primary, fontSize: '0.88rem', fontWeight: 600 }}>
+                    Finish customer &amp; billing details →
+                  </Link>
                   <Link to={`/sites/${encodeURIComponent(sid)}`} style={{ textDecoration: 'none' }}>
                     <button style={buttonStyle()}>View Site & Add Equipment <ArrowRight size={16} /></button>
                   </Link>

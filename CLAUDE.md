@@ -48,6 +48,7 @@ Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar 
 /ota                           → Firmware OTA management (AdminRoute)
 /sites                         → Site list
 /sites/commissioning           → CommissioningWizard
+/sites/onboarding              → SiteOnboarding (pick a site, fill customer / system / appliances / billing; per-section progress)
 /sites/:siteId                 → SiteDetail
 /equipment                     → Equipment
 /quotation                     → QuotationPage
@@ -118,7 +119,8 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 ### Notable `src/features/staff/` Components
 
 - `CommissioningWizard.tsx` — new-site commissioning flow
-- `SavingsBillingEditor.tsx` — savings/billing tariff editor
+- `SavingsBillingEditor.tsx` — savings/billing editor (EB bill, investment, payment status, latest bill date / billing anchor, energy-wallet balance override)
+- `SiteOnboarding.tsx` + `onboardingProgress.ts` — staff page to complete a site's customer, system, appliance and billing details (`/sites/onboarding?site=<id>`, sidebar entry under Sites). A "Site setup" redesign (one page, Needs-setup filter on Sites, retire the wizard) is proposed, not built — see `smart-solar-django-backend/docs/superpowers/specs/2026-10-07-site-onboarding-page-design.md`
 - `RestoreArchivedDeviceModal.tsx` — restore a soft-deleted device
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
 - `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `is_staff`/`is_superuser`)

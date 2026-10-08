@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
   LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
-  Zap, CalendarCheck, MessageCircle, TrendingUp,
+  Zap, CalendarCheck, MessageCircle, TrendingUp, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -26,6 +26,7 @@ const NAV_CONFIG = [
 
 const NAV_STAFF = [
   { path: '/sites',            label: 'Sites',            icon: Building2    },
+  { path: '/sites/onboarding', label: 'Site Onboarding',  icon: ClipboardCheck },
   { path: '/equipment',        label: 'Product Catalog',  icon: Server       },
   { path: '/quotation',        label: 'Quotation',        icon: FileText     },
   { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck },
@@ -382,6 +383,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     <NavLink
       key={path}
       to={path}
+      end={path === '/sites'}   // else Sites stays highlighted on /sites/onboarding
       onClick={onClose}
       title={label}
       className={({ isActive }) =>
