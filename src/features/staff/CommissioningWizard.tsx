@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAccess } from '../../shared/access/useAccess';
 import PageHeader from '../../shared/layout/PageHeader';
 import InverterMeasurementConfig from './InverterMeasurementConfig';
 import { ConfirmDialog } from './siteHardware/ui';
@@ -23,6 +24,7 @@ const slideVariants = {
 export default function CommissioningWizard() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const canUsers = useAccess().can('users');
 
   // ── State ──
   const [step, setStep] = useState(1);
@@ -129,23 +131,22 @@ export default function CommissioningWizard() {
       setUsersBusy(true);
       setIdBusy(true);
       try {
-        const [usersResp, idResp] = await Promise.all([
-          apiService.getUsers(),
+        // allSettled: the user list is admin-only, so it must not take the generated site id down with it.
+        const [usersRes, idRes] = await Promise.allSettled([
+          canUsers ? apiService.getUsers() : Promise.reject(new Error('not allowed')),
           apiService.getNextSiteId(),
         ]);
         if (!mounted) return;
-        const users = Array.isArray(usersResp?.results) ? usersResp.results : Array.isArray(usersResp) ? usersResp : [];
-        setOwnerUsers(users);
-        setSiteId(idResp.site_id);
-      } catch {
-        if (mounted) setOwnerUsers([]);
+        if (idRes.status === 'fulfilled') setSiteId(idRes.value.site_id);
+        const usersResp: any = usersRes.status === 'fulfilled' ? usersRes.value : [];
+        setOwnerUsers(Array.isArray(usersResp?.results) ? usersResp.results : Array.isArray(usersResp) ? usersResp : []);
       } finally {
         if (mounted) { setUsersBusy(false); setIdBusy(false); }
       }
     };
     init();
     return () => { mounted = false; };
-  }, []);
+  }, [canUsers]);
 
   const filteredOwnerUsers = useMemo(() => {
     const q = ownerSearch.trim().toLowerCase();
@@ -181,6 +182,7 @@ export default function CommissioningWizard() {
       const azimuth = azimuthDeg.trim() === '' ? undefined : parseFloat(azimuthDeg);
       const logger = loggerSerial.trim() === '' ? undefined : parseInt(loggerSerial, 10);
 
+      if (!canUsers && (!owner || Number.isNaN(owner))) throw new Error('Customer details are managed by an admin. Ask an admin to link the owner.');
       if (!siteId.trim() || !owner || Number.isNaN(owner)) throw new Error('Site ID and Owner User ID are required');
       if (Number.isNaN(lat) || Number.isNaN(lon)) throw new Error('Invalid coordinates');
       if (cap !== undefined && Number.isNaN(cap)) throw new Error('Invalid capacity');
@@ -446,6 +448,11 @@ export default function CommissioningWizard() {
 
                   <div>
                     <label style={labelStyle}>Owner User (required)</label>
+                    {!canUsers ? (
+                      <div style={{ marginTop: 6, fontSize: '0.8rem', color: textSub }}>
+                        Customer details are managed by an admin. Ask an admin to link the owner.
+                      </div>
+                    ) : (<>
                     <input
                       value={ownerSearch}
                       onChange={e => setOwnerSearch(e.target.value)}
@@ -474,6 +481,7 @@ export default function CommissioningWizard() {
                         {selectedOwner.email ? ` (${selectedOwner.email})` : ''}
                       </div>
                     )}
+                    </>)}
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

@@ -16,7 +16,8 @@ export interface OnboardingData {
   billingAnchor: string | null;
 }
 
-export function sectionProgress(d: OnboardingData): Record<SectionKey, { filled: number; total: number }> {
+/** `withSavings: false` drops the savings-backed items (anchor, wallet) for people who can't see billing. */
+export function sectionProgress(d: OnboardingData, withSavings = true): Record<SectionKey, { filled: number; total: number }> {
   const count = (vals: unknown[]) => ({ filled: vals.filter(filled).length, total: vals.length });
   const o = d.owner ?? {};
   const s = d.site ?? {};
@@ -30,6 +31,9 @@ export function sectionProgress(d: OnboardingData): Record<SectionKey, { filled:
         .filter(v => v !== null && v !== undefined).length,
       total: 5,
     },
-    billing: count([d.billingAnchor, d.savings?.energyWallet?.balanceKwh, s.eb_consumer_number, s.eb_registered_mobile]),
+    billing: count([
+      ...(withSavings ? [d.billingAnchor, d.savings?.energyWallet?.balanceKwh] : []),
+      s.eb_consumer_number, s.eb_registered_mobile,
+    ]),
   };
 }

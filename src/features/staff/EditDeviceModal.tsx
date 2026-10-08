@@ -17,6 +17,7 @@ import {
   ScrollText, ChevronDown, ChevronUp, AlertTriangle, Cpu,
 } from 'lucide-react';
 import DeviceTypeSelector from './DeviceTypeSelector';
+import { useAccess } from '../../shared/access/useAccess';
 
 interface Device {
   id: number;
@@ -298,6 +299,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWifi, setShowWifi] = useState(false);
+  const canWifiPassword = useAccess().can('site_credentials');
   const [muteMode, setMuteMode] = useState<'none' | 'hours' | 'datetime'>('none');
   const muteRef = useRef<HTMLInputElement>(null);
 
@@ -344,7 +346,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
         wifi_ssid: formData.wifi_ssid,
         alerts_muted_until: formData.alerts_muted_until || null,
       };
-      if (showWifi && formData.wifi_password) {
+      if (canWifiPassword && showWifi && formData.wifi_password) {
         payload.wifi_password = formData.wifi_password;
       }
       console.log('[EditDeviceModal] saving', { ...payload, wifi_password: payload.wifi_password ? '(set)' : undefined });
@@ -657,7 +659,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: P.amber, fontFamily: P.mono }}>
                           Wi-Fi Credentials
                         </span>
-                        <button
+                        {canWifiPassword && (<button
                           onClick={() => setShowWifi(!showWifi)}
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer',
@@ -666,7 +668,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                           }}
                         >
                           {showWifi ? <><ChevronUp size={13} /> Hide</> : <><ChevronDown size={13} /> Change</>}
-                        </button>
+                        </button>)}
                       </div>
 
                       <EditField
@@ -678,7 +680,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                       />
 
                       <AnimatePresence>
-                        {showWifi && (
+                        {canWifiPassword && showWifi && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                             style={{ overflow: 'hidden' }}

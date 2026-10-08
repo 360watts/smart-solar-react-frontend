@@ -4,6 +4,7 @@ import { apiService } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import finalLogo from '../../../assets/finalLogo.png';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useAccess } from '../../../shared/access/useAccess';
 import {
   ArrowLeft, RefreshCw, Wifi, WifiOff, Server, Activity,
   Settings, Save, X, MapPin, Zap, Clock, Link as LinkIcon,
@@ -21,6 +22,9 @@ const MobileSiteDetail: React.FC = () => {
   const navigate = useNavigate();
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const canUsers = useAccess().can('users');
+  // Device operations switch off = watch only: no attach / detach / move.
+  const canOps = useAccess().can('device_control');
 
   const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
@@ -83,11 +87,11 @@ const MobileSiteDetail: React.FC = () => {
       .finally(() => setAppliancesLoading(false));
   }, [siteId]);
   useEffect(() => {
-    if (!user?.is_staff) { setOwnerUsers([]); return; }
+    if (!user?.is_staff || !canUsers) { setOwnerUsers([]); return; }
     apiService.getUsers().then((res: any) => {
       setOwnerUsers(Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : []);
     }).catch(() => {});
-  }, [user]);
+  }, [user, canUsers]);
 
   useEffect(() => {
     if (tab !== 'equipment' || !siteId) return;
@@ -107,7 +111,7 @@ const MobileSiteDetail: React.FC = () => {
       if (latitude.trim() && Number.isFinite(lat)) payload.latitude = lat;
       const lon = Number(longitude);
       if (longitude.trim() && Number.isFinite(lon)) payload.longitude = lon;
-      payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
+      if (canUsers) payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
       const data = await apiService.patchSiteStaff(siteId, payload);
       setSite(data); setEditing(false);
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed'); }
@@ -276,12 +280,14 @@ const MobileSiteDetail: React.FC = () => {
                   ))}
                   <div>
                     <div style={{ fontSize:'0.62rem', color:muted, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.06em', fontFamily:"'DM Sans', sans-serif" }}>Owner User</div>
-                    <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={{ ...inputStyle }}>
+                    {!canUsers ? (
+                      <div style={{ ...inputStyle }}>{site?.owner_username || 'Managed by an admin'}</div>
+                    ) : <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={{ ...inputStyle }}>
                       <option value="">— None —</option>
                       {ownerUsers.map((u: any) => (
                         <option key={u.id} value={u.id}>{u.username} {u.first_name ? `(${u.first_name})` : ''}</option>
                       ))}
-                    </select>
+                    </select>}
                   </div>
                   <button onClick={handleSaveDetails} disabled={busy}
                     style={{ padding:'12px', background: accent, border:'none', borderRadius:12, cursor:'pointer', color:'#fff', fontSize:'0.85rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity:busy?0.7:1, fontFamily:"'DM Sans', sans-serif" }}>
@@ -352,6 +358,7 @@ const MobileSiteDetail: React.FC = () => {
                     <Clock size={11}/> Last seen {new Date(gw.last_seen_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
                   </div>
                 )}
+                {canOps && (<>
                 <button onClick={handleDetach} disabled={busy}
                   style={{ width:'100%', minHeight:44, padding:'10px', background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.25)', borderRadius:10, cursor:'pointer', color:'#F87171', fontSize:'0.78rem', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:"'DM Sans', sans-serif" }}>
                   <Unlink size={13}/> Detach Gateway
@@ -366,10 +373,12 @@ const MobileSiteDetail: React.FC = () => {
                     </button>
                   </div>
                 </div>
+                </>)}
               </div>
             ) : (
               <div style={card({ padding:'16px' })}>
                 <div style={{ fontSize:'0.8rem', color:muted, marginBottom:14, fontFamily:"'DM Sans', sans-serif" }}>No gateway attached.</div>
+                {canOps && (
                 <div>
                   <div style={{ fontSize:'0.62rem', color:muted, marginBottom:6, textTransform:'uppercase', letterSpacing:'0.06em', fontFamily:"'DM Sans', sans-serif" }}>Attach device by PK</div>
                   <div style={{ display:'flex', gap:6 }}>
@@ -380,6 +389,7 @@ const MobileSiteDetail: React.FC = () => {
                     </button>
                   </div>
                 </div>
+                )}
               </div>
             )}
           </>

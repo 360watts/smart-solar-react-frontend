@@ -96,4 +96,44 @@ describe('PersonPanel', () => {
     fireEvent.click(screen.getByRole('radio', { name: /employee/i }));
     expect(screen.getByText(/site list will be cleared/i)).toBeInTheDocument();
   });
+
+  describe('Device operations switch', () => {
+    it('shows an on switch with helper text for a viewer', () => {
+      setup();
+      const sw = screen.getByRole('switch', { name: /device operations/i });
+      expect(sw).toBeChecked();
+      expect(screen.getByText('Can restart devices and change their settings.')).toBeInTheDocument();
+    });
+
+    it('reads an explicit off from the person and explains it', () => {
+      setup({ person: { ...meera, device_ops_enabled: false } });
+      expect(screen.getByRole('switch', { name: /device operations/i })).not.toBeChecked();
+      expect(screen.getByText('Can watch devices but not change them.')).toBeInTheDocument();
+    });
+
+    it('is hidden for an admin and comes back when the role changes', () => {
+      setup({ person: { ...meera, role: 'admin' } });
+      expect(screen.queryByRole('switch', { name: /device operations/i })).toBeNull();
+      fireEvent.click(screen.getByRole('radio', { name: /employee/i }));
+      expect(screen.getByRole('switch', { name: /device operations/i })).toBeChecked();
+    });
+
+    it('counts as a change and is saved', async () => {
+      (apiService.updateEmployee as jest.Mock).mockResolvedValue({});
+      setup();
+      fireEvent.click(screen.getByRole('switch', { name: /device operations/i }));
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+      await waitFor(() => expect(apiService.updateEmployee).toHaveBeenCalled());
+      expect((apiService.updateEmployee as jest.Mock).mock.calls[0][1]).toMatchObject({ device_ops_enabled: false });
+    });
+
+    it('does not send the flag for an admin', async () => {
+      (apiService.updateEmployee as jest.Mock).mockResolvedValue({});
+      setup({ person: { ...meera, role: 'employee', device_ops_enabled: false } });
+      fireEvent.click(screen.getByRole('radio', { name: /admin/i }));
+      fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+      await waitFor(() => expect(apiService.updateEmployee).toHaveBeenCalled());
+      expect('device_ops_enabled' in (apiService.updateEmployee as jest.Mock).mock.calls[0][1]).toBe(false);
+    });
+  });
 });

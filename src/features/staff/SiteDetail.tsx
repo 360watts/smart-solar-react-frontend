@@ -19,6 +19,7 @@ import {
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAccess } from '../../shared/access/useAccess';
 import PageHeader from '../../shared/layout/PageHeader';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ const EqDeleteModal: React.FC<{open:boolean;label:string;onConfirm:()=>void;onCa
 };
 
 const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const canDestroy=useAccess().can('destructive');
   const [err,setErr]=React.useState<string|null>(null);
   const [modal,setModal]=React.useState<{open:boolean;item:EqInverter|null}>({open:false,item:null});
   const [form,setForm]=React.useState(blankEqInverter());
@@ -198,13 +200,13 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
               <td><span style={{color:inv.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{inv.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(inv)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
-                <button onClick={()=>setDel(inv)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+                {canDestroy&&<button onClick={()=>setDel(inv)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
               </div></td>
             </tr>
           ))}</tbody>
         </table></div>
       )}
-      <EqDeleteModal open={!!del} label={del?.serial_number??'inverter'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {canDestroy&&<EqDeleteModal open={!!del} label={del?.serial_number??'inverter'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>}
       {modal.open&&ReactDOM.createPortal(
         <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
           <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:580,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
@@ -273,6 +275,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
 };
 
 const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const canDestroy=useAccess().can('destructive');
   const [err,setErr]=React.useState<string|null>(null);
   const [modal,setModal]=React.useState<{open:boolean;item:EqBattery|null}>({open:false,item:null});
   const [form,setForm]=React.useState(blankEqBattery());
@@ -300,13 +303,13 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
               <td><span style={{color:bat.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{bat.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(bat)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
-                <button onClick={()=>setDel(bat)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+                {canDestroy&&<button onClick={()=>setDel(bat)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
               </div></td>
             </tr>
           ))}</tbody>
         </table></div>
       )}
-      <EqDeleteModal open={!!del} label={del?.serial_number??'battery'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {canDestroy&&<EqDeleteModal open={!!del} label={del?.serial_number??'battery'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>}
       {modal.open&&ReactDOM.createPortal(
         <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
           <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:580,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
@@ -348,6 +351,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
 };
 
 const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loading:boolean;onRefresh:()=>Promise<void>}> = ({siteId,isDark,items,loading,onRefresh}) => {
+  const canDestroy=useAccess().can('destructive');
   const [err,setErr]=React.useState<string|null>(null);
   const [modal,setModal]=React.useState<{open:boolean;item:EqPanel|null}>({open:false,item:null});
   const [form,setForm]=React.useState(blankEqPanel());
@@ -377,13 +381,13 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
               <td><span style={{color:p.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{p.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(p)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
-                <button onClick={()=>setDel(p)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>
+                {canDestroy&&<button onClick={()=>setDel(p)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
               </div></td>
             </tr>
           ))}</tbody>
         </table></div>
       )}
-      <EqDeleteModal open={!!del} label={del?.serial_number??'panel'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>
+      {canDestroy&&<EqDeleteModal open={!!del} label={del?.serial_number??'panel'} onConfirm={doDelete} onCancel={()=>setDel(null)} isDark={isDark}/>}
       {modal.open&&ReactDOM.createPortal(
         <div style={{position:'fixed',inset:0,zIndex:2000,background:isDark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
           <div style={{background:T.surface,borderRadius:12,width:'100%',maxWidth:480,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 20px 60px rgba(0,0,0,0.35)'}}>
@@ -432,6 +436,10 @@ export default function SiteDetail() {
   const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const { isDark } = useTheme();
   const { user } = useAuth();
+  const { can } = useAccess();
+  const canBilling = can('site_billing');
+  const canDestroy = can('destructive');
+  const canUsers = can('users');
 
   // ── State ──
   const [tab, setTab] = useState<Tab>('overview');
@@ -670,7 +678,7 @@ export default function SiteDetail() {
   // (see the "Edit" button's onClick below), not unconditionally after mount.
   const usersLoadedRef = useRef(false);
   const loadOwnerUsers = useCallback(async () => {
-    if (!user?.is_staff || usersLoadedRef.current) return;
+    if (!canUsers || !user?.is_staff || usersLoadedRef.current) return;
     usersLoadedRef.current = true;
     setUsersBusy(true);
     try {
@@ -692,7 +700,7 @@ export default function SiteDetail() {
     } finally {
       setUsersBusy(false);
     }
-  }, [user, site]);
+  }, [user, site, canUsers]);
 
   // Load equipment when equipment tab is opened
   const refreshEquipment = useCallback(async () => {
@@ -799,7 +807,7 @@ export default function SiteDetail() {
       if (latitude.trim() !== '' && Number.isFinite(parsedLatitude)) payload.latitude = parsedLatitude;
       if (longitude.trim() !== '' && Number.isFinite(parsedLongitude)) payload.longitude = parsedLongitude;
       payload.grid_type = gridType;
-      payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
+      if (canUsers) payload.owner_user_id = ownerUserId.trim() === '' ? null : Number(ownerUserId);
       payload.vendor_name = vendorName.trim();
       payload.vendor_gst = vendorGst.trim();
       payload.vendor_phone = vendorPhone.trim();
@@ -1053,14 +1061,16 @@ export default function SiteDetail() {
                       </select>
                     </Field>
                     <Field isDark={isDark} label="Customer">
-                      <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={ro()} disabled={!editingDetails || busy || usersBusy}>
+                      {!canUsers ? (
+                        <div style={{ ...ro(), display: 'flex', alignItems: 'center' }}>{site.owner_username || 'Managed by an admin'}</div>
+                      ) : <select value={ownerUserId} onChange={e => setOwnerUserId(e.target.value)} style={ro()} disabled={!editingDetails || busy || usersBusy}>
                         <option value="">Not assigned yet</option>
                         {ownerUsers.map((u) => {
                           const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
                           const label = fullName ? `${fullName} (${u.username || `#${u.id}`})` : (u.username || `User #${u.id}`);
                           return <option key={u.id} value={String(u.id)}>{label}</option>;
                         })}
-                      </select>
+                      </select>}
                     </Field>
                     <Field isDark={isDark} label="Latitude" hint="for weather & sun position">
                       <input type="number" step="0.0001" value={latitude} onChange={e => setLatitude(e.target.value)} style={ro()} placeholder="e.g. 11.0168" disabled={!editingDetails || busy} />
@@ -1087,6 +1097,7 @@ export default function SiteDetail() {
                     </Field>
                   </div>
 
+                  {canBilling && (<>
                   <div style={{ height: 1, background: ut.line2, margin: '6px 0' }} />
                   <div style={{ fontSize: '0.9rem', fontWeight: 600, color: ut.ink }}>Billing</div>
                   <Field
@@ -1096,14 +1107,17 @@ export default function SiteDetail() {
                   >
                     <input type="date" value={commissionedOn} onChange={e => setCommissionedOn(e.target.value)} style={ro({ maxWidth: 240 })} disabled={!editingDetails || busy} />
                   </Field>
+                  </>)}
                 </SetupCard>
                   );
                 })()}
 
                 {/* ── Savings & Billing Manual Entry ── */}
+                {canBilling && (
                 <div style={{ marginTop: 20 }}>
                   <SavingsBillingEditor siteId={site.site_id} />
                 </div>
+                )}
               </motion.div>
             )}
 
@@ -1399,6 +1413,7 @@ export default function SiteDetail() {
                   </Field>
                 </SetupCard>
 
+                {canDestroy && (
                 <SetupCard
                   isDark={isDark}
                   icon={<AlertTriangle size={21} strokeWidth={1.8} />}
@@ -1411,6 +1426,7 @@ export default function SiteDetail() {
                     </Btn>
                   </div>
                 </SetupCard>
+                )}
               </motion.div>
             )}
 
@@ -1432,7 +1448,7 @@ export default function SiteDetail() {
           </AnimatePresence>
 
           {/* Delete Site Confirmation Modal */}
-          {showDeleteModal && ReactDOM.createPortal(
+          {canDestroy && showDeleteModal && ReactDOM.createPortal(
             <div className="portal-modal-backdrop">
               <div className="portal-modal-container">
                 <div className="portal-modal-header">

@@ -35,7 +35,8 @@ import '../features/staff/ota.css';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { CUSTOMER_PORTAL_URL } from './constants';
 import { NavigationProvider } from '../contexts/NavigationContext';
-import AdminRoute from '../shared/guards/AdminRoute';
+import RequireAccess from '../shared/access/RequireAccess';
+import { useAccess } from '../shared/access/useAccess';
 import Login from '../features/auth/components/Login';
 import VerifyEmailPage from '../features/auth/components/VerifyEmailPage';
 import NavigationProgress from '../shared/layout/NavigationProgress';
@@ -74,12 +75,17 @@ const StaffLayout       = lazy(() => import('../shared/layout/StaffLayout'));
 /** Renders AiChat only for staff/superusers. */
 function StaffAiChat() {
   const { isAuthenticated, isStaff, loading } = useAuth();
-  if (loading || !isAuthenticated || !isStaff) return null;
+  const { can } = useAccess();
+  if (loading || !isAuthenticated || !isStaff || !can('ai_chat')) return null;
   return <Suspense fallback={null}><AiChat /></Suspense>;
 }
 
-function RoleRedirect() {
+const MySites = lazy(() => import('../features/staff/viewer/MySites'));
+const ViewerSite = lazy(() => import('../features/staff/viewer/ViewerSite'));
+
+export function RoleRedirect() {
   const { isAuthenticated, isStaff, loading } = useAuth();
+  const { home } = useAccess();
   React.useEffect(() => {
     if (!loading && isAuthenticated && !isStaff) {
       window.location.href = CUSTOMER_PORTAL_URL;
@@ -89,7 +95,7 @@ function RoleRedirect() {
   if (loading) return <div className="loading">Loading…</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!isStaff) return <div className="loading">Redirecting…</div>;
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to={home} replace />;
 }
 
 function App() {
@@ -125,25 +131,27 @@ function App() {
                 }
               >
                 <Route path="/" element={<RoleRedirect />} />
-                <Route path="/dashboard" element={<Suspense fallback={<SkeletonDashboard />}><Dashboard /></Suspense>} />
-                <Route path="/devices" element={<Suspense fallback={<SkeletonDashboard />}><Devices /></Suspense>} />
-                <Route path="/configuration" element={<Suspense fallback={<SkeletonDashboard />}><Configuration /></Suspense>} />
-                <Route path="/alerts" element={<Suspense fallback={<SkeletonDashboard />}><Alerts /></Suspense>} />
-                <Route path="/service-bookings" element={<Suspense fallback={<SkeletonDashboard />}><ServiceBookings /></Suspense>} />
-                <Route path="/support-inbox" element={<Suspense fallback={<SkeletonDashboard />}><SupportInbox /></Suspense>} />
-                <Route path="/users" element={<Suspense fallback={<SkeletonDashboard />}><Users /></Suspense>} />
-                <Route path="/employees" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Employees /></Suspense></AdminRoute>} />
-                <Route path="/teams" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Teams /></Suspense></AdminRoute>} />
+                <Route path="/dashboard" element={<RequireAccess feature="dashboard"><Suspense fallback={<SkeletonDashboard />}><Dashboard /></Suspense></RequireAccess>} />
+                <Route path="/devices" element={<RequireAccess feature="devices"><Suspense fallback={<SkeletonDashboard />}><Devices /></Suspense></RequireAccess>} />
+                <Route path="/configuration" element={<RequireAccess feature="configuration"><Suspense fallback={<SkeletonDashboard />}><Configuration /></Suspense></RequireAccess>} />
+                <Route path="/alerts" element={<RequireAccess feature="alerts"><Suspense fallback={<SkeletonDashboard />}><Alerts /></Suspense></RequireAccess>} />
+                <Route path="/service-bookings" element={<RequireAccess feature="bookings"><Suspense fallback={<SkeletonDashboard />}><ServiceBookings /></Suspense></RequireAccess>} />
+                <Route path="/support-inbox" element={<RequireAccess feature="support"><Suspense fallback={<SkeletonDashboard />}><SupportInbox /></Suspense></RequireAccess>} />
+                <Route path="/users" element={<RequireAccess feature="users"><Suspense fallback={<SkeletonDashboard />}><Users /></Suspense></RequireAccess>} />
+                <Route path="/employees" element={<RequireAccess feature="employees"><Suspense fallback={<SkeletonDashboard />}><Employees /></Suspense></RequireAccess>} />
+                <Route path="/teams" element={<RequireAccess feature="teams"><Suspense fallback={<SkeletonDashboard />}><Teams /></Suspense></RequireAccess>} />
                 <Route path="/departments" element={<Navigate to="/teams" replace />} />
-                <Route path="/device-presets" element={<Suspense fallback={<SkeletonDashboard />}><DevicePresets /></Suspense>} />
-                <Route path="/ota" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><OTA /></Suspense></AdminRoute>} />
-                <Route path="/analytics" element={<AdminRoute><Suspense fallback={<SkeletonDashboard />}><Analytics /></Suspense></AdminRoute>} />
-                <Route path="/sites/commissioning" element={<Suspense fallback={<SkeletonDashboard />}><CommissioningWizard /></Suspense>} />
-                <Route path="/sites/onboarding" element={<Suspense fallback={<SkeletonDashboard />}><SiteOnboarding /></Suspense>} />
-                <Route path="/sites/:siteId" element={<Suspense fallback={<SkeletonDashboard />}><SiteDetail /></Suspense>} />
-                <Route path="/sites" element={<Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense>} />
-                <Route path="/equipment" element={<Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense>} />
-                <Route path="/quotation" element={<Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense>} />
+                <Route path="/device-presets" element={<RequireAccess feature="presets"><Suspense fallback={<SkeletonDashboard />}><DevicePresets /></Suspense></RequireAccess>} />
+                <Route path="/ota" element={<RequireAccess feature="ota"><Suspense fallback={<SkeletonDashboard />}><OTA /></Suspense></RequireAccess>} />
+                <Route path="/analytics" element={<RequireAccess feature="analytics"><Suspense fallback={<SkeletonDashboard />}><Analytics /></Suspense></RequireAccess>} />
+                <Route path="/sites/commissioning" element={<RequireAccess feature="sites"><Suspense fallback={<SkeletonDashboard />}><CommissioningWizard /></Suspense></RequireAccess>} />
+                <Route path="/sites/onboarding" element={<RequireAccess feature="sites"><Suspense fallback={<SkeletonDashboard />}><SiteOnboarding /></Suspense></RequireAccess>} />
+                <Route path="/sites/:siteId" element={<RequireAccess feature="sites"><Suspense fallback={<SkeletonDashboard />}><SiteDetail /></Suspense></RequireAccess>} />
+                <Route path="/sites" element={<RequireAccess feature="sites"><Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense></RequireAccess>} />
+                <Route path="/equipment" element={<RequireAccess feature="catalog"><Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense></RequireAccess>} />
+                <Route path="/quotation" element={<RequireAccess feature="quotations"><Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense></RequireAccess>} />
+                <Route path="/my-sites" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><MySites /></Suspense></RequireAccess>} />
+                <Route path="/my-sites/:siteId" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><ViewerSite /></Suspense></RequireAccess>} />
                 <Route path="/profile" element={<Suspense fallback={<SkeletonDashboard />}><Profile /></Suspense>} />
               </Route>
             </Routes>

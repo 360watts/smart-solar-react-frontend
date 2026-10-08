@@ -6,7 +6,7 @@ import {
 } from '../siteHardware/ui';
 import { apiService } from '../../../services/api';
 import { useDialogBehavior } from './useDialogBehavior';
-import { Avatar } from './parts';
+import { Avatar, DeviceOpsSwitch } from './parts';
 import { RoleCards } from './RoleCards';
 import { SitePicker } from './SitePicker';
 import {
@@ -93,6 +93,11 @@ export function PersonPanel({ isDark, person, sites, teams, isSelf, onClose, onS
             <RoleCards isDark={isDark} value={form.role} onChange={(role) => set({ role })} disabled={isSelf} />
             {wasViewer && form.role !== 'viewer' && (
               <p style={{ margin: '10px 0 0', fontSize: '0.84rem', color: t.waitInk }}>Their site list will be cleared.</p>
+            )}
+            {form.role !== 'admin' && (
+              <div style={{ marginTop: 12 }}>
+                <DeviceOpsSwitch isDark={isDark} checked={form.device_ops_enabled} onChange={(device_ops_enabled) => set({ device_ops_enabled })} />
+              </div>
             )}
           </section>
 

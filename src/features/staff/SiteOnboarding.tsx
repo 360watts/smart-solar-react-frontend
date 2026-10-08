@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { apiService, SiteProfile } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAccess } from '../../shared/access/useAccess';
 import PageHeader from '../../shared/layout/PageHeader';
 import SavingsBillingEditor from './SavingsBillingEditor';
 import { Btn, ConfirmDialog, Field, StatusChip, controlStyle, useTokens } from './siteHardware/ui';
@@ -56,6 +57,9 @@ function changedPayload(draft: Draft, saved: Draft): Record<string, unknown> {
 }
 
 export default function SiteOnboarding() {
+  const { can } = useAccess();
+  const canBilling = can('site_billing');
+  const canUsers = can('users');
   const { isDark } = useTheme();
   const t = useTokens(isDark);
   const input = controlStyle(isDark);
@@ -83,17 +87,18 @@ export default function SiteOnboarding() {
     setErrors({});
     setSite(null); setOwner(null); setProfile(null); setSavings(null);
     const [s, p, sv] = await Promise.allSettled([
-      apiService.getSiteStaffDetail(id), apiService.getSiteProfile(id), apiService.getSiteSavings(id),
+      apiService.getSiteStaffDetail(id), apiService.getSiteProfile(id),
+      canBilling ? apiService.getSiteSavings(id) : Promise.resolve(null),
     ]);
     const errs: Partial<Record<SectionKey, string>> = {};
     let o: any = null;
     if (s.status === 'fulfilled') {
       setSite(s.value);
-      if (s.value.owner_user != null) o = await apiService.getUserById(s.value.owner_user).catch(() => null);
+      if (canUsers && s.value.owner_user != null) o = await apiService.getUserById(s.value.owner_user).catch(() => null);
       setOwner(o);
     } else errs.site = 'Could not load site details.';
     if (p.status === 'fulfilled') setProfile(p.value); else errs.appliances = 'Could not load appliance details.';
-    if (sv.status === 'fulfilled') setSavings(sv.value); else errs.billing = 'Could not load billing details.';
+    if (sv.status === 'fulfilled') setSavings(sv.value); else if (canBilling) errs.billing = 'Could not load billing details.';
     setErrors(errs);
     const next = {
       customer: toDraft(o, CUSTOMER_FIELDS),
@@ -101,7 +106,7 @@ export default function SiteOnboarding() {
       appliances: toDraft(p.status === 'fulfilled' ? p.value : null, APPLIANCE_FIELDS),
     };
     setDrafts(next); setSaved(next);
-  }, []);
+  }, [canBilling, canUsers]);
 
   useEffect(() => { if (siteId) load(siteId); }, [siteId, load]);
 
@@ -130,7 +135,7 @@ export default function SiteOnboarding() {
     site: site && { ...site, ...drafts.site },
     profile: profile && { ...profile, ...Object.fromEntries(Object.entries(drafts.appliances).map(([k, v]) => [k, v === '' ? null : v])) },
     savings, billingAnchor: savings?.billingAnchor ?? null,
-  } as OnboardingData), [owner, site, profile, savings, drafts]);
+  } as OnboardingData, canBilling), [owner, site, profile, savings, drafts, canBilling]);
 
   const filteredSites = sites.filter(s =>
     `${s.site_id} ${s.display_name ?? ''}`.toLowerCase().includes(query.toLowerCase()));
@@ -162,7 +167,9 @@ export default function SiteOnboarding() {
           style={{ all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <span style={{ fontWeight: 700, color: t.ink, flex: 1 }}>{title}</span>
-          <StatusChip isDark={isDark} state={done ? 'good' : 'wait'}>{done ? 'Complete' : `${p.filled} of ${p.total} filled`}</StatusChip>
+          {!(key === 'customer' && !canUsers) && (
+            <StatusChip isDark={isDark} state={done ? 'good' : 'wait'}>{done ? 'Complete' : `${p.filled} of ${p.total} filled`}</StatusChip>
+          )}
         </button>
         {isOpen && (
           <div style={{ padding: '4px 16px 16px' }}>
@@ -199,9 +206,10 @@ export default function SiteOnboarding() {
       {siteId && (
         <>
           {section('customer', 'Customer',
-            owner ? renderFields('customer', CUSTOMER_FIELDS)
+            !canUsers ? <p style={{ color: t.ink2 }}>Customer details are managed by an admin.</p>
+              : owner ? renderFields('customer', CUSTOMER_FIELDS)
               : <p style={{ color: t.ink2 }}>No customer is linked to this site yet. Link one from <Link to={`/sites/${siteId}`}>the site page</Link>.</p>,
-            owner ? 'customer' : undefined)}
+            canUsers && owner ? 'customer' : undefined)}
           {section('site', 'Site & system', renderFields('site', SITE_FIELDS), 'site')}
           {section('appliances', 'Appliances & metering', renderFields('appliances', APPLIANCE_FIELDS), 'appliances')}
           {section('billing', 'Billing & energy wallet', <>
@@ -211,7 +219,7 @@ export default function SiteOnboarding() {
                 {busy === 'site' ? 'Saving…' : 'Save EB account'}
               </Btn>
             </div>
-            <SavingsBillingEditor key={siteId} siteId={siteId} />
+            {can('site_billing') && <SavingsBillingEditor key={siteId} siteId={siteId} />}
           </>)}
         </>
       )}

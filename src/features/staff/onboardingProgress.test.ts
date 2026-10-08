@@ -25,4 +25,9 @@ describe('sectionProgress', () => {
     const p = sectionProgress({ ...empty, billingAnchor: '2026-07-17', savings: { energyWallet: { balanceKwh: 1237.5 } } });
     expect(p.billing.filled).toBe(2);
   });
+
+  it('leaves the savings items out of billing when the person cannot see savings', () => {
+    const p = sectionProgress({ ...empty, site: { eb_consumer_number: '123', eb_registered_mobile: '999' } }, false);
+    expect(p.billing).toEqual({ filled: 2, total: 2 });
+  });
 });

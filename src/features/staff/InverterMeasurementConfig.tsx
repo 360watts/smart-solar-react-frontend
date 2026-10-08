@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAccess } from '../../shared/access/useAccess';
 import {
   SetupShell, SetupCard, StatusChip, Item, Flow, Field, controlStyle, Btn, EmptyState,
   ConfirmDialog, useTokens, applianceIcon, applianceName, smartDeviceKindLabel,
@@ -58,6 +59,8 @@ export default function InverterMeasurementConfig({
 }: InverterMeasurementConfigProps) {
   const { isDark } = useTheme();
   const t = useTokens(isDark);
+  // Device operations switch off = watch only: attach / move / disconnect / plug controls are hidden.
+  const canOps = useAccess().can('device_control');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -379,7 +382,7 @@ export default function InverterMeasurementConfig({
               {heartbeatHealth?.severity === 'critical' ? 'Needs attention' : 'Connected'}
             </StatusChip>
           : <StatusChip isDark={isDark} state="wait">Not set up yet</StatusChip>}
-        action={!hasGateway && !gatewayComposerOpen && availableGatewayDevices.length > 0 && (
+        action={canOps && !hasGateway && !gatewayComposerOpen && availableGatewayDevices.length > 0 && (
           <Btn isDark={isDark} variant="soft" onClick={() => setGatewayComposerOpen(true)}><Plus size={15} /> Connect the monitor</Btn>
         )}
       >
@@ -393,7 +396,7 @@ export default function InverterMeasurementConfig({
                 ? <span style={{ color: t.waitInk, fontWeight: 600 }}>Not reporting — last update {ago(gw.last_seen_at)}</span>
                 : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Reporting normally</span> · last update {ago(gw.last_seen_at)}</>
             }
-            actions={[
+            actions={!canOps ? [] : [
               { label: 'Move to another site', hint: 'Unlink here and attach it elsewhere', icon: <ArrowRightLeft size={14} />, onClick: () => setGatewayComposerOpen(true) },
               { label: 'Disconnect', hint: 'Unlink from this site — the monitor stays registered', icon: <Unlink size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'gateway', id: gw.device_id, label: `Monitor ${gw.device_serial}` }) },
             ]}
@@ -404,7 +407,7 @@ export default function InverterMeasurementConfig({
               isDark={isDark}
               headline="No monitor connected"
               detail={availableGatewayDevices.length ? 'Connect the on-site box so we can read the inverter.' : 'No spare monitor is available to connect right now.'}
-              action={availableGatewayDevices.length > 0 && (
+              action={canOps && availableGatewayDevices.length > 0 && (
                 <Btn isDark={isDark} variant="soft" onClick={() => setGatewayComposerOpen(true)}><Plus size={15} /> Connect the monitor</Btn>
               )}
             />
@@ -497,7 +500,7 @@ export default function InverterMeasurementConfig({
         status={hasEnergyMeter
           ? <StatusChip isDark={isDark} state="good">Connected</StatusChip>
           : <StatusChip isDark={isDark} state="wait">Not set up yet</StatusChip>}
-        action={!meterComposerOpen && (
+        action={canOps && !meterComposerOpen && (
           <Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn>
         )}
       >
@@ -513,7 +516,7 @@ export default function InverterMeasurementConfig({
                 status={relayed
                   ? <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · via the monitor</>
                   : <><span style={{ color: t.goodInk, fontWeight: 600 }}>Connected</span> · last update {ago(meter.last_seen_at)}</>}
-                actions={[
+                actions={!canOps ? [] : [
                   ...(gw && mirrorInfoReady && !relayed ? [{ label: 'Route through the monitor', hint: 'Read this meter over the monitor’s connection', icon: <Link2 size={14} />, onClick: () => handleSetMirror(meter.device_id, gw.device_id) }] : []),
                   { label: 'Move to another site', hint: 'Unlink here and attach it elsewhere', icon: <ArrowRightLeft size={14} />, onClick: () => {
                     const target = window.prompt(`Move the meter to which site ID?`, '');
@@ -530,7 +533,7 @@ export default function InverterMeasurementConfig({
               isDark={isDark}
               headline="No meter connected"
               detail="Add a whole-home meter here to track total usage and what's sent to the grid."
-              action={<Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn>}
+              action={canOps ? <Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn> : undefined}
             />
           )
         )}
@@ -659,7 +662,7 @@ export default function InverterMeasurementConfig({
             ? `${smartDevices.filter((d: any) => isReadingFresh(d.latest?.timestamp)).length} of ${smartDevices.length} online`
             : '0 appliances'}
         </StatusChip>}
-        action={!smartComposerOpen && (
+        action={canOps && !smartComposerOpen && (
           <Btn isDark={isDark} variant="soft" full onClick={beginAddSmartDevice}><Plus size={15} /> Add a smart plug</Btn>
         )}
       >
@@ -689,7 +692,7 @@ export default function InverterMeasurementConfig({
               isDark={isDark}
               headline="No smart plugs yet"
               detail="Add one to start tracking an appliance on its own."
-              action={<Btn isDark={isDark} variant="soft" onClick={beginAddSmartDevice}><Plus size={15} /> Add the first plug</Btn>}
+              action={canOps ? <Btn isDark={isDark} variant="soft" onClick={beginAddSmartDevice}><Plus size={15} /> Add the first plug</Btn> : undefined}
             />
           )
         ) : (
@@ -720,7 +723,7 @@ export default function InverterMeasurementConfig({
                 icon={applianceIcon(device.appliance_label)}
                 title={device.display_name || applianceName(device.appliance_label)}
                 status={status}
-                actions={[
+                actions={!canOps ? [] : [
                   { label: 'Edit', icon: <Pencil size={14} />, onClick: () => beginEditSmartDevice(device) },
                   { label: 'Remove', icon: <Trash2 size={14} />, danger: true, onClick: () => setConfirmDel({ kind: 'smart', id: device.id, label: device.display_name || applianceName(device.appliance_label) }) },
                 ]}

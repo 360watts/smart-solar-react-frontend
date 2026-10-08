@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAccess } from '../../shared/access/useAccess';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileOTA from '../mobile/staff/MobileOTA';
 import PageHeader from '../../shared/layout/PageHeader';
@@ -317,6 +318,8 @@ const Modal: React.FC<{
 
 export const OTA: React.FC = () => {
   const isMobile = useIsMobile();
+  // Device operations switch off = watch only: deploy, cancel and rollback are hidden.
+  const canOps = useAccess().can('device_control');
   if (isMobile) return <MobileOTA />;
   const { isDark } = useTheme();
 
@@ -1023,6 +1026,7 @@ export const OTA: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════ */}
       {/* SECTION 2: Deploy Firmware                                */}
       {/* ══════════════════════════════════════════════════════════ */}
+      {canOps && (
       <div style={cardStyle(isDark)}>
         <CardHeader
           icon={<Zap size={19} color="white" />}
@@ -1153,6 +1157,8 @@ export const OTA: React.FC = () => {
         </div>
       </div>
 
+      )}
+
       {/* ══════════════════════════════════════════════════════════ */}
       {/* SECTION 3: Live Deployment Status                         */}
       {/* ══════════════════════════════════════════════════════════ */}
@@ -1195,7 +1201,7 @@ export const OTA: React.FC = () => {
                   <code style={{ fontSize: '0.75rem', color: sub, background: tok.bgMuted(isDark), padding: '2px 8px', borderRadius: 6 }}>
                     ID #{activeDeployment.id}
                   </code>
-                  {activeDeployment.status === 'in_progress' && (
+                  {canOps && activeDeployment.status === 'in_progress' && (
                     <button onClick={handleCancelDeployment} style={{
                       ...btnBase, background: 'rgba(239,68,68,0.12)', color: '#EF4444',
                       border: '1px solid rgba(239,68,68,0.3)', padding: '3px 10px', fontSize: '0.7rem',
@@ -1323,6 +1329,7 @@ export const OTA: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════ */}
       {/* SECTION 4: Emergency Rollback                             */}
       {/* ══════════════════════════════════════════════════════════ */}
+      {canOps && (
       <div style={{ ...cardStyle(isDark, { border: `1px solid rgba(239,68,68,0.35)` }) }}>
         <CardHeader
           icon={<RotateCcw size={19} color="white" />}
@@ -1460,6 +1467,7 @@ export const OTA: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Deployment Confirm Modal ── */}
       <Modal show={confirmModal.show} onClose={() => setConfirmModal(m => ({ ...m, show: false }))}

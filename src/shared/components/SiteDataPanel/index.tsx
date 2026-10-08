@@ -309,7 +309,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       // latest CT meter reading, and today's solar-day energy summary — replacing
       // what used to be 5 separate endpoints/pollers (3 of them on this same 30s
       // cadence) with one round-trip.
-      const overview = await apiService.getStaffOverview(siteId);
+      // A 403 (e.g. a viewer if the backend tier changes) must not break the panel:
+      // carry on with empty overview data.
+      let overview: Awaited<ReturnType<typeof apiService.getStaffOverview>> = null;
+      try {
+        overview = await apiService.getStaffOverview(siteId);
+      } catch {
+        overview = null;
+      }
       if (cancelled) return;
       setGatewayOnline(overview?.realtime?.is_online ?? null);
       setCtLatest(overview?.energy_meter_latest ?? null);

@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import { matchPath } from 'react-router-dom';
+import type { Feature } from '../access/features';
 
 export type StaffDensityMode = 'data-dense' | 'workflow' | 'admin';
 export type StaffWorkspaceGroup = 'Monitor' | 'Sales & Quotations' | 'Operations' | 'Admin';
@@ -32,14 +33,15 @@ export interface StaffNavItem extends StaffRouteMeta {
   path: string;
   label: string;
   icon: LucideIcon;
-  staffOnly?: boolean;
-  adminOnly?: boolean;
+  /** Backend feature key that must be in the user's access list; none = always shown. */
+  feature?: Feature;
   end?: boolean;
 }
 
 export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   {
     path: '/dashboard',
+    feature: 'dashboard',
     label: 'Dashboard',
     title: 'Operations Dashboard',
     subtitle: 'Live estate status, health signals, and active site conditions',
@@ -50,6 +52,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/alerts',
+    feature: 'alerts',
     label: 'Alerts',
     title: 'Alerts',
     subtitle: 'Faults, acknowledgements, and active exceptions across sites',
@@ -59,6 +62,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/devices',
+    feature: 'devices',
     label: 'Devices',
     title: 'Devices',
     subtitle: 'Commissioned devices, status tracking, and field configuration',
@@ -68,6 +72,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/sites',
+    feature: 'sites',
     label: 'Sites',
     title: 'Sites',
     subtitle: 'Commissioning progress, performance context, and customer estates',
@@ -77,6 +82,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/quotation',
+    feature: 'quotations',
     label: 'Quotation',
     title: 'Solar Quotations',
     subtitle: 'Create, share, and manage customer solar proposals',
@@ -86,6 +92,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/service-bookings',
+    feature: 'bookings',
     label: '360Care Bookings',
     title: '360Care Service Bookings',
     subtitle: 'Assign vendors, schedule visits, and track jobs through completion',
@@ -95,6 +102,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/configuration',
+    feature: 'configuration',
     label: 'Configuration',
     title: 'Configuration',
     subtitle: 'Platform rules, operating defaults, and field behavior settings',
@@ -104,6 +112,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/equipment',
+    feature: 'catalog',
     label: 'Product Catalog',
     title: 'Product Catalog',
     subtitle: 'Manage solar panels, inverters & batteries catalog',
@@ -113,6 +122,7 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/device-presets',
+    feature: 'presets',
     label: 'Presets',
     title: 'Device Presets',
     subtitle: 'Reusable provisioning templates and hardware defaults',
@@ -122,16 +132,17 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/ota',
+    feature: 'ota',
     label: 'OTA',
     title: 'OTA Updates',
     subtitle: 'Firmware rollout history, package status, and update orchestration',
     group: 'Operations',
     density: 'admin',
     icon: Download,
-    adminOnly: true,
   },
   {
     path: '/users',
+    feature: 'users',
     label: 'Users',
     title: 'Users',
     subtitle: 'Customer portal users, device assignments, and account controls',
@@ -141,23 +152,33 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/employees',
+    feature: 'employees',
     label: 'Employees',
     title: 'Employees',
     subtitle: 'Internal staff records, roster management, and operational ownership',
     group: 'Admin',
     density: 'admin',
     icon: Briefcase,
-    adminOnly: true,
   },
   {
     path: '/teams',
+    feature: 'teams',
     label: 'Teams',
     title: 'Teams',
     subtitle: 'Teams, who is on them, and how the group is organised',
     group: 'Admin',
     density: 'admin',
     icon: Users,
-    adminOnly: true,
+  },
+  {
+    path: '/my-sites',
+    label: 'My sites',
+    title: 'My sites',
+    subtitle: 'The sites you have been given access to',
+    group: 'Monitor',
+    density: 'workflow',
+    icon: Building2,
+    feature: 'my_sites',
   },
   {
     path: '/profile',
@@ -171,6 +192,15 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
 ];
 
 const STAFF_ROUTE_MATCHERS: Array<{ pattern: string; meta: StaffRouteMeta }> = [
+  {
+    pattern: '/my-sites/:siteId',
+    meta: {
+      title: 'Site',
+      subtitle: 'Live performance for one of your sites',
+      group: 'Monitor',
+      density: 'data-dense',
+    },
+  },
   {
     pattern: '/sites/onboarding',
     meta: {
@@ -217,3 +247,10 @@ export function getStaffRouteMeta(pathname: string): StaffRouteMeta | undefined 
   return matched?.meta;
 }
 
+/** Nav items the person may see: no feature = always, else `can(feature)`. */
+export function visibleNavItems<T extends { feature?: Feature }>(
+  items: T[],
+  can: (feature: Feature) => boolean,
+): T[] {
+  return items.filter((item) => !item.feature || can(item.feature));
+}

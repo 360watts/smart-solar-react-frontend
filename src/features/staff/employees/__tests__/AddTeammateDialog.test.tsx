@@ -90,4 +90,42 @@ describe('AddTeammateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /send invite/i }));
     expect(await screen.findByText('That email already has an account.')).toBeInTheDocument();
   });
+
+  describe('Device operations switch', () => {
+    it('is on by default for employees and hidden for admins', () => {
+      setup();
+      expect(screen.getByRole('switch', { name: /device operations/i })).toBeChecked();
+      fireEvent.click(screen.getByRole('radio', { name: /admin/i }));
+      expect(screen.queryByRole('switch', { name: /device operations/i })).toBeNull();
+    });
+
+    it('is sent with the invite when turned off', async () => {
+      (apiService.createEmployee as jest.Mock).mockResolvedValue({ id: 9 });
+      setup();
+      fill();
+      fireEvent.click(screen.getByRole('switch', { name: /device operations/i }));
+      expect(screen.getByText('Can watch devices but not change them.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /send invite/i }));
+      await waitFor(() => expect(apiService.createEmployee).toHaveBeenCalled());
+      expect((apiService.createEmployee as jest.Mock).mock.calls[0][0]).toMatchObject({ role: 'employee', device_ops_enabled: false });
+    });
+
+    it('is sent as true by default and omitted for an admin', async () => {
+      (apiService.createEmployee as jest.Mock).mockResolvedValue({ id: 9 });
+      setup();
+      fill();
+      fireEvent.click(screen.getByRole('button', { name: /send invite/i }));
+      await waitFor(() => expect(apiService.createEmployee).toHaveBeenCalledTimes(1));
+      expect((apiService.createEmployee as jest.Mock).mock.calls[0][0].device_ops_enabled).toBe(true);
+    });
+
+    it('leaves the flag out of an admin invite', async () => {
+      (apiService.createEmployee as jest.Mock).mockResolvedValue({ id: 9 });
+      setup({ defaultRole: 'admin' });
+      fill();
+      fireEvent.click(screen.getByRole('button', { name: /send invite/i }));
+      await waitFor(() => expect(apiService.createEmployee).toHaveBeenCalled());
+      expect('device_ops_enabled' in (apiService.createEmployee as jest.Mock).mock.calls[0][0]).toBe(false);
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { RoleKey, initialsOf, Person } from './roles';
+import { useTokens } from '../siteHardware/ui';
 
 const PALETTE: [string, string][] = [
   ['#e3e1fb', '#2b2a6b'], ['#d9efe3', '#0b4d2e'], ['#fbe8cf', '#7a4504'],
@@ -40,5 +41,27 @@ export function RolePill({ isDark, role, label }: { isDark: boolean; role: RoleK
     <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: c.bg, color: c.fg, fontSize: '0.8rem', fontWeight: 600 }}>
       {label}
     </span>
+  );
+}
+
+/** "Device operations" on/off for employees and viewers. Callers hide it for admins. */
+export function DeviceOpsSwitch({ isDark, checked, onChange }: { isDark: boolean; checked: boolean; onChange: (v: boolean) => void }) {
+  const t = useTokens(isDark);
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12, minHeight: 44, padding: '11px 13px', borderRadius: 12,
+      border: `1.5px solid ${checked ? t.good : t.line}`, background: checked ? t.goodBg : t.card2, cursor: 'pointer',
+    }}>
+      <input
+        type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)}
+        style={{ accentColor: t.good, width: 20, height: 20, marginTop: 1, flexShrink: 0 }}
+      />
+      <span>
+        <span style={{ display: 'block', fontSize: '0.92rem', fontWeight: 600, color: t.ink }}>Device operations</span>
+        <span style={{ display: 'block', fontSize: '0.84rem', color: t.ink2, marginTop: 2 }}>
+          {checked ? 'Can restart devices and change their settings.' : 'Can watch devices but not change them.'}
+        </span>
+      </span>
+    </label>
   );
 }

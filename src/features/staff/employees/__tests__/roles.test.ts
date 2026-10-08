@@ -47,7 +47,7 @@ describe('statusOf', () => {
 });
 
 describe('formError / buildPayload', () => {
-  const form = { first_name: 'Meera', last_name: 'Iyer', email: 'Meera@Example.com', mobile_number: '+91 90000 00002', role: 'viewer' as const, assigned_sites: [] as string[] };
+  const form = { first_name: 'Meera', last_name: 'Iyer', email: 'Meera@Example.com', mobile_number: '+91 90000 00002', role: 'viewer' as const, assigned_sites: [] as string[], device_ops_enabled: true };
   it('asks a viewer for at least one site', () => {
     expect(formError(form, 'create')).toMatch(/at least one site/i);
     expect(formError({ ...form, assigned_sites: ['s1'] }, 'create')).toBeNull();
@@ -79,6 +79,27 @@ describe('formError / buildPayload', () => {
   });
 });
 
+describe('device operations switch', () => {
+  const form = { first_name: 'Meera', last_name: 'Iyer', email: 'm@example.com', mobile_number: '1', role: 'employee' as const, assigned_sites: [] as string[], device_ops_enabled: true };
+  it('treats a missing flag as on and reads an explicit off', () => {
+    expect(formFromPerson(person()).device_ops_enabled).toBe(true);
+    expect(formFromPerson(person({ device_ops_enabled: false })).device_ops_enabled).toBe(false);
+  });
+  it('sends the flag for employees and viewers, never for admins', () => {
+    expect(buildPayload(form).device_ops_enabled).toBe(true);
+    expect(buildPayload({ ...form, device_ops_enabled: false }).device_ops_enabled).toBe(false);
+    expect(buildPayload({ ...form, role: 'viewer', device_ops_enabled: false }).device_ops_enabled).toBe(false);
+    expect('device_ops_enabled' in buildPayload({ ...form, role: 'admin' })).toBe(false);
+  });
+  it('adds Watch only to the note when off, leaving the headline alone', () => {
+    const names = { s1: 'Coimbatore 02' };
+    expect(worksOn(person({ role: 'employee', device_ops_enabled: false }), names)).toEqual({ headline: 'All sites', note: 'Monitors and fixes systems. Watch only' });
+    expect(worksOn(person({ assigned_sites: ['s1'], device_ops_enabled: false }), names)).toEqual({ headline: '1 site', note: 'Coimbatore 02. Watch only' });
+    expect(worksOn(person({ assigned_sites: [], device_ops_enabled: false }), names)).toEqual({ headline: 'No sites yet', note: 'Watch only' });
+    expect(worksOn(person({ role: 'admin', device_ops_enabled: false }), names).note).toBe('Including team and billing');
+  });
+});
+
 describe('formFromPerson / names / savedMessage', () => {
   it('builds a form from a person', () => {
     const f = formFromPerson(person({ team: { id: 3, name: 'Partners' } }));
@@ -105,6 +126,7 @@ describe('friendlyError', () => {
     ['Your role does not have access to this resource.', /permission/i],
     ['First name is required', /name and email/i],
     ['Team not found', /team is no longer available/i],
+    ['Device operations are turned off for your account.', /device operations are turned off.*ask an admin/i],
     ['something odd', /couldn't save that/i],
   ];
   it.each(cases)('maps %s', (msg, expected) => {

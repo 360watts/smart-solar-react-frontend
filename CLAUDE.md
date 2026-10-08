@@ -28,7 +28,7 @@ VITE_API_BASE_URL=https://smart-solar-django-backend.vercel.app/api
 
 ### Route Structure
 
-Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`/`AdminRoute`). This app has no customer-facing routes — the customer portal was decommissioned here and now lives solely in `smart-solar-customer-portal`. Non-staff accounts hitting `/` are redirected to `https://my.360watts.com` (`RoleRedirect` in `App.tsx`) rather than routed anywhere internally.
+Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`, and per page by `RequireAccess` from `src/shared/access`, which hides what the signed-in role cannot use; see "Role-based access" below). This app has no customer-facing routes — the customer portal was decommissioned here and now lives solely in `smart-solar-customer-portal`. Non-staff accounts hitting `/` are redirected to `https://my.360watts.com` (`RoleRedirect` in `App.tsx`) rather than routed anywhere internally.
 
 ```
 /login                        → Login (public)
@@ -42,10 +42,12 @@ Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar 
 /alerts                        → Active alerts
 /service-bookings              → ServiceBookings
 /users                         → User management
-/employees                     → Employee list (AdminRoute)
-/departments                   → Department list (AdminRoute)
+/employees                     → Employees page: list, person drawer, add dialog; viewers are managed here (RequireAccess `employees`)
+/teams                         → Teams (RequireAccess `teams`); `/departments` redirects here
+/my-sites                      → Viewer home: the sites assigned to the signed-in viewer (RequireAccess `my_sites`)
+/my-sites/:siteId              → Viewer site view (SiteDataPanel with the read-only monitoring tabs)
 /device-presets                → MODBUS register presets
-/ota                           → Firmware OTA management (AdminRoute)
+/ota                           → Firmware OTA management (RequireAccess `ota`, admin only)
 /sites                         → Site list
 /sites/commissioning           → CommissioningWizard
 /sites/onboarding              → SiteOnboarding (pick a site, fill customer / system / appliances / billing; per-section progress)
@@ -71,7 +73,8 @@ src/
     quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
   shared/
     components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...)
-    guards/       — StaffRoute, AdminRoute
+    guards/       — StaffRoute (AdminRoute is no longer used by any route)
+    access/       — Feature keys, `useAccess()`, `RequireAccess` (see "Role-based access")
     hooks/        — Custom React hooks
     layout/       — StaffLayout, NavigationProgress
     lib/          — Utility helpers
@@ -86,7 +89,11 @@ src/
 
 ### Auth
 
-JWT auth via `AuthContext`. Access token stored in memory; refresh token in localStorage. 401 responses trigger automatic refresh in the API service layer. `ProtectedRoute` wraps all authenticated pages; `AdminRoute` gates admin-only pages.
+JWT auth via `AuthContext`. Access token stored in memory; refresh token in localStorage. 401 responses trigger automatic refresh in the API service layer. `StaffRoute` wraps the staff pages; per-page access is decided by the backend's `access` list (below), not by `is_superuser` alone.
+
+### Role-based access
+
+Roles are admin / employee / viewer (backend `api/staff_roles.py`). `/auth/user/` and the login responses return `role`, an `access` array of feature keys and, for viewers, `assigned_sites`. `useAccess().can('<feature>')` (in `src/shared/access/`) is the single check: the three nav lists (`staffNavigation.tsx`, `StaffLayout.tsx`, `Navbar.tsx`), `RequireAccess` on every staff route, the AI chat bubble and the in-page controls (site billing, permanent deletes, Wi-Fi passwords, device-writing buttons) all use it. Hide controls, do not disable them. Feature keys live in `src/shared/access/features.ts` and must match the backend `FEATURES` table. If the backend sends no `access` list (older deploy) the hook falls back to the old behaviour, except a viewer, who gets nothing. Hiding is a convenience only; the backend enforces everything. Viewers have no list-all endpoint: their home is `/my-sites`, built from `assigned_sites`. Design: `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-staff-roles-design.md`; scenarios: `docs/test-scenarios/role-based-hiding.md`, `employees-page.md`.
 
 ### API Layer
 
@@ -120,10 +127,13 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 
 - `CommissioningWizard.tsx` — new-site commissioning flow
 - `SavingsBillingEditor.tsx` — savings/billing editor (EB bill, investment, payment status, latest bill date / billing anchor, energy-wallet balance override)
-- `SiteOnboarding.tsx` + `onboardingProgress.ts` — staff page to complete a site's customer, system, appliance and billing details (`/sites/onboarding?site=<id>`, sidebar entry under Sites). A "Site setup" redesign (one page, Needs-setup filter on Sites, retire the wizard) is proposed, not built — see `smart-solar-django-backend/docs/superpowers/specs/2026-10-07-site-onboarding-page-design.md`
+- `SiteOnboarding.tsx` + `onboardingProgress.ts` — staff page to complete a site's customer, system, appliance and billing details (`/sites/onboarding?site=<id>`, sidebar entry under Sites). The Billing section also holds the EB account fields (consumer number + EB-registered mobile). A "Site setup" redesign (one page, Needs-setup filter on Sites, retire the wizard) is proposed, not built — see `smart-solar-django-backend/docs/superpowers/specs/2026-10-07-site-onboarding-page-design.md`
 - `RestoreArchivedDeviceModal.tsx` — restore a soft-deleted device
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
-- `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `is_staff`/`is_superuser`)
+- `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `can('ai_chat')`, admin only)
+- `employees/` — the Employees page: `EmployeesPage.tsx`, `PeopleList.tsx`, `PersonPanel.tsx` (role, assigned sites, device-operations switch), `AddTeammateDialog.tsx`, `roles.ts` (role copy and payload rules; keep in sync with the backend tiers)
+- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view
+- `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
 
 ### Customer Portal Decommission
 

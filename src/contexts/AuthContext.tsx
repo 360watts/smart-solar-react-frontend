@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { getCsrfToken, setCsrfToken } from '../services/api';
 import { API_BASE_URL } from '../app/constants';
+import type { Feature } from '../shared/access/features';
 
 interface User {
   id: number;
@@ -12,6 +13,9 @@ interface User {
   address?: string;
   is_staff: boolean;
   is_superuser: boolean;
+  role?: string | null;
+  access?: Feature[];
+  assigned_sites?: { site_id: string; display_name: string }[];
 }
 
 interface AuthContextType {

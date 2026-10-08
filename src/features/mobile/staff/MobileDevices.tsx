@@ -7,6 +7,7 @@ import {
   RotateCcw, Trash2, Pencil, Download, BellOff, Bell, Menu
 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAccess } from '../../../shared/access/useAccess';
 import finalLogo from '../../../assets/finalLogo.png';
 
 interface Device {
@@ -212,6 +213,11 @@ const MobileDevices: React.FC = () => {
   const muted   = 'var(--muted-foreground)';
   const accent  = '#2FBF71';
 
+  const { can } = useAccess();
+  const canDestroy = can('destructive');
+  // Device operations switch off = watch only: edit / reboot / reset / mute are hidden.
+  const canOps = can('device_control');
+  const canWifiPassword = can('site_credentials');
   const [devices,    setDevices]    = useState<Device[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -284,7 +290,7 @@ const MobileDevices: React.FC = () => {
         config_version: editForm.config_version || '',
         wifi_ssid: editForm.wifi_ssid || '',
       };
-      if (showWifiPassword && editForm.wifi_password) {
+      if (canWifiPassword && showWifiPassword && editForm.wifi_password) {
         payload.wifi_password = editForm.wifi_password;
       }
       await apiService.patchDevice(editingDevice.id, payload);
@@ -501,9 +507,11 @@ const MobileDevices: React.FC = () => {
                       {isExp ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </div>
                   </div>
+                  {(canOps || canDestroy) && (
                   <button onClick={e => { e.stopPropagation(); setActionMenu(actionMenu === device.id ? null : device.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: muted, padding: '4px', flexShrink: 0, marginLeft: '-8px' }}>
                     <MoreVertical size={16} />
                   </button>
+                  )}
                 </button>
 
                 {isExp && (
@@ -624,6 +632,7 @@ const MobileDevices: React.FC = () => {
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}`, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Actions</div>
             <div style={{ padding: '8px' }}>
               {[
+                ...(canOps ? [
                 { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEdit(filtered.find(d => d.id === actionMenu)!), color: '#3B82F6' },
                 { label: 'Reboot', icon: <RotateCcw size={16} />, onClick: () => { setModal({ type: 'reboot', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
                 { label: 'Hard Reset', icon: <AlertTriangle size={16} />, onClick: () => { setModal({ type: 'reset', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#F59E0B' },
@@ -632,7 +641,8 @@ const MobileDevices: React.FC = () => {
                   const mutedNow = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
                   return { label: mutedNow ? 'Unmute Alerts' : 'Mute Alerts', icon: mutedNow ? <Bell size={16} /> : <BellOff size={16} />, onClick: () => toggleAlertsMute(device), color: 'var(--muted-foreground)' };
                 })()),
-                { label: 'Delete', icon: <Trash2 size={16} />, onClick: () => { setModal({ type: 'delete', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#EF4444' },
+                ] : []),
+                ...(canDestroy ? [{ label: 'Delete', icon: <Trash2 size={16} />, onClick: () => { setModal({ type: 'delete', device: filtered.find(d => d.id === actionMenu)! }); setActionMenu(null); }, color: '#EF4444' }] : []),
               ].map(({ label, icon, onClick, color }) => (
                 <button key={label} onClick={onClick} style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'transparent',
@@ -703,6 +713,7 @@ const MobileDevices: React.FC = () => {
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi SSID</label>
                   <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
+                {canWifiPassword && (
                 <div style={{ display: 'grid', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi Password</label>
@@ -714,6 +725,7 @@ const MobileDevices: React.FC = () => {
                     <input type="password" value={editForm.wifi_password} onChange={e => setEditForm(prev => ({ ...prev, wifi_password: e.target.value }))} placeholder="New Wi-Fi password" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                   )}
                 </div>
+                )}
                 <div style={{ display: 'grid', gap: 6 }}>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Config Version ID</label>
                   <input value={editForm.config_version} onChange={e => setEditForm(prev => ({ ...prev, config_version: e.target.value }))} placeholder="Config version" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />

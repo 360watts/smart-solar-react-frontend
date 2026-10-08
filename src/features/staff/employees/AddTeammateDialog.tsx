@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useTokens, Btn, Field, controlStyle } from '../siteHardware/ui';
 import { apiService } from '../../../services/api';
 import { useDialogBehavior } from './useDialogBehavior';
+import { DeviceOpsSwitch } from './parts';
 import { RoleCards } from './RoleCards';
 import { SitePicker } from './SitePicker';
 import { PersonForm, RoleKey, SiteOption, Team, buildPayload, formError, friendlyError } from './roles';
@@ -16,7 +17,7 @@ export function AddTeammateDialog({ isDark, sites, teams, defaultRole = 'employe
   const control = controlStyle(isDark);
   const ref = useDialogBehavior(onClose);
   const [form, setForm] = useState<PersonForm>({
-    first_name: '', last_name: '', email: '', mobile_number: '', role: defaultRole, assigned_sites: [],
+    first_name: '', last_name: '', email: '', mobile_number: '', role: defaultRole, assigned_sites: [], device_ops_enabled: true,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +119,11 @@ export function AddTeammateDialog({ isDark, sites, teams, defaultRole = 'employe
               <p style={{ margin: '10px 0 0', fontSize: '0.84rem', color: t.waitInk, background: t.waitBg, borderRadius: 10, padding: '9px 12px' }}>
                 Admins can see billing and customer details.
               </p>
+            )}
+            {form.role !== 'admin' && (
+              <div style={{ marginTop: 12 }}>
+                <DeviceOpsSwitch isDark={isDark} checked={form.device_ops_enabled} onChange={(device_ops_enabled) => set({ device_ops_enabled })} />
+              </div>
             )}
           </section>
 

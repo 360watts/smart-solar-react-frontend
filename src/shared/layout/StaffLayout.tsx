@@ -7,37 +7,43 @@ import {
   Zap, CalendarCheck, MessageCircle, TrendingUp, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAccess } from '../access/useAccess';
+import type { Feature } from '../access/features';
+import { visibleNavItems } from './staffNavigation';
 import { useTheme } from '../../contexts/ThemeContext';
 import finalLogo from '../../assets/finalLogo.png';
 
 // ─── Nav groups ───────────────────────────────────────────────────────────────
 
-const NAV_MAIN = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+type NavEntry = { path: string; label: string; icon: React.ElementType; feature: Feature };
+
+const NAV_MAIN: NavEntry[] = [
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, feature: 'dashboard' },
+  { path: '/my-sites',  label: 'My sites',  icon: Building2,       feature: 'my_sites'  },
 ];
 
-const NAV_CONFIG = [
-  { path: '/devices',        label: 'Devices',       icon: Monitor   },
-  { path: '/alerts',         label: 'Alerts',         icon: Bell      },
-  { path: '/configuration',  label: 'Configuration',  icon: Settings  },
-  { path: '/users',          label: 'Users',          icon: Users     },
-  { path: '/device-presets', label: 'Device Presets', icon: Star      },
+const NAV_CONFIG: NavEntry[] = [
+  { path: '/devices',        label: 'Devices',       icon: Monitor,  feature: 'devices'       },
+  { path: '/alerts',         label: 'Alerts',         icon: Bell,     feature: 'alerts'        },
+  { path: '/configuration',  label: 'Configuration',  icon: Settings, feature: 'configuration' },
+  { path: '/users',          label: 'Users',          icon: Users,    feature: 'users'         },
+  { path: '/device-presets', label: 'Device Presets', icon: Star,     feature: 'presets'       },
 ];
 
-const NAV_STAFF = [
-  { path: '/sites',            label: 'Sites',            icon: Building2    },
-  { path: '/sites/onboarding', label: 'Site Onboarding',  icon: ClipboardCheck },
-  { path: '/equipment',        label: 'Product Catalog',  icon: Server       },
-  { path: '/quotation',        label: 'Quotation',        icon: FileText     },
-  { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck },
-  { path: '/support-inbox',    label: 'Support Inbox',    icon: MessageCircle },
-  { path: '/ota',              label: 'OTA Updates',      icon: Download     },
+const NAV_STAFF: NavEntry[] = [
+  { path: '/sites',            label: 'Sites',            icon: Building2,      feature: 'sites'    },
+  { path: '/sites/onboarding', label: 'Site Onboarding',  icon: ClipboardCheck, feature: 'sites'    },
+  { path: '/equipment',        label: 'Product Catalog',  icon: Server,         feature: 'catalog'  },
+  { path: '/quotation',        label: 'Quotation',        icon: FileText,       feature: 'quotations' },
+  { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck,  feature: 'bookings' },
+  { path: '/support-inbox',    label: 'Support Inbox',    icon: MessageCircle,  feature: 'support'  },
+  { path: '/ota',              label: 'OTA Updates',      icon: Download,       feature: 'ota'      },
 ];
 
-const NAV_ADMIN = [
-  { path: '/employees',   label: 'Employees',   icon: Briefcase },
-  { path: '/teams', label: 'Teams', icon: Users     },
-  { path: '/analytics',   label: 'Analytics',   icon: TrendingUp },
+const NAV_ADMIN: NavEntry[] = [
+  { path: '/employees', label: 'Employees', icon: Briefcase,  feature: 'employees' },
+  { path: '/teams',     label: 'Teams',     icon: Users,      feature: 'teams'     },
+  { path: '/analytics', label: 'Analytics', icon: TrendingUp, feature: 'analytics' },
 ];
 
 const STAFF_SIDEBAR_EXPANDED  = 236;
@@ -253,7 +259,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   collapsed = false,
   onToggleCollapse,
 }) => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
+  const { can } = useAccess();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -272,7 +279,6 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     navigate('/login');
   };
 
-  const isStaff = !!(user?.is_staff);
   const initials = [user?.first_name?.[0], user?.last_name?.[0]]
     .filter(Boolean).join('').toUpperCase() || user?.username?.[0]?.toUpperCase() || '?';
   const displayName = user
@@ -430,37 +436,25 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         display: 'flex', flexDirection: 'column', gap: 1,
         overflowY: 'auto', overflowX: 'hidden',
       }}>
-        {NAV_MAIN.map(item => navLink(item))}
+        {visibleNavItems(NAV_MAIN, can).map(item => navLink(item))}
 
-        {(isAdmin || isStaff) && (
-          <>
-            {showCollapsed
-              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
-              : <div className="staff-group-label">Config</div>
-            }
-            {NAV_CONFIG.map(item => navLink(item))}
-          </>
-        )}
-
-        {(isAdmin || isStaff) && (
-          <>
-            {showCollapsed
-              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
-              : <div className="staff-group-label">Operations</div>
-            }
-            {NAV_STAFF.map(item => navLink(item))}
-          </>
-        )}
-
-        {isAdmin && (
-          <>
-            {showCollapsed
-              ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
-              : <div className="staff-group-label">Admin</div>
-            }
-            {NAV_ADMIN.map(item => navLink(item))}
-          </>
-        )}
+        {([
+          ['Config', NAV_CONFIG],
+          ['Operations', NAV_STAFF],
+          ['Admin', NAV_ADMIN],
+        ] as const).map(([label, items]) => {
+          const shown = visibleNavItems(items, can);
+          if (shown.length === 0) return null;
+          return (
+            <React.Fragment key={label}>
+              {showCollapsed
+                ? <div style={{ height: 1, background: sideBorder, margin: '6px 6px' }} />
+                : <div className="staff-group-label">{label}</div>
+              }
+              {shown.map(item => navLink(item))}
+            </React.Fragment>
+          );
+        })}
       </nav>
 
       {/* Status badge */}

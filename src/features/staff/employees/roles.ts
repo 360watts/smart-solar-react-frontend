@@ -83,6 +83,8 @@ export interface Person {
   assigned_sites?: string[];
   team?: Team | null;
   date_joined?: string;
+  /** Missing counts as on. Always true for admins. */
+  device_ops_enabled?: boolean;
 }
 
 export interface SiteOption { site_id: string; display_name: string }
@@ -109,12 +111,13 @@ export function initialsOf(p: Pick<Person, 'first_name' | 'last_name' | 'email'>
 export function worksOn(p: Person, siteNames: Record<string, string>): { headline: string; note: string } {
   const role = roleOf(p);
   if (role === 'admin') return { headline: 'Everything', note: 'Including team and billing' };
-  if (role === 'employee') return { headline: 'All sites', note: 'Monitors and fixes systems' };
+  const watchOnly = (note: string) => (p.device_ops_enabled === false ? (note ? `${note}. Watch only` : 'Watch only') : note);
+  if (role === 'employee') return { headline: 'All sites', note: watchOnly('Monitors and fixes systems') };
   const ids = p.assigned_sites ?? [];
   const names = ids.map((id) => siteNames[id] ?? id);
   const headline = ids.length === 0 ? 'No sites yet' : ids.length === 1 ? '1 site' : `${ids.length} sites`;
   const note = names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2} more` : '');
-  return { headline, note };
+  return { headline, note: watchOnly(note) };
 }
 
 export type StatusKey = 'active' | 'on_leave' | 'inactive';
@@ -132,6 +135,7 @@ export interface PersonForm {
   team_id?: number;
   role: RoleKey;
   assigned_sites: string[];
+  device_ops_enabled: boolean;
 }
 
 export function formFromPerson(p: Person): PersonForm {
@@ -143,6 +147,7 @@ export function formFromPerson(p: Person): PersonForm {
     team_id: p.team?.id,
     role: roleOf(p),
     assigned_sites: [...(p.assigned_sites ?? [])],
+    device_ops_enabled: p.device_ops_enabled !== false,
   };
 }
 
@@ -174,6 +179,8 @@ export function buildPayload(
     role: f.role,
     assigned_sites: f.role === 'viewer' ? f.assigned_sites : [],
   };
+  // Admins always have device operations; the backend ignores the key for them, so don't send it.
+  if (f.role !== 'admin') payload.device_ops_enabled = f.device_ops_enabled;
   if (f.team_id != null) payload.team_id = f.team_id;
   else if (extra.clearTeam) payload.team_id = null;
   // The update endpoint blanks `address` when it is missing, so edits always carry it through.
@@ -204,6 +211,7 @@ export function friendlyError(err: unknown): string {
   if (msg.includes('unknown site')) return 'One of those sites no longer exists. Refresh and pick again.';
   if (msg.includes('does not have access')) return "You don't have permission to do that.";
   if (msg.includes('team not found')) return 'That team is no longer available. Pick another team or choose No team.';
+  if (msg.includes('device operations are turned off')) return 'Device operations are turned off for your account. Ask an admin.';
   if (msg.includes('is required')) return 'A name and email are needed first. Open Edit access to add them.';
   return GENERIC;
 }

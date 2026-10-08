@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { QrCode, X, Copy, Check, ShieldAlert, Plus, Ban, Cpu, Clock } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
+import { useAccess } from '../../shared/access/useAccess';
 
 interface DeviceClaim {
   id: number;
@@ -47,6 +48,7 @@ const STATUS_STYLE: Record<DeviceClaim['status'], { bg: string; color: string; l
  */
 export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ open, onClose }) => {
   const { isDark } = useTheme();
+  const canRevoke = useAccess().can('destructive');
   const [mounted, setMounted] = useState(false);
   const [claims, setClaims] = useState<DeviceClaim[]>([]);
   const [loading, setLoading] = useState(false);
@@ -317,7 +319,7 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
                   </div>
                 </div>
 
-                {claim.status === 'pending' && (
+                {claim.status === 'pending' && canRevoke && (
                   <button
                     onClick={() => revoke(claim)}
                     disabled={revokingId === claim.id}

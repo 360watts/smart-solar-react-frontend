@@ -5,7 +5,7 @@ import {
   Trash2, ShieldAlert, CheckSquare, Square,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAccess } from '../../shared/access/useAccess';
 import { apiService } from '../../services/api';
 
 interface ArchivedDevice {
@@ -57,7 +57,8 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
   open, onClose, onRestored, onHardDeleted,
 }) => {
   const { isDark } = useTheme();
-  const { isAdmin } = useAuth();
+  const { can } = useAccess();
+  const canDestroy = can('destructive');
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<DeviceTypeFilter>('all');
@@ -466,8 +467,8 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           </div>
         </div>
 
-        {/* Bulk action bar — admin-only, appears once something's selected */}
-        {isAdmin && selectedCount > 0 && (
+        {/* Bulk action bar — destructive-only, appears once something's selected */}
+        {canDestroy && selectedCount > 0 && (
           <div style={S.bulkBar}>
             <button
               onClick={toggleSelectAll}
@@ -557,7 +558,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                   }}
                 >
-                  {isAdmin && (
+                  {canDestroy && (
                     <button
                       onClick={() => toggleSelect(device.id)}
                       aria-label={isSelected ? 'Deselect device' : 'Select device'}
@@ -639,7 +640,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                       )}
                     </button>
 
-                    {isAdmin && !isFlashing && (
+                    {canDestroy && !isFlashing && (
                       <button
                         onClick={() => setConfirmTarget({ mode: 'single', device })}
                         aria-label="Permanently delete device"

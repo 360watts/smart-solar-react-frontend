@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAccess } from '../../../shared/access/useAccess';
 import finalLogo from '../../../assets/finalLogo.png';
 import {
   RefreshCw, Upload, ChevronDown, ChevronUp,
@@ -54,6 +55,8 @@ const mapLogStatus = (s: string | null): DeviceStatus['status'] => {
 
 const MobileOTA: React.FC = () => {
   const { isDark } = useTheme();
+  // Device operations switch off = watch only: deploy and rollback are hidden.
+  const canOps = useAccess().can('device_control');
 
   const bg      = 'var(--background)';
   const surface = isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF';
@@ -237,10 +240,12 @@ const MobileOTA: React.FC = () => {
               style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, padding: '7px', display: 'flex' }}>
               <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             </button>
+            {canOps && (
             <button onClick={() => openDeploy()}
               style={{ background: accent, border: 'none', borderRadius: 10, cursor: 'pointer', color: '#fff', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>
               <Plus size={14} /> Deploy
             </button>
+            )}
           </div>
         </div>
 
@@ -391,10 +396,12 @@ const MobileOTA: React.FC = () => {
                           </div>
 
                           <div style={{ display: 'flex', gap: 7 }}>
+                            {canOps && (
                             <button onClick={() => openDeploy(fw.id)}
                               style={{ flex: 1, padding: '9px', background: `${accent}12`, border: `1px solid ${accent}25`, borderRadius: 10, cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
                               <Play size={12} /> Deploy
                             </button>
+                            )}
                             {!fw.is_active && (
                               <button onClick={() => handleActivate(fw.id)}
                                 style={{ flex: 1, padding: '9px', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
@@ -497,7 +504,7 @@ const MobileOTA: React.FC = () => {
                               <span style={{ fontSize: '0.7rem', color: '#F87171', lineHeight: 1.4, fontFamily: "'DM Sans', sans-serif" }}>{d.lastError}</span>
                             </div>
                           )}
-                          {['failed', 'trial'].includes(d.status) && (
+                          {canOps && ['failed', 'trial'].includes(d.status) && (
                             <button onClick={() => handleRollback(d.deviceId)}
                               style={{ width: '100%', padding: '9px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, cursor: 'pointer', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
                               <RotateCcw size={12} /> Rollback

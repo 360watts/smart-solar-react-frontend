@@ -8,6 +8,7 @@ import { apiService, AlertItem } from '../../services/api';
 import { useDebouncedCallback } from '../../shared/hooks/useDebounce';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAccess } from '../../shared/access/useAccess';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from '../../shared/components/SiteDataPanel';
 import EnergyMeterDashboard from '../../shared/components/EnergyMeterDashboard';
@@ -269,6 +270,10 @@ const Devices: React.FC = () => {
     accent:  'var(--primary)',
   };
   const { user } = useAuth();
+  const { can } = useAccess();
+  const canDestroy = can('destructive');
+  // Device operations switch: off means watch only, so device-writing controls are hidden.
+  const canOps = can('device_control');
   const isStaffUser = !!user?.is_staff;
   const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -966,10 +971,12 @@ const Devices: React.FC = () => {
           {/* Right: action buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {[
+              ...(canOps ? [
               { label: 'Edit', icon: <Pencil size={14} />, onClick: () => handleEdit(selectedDevice), color: 'default', title: 'Edit device configuration' },
               { label: 'Reboot', icon: <RotateCcw size={14} />, onClick: () => handleReboot(selectedDevice), color: 'amber', title: 'Queue reboot command' },
               { label: 'Hard Reset', icon: <AlertTriangle size={14} />, onClick: () => handleHardReset(selectedDevice), color: 'amber', title: 'Queue hard reset (erases config)' },
-              ...(selectedDevice.alerts_muted_until && new Date(selectedDevice.alerts_muted_until) > new Date()
+              ] : []),
+              ...(!canOps ? [] : selectedDevice.alerts_muted_until && new Date(selectedDevice.alerts_muted_until) > new Date()
                 ? [{
                     label: 'Unmute',
                     icon: <Bell size={14} />,
@@ -980,7 +987,7 @@ const Devices: React.FC = () => {
                       : `Alerts muted until ${new Date(selectedDevice.alerts_muted_until!).toLocaleString()}`,
                   }]
                 : [{ label: 'Mute Alerts', icon: <BellOff size={14} />, onClick: () => handleMuteAlerts(selectedDevice), color: 'default', title: 'Suppress fault alerts for this device' }]),
-              { label: 'Delete', icon: <Trash2 size={14} />, onClick: () => handleDeleteDevice(selectedDevice), color: 'red', title: 'Permanently delete device' },
+              ...(canDestroy ? [{ label: 'Delete', icon: <Trash2 size={14} />, onClick: () => handleDeleteDevice(selectedDevice), color: 'red', title: 'Permanently delete device' }] : []),
             ].map(({ label, icon, onClick, color, title }) => (
               <button
                 key={label}
@@ -1458,6 +1465,7 @@ const Devices: React.FC = () => {
                 <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Created By</div>
                 <div style={{ fontSize: '0.9rem', color: T.text }}>{selectedDevice.created_by_username || '—'}</div>
               </div>
+              {canOps && (<>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                   <input
@@ -1486,6 +1494,7 @@ const Devices: React.FC = () => {
                   </span>
                 </label>
               </div>
+              </>)}
             </div>
               );
             })()}
@@ -2627,7 +2636,7 @@ const Devices: React.FC = () => {
               className="search-input"
               style={{ background: T.surface, color: isDark ? '#e0e0e0' : 'inherit', border: `1px solid ${T.border}` }}
             />
-            {selectedDevices.size > 0 && (
+            {canDestroy && selectedDevices.size > 0 && (
               <button
                 onClick={handleBulkDelete}
                 disabled={bulkDeleteLoading}
@@ -2690,6 +2699,7 @@ const Devices: React.FC = () => {
         <div className="table-responsive"><table className="table">
           <thead>
             <tr>
+              {canDestroy && (
               <th style={{ textAlign: 'center', width: '40px' }}>
                 <input
                   type="checkbox"
@@ -2699,6 +2709,7 @@ const Devices: React.FC = () => {
                   style={{ background: T.surface, border: `1px solid ${T.border}` }}
                 />
               </th>
+              )}
               <th style={{ textAlign: 'center' }}>Device Serial</th>
               <th style={{ textAlign: 'center' }}>Type</th>
               <th style={{ textAlign: 'center' }}>Status</th>
@@ -2707,13 +2718,13 @@ const Devices: React.FC = () => {
               <th style={{ textAlign: 'center' }}>Alerts</th>
               <th style={{ textAlign: 'center' }}>Last Seen</th>
               <th style={{ textAlign: 'center' }}>Provisioned At</th>
-              <th style={{ textAlign: 'center' }}>Actions</th>
+              {(canOps || canDestroy) && <th style={{ textAlign: 'center' }}>Actions</th>}
             </tr>
           </thead>
           <tbody className="stagger-children">
             {filteredDevices.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td colSpan={(canDestroy ? 1 : 0) + 8 + (canOps || canDestroy ? 1 : 0)} style={{ textAlign: 'center', padding: '2rem' }}>
                   <EmptyState
                     title={searchTerm ? 'No devices match your search' : 'No devices yet'}
                     description={searchTerm ? 'Try a different search term.' : 'Devices self-provision on first boot. If a serial went missing, restore it from the archive.'}
@@ -2731,6 +2742,7 @@ const Devices: React.FC = () => {
                 }}
                 className="clickable-row"
               >
+                {canDestroy && (
                 <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
@@ -2740,6 +2752,7 @@ const Devices: React.FC = () => {
                     style={{ background: T.surface, border: `1px solid ${T.border}` }}
                   />
                 </td>
+                )}
                 <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
@@ -2814,7 +2827,9 @@ const Devices: React.FC = () => {
                     return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
                   })()}
                 </td>
+                {(canOps || canDestroy) && (
                 <td style={{ textAlign: 'center' }}>
+                  {canOps && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2825,6 +2840,8 @@ const Devices: React.FC = () => {
                   >
                     <Pencil size={16} strokeWidth={2} />
                   </button>
+                  )}
+                  {canDestroy && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2835,7 +2852,9 @@ const Devices: React.FC = () => {
                   >
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
+                  )}
                 </td>
+                )}
               </tr>
             ))}
           </tbody>

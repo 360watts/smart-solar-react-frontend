@@ -7,6 +7,9 @@ import {
   ChevronDown, User, MoreHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAccess } from '../access/useAccess';
+import type { Feature } from '../access/features';
+import { visibleNavItems } from './staffNavigation';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import finalLogo from '../../assets/finalLogo.png';
@@ -29,42 +32,47 @@ const getNavbarTokens = (isDark: boolean) => {
 const iconProps = { size: 15 };
 
 // Customer-visible tabs (dashboard only)
-const MAIN_NAV = [
-  { path: '/dashboard',      label: 'Dashboard',     icon: <LayoutDashboard {...iconProps} /> },
+type NavEntry = { path: string; label: string; icon: React.ReactElement; feature: Feature };
+
+const MAIN_NAV: NavEntry[] = [
+  { path: '/dashboard',      label: 'Dashboard',     icon: <LayoutDashboard {...iconProps} />, feature: 'dashboard' },
+  { path: '/my-sites',       label: 'My sites',      icon: <Building2 {...iconProps} />,       feature: 'my_sites'  },
 ];
 
 // Staff-only tabs
-const STAFF_CONFIG_NAV = [
-  { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} /> },
-  { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} /> },
-  { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} /> },
-  { path: '/users',          label: 'Users',          icon: <Users {...iconProps} /> },
-  { path: '/device-presets', label: 'Device Presets', icon: <Star {...iconProps} /> },
+const STAFF_CONFIG_NAV: NavEntry[] = [
+  { path: '/devices',        label: 'Devices',        icon: <Monitor {...iconProps} />, feature: 'devices' },
+  { path: '/alerts',         label: 'Alerts',         icon: <Bell {...iconProps} />, feature: 'alerts' },
+  { path: '/configuration',  label: 'Configuration',  icon: <Settings {...iconProps} />, feature: 'configuration' },
+  { path: '/users',          label: 'Users',          icon: <Users {...iconProps} />, feature: 'users' },
+  { path: '/device-presets', label: 'Device Presets', icon: <Star {...iconProps} />, feature: 'presets' },
 ];
 
-const ADMIN_NAV = [
-  { path: '/employees', label: 'Employees', icon: <Briefcase {...iconProps} /> },
-  { path: '/teams', label: 'Teams', icon: <Users {...iconProps} /> },
+const ADMIN_NAV: NavEntry[] = [
+  { path: '/employees', label: 'Employees', icon: <Briefcase {...iconProps} />, feature: 'employees' },
+  { path: '/teams', label: 'Teams', icon: <Users {...iconProps} />, feature: 'teams' },
 ];
 
-const STAFF_NAV = [
-  { path: '/sites', label: 'Sites', icon: <Building2 {...iconProps} /> },
-  { path: '/equipment', label: 'Product Catalog', icon: <Server {...iconProps} /> },
-  { path: '/quotation', label: 'Quotation', icon: <FileText {...iconProps} /> },
-  { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} /> },
+const STAFF_NAV: NavEntry[] = [
+  { path: '/sites', label: 'Sites', icon: <Building2 {...iconProps} />, feature: 'sites' },
+  { path: '/equipment', label: 'Product Catalog', icon: <Server {...iconProps} />, feature: 'catalog' },
+  { path: '/quotation', label: 'Quotation', icon: <FileText {...iconProps} />, feature: 'quotations' },
+  { path: '/ota', label: 'OTA Updates', icon: <Download {...iconProps} />, feature: 'ota' },
 ];
 
 // ─── Bottom nav primary items (always visible on mobile) ────────────────────
 // Customers see: Dashboard only
-const BOTTOM_NAV_PRIMARY = [
-  { path: '/dashboard',     label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+const BOTTOM_NAV_PRIMARY: NavEntry[] = [
+  { path: '/dashboard',     label: 'Dashboard', icon: <LayoutDashboard size={20} />, feature: 'dashboard' },
+  { path: '/my-sites',      label: 'My sites',  icon: <Building2 size={20} />,       feature: 'my_sites'  },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
+  const { can } = useAccess();
   const { setIsNavigating, navigationHistory } = useNavigation();
   const { isDark, toggleTheme } = useTheme();
   const tok = getNavbarTokens(isDark);
@@ -85,12 +93,8 @@ const Navbar: React.FC = () => {
     return () => { mq.removeEventListener('change', onMq); tq.removeEventListener('change', onTq); };
   }, []);
 
-  const allNavItems = [
-    ...MAIN_NAV,
-    ...(isAdmin ? ADMIN_NAV : []),
-    ...((isAdmin || isStaff) ? STAFF_CONFIG_NAV : []),
-    ...((isAdmin || isStaff) ? STAFF_NAV : []),
-  ];
+  const allNavItems = visibleNavItems([...MAIN_NAV, ...ADMIN_NAV, ...STAFF_CONFIG_NAV, ...STAFF_NAV], can);
+  const bottomNavItems = visibleNavItems(BOTTOM_NAV_PRIMARY, can);
 
   // Close user dropdown on outside click
   useEffect(() => {
@@ -577,7 +581,7 @@ const Navbar: React.FC = () => {
             alignItems: 'stretch',
           }}
         >
-          {BOTTOM_NAV_PRIMARY.map(item => {
+          {bottomNavItems.map(item => {
             const isActive = location.pathname === item.path;
             return (
               <Link
