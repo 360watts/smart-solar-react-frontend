@@ -250,7 +250,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
               </div>
               <div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--muted-foreground)',marginTop:8}}>Installation <span style={{fontWeight:400}}>· optional</span></div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <EqFormField label="TEDA Scheme" value={form.teda_scheme} onChange={v=>f('teda_scheme',v)} isDark={isDark}/>
+                <div><label style={eqLabel(isDark)}>Scheme</label><input list="eq-schemes" value={form.teda_scheme} onChange={e=>f('teda_scheme',e.target.value)} placeholder="Pick or type the scheme this site is under" style={eqInput(isDark)}/><datalist id="eq-schemes">{['PM Surya Ghar Muft Bijli Yojana','PM-KUSUM','TEDA','Net metering (no subsidy)','Private / no scheme'].map(o=><option key={o} value={o}/>)}</datalist></div>
                 <EqFormField label="Logger Serial (optional)" value={form.logger_serial??''} onChange={v=>f('logger_serial',v)} isDark={isDark}/>
                 <EqFormField label="Installed Date" value={form.installed_at??''} onChange={v=>f('installed_at',v)} type="date" isDark={isDark}/>
                 <EqFormField label="Warranty Expires" value={form.warranty_expires_at??''} onChange={v=>f('warranty_expires_at',v)} type="date" isDark={isDark}/>
