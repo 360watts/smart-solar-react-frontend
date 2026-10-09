@@ -5,7 +5,7 @@ export const API_BASE_URL =
 
 export const CUSTOMER_PORTAL_URL = 'https://my.360watts.com';
 
-export const CHART_COLORS = ['#00a63e', '#F07522', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
+export const CHART_COLORS = ['#0F9F8F', '#F07522', '#3b82f6', '#8b5cf6', '#0F9F8F', '#f59e0b'];
 
 export const DEFAULT_PAGE_SIZE = 25;
 

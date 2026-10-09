@@ -1,0 +1,44 @@
+/* Energy-flow block layout. Breakpoints are container queries measured on the block itself (.ef-block),
+   not the viewport: the staff nav rail, page padding and side rails all eat width.
+   wide >= 900px: rails beside the centre panel; medium 600-899px: centre on top, the two rails below
+   side by side; narrow < 600px: one column and the three-card rows wrap (auto-fit, min 160px). */
+.ef-block { container-type: inline-size; }
+
+.ef-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: clamp(180px, 20cqw, 240px) minmax(0, 1fr) clamp(180px, 20cqw, 240px);
+  grid-template-areas: "left center right";
+}
+
+.ef-row3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  position: relative;
+}
+
+/* No EV plug: two load columns (Backup, Grid direct). */
+.ef-row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Rails: wide = a column of three equal cards as tall as the centre panel; below that each rail becomes a
+   row of cards at their natural height. */
+.ef-rail > .ef-tile { min-height: 120px; }
+
+@container (max-width: 899px) {
+  .ef-grid {
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: "center center" "left right";
+  }
+  .ef-rail { flex-direction: row !important; flex-wrap: wrap; }
+  .ef-rail > .ef-tile { flex: 1 1 160px !important; }
+}
+
+@container (max-width: 599px) {
+  .ef-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "center" "left" "right";
+  }
+  .ef-row3:not(.ef-row2) { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+}

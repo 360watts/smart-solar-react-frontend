@@ -47,6 +47,10 @@ import HistoryTab, { HISTORY_SERIES } from './tabs/HistoryTab';
 import ForecastTab from './tabs/ForecastTab';
 import PhaseLoadTab from './tabs/PhaseLoadTab';
 import UsageTab from './tabs/UsageTab';
+import PlugsTab from './tabs/PlugsTab';
+import { isPlug } from '../EnergyFlow/plugHelpers';
+import { railToday, type HomeToday } from '../EnergyFlow/flowModel';
+import ViewerDevices from '../../../features/staff/viewer/ViewerDevices';
 import { tabsFor, tabLabel, resolveTab } from './tabVisibility';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -217,7 +221,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   const [activeTabState, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
   // The tab bar is the source of truth: a tab it does not list (e.g. meterOnly flipped) falls back to its first entry.
-  const panelTabs = tabsFor({ meterOnly, hasMeter, visibleTabs });
+  // Smart plugs tab: from the overview's smart_devices (no extra request); hidden until that list has a plug.
+  const hasPlugs = smartDevices.some(isPlug);
+  const panelTabs = tabsFor({ meterOnly, hasMeter, hasPlugs, visibleTabs });
   const activeTab = resolveTab(activeTabState, panelTabs);
   const meterOnlyOn = meterOnly === true;
   // Set once the person picks a tab (or the caller names one), so the meter-only auto-switch never overrides them.
@@ -259,25 +265,25 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const ttBg        = resolveCssVar('--popover');
   const ttTitle     = resolveCssVar('--foreground');
   const ttBody      = resolveCssVar('--muted-foreground');
-  const ttBorder    = isDark ? 'rgba(148,163,184,0.2)'  : 'rgba(0,166,62,0.2)';
+  const ttBorder    = isDark ? 'rgba(148,163,184,0.2)'  : 'rgba(15,159,143,0.2)';
   const legendColor = resolveCssVar('--muted-foreground');
 
   const historyChartOptions = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: legendColor, font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: legendColor, font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: ttBg, titleColor: ttTitle, bodyColor: ttBody,
         borderColor: ttBorder, borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'SOC' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'SOC' ? 0 : 3)} ${unit}`; } },
       },
       zoom: {
         zoom: {
           wheel: { enabled: true, speed: 0.08 },
-          drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
+          drag: { enabled: true, backgroundColor: 'rgba(15,159,143,0.14)', borderColor: 'rgba(15,159,143,0.7)', borderWidth: 1 },
           pinch: { enabled: true },
           mode: 'x' as const,
           onZoomComplete: () => historyZoom.onZoomComplete.current(),
@@ -287,7 +293,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      power: { type: 'linear', position: 'left', ticks: { color: tickColor, font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      power: { type: 'linear', position: 'left', ticks: { color: tickColor, font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
       soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: resolveCssVar('--success'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -297,18 +303,18 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: legendColor, font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: legendColor, font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: ttBg, titleColor: ttTitle, bodyColor: ttBody,
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
       },
       zoom: {
         zoom: {
           wheel: { enabled: true, speed: 0.08 },
-          drag: { enabled: true, backgroundColor: 'rgba(0,166,62,0.14)', borderColor: 'rgba(0,166,62,0.7)', borderWidth: 1 },
+          drag: { enabled: true, backgroundColor: 'rgba(15,159,143,0.14)', borderColor: 'rgba(15,159,143,0.7)', borderWidth: 1 },
           pinch: { enabled: true },
           mode: 'x' as const,
           onZoomComplete: () => vsActualZoom.onZoomComplete.current(),
@@ -318,7 +324,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } as any,
     scales: {
       x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: tickColor, font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      y: { ticks: { color: tickColor, font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
       delta: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -336,6 +342,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const [ctLatest, setCtLatest] = useState<any | null>(null);
   const [latestLiveTelemetry, setLatestLiveTelemetry] = useState<any | null>(null);
   const [solarDayToday, setSolarDayToday] = useState<Record<string, number> | null>(null);
+  // undefined = backend sent no home_today key (older deploy): the rail falls back to the Load tile figure.
+  const [homeToday, setHomeToday] = useState<HomeToday | null | undefined>(undefined);
   const [gatewayOnline, setGatewayOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -360,6 +368,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       setGatewayOnline(overview?.realtime?.is_online ?? null);
       setCtLatest(overview?.energy_meter_latest ?? null);
       setSolarDayToday(overview?.energy_summary_today ?? null);
+      setHomeToday(overview && 'home_today' in overview ? overview.home_today ?? null : undefined);
       if (typeof overview?.meter_only === 'boolean' && typeof overview?.has_meter === 'boolean') {
         meterMemory.set(siteId, { meterOnly: overview.meter_only, hasMeter: overview.has_meter });
       }
@@ -681,6 +690,29 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const isLatestToday = latest?.timestamp
     ? istDate(new Date(latest.timestamp)) === istDate(new Date())
     : false;
+  // Energy-flow left rail: "Home used" is the whole-home figure (home_today), see railToday.
+  const flowToday = (() => {
+    const base = railToday(solarDayToday, latest, isLatestToday, homeToday);
+    // Solar curve for the "Solar made today" tile: hourly average kW from the 5-minute rows this panel already
+    // loads (24h mode = the solar day so far). Other ranges carry no "today" curve.
+    if (dateRange !== '24h' || telemetry.length < 2) return base;
+    const hours = new Map<number, number[]>();
+    let kwhSum = 0;
+    for (const r of telemetry) {
+      const w = Number(r.pv1_power_w ?? 0) + Number(r.pv2_power_w ?? 0) + Number(r.pv3_power_w ?? 0) + Number(r.pv4_power_w ?? 0);
+      if (!Number.isFinite(w)) continue;
+      const h = Math.floor(new Date(r.timestamp).getTime() / 3_600_000);
+      hours.set(h, [...(hours.get(h) ?? []), w / 1000]);
+      kwhSum += (w / 1000) * (5 / 60);
+    }
+    const hourly = [...hours.entries()].sort((a, b) => a[0] - b[0]);
+    const solarCurve = hourly.map(([, v]) => v.reduce((s, x) => s + x, 0) / v.length);
+    // Tooltip labels: the hour each point covers, in IST ("2 PM").
+    const solarCurveLabels = hourly.map(([h]) => new Date(h * 3_600_000).toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' }).toUpperCase());
+    // When the energy summary has no figure, total the same rows (5-minute aggregate: kW x 5/60) rather than "—".
+    const solarKwh = base.solarKwh ?? (kwhSum > 0 ? kwhSum : null);
+    return { ...base, solarKwh, solarCurve, solarCurveLabels };
+  })();
 
   const liveThresholdMs = isDeyeCloud ? 15 * 60 * 1000 : 10 * 60 * 1000;
   const dataFresh = latest?.timestamp
@@ -706,29 +738,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     return `${Math.floor(hr / 24)}d ago`;
   })();
 
-  const gridL1PowerW  = latest?.grid_l1_power_w   || latest?.grid_power_w   || null;
-  const gridL2PowerW  = latest?.grid_l2_power_w   || null;
-  const gridL3PowerW  = latest?.grid_l3_power_w   || null;
   const gridL1VoltageV = latest?.grid_l1_voltage_v || latest?.grid_voltage_v || null;
   const gridL2VoltageV = latest?.grid_l2_voltage_v || null;
   const gridL3VoltageV = latest?.grid_l3_voltage_v || null;
   const gridL1CurrentA = latest?.grid_l1_current_a || null;
   const gridL2CurrentA = latest?.grid_l2_current_a || null;
   const gridL3CurrentA = latest?.grid_l3_current_a || null;
-
-  const hasPhaseData = (gridL1PowerW != null && gridL1PowerW !== 0) || gridL2PowerW != null || gridL3PowerW != null
-    || (gridL1VoltageV != null && gridL1VoltageV > 50);
-  const phaseSum = (gridL1PowerW ?? 0) + (gridL2PowerW ?? 0) + (gridL3PowerW ?? 0);
-  const gridTotalW = (gridKw ?? 0) * 1000;
-  const phaseDataStale = hasPhaseData && Math.abs(gridTotalW) < 50
-    ? Math.abs(phaseSum) > 200
-    : Math.abs(phaseSum - gridTotalW) > Math.abs(gridTotalW) * 3 + 200;
-
-  const gridPhases = hasPhaseData ? [
-    { label: 'L1', powerW: gridL1PowerW, voltageV: gridL1VoltageV, currentA: gridL1CurrentA },
-    { label: 'L2', powerW: gridL2PowerW, voltageV: gridL2VoltageV, currentA: gridL2CurrentA },
-    { label: 'L3', powerW: gridL3PowerW, voltageV: gridL3VoltageV, currentA: gridL3CurrentA },
-  ] : null;
 
   const loadL1PowerW = latest?.load_l1_power_w || null;
   const loadL2PowerW = latest?.load_l2_power_w || null;
@@ -737,11 +752,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const loadPhaseSumW = hasLoadPhaseData ? (loadL1PowerW ?? 0) + (loadL2PowerW ?? 0) + (loadL3PowerW ?? 0) : null;
   const loadKw = loadPhaseSumW != null ? loadPhaseSumW / 1000 : loadKwRaw;
   const loadPowerDisplay = formatPowerForKpi(loadKw);
-  const loadPhases = hasLoadPhaseData ? [
-    { label: 'L1', powerW: loadL1PowerW },
-    { label: 'L2', powerW: loadL2PowerW },
-    { label: 'L3', powerW: loadL3PowerW },
-  ] : null;
   const inverterPhasesForFlow = {
     l1: { power_w: loadL1PowerW, voltage_v: latest?.load_l1_voltage_v ?? null, current_a: latest?.load_l1_current_a ?? null },
     l2: { power_w: loadL2PowerW, voltage_v: latest?.load_l2_voltage_v ?? null, current_a: latest?.load_l2_current_a ?? null },
@@ -758,7 +768,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const runStateBadge = runState != null ? (
     runState === 0 ? { label: 'Standby',    color: 'var(--muted-foreground)' } :
     runState === 1 ? { label: 'Self-Check', color: '#60a5fa' } :
-    runState === 2 ? { label: 'Normal',     color: '#00a63e' } :
+    runState === 2 ? { label: 'Normal',     color: '#0F9F8F' } :
     runState === 3 ? { label: 'Alarm',      color: '#f59e0b' } :
     runState === 4 ? { label: 'Fault',      color: '#ef4444' } :
     runState === 5 ? { label: 'Activating', color: '#a78bfa' } :
@@ -768,7 +778,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const invTempColor = invTemp == null ? 'var(--muted-foreground)'
     : invTemp > 60 ? '#ef4444'
     : invTemp > 45 ? '#f59e0b'
-    : '#10b981';
+    : '#0F9F8F';
 
   // ── Chart data for HistoryTab ──────────────────────────────────────────────
   const historyData = useMemo(() => {
@@ -990,8 +1000,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     );
   }
 
-  if (error && meterOnly !== true) {
-    return (
+  const failed = !!error && meterOnly !== true;
+  // With the Devices tab (viewer, device_control) the tab bar stays up on error / no data, so devices that
+  // stopped reporting can still be restarted or updated; the other tabs show the message instead.
+  const devicesEscape = visibleTabs?.includes('devices') === true;
+  const errorMsg = (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1007,32 +1020,33 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       >
         Failed to load data for <strong>{siteId}</strong>: {error}
       </motion.div>
-    );
-  }
+  );
+  const noDataMsg = (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '0.875rem',
+            background: isDark ? 'rgba(15,159,143, 0.05)' : 'rgba(15,159,143, 0.03)',
+            borderRadius: 16,
+            border: '1px dashed rgba(15,159,143, 0.2)',
+          }}
+        >
+          No data found for site <strong style={{ color: '#0F9F8F' }}>{siteId}</strong> for{' '}
+          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'the last 7 days' : dateRange === '30d' ? 'the last 30 days' : 'the selected date range'}
+          .<br />
+          <span style={{ fontSize: '0.8rem' }}>Telemetry is posted by the gateway device. Forecast and weather data load once telemetry is available.</span>
+        </motion.div>
+  );
+  if (failed && !devicesEscape) return errorMsg;
 
-  return (
-    <div style={{ marginTop: 24 }}>
-      {/* ── Section header with glassmorphism ── */}
-      {!hideHeader && <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-          gap: 16,
-          flexWrap: 'wrap',
-          padding: '16px 20px',
-          borderRadius: 16,
-          background: isDark
-            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5))'
-            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
-          backdropFilter: 'blur(10px)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-        }}
-      >
+  // Today / last update / Refresh: at the right end of the tab row, or in the old bar when there is no tab row.
+  const tabRowShown = !hideTabs && !(noData && !devicesEscape);
+  const headerControls = hideHeader ? null : (
+      <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {(activeTab === 'overview' || activeTab === 'history') && (
@@ -1042,13 +1056,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   onChange={e => setDateRange(e.target.value)}
                   style={{
                     background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid rgba(0, 166, 62, 0.3)',
+                    border: '1px solid rgba(15,159,143, 0.3)',
                     borderRadius: 8,
                     padding: '6px 12px',
                     fontSize: '0.75rem',
                     color: 'var(--text-primary)',
                     cursor: 'pointer',
-                    fontFamily: 'Poppins, sans-serif',
+                    fontFamily: 'Rubik, sans-serif',
                     fontWeight: 600,
                   }}
                 >
@@ -1065,12 +1079,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       onChange={e => setCustomStartDate(e.target.value)}
                       style={{
                         background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid rgba(0, 166, 62, 0.3)',
+                        border: '1px solid rgba(15,159,143, 0.3)',
                         borderRadius: 8,
                         padding: '6px 12px',
                         fontSize: '0.75rem',
                         color: 'var(--text-primary)',
-                        fontFamily: 'Poppins, sans-serif',
+                        fontFamily: 'Rubik, sans-serif',
                         fontWeight: 600,
                       }}
                     />
@@ -1081,12 +1095,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                       onChange={e => setCustomEndDate(e.target.value)}
                       style={{
                         background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid rgba(0, 166, 62, 0.3)',
+                        border: '1px solid rgba(15,159,143, 0.3)',
                         borderRadius: 8,
                         padding: '6px 12px',
                         fontSize: '0.75rem',
                         color: 'var(--text-primary)',
-                        fontFamily: 'Poppins, sans-serif',
+                        fontFamily: 'Rubik, sans-serif',
                         fontWeight: 600,
                       }}
                     />
@@ -1100,13 +1114,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '2d')}
                 style={{
                   background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid rgba(0, 166, 62, 0.3)',
+                  border: '1px solid rgba(15,159,143, 0.3)',
                   borderRadius: 8,
                   padding: '6px 12px',
                   fontSize: '0.75rem',
                   color: 'var(--text-primary)',
                   cursor: 'pointer',
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'Rubik, sans-serif',
                   fontWeight: 600,
                 }}
               >
@@ -1117,11 +1131,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             )}
           </div>
           {lastUpdated && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif' }}>
               <span style={{
                 display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-                background: secondsSinceUpdate < 60 ? '#22c55e' : '#f59e0b',
-                boxShadow: secondsSinceUpdate < 60 ? '0 0 6px rgba(34,197,94,0.7)' : 'none',
+                background: secondsSinceUpdate < 60 ? '#0F9F8F' : '#f59e0b',
+                boxShadow: secondsSinceUpdate < 60 ? '0 0 6px rgba(15,159,143,0.7)' : 'none',
                 animation: secondsSinceUpdate < 60 ? 'pulse 2s ease-in-out infinite' : 'none',
               }} />
               {secondsSinceUpdate < 60
@@ -1138,13 +1152,13 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             onClick={() => { fetchAll(true); }}
             style={{
               background: 'none',
-              border: '1px solid rgba(0, 166, 62, 0.3)',
+              border: '1px solid rgba(15,159,143, 0.3)',
               borderRadius: 8,
               padding: '4px 12px',
               fontSize: '0.75rem',
-              color: '#00a63e',
+              color: '#0F9F8F',
               cursor: 'pointer',
-              fontFamily: 'Poppins, sans-serif',
+              fontFamily: 'Rubik, sans-serif',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
@@ -1155,42 +1169,50 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             Refresh
           </motion.button>
         </div>
+      </>
+  );
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      {/* ── Section header: only when there is no tab row to hold the controls ── */}
+      {headerControls && !tabRowShown && <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          gap: 16,
+          flexWrap: 'wrap',
+          padding: '16px 20px',
+          borderRadius: 16,
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5))'
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 250, 251, 0.8))',
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        {headerControls}
       </motion.div>}
 
-      {noData ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{
-            padding: 32,
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '0.875rem',
-            background: isDark ? 'rgba(0, 166, 62, 0.05)' : 'rgba(0, 166, 62, 0.03)',
-            borderRadius: 16,
-            border: '1px dashed rgba(0, 166, 62, 0.2)',
-          }}
-        >
-          No data found for site <strong style={{ color: '#00a63e' }}>{siteId}</strong> for{' '}
-          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'the last 7 days' : dateRange === '30d' ? 'the last 30 days' : 'the selected date range'}
-          .<br />
-          <span style={{ fontSize: '0.8rem' }}>Telemetry is posted by the gateway device. Forecast and weather data load once telemetry is available.</span>
-        </motion.div>
-      ) : (
+      {noData && !devicesEscape ? noDataMsg : (
         <>
-          {/* ── Tab Bar ── */}
+          {/* ── Tab Bar (underlined row; colours are the getDesignTokens CSS vars) ── */}
+          <div data-testid="tab-row" style={{ display: hideTabs ? 'none' : 'flex', flexWrap: 'wrap', marginBottom: 24, minWidth: 0 }}>
           <motion.div
+            role="tablist"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             style={{
-              display: hideTabs ? 'none' : 'flex',
-              borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
-              marginBottom: 20,
-              gap: 0,
-              background: isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(249, 250, 251, 0.5)',
-              borderRadius: '12px 12px 0 0',
-              padding: '0 8px',
+              display: 'flex',
+              flex: '1 1 320px',
+              minWidth: 0,
+              borderBottom: '1px solid var(--border)',
+              gap: 4,
               overflowX: 'auto',
               scrollbarWidth: 'none',
               WebkitOverflowScrolling: 'touch',
@@ -1199,33 +1221,27 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             {panelTabs.map(id => TABS.find(tab => tab.id === id)!).map(tab => {
               const isActive = activeTab === tab.id;
               return (
-                <motion.button
+                <button
                   key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => { pickedTabRef.current = true; setActiveTab(tab.id); }}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.95 }}
                   style={{
                     border: 'none',
-                    background: isActive
-                      ? isDark
-                        ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.25), rgba(0, 166, 62, 0.08))'
-                        : 'linear-gradient(135deg, rgba(0, 166, 62, 0.1), rgba(0, 166, 62, 0.05))'
-                      : 'transparent',
+                    background: 'transparent',
                     cursor: 'pointer',
-                    padding: '12px 20px',
-                    fontSize: '0.813rem',
-                    fontWeight: isActive ? 700 : 600,
-                    fontFamily: 'Poppins, sans-serif',
-                    color: isActive ? '#00a63e' : 'var(--text-muted)',
-                    borderBottom: `3px solid ${isActive ? '#00a63e' : 'transparent'}`,
-                    marginBottom: -2,
+                    height: 44,
+                    padding: '0 16px',
+                    fontSize: 14,
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? 'var(--foreground)' : 'var(--muted-foreground)',
+                    borderBottom: `2px solid ${isActive ? 'var(--primary)' : 'transparent'}`,
+                    marginBottom: -1,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    transition: 'all 0.3s',
-                    letterSpacing: '0.02em',
-                    borderRadius: '8px 8px 0 0',
-                    boxShadow: isActive ? '0 -2px 10px rgba(0, 166, 62, 0.2)' : 'none',
+                    transition: 'color 150ms, border-color 150ms',
                     flexShrink: 0,
                     whiteSpace: 'nowrap',
                     WebkitTapHighlightColor: 'transparent',
@@ -1233,12 +1249,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 >
                   <span>{tab.icon}</span>
                   {tabLabel(tab)}
-                </motion.button>
+                </button>
               );
             })}
           </motion.div>
+          {headerControls && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', marginLeft: 'auto', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+              {headerControls}
+            </div>
+          )}
+          </div>
 
           {/* ── Tab Content ── */}
+          {(failed || noData) && activeTab !== 'devices' ? (failed ? errorMsg : noDataMsg) : (
           <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
               <OverviewTab
@@ -1251,6 +1274,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 batPowerKw={batPowerKw}
                 batSoc={batSoc}
                 todayKwh={todayKwh}
+                flowToday={flowToday}
                 totalPvKwh={totalPvKwh}
                 invTemp={invTemp}
                 pvPowerDisplay={pvPowerDisplay}
@@ -1262,11 +1286,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 latest={latest}
                 smartDevices={smartDevices}
                 siteId={siteId}
+                onOpenPlugs={panelTabs.includes('plugs') ? () => { pickedTabRef.current = true; setActiveTab('plugs'); } : undefined}
                 inverterPhasesForFlow={inverterPhasesForFlow}
                 isDeyeCloud={isDeyeCloud}
                 rs485Stale={rs485Stale}
                 isLatestToday={isLatestToday}
-                achievedPct={achievedPct}
                 runStateBadge={runStateBadge}
                 loggerOffline={loggerOffline}
                 gatewayOffline={gatewayOffline}
@@ -1284,9 +1308,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 acOutputKw={acOutputKw}
                 inverterCapacityKw={inverterCapacityKw}
                 invTempColor={invTempColor}
-                gridPhases={gridPhases}
-                phaseDataStale={phaseDataStale}
-                loadPhases={loadPhases}
               />
             )}
 
@@ -1409,6 +1430,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               <UsageTab key="usage" siteId={siteId} isDark={isDark} ctLatest={ctLatest} />
             )}
 
+            {activeTab === 'devices' && <ViewerDevices key="devices" siteId={siteId} />}
+
+            {activeTab === 'plugs' && <PlugsTab key="plugs" smartDevices={smartDevices} isDark={isDark} siteId={siteId} />}
+
             {activeTab === 'phase-load' && (
               <PhaseLoadTab
                 key="phase-load"
@@ -1426,6 +1451,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               />
             )}
           </AnimatePresence>
+          )}
         </>
       )}
     </div>

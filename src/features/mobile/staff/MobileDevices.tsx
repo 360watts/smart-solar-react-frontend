@@ -104,24 +104,24 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
   };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '14px 0', color: muted, fontSize: '0.72rem', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '14px 0', color: muted, fontSize: '0.75rem', fontFamily: "'Rubik', sans-serif" }}>
       <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading logs…
     </div>
   );
-  if (error) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: '#F87171', fontFamily: "'DM Sans', sans-serif" }}>{error}</div>;
-  if (logs.length === 0) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No log entries found</div>;
+  if (error) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.75rem', color: '#F87171', fontFamily: "'Rubik', sans-serif" }}>{error}</div>;
+  if (logs.length === 0) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No log entries found</div>;
 
   return (
     <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', overflow: 'hidden' }}>
       <div style={{ padding: '9px 10px', borderBottom: `1px solid ${border}`, display: 'grid', gap: 8, background: isDark ? 'rgba(255,255,255,0.02)' : '#fff' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.72rem' }} />
-          <input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.72rem' }} />
+          <input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.75rem' }} />
+          <input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: 'var(--muted-foreground)', fontSize: '0.75rem' }} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          <button onClick={() => loadLogs(from || undefined, to || undefined)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: '0.72rem', fontWeight: 700 }}>Fetch</button>
-          <button onClick={() => apiService.bulkDownloadLogFiles(deviceId, from || undefined, to || undefined).catch(() => setError('Failed to download logs'))} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, fontSize: '0.72rem', fontWeight: 700 }}>All</button>
-          <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.22)`, background: 'transparent', color: '#ef4444', fontSize: '0.72rem' }} />
+          <button onClick={() => loadLogs(from || undefined, to || undefined)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>Fetch</button>
+          <button onClick={() => apiService.bulkDownloadLogFiles(deviceId, from || undefined, to || undefined).catch(() => setError('Failed to download logs'))} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, fontSize: '0.75rem', fontWeight: 700 }}>All</button>
+          <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.22)`, background: 'transparent', color: '#ef4444', fontSize: '0.75rem' }} />
         </div>
         <button onClick={async () => {
           if (!scanDate) return;
@@ -135,17 +135,17 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
           } finally {
             setScanLoading(false);
           }
-        }} disabled={!scanDate || scanLoading} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.22)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.72rem', fontWeight: 700 }}>{scanLoading ? 'Scanning…' : 'Scan Log Day'}</button>
+        }} disabled={!scanDate || scanLoading} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.22)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 700 }}>{scanLoading ? 'Scanning…' : 'Scan Log Day'}</button>
       </div>
       <div style={{ maxHeight: 240, overflowY: 'auto' }}>
         {logs.map((entry, i) => (
           <div key={entry.id} style={{ display: 'flex', gap: 8, padding: '7px 11px', borderTop: i === 0 ? 'none' : `1px solid ${border}` }}>
-            <span style={{ flexShrink: 0, minWidth: 32, fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', color: levelColor(entry.log_level), paddingTop: 1, fontFamily: "'JetBrains Mono', monospace" }}>
+            <span style={{ flexShrink: 0, minWidth: 32, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: levelColor(entry.log_level), paddingTop: 1, fontFamily: "'Fira Code', monospace" }}>
               {entry.log_level.slice(0, 4)}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--muted-foreground)', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'DM Sans', sans-serif" }}>{entry.message}</div>
-              <div style={{ fontSize: '0.6rem', color: muted, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', lineHeight: 1.4, wordBreak: 'break-word', fontFamily: "'Rubik', sans-serif" }}>{entry.message}</div>
+              <div style={{ fontSize: '0.75rem', color: muted, marginTop: 2, fontFamily: "'Fira Code', monospace" }}>
                 {entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'No timestamp'}
                 {entry.size_bytes ? ` · ${fmtSize(entry.size_bytes)}` : ''}
               </div>
@@ -170,7 +170,7 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewing.name}</div>
               <button onClick={() => setViewing(null)} style={{ width: 32, height: 32, borderRadius: 9, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
             </div>
-            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontSize: '0.68rem', lineHeight: 1.5, color: 'var(--muted-foreground)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{viewing.content}</pre>
+            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontSize: '0.75rem', lineHeight: 1.5, color: 'var(--muted-foreground)', fontFamily: "'Fira Code', monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{viewing.content}</pre>
           </div>
         </div>
       )}
@@ -211,7 +211,7 @@ const MobileDevices: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
-  const accent  = '#2FBF71';
+  const accent  = 'var(--brand-green)';
 
   const { can } = useAccess();
   const canDestroy = can('destructive');
@@ -288,8 +288,11 @@ const MobileDevices: React.FC = () => {
       const payload: Record<string, unknown> = {
         user: editForm.user || '',
         config_version: editForm.config_version || '',
-        wifi_ssid: editForm.wifi_ssid || '',
       };
+      // Wi-Fi is admin-only (employees get no SSID back). Send the SSID only when an admin changed it.
+      if (canWifiPassword && (editForm.wifi_ssid || '') !== (editingDevice.wifi_ssid || '')) {
+        payload.wifi_ssid = editForm.wifi_ssid || '';
+      }
       if (canWifiPassword && showWifiPassword && editForm.wifi_password) {
         payload.wifi_password = editForm.wifi_password;
       }
@@ -302,7 +305,7 @@ const MobileDevices: React.FC = () => {
     } finally {
       setEditSaving(false);
     }
-  }, [editingDevice, editForm, showWifiPassword, fetchDevices]);
+  }, [editingDevice, editForm, showWifiPassword, fetchDevices, canWifiPassword]);
 
   const confirmAction = useCallback(async () => {
     if (!modal.type || !modal.device) return;
@@ -345,11 +348,11 @@ const MobileDevices: React.FC = () => {
 
   const counts = { total: devices.length, online: devices.filter(d => d.is_online).length, offline: devices.filter(d => !d.is_online).length, warn: devices.filter(d => d.heartbeat_health?.severity === 'warn' || d.heartbeat_health?.severity === 'critical').length };
 
-  const healthColor = (h?: Device['heartbeat_health']) => !h || h.severity === 'ok' ? '#2FBF71' : h.severity === 'warn' ? '#F59E0B' : '#F87171';
+  const healthColor = (h?: Device['heartbeat_health']) => !h || h.severity === 'ok' ? 'var(--brand-green)' : h.severity === 'warn' ? '#F59E0B' : '#F87171';
 
   const signalBar = (dbm: number | null | undefined) => {
     if (dbm == null) return null;
-    const c = dbm > -60 ? '#2FBF71' : dbm > -75 ? '#F59E0B' : '#F87171';
+    const c = dbm > -60 ? 'var(--brand-green)' : dbm > -75 ? '#F59E0B' : '#F87171';
     const label = dbm > -60 ? 'Strong' : dbm > -75 ? 'Fair' : 'Weak';
     const bars = [dbm > -90, dbm > -75, dbm > -60];
     return (
@@ -360,8 +363,8 @@ const MobileDevices: React.FC = () => {
             <div key={i} style={{ width: 4, height: `${(i + 1) * 33}%`, borderRadius: 2, background: on ? c : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }} />
           ))}
         </div>
-        <span style={{ fontSize: '0.72rem', color: c, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
-        <span style={{ fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginLeft: 'auto' }}>{dbm} dBm</span>
+        <span style={{ fontSize: '0.75rem', color: c, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{label}</span>
+        <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace", marginLeft: 'auto' }}>{dbm} dBm</span>
       </div>
     );
   };
@@ -373,7 +376,7 @@ const MobileDevices: React.FC = () => {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
       <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.8rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
+      <span style={{ fontSize: '0.8rem', fontFamily: "'Rubik', sans-serif" }}>Loading…</span>
     </div>
   );
 
@@ -383,27 +386,27 @@ const MobileDevices: React.FC = () => {
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '12px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)', flexShrink: 0 }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Rubik', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, cursor: 'pointer', color: '#2FBF71', padding: '6px', display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, cursor: 'pointer', color: 'var(--brand-green)', padding: '6px', display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif" }}>Devices</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", marginTop: 1 }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: accent }}>{counts.online}</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: muted }}>/{counts.total}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'DM Sans', sans-serif", marginLeft: 6 }}>online</span>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif" }}>Devices</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif", marginTop: 1 }}>
+              <span style={{ fontFamily: "'Fira Code', monospace", color: accent }}>{counts.online}</span>
+              <span style={{ fontFamily: "'Fira Code', monospace", color: muted }}>/{counts.total}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'Rubik', sans-serif", marginLeft: 6 }}>online</span>
             </div>
           </div>
           <button
             onClick={() => { setRefreshing(true); fetchDevices(true); }}
-            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}
           >
             <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             Refresh
@@ -418,8 +421,8 @@ const MobileDevices: React.FC = () => {
             { label: 'Issues',  value: counts.warn,    color: counts.warn > 0 ? '#F59E0B' : muted },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}`, flexShrink: 0 }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.82rem', fontWeight: 700, color }}>{value}</span>
-              <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+              <span style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.82rem', fontWeight: 700, color }}>{value}</span>
+              <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -433,7 +436,7 @@ const MobileDevices: React.FC = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search serial, model, HW ID…"
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'Rubik', sans-serif" }}
           />
           {search && (
             <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
@@ -450,7 +453,7 @@ const MobileDevices: React.FC = () => {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'DM Sans', sans-serif" }}
+                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'Rubik', sans-serif" }}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)} {f !== 'all' && `(${f === 'online' ? counts.online : counts.offline})`}
               </button>
@@ -458,7 +461,7 @@ const MobileDevices: React.FC = () => {
           })}
         </div>
 
-        <div style={{ fontSize: '0.65rem', color: muted, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+        <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif", fontWeight: 500 }}>
           {filtered.length} device{filtered.length !== 1 ? 's' : ''}
         </div>
 
@@ -466,7 +469,7 @@ const MobileDevices: React.FC = () => {
           {filtered.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 20px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16 }}>
               <Cpu size={32} color={border} style={{ marginBottom: 10 }} />
-              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No devices match filter</div>
+              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No devices match filter</div>
             </div>
           ) : filtered.map(device => {
             const hc     = healthColor(device.heartbeat_health);
@@ -475,7 +478,7 @@ const MobileDevices: React.FC = () => {
             const health = device.heartbeat_health;
             const uptime = fmtUptime(device.uptime_seconds);
             const freeMem = fmtBytes(device.free_memory_bytes);
-            const onlineColor = device.is_online ? '#2FBF71' : 'var(--muted-foreground)';
+            const onlineColor = device.is_online ? 'var(--brand-green)' : 'var(--muted-foreground)';
             const alertsMuted = !!device.alerts_muted_until && new Date(device.alerts_muted_until) > new Date();
 
             return (
@@ -484,18 +487,18 @@ const MobileDevices: React.FC = () => {
                   onClick={() => toggle(expanded, setExpanded, device.id)}
                   style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11 }}
                 >
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: device.is_online ? 'rgba(47,191,113,0.12)' : 'rgba(71,85,105,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${device.is_online ? 'rgba(47,191,113,0.25)' : 'rgba(71,85,105,0.2)'}` }}>
-                    {device.is_online ? <Wifi size={16} color="#2FBF71" /> : <WifiOff size={16} color="var(--muted-foreground)" />}
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: device.is_online ? 'rgba(15,159,143,0.12)' : 'rgba(71,85,105,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${device.is_online ? 'rgba(15,159,143,0.25)' : 'rgba(71,85,105,0.2)'}` }}>
+                    {device.is_online ? <Wifi size={16} color="var(--brand-green)" /> : <WifiOff size={16} color="var(--muted-foreground)" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.875rem', fontWeight: 700, color: text, marginBottom: 3 }}>{device.device_serial}</div>
-                    {device.model && <div style={{ fontSize: '0.68rem', color: muted, fontFamily: "'DM Sans', sans-serif", marginBottom: 4 }}>{device.model}</div>}
+                    <div style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.875rem', fontWeight: 700, color: text, marginBottom: 3 }}>{device.device_serial}</div>
+                    {device.model && <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif", marginBottom: 4 }}>{device.model}</div>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.67rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>
                         <Clock size={10} color={muted} />{fmtLastSeen(device.last_seen_at ?? device.last_heartbeat)}
                       </div>
                       {device.pending_config_update && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', color: '#F59E0B', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.75rem', color: '#F59E0B', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
                           <AlertTriangle size={10} color="#F59E0B" />Config pending
                         </div>
                       )}
@@ -524,48 +527,48 @@ const MobileDevices: React.FC = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                         {device.hw_id && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>HW ID</div>
-                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.68rem', fontWeight: 600, color: muted }}>{device.hw_id}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>HW ID</div>
+                            <div style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.75rem', fontWeight: 600, color: muted }}>{device.hw_id}</div>
                           </div>
                         )}
                         {device.firmware_version && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Firmware</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Shield size={10} color={muted} />{device.firmware_version}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Firmware</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}><Shield size={10} color={muted} />{device.firmware_version}</div>
                           </div>
                         )}
                         {device.connectivity_type && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Connectivity</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Radio size={10} color={muted} />{device.connectivity_type}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Connectivity</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}><Radio size={10} color={muted} />{device.connectivity_type}</div>
                           </div>
                         )}
                         {device.device_temp_c != null && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Temperature</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.device_temp_c > 70 ? '#F87171' : muted, fontFamily: "'JetBrains Mono', monospace" }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Temperature</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: device.device_temp_c > 70 ? '#F87171' : muted, fontFamily: "'Fira Code', monospace" }}>
                               <Thermometer size={10} color={device.device_temp_c > 70 ? '#F87171' : muted} />{device.device_temp_c.toFixed(1)}°C
                             </div>
                           </div>
                         )}
                         {uptime && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Uptime</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Activity size={10} color={muted} />{uptime}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Uptime</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}><Activity size={10} color={muted} />{uptime}</div>
                           </div>
                         )}
                         {device.cpu_usage_pct != null && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>CPU</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: device.cpu_usage_pct > 80 ? '#F87171' : muted, fontFamily: "'JetBrains Mono', monospace" }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>CPU</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: device.cpu_usage_pct > 80 ? '#F87171' : muted, fontFamily: "'Fira Code', monospace" }}>
                               <Cpu size={10} color={device.cpu_usage_pct > 80 ? '#F87171' : muted} />{device.cpu_usage_pct.toFixed(0)}%
                             </div>
                           </div>
                         )}
                         {freeMem && (
                           <div>
-                            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Free Mem</div>
-                            <div style={{ fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{freeMem}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Free Mem</div>
+                            <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}>{freeMem}</div>
                           </div>
                         )}
                       </div>
@@ -578,9 +581,9 @@ const MobileDevices: React.FC = () => {
 
                       {health && health.severity !== 'ok' && (health.issues?.length ?? 0) > 0 && (
                         <div style={{ marginBottom: 8, padding: '9px 11px', borderRadius: 10, background: `${hc}10`, border: `1px solid ${hc}30` }}>
-                          <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: hc, marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Health Issues</div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: hc, marginBottom: 5, fontFamily: "'Rubik', sans-serif" }}>Health Issues</div>
                           {health.issues!.map((issue, i) => (
-                            <div key={i} style={{ fontSize: '0.72rem', color: hc, fontWeight: 500, lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>{issue}</div>
+                            <div key={i} style={{ fontSize: '0.75rem', color: hc, fontWeight: 500, lineHeight: 1.5, fontFamily: "'Rubik', sans-serif" }}>{issue}</div>
                           ))}
                         </div>
                       )}
@@ -592,7 +595,7 @@ const MobileDevices: React.FC = () => {
                           { label: 'Config Sync', on: !device.pending_config_update },
                           { label: alertsMuted ? 'Alerts Muted' : 'Alerts Live', on: !alertsMuted },
                         ].map(({ label, on }) => (
-                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600, background: on ? 'rgba(47,191,113,0.1)' : 'rgba(71,85,105,0.12)', color: on ? '#2FBF71' : 'var(--muted-foreground)', border: `1px solid ${on ? 'rgba(47,191,113,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'DM Sans', sans-serif" }}>
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, background: on ? 'rgba(15,159,143,0.1)' : 'rgba(71,85,105,0.12)', color: on ? 'var(--brand-green)' : 'var(--muted-foreground)', border: `1px solid ${on ? 'rgba(15,159,143,0.2)' : 'rgba(71,85,105,0.2)'}`, fontFamily: "'Rubik', sans-serif" }}>
                             <Settings size={9} />{label}
                           </div>
                         ))}
@@ -602,7 +605,7 @@ const MobileDevices: React.FC = () => {
                         onClick={() => toggle(logsOpen, setLogsOpen, device.id)}
                         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 11px', borderRadius: 9, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', cursor: 'pointer' }}
                       >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', fontWeight: 600, color: muted, fontFamily: "'DM Sans', sans-serif" }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', fontWeight: 600, color: muted, fontFamily: "'Rubik', sans-serif" }}>
                           <FileText size={12} color={muted} />Device Logs
                         </span>
                         {isLogs ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
@@ -629,7 +632,7 @@ const MobileDevices: React.FC = () => {
             background: surface, borderRadius: 12, border: `1px solid ${border}`,
             overflow: 'hidden', width: 'calc(100% - 32px)', maxWidth: 320
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}`, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Actions</div>
+            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${border}`, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'Rubik', sans-serif" }}>Actions</div>
             <div style={{ padding: '8px' }}>
               {[
                 ...(canOps ? [
@@ -646,7 +649,7 @@ const MobileDevices: React.FC = () => {
               ].map(({ label, icon, onClick, color }) => (
                 <button key={label} onClick={onClick} style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'transparent',
-                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color, fontWeight: 600, fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif",
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color, fontWeight: 600, fontSize: '0.9rem', fontFamily: "'Rubik', sans-serif",
                   transition: 'background 150ms'
                 }} onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}
                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -668,10 +671,10 @@ const MobileDevices: React.FC = () => {
             width: '100%', borderRadius: '20px 20px 0 0', background: surface,
             padding: '20px 20px 30px'
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ marginBottom: 12, fontSize: '0.9rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", color: text }}>
+            <div style={{ marginBottom: 12, fontSize: '0.9rem', fontWeight: 700, fontFamily: "'Rubik', sans-serif", color: text }}>
               {modal.type === 'reboot' ? 'Reboot Device?' : modal.type === 'reset' ? 'Hard Reset?' : 'Delete Device?'}
             </div>
-            <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: muted, fontFamily: "'Rubik', sans-serif", lineHeight: 1.5 }}>
               {modal.type === 'reboot' && `Queue reboot for ${modal.device.device_serial}? The device will restart.`}
               {modal.type === 'reset' && `Hard reset ${modal.device.device_serial}? This will erase configuration.`}
               {modal.type === 'delete' && `Permanently delete ${modal.device.device_serial}? This cannot be undone.`}
@@ -679,11 +682,11 @@ const MobileDevices: React.FC = () => {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setModal({ type: null, device: null })} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: `1px solid ${border}`,
-                background: 'transparent', color: muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
+                background: 'transparent', color: muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'Rubik', sans-serif"
               }} disabled={actionBusy}>Cancel</button>
               <button onClick={confirmAction} disabled={actionBusy} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: 'none',
-                background: modal.type === 'delete' ? '#EF4444' : '#F59E0B', color: '#FFFFFF', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'DM Sans', sans-serif"
+                background: modal.type === 'delete' ? '#EF4444' : '#F59E0B', color: '#FFFFFF', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: "'Rubik', sans-serif"
               }}>{actionBusy ? 'Working…' : modal.type === 'reboot' ? 'Reboot' : modal.type === 'reset' ? 'Reset' : 'Delete'}</button>
             </div>
           </div>
@@ -695,8 +698,8 @@ const MobileDevices: React.FC = () => {
           <div style={{ width: '100%', maxHeight: '88dvh', overflowY: 'auto', borderRadius: '20px 20px 0 0', background: surface, borderTop: `1px solid ${border}`, padding: '18px 16px 28px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Edit device</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif" }}>{editForm.device_serial}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: muted, fontFamily: "'Rubik', sans-serif" }}>Edit device</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif" }}>{editForm.device_serial}</div>
               </div>
               <button onClick={() => setEditingDevice(null)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
             </div>
@@ -706,18 +709,20 @@ const MobileDevices: React.FC = () => {
             ) : (
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ display: 'grid', gap: 6 }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Assigned User</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: muted }}>Assigned User</label>
                   <input value={editForm.user} onChange={e => setEditForm(prev => ({ ...prev, user: e.target.value }))} placeholder="Username" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
                 <div style={{ display: 'grid', gap: 6 }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi SSID</label>
-                  <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: muted }}>Wi-Fi SSID</label>
+                  {canWifiPassword
+                    ? <input value={editForm.wifi_ssid} onChange={e => setEditForm(prev => ({ ...prev, wifi_ssid: e.target.value }))} placeholder="Optional SSID" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
+                    : <span style={{ fontSize: '0.82rem', color: muted }}>Managed by an admin</span>}
                 </div>
                 {canWifiPassword && (
                 <div style={{ display: 'grid', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Wi-Fi Password</label>
-                    <button type="button" onClick={() => { setShowWifiPassword(v => !v); if (showWifiPassword) setEditForm(prev => ({ ...prev, wifi_password: '' })); }} style={{ border: `1px solid ${border}`, background: 'transparent', color: text, borderRadius: 999, padding: '5px 9px', fontSize: '0.68rem', fontWeight: 700 }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: muted }}>Wi-Fi Password</label>
+                    <button type="button" onClick={() => { setShowWifiPassword(v => !v); if (showWifiPassword) setEditForm(prev => ({ ...prev, wifi_password: '' })); }} style={{ border: `1px solid ${border}`, background: 'transparent', color: text, borderRadius: 999, padding: '5px 9px', fontSize: '0.75rem', fontWeight: 700 }}>
                       {showWifiPassword ? 'Cancel' : 'Change'}
                     </button>
                   </div>
@@ -727,13 +732,13 @@ const MobileDevices: React.FC = () => {
                 </div>
                 )}
                 <div style={{ display: 'grid', gap: 6 }}>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: muted }}>Config Version ID</label>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: muted }}>Config Version ID</label>
                   <input value={editForm.config_version} onChange={e => setEditForm(prev => ({ ...prev, config_version: e.target.value }))} placeholder="Config version" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'var(--card)', color: text }} />
                 </div>
-                {editError && <div style={{ fontSize: '0.72rem', color: '#F87171', lineHeight: 1.4 }}>{editError}</div>}
+                {editError && <div style={{ fontSize: '0.75rem', color: '#F87171', lineHeight: 1.4 }}>{editError}</div>}
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <button onClick={() => setEditingDevice(null)} disabled={editSaving} style={{ flex: 1, padding: '12px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: text, fontWeight: 700 }}>Cancel</button>
-                  <button onClick={saveEdit} disabled={editSaving || editLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: '#2FBF71', color: '#fff', fontWeight: 700 }}>{editSaving ? 'Saving…' : 'Save'}</button>
+                  <button onClick={saveEdit} disabled={editSaving || editLoading} style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: 'var(--brand-green)', color: '#fff', fontWeight: 700 }}>{editSaving ? 'Saving…' : 'Save'}</button>
                 </div>
               </div>
             )}

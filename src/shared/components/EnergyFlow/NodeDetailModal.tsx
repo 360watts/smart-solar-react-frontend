@@ -63,10 +63,10 @@ interface NodeDetailModalProps {
 
 const DS = {
   colors: {
-    solarGreen: '#2FBF71',
+    solarGreen: 'var(--brand-green)',
     amber: '#E9B949',
     error: '#DC2626',
-    success: '#34D399',
+    success: '#0F9F8F',
     warning: '#F59E0B',
     info: '#3B82F6',
     bgDark: 'var(--background)',
@@ -254,7 +254,7 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark, ctReverse
   const evLatest = evDevice?.latest as { power_w?: number; voltage_v?: number; switch_on?: boolean } | null | undefined;
   const evCharging = evKw > 0;
   const evPlugged  = evLatest?.switch_on ?? false;
-  const evColor    = '#34d399';
+  const evColor    = '#0F9F8F';
 
   const cols = hasEv ? '1fr 1fr 1fr' : '1fr 1fr';
 
@@ -348,7 +348,7 @@ function LoadSplitPanel({ solarKw, gridKw, evKw = 0, evDevice, isDark, ctReverse
             style={{ height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
           {hasEv && evKw > 0 && (
             <motion.div initial={{ width: 0 }} animate={{ width: `${evPct}%` }} transition={{ duration: 0.7, ease: 'easeOut', delay: 0.05 }}
-              style={{ height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+              style={{ height: '100%', background: 'linear-gradient(90deg, #0F9F8F, #0F9F8F)' }} />
           )}
           <motion.div initial={{ width: 0 }} animate={{ width: `${gridPct}%` }} transition={{ duration: 0.7, ease: 'easeOut', delay: evKw > 0 ? 0.1 : 0.05 }}
             style={{ height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '0 3px 3px 0' }} />
@@ -766,7 +766,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
           ...(visibleSeries.ev && node?.evDevice ? [{
             label: 'EV Charging',
             data: sparkData.map(p => p.ev ?? null),
-            borderColor: '#34d399',
+            borderColor: '#0F9F8F',
             borderWidth: 1.5,
             backgroundColor: 'transparent',
             fill: false,
@@ -832,8 +832,8 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
             wheel: { enabled: true, speed: 0.08 },
             drag: {
               enabled: true,
-              backgroundColor: 'rgba(0,166,62,0.14)',
-              borderColor: 'rgba(0,166,62,0.7)',
+              backgroundColor: 'rgba(15,159,143,0.14)',
+              borderColor: 'rgba(15,159,143,0.7)',
               borderWidth: 1,
             },
             pinch: { enabled: true },
@@ -907,8 +907,8 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
             <TrendRangeToggle value={trendRange} onChange={setTrendRange} isDark={isDark} />
             {isFsZoomed && (
               <button onClick={resetFsZoom} style={{
-                border: '1px solid rgba(0,166,62,0.35)', background: 'transparent',
-                color: '#00a63e', borderRadius: 6, cursor: 'pointer',
+                border: '1px solid rgba(15,159,143,0.35)', background: 'transparent',
+                color: '#0F9F8F', borderRadius: 6, cursor: 'pointer',
                 padding: '5px 12px', fontSize: 10, fontWeight: 600,
               }}>Reset Zoom</button>
             )}
@@ -933,7 +933,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
             {([
               { key: 'v',    label: 'Inverter Load', color: '#f87171', dash: false },
               { key: 'grid', label: 'Energy Meter',      color: '#60a5fa', dash: true  },
-              ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#34d399', dash: false }] : []),
+              ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#0F9F8F', dash: false }] : []),
             ] as { key: string; label: string; color: string; dash: boolean }[]).map(({ key, label, color, dash }) => {
               const on = visibleSeries[key] !== false;
               return (
@@ -1125,7 +1125,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                         fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1,
                         color: node.type === 'ctmeter' && node.power_kw < 0 ? DS.colors.warning : isDark ? DS.colors.textPrimary : '#0F172A',
                         fontVariantNumeric: 'tabular-nums',
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                        fontFamily: "'Fira Code', 'Fira Code', monospace",
                       }}>
                         {node.type === 'ctmeter' && node.power_kw < 0 ? '-' : ''}{pwr.value}
                       </span>
@@ -1230,7 +1230,7 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                       {([
                         { key: 'v',    label: 'Inverter Load', color: '#f87171' },
                         { key: 'grid', label: 'Energy Meter',      color: '#60a5fa' },
-                        ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#34d399' }] : []),
+                        ...(node.evDevice ? [{ key: 'ev', label: 'EV Charging', color: '#0F9F8F' }] : []),
                       ] as { key: string; label: string; color: string }[]).map(({ key, label, color }) => {
                         const on = visibleSeries[key] !== false;
                         return (
@@ -1252,8 +1252,8 @@ export default function NodeDetailModal({ node, onClose, isDark, siteId }: NodeD
                       })}
                       {isZoomed && (
                         <button onClick={resetZoom} style={{
-                          border: '1px solid rgba(0,166,62,0.35)', background: 'transparent',
-                          color: '#00a63e', borderRadius: 6, cursor: 'pointer',
+                          border: '1px solid rgba(15,159,143,0.35)', background: 'transparent',
+                          color: '#0F9F8F', borderRadius: 6, cursor: 'pointer',
                           padding: '3px 9px', fontSize: 9, fontWeight: 600, marginLeft: 'auto',
                         }}>Reset Zoom</button>
                       )}

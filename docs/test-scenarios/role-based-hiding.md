@@ -44,8 +44,9 @@ Hiding is a convenience; the backend keeps enforcing. Features come from `user.a
 | IP-5 | No `destructive` | Devices page | No row trash button, no "Delete" in device detail actions, no bulk "Delete (n)" button even with rows selected | manual | P0 | planned |
 | IP-6 | No `destructive` | Restore Archived Device modal | Restore works; no row checkboxes, no bulk bar, no permanent-delete button | unit | P0 | passing |
 | IP-7 | `destructive` allowed | Restore Archived Device modal | Checkbox and permanent-delete button shown | unit | P1 | passing |
-| IP-8 | No `site_credentials` | Edit device modal | SSID visible; no "Change" toggle, no Wi-Fi password field; saving never sends `wifi_password` | manual | P0 | planned |
-| IP-9 | No `site_credentials` | Mobile devices edit sheet | No Wi-Fi Password block; mobile action menu has no Delete without `destructive` | manual | P1 | planned |
+| IP-8 | No `site_credentials` (backend no longer returns `wifi_ssid` / `network_ip` to employees) | Edit device modal | SSID shown read-only as "Managed by an admin" (not an empty input); no "Change" toggle, no Wi-Fi password field; saving sends neither `wifi_ssid` nor `wifi_password` | unit | P0 | written |
+| IP-9 | No `site_credentials` | Mobile devices edit sheet | SSID shown as "Managed by an admin", no Wi-Fi Password block; saving sends neither `wifi_ssid` nor `wifi_password`; mobile action menu has no Delete without `destructive` | manual | P1 | planned |
+| IP-11 | `site_credentials` (admin) | Edit device modal saved with SSID untouched, or changed (mobile sheet same rule, manual) | Untouched: `wifi_ssid` not sent; changed: sent; password only when typed | unit | P1 | written |
 | IP-10 | Admin | All of the above | Every control present, unchanged behaviour | manual | P1 | planned |
 | IP-11 | No `ai_chat` | Any staff page | The AI chat button and panel are not rendered | unit | P1 | planned |
 | IP-12 | Overview call fails for the role | Site data panel | The panel keeps working with its other data; no error banner | unit | P1 | planned |

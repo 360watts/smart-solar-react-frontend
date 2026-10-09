@@ -83,7 +83,7 @@ export default function GridReliabilitySection({ gaps, availabilityPct, latestTe
           label="Data Freshness"
           value={formatAge(latestTelemetryTs)}
           sub={isStale ? 'no recent telemetry — device may be offline' : 'last telemetry received'}
-          accent={isStale ? '#f59e0b' : '#34d399'}
+          accent={isStale ? '#f59e0b' : '#0F9F8F'}
         />
         <StatTile label="Total Outage" value={`${totalOutageHours.toFixed(1)} hrs`} sub="this window" />
         <StatTile label="Weeks with an outage" value={`${weekly.filter(w => w.outageHours > 0).length} / ${weekly.length || 0}`} />

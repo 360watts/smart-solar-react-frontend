@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   LayoutDashboard, ChevronDown, Wifi, WifiOff, RefreshCw, Search, X,
-  Activity, Server, CheckCircle, AlertTriangle, XCircle, Zap,
-  MapPin, Globe, Compass, Bell,
+  AlertTriangle,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { apiService, AlertItem } from '../../services/api';
 import SiteDataPanel from '../../shared/components/SiteDataPanel';
 import PageHeader from '../../shared/layout/PageHeader';
 import MobileDashboard from '../mobile/staff/MobileDashboard';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import { getDesignTokens } from '../../shared/theme';
+import HealthBand from './HealthBand';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -45,6 +47,9 @@ function siteIsOnline(site: Site): boolean {
 const Dashboard: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
+  const { user } = useAuth();
+  const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase()
+    || user?.username?.[0]?.toUpperCase() || '?';
 
   // Sites
   const [sites, setSites] = useState<Site[]>([]);
@@ -104,6 +109,18 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Equipment health score for the health band (was in the energy-flow header strip).
+  const [equipmentHealth, setEquipmentHealth] = useState<number | null>(null);
+  useEffect(() => {
+    setEquipmentHealth(null);
+    if (!selectedSiteId) return;
+    let cancelled = false;
+    apiService.getSiteHardwareHealth(selectedSiteId)
+      .then(d => { if (!cancelled) setEquipmentHealth(d?.overall_score ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedSiteId]);
+
   // Focus search on open
   useEffect(() => {
     if (dropdownOpen) setTimeout(() => searchRef.current?.focus(), 50);
@@ -154,12 +171,6 @@ const Dashboard: React.FC = () => {
     boxShadow: online ? `0 0 5px ${accent}88` : 'none',
   });
 
-  const statusPalette = {
-    ok:   { bg: tokens.successSoft, color: tokens.success, border: tokens.successSoft },
-    warn: { bg: tokens.warningSoft, color: tokens.warning, border: tokens.warningSoft },
-    err:  { bg: tokens.dangerSoft,  color: tokens.danger,  border: tokens.dangerSoft  },
-  };
-
   // ── Mobile handoff ───────────────────────────────────────────────────────
   if (isMobile) return <MobileDashboard />;
 
@@ -202,149 +213,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // ── Health KPI cards ─────────────────────────────────────────────────────
-
-  const renderSiteKPIs = () => {
-    if (!selectedSite) return null;
-
-    const totalDevices  = selectedSite.devices.length;
-    const onlineDevices = selectedSite.devices.filter(d => d.is_online).length;
-    const deviceRatio   = onlineDevices / Math.max(totalDevices, 1);
-    const siteOnline    = onlineDevices > 0;
-
-    const statusIcons  = { ok: <CheckCircle size={13} />, warn: <AlertTriangle size={13} />, err: <XCircle size={13} /> };
-    const statusLabels = { ok: 'Online', warn: 'Partial', err: 'Offline' };
-
-    const hasCriticalAlerts = activeAlerts.some(a => a.severity === 'critical');
-    const hasWarningAlerts = activeAlerts.length > 0;
-    const siteStatusStatus = !siteOnline ? 'err' : hasCriticalAlerts ? 'err' : hasWarningAlerts ? 'warn' : 'ok';
-
-    const kpiCards = [
-      {
-        label: 'Site Status',
-        value: siteOnline ? 'Online' : 'Offline',
-        sub: activeAlerts.length > 0
-          ? `${activeAlerts.length} active alert${activeAlerts.length !== 1 ? 's' : ''}`
-          : selectedSite.display_name,
-        icon: siteOnline ? <Wifi size={22} /> : <WifiOff size={22} />,
-        status: siteStatusStatus as keyof typeof statusPalette,
-      },
-      {
-        label: 'Devices Online',
-        value: `${onlineDevices} / ${totalDevices}`,
-        sub: `${(deviceRatio * 100).toFixed(0)}% active`,
-        icon: <Activity size={22} />,
-        status: (deviceRatio >= 1 ? 'ok' : deviceRatio > 0 ? 'warn' : 'err') as keyof typeof statusPalette,
-      },
-      {
-        label: 'PV Capacity',
-        value: `${selectedSite.capacity_kw} kW`,
-        sub: 'Installed solar panels',
-        icon: <Zap size={22} />,
-        status: 'ok' as keyof typeof statusPalette,
-      },
-      {
-        label: 'Inverter Capacity',
-        value: selectedSite.inverter_capacity_kw != null ? `${selectedSite.inverter_capacity_kw} kW` : '—',
-        sub: 'Rated inverter output',
-        icon: <Server size={22} />,
-        status: 'ok' as keyof typeof statusPalette,
-      },
-      {
-        label: 'Active Alerts',
-        value: activeAlerts.length === 0 ? 'None' : `${activeAlerts.length}`,
-        sub: activeAlerts.length === 0
-          ? 'No faults detected'
-          : hasCriticalAlerts ? 'Critical fault(s)' : 'Warning(s)',
-        icon: <Bell size={22} />,
-        status: (activeAlerts.length === 0 ? 'ok' : hasCriticalAlerts ? 'err' : 'warn') as keyof typeof statusPalette,
-      },
-    ];
-
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
-        {kpiCards.map(({ label, value, sub, icon, status }) => {
-          const s = statusPalette[status];
-          return (
-            <div key={label} style={{
-              background: surface, border: `1px solid ${border}`, borderRadius: 18,
-              padding: 14, position: 'relative', overflow: 'hidden', minHeight: 100,
-              boxShadow: tokens.shadow,
-            }}>
-              {/* Corner glow */}
-              <span style={{ position: 'absolute', top: -18, right: -18, width: 56, height: 56, borderRadius: '50%', background: `${s.color}0A`, pointerEvents: 'none' }} />
-              <span style={{ position: 'absolute', top: -6, right: -6, width: 28, height: 28, borderRadius: '50%', background: `${s.color}0D`, pointerEvents: 'none' }} />
-
-              {/* Icon badge + label row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 10,
-                  background: s.bg, color: s.color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1px solid ${s.color}25`, flexShrink: 0,
-                }}>
-                  {React.cloneElement(icon as React.ReactElement<any>, { size: 15 })}
-                </div>
-                <span style={{ color: textMute, fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-              </div>
-
-              {/* Value */}
-              <div className="staff-data" style={{ color: textMain, fontSize: '1.625rem', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-              <div style={{ color: textDim, fontSize: '0.6875rem', marginTop: 4 }}>{sub}</div>
-
-              {/* Accent baseline bar */}
-              <div style={{ position: 'absolute', bottom: 8, left: 14, width: 24, height: 2, borderRadius: 1, background: `${s.color}50` }} />
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // ── Site info strip ───────────────────────────────────────────────────────
-
-  const renderSiteInfoStrip = () => {
-    if (!selectedSite) return null;
-
-    const chipBg     = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(18,21,26,0.04)';
-    const chipBorder = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(18,21,26,0.09)';
-    const isActive   = selectedSite.is_active !== false;
-
-    const chips: { icon: React.ReactNode; text: string }[] = [
-      { icon: <MapPin size={11} />, text: `${selectedSite.latitude}° N, ${selectedSite.longitude}° E` },
-      { icon: <Globe size={11} />,  text: selectedSite.timezone },
-      ...(selectedSite.tilt_deg != null && selectedSite.azimuth_deg != null
-        ? [{ icon: <Compass size={11} />, text: `Tilt ${selectedSite.tilt_deg}° · Azimuth ${selectedSite.azimuth_deg}°` }]
-        : []),
-    ];
-
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 0 }}>
-        {chips.map(({ icon, text }) => (
-          <span key={text} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', borderRadius: 999,
-            background: chipBg, border: `1px solid ${chipBorder}`,
-            fontSize: '0.72rem', color: textSub, fontWeight: 500,
-          }}>
-            <span style={{ color: textMute, display: 'flex' }}>{icon}</span>
-            {text}
-          </span>
-        ))}
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '4px 10px', borderRadius: 999,
-          background: isActive ? tokens.successSoft : tokens.dangerSoft,
-          border: `1px solid ${isActive ? tokens.successSoft : tokens.dangerSoft}`,
-          fontSize: '0.72rem', color: isActive ? tokens.success : tokens.danger, fontWeight: 600,
-        }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: isActive ? tokens.success : tokens.danger, display: 'inline-block' }} />
-          {isActive ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-    );
-  };
-
   // ── Active alerts strip ───────────────────────────────────────────────────
 
   const renderAlertsStrip = () => {
@@ -356,60 +224,7 @@ const Dashboard: React.FC = () => {
 
     return (
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <button
-          type="button"
-          onClick={() => setAlertsCollapsed(c => !c)}
-          aria-expanded={!alertsCollapsed}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '10px 14px',
-            borderRadius: 12,
-            border: `1px solid ${tokens.border}`,
-            background: tokens.primarySoft,
-            cursor: 'pointer',
-            width: '100%',
-            textAlign: 'left',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <Bell size={14} color={activeAlerts.length > 0 ? tokens.primary : textMute} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: textMain }}>
-              Active alerts
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              color: activeAlerts.length > 0 ? tokens.primary : textMute,
-            }}>
-              {activeAlerts.length > 0 ? `${activeAlerts.length} open` : 'None'}
-            </span>
-            <ChevronDown
-              size={14}
-              color={textMute}
-              style={{ transform: alertsCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 150ms' }}
-            />
-          </div>
-        </button>
-
-        {alertsCollapsed ? null : activeAlerts.length === 0 ? (
-          <div style={{
-            padding: '12px 14px',
-            borderRadius: 12,
-            border: `1px dashed ${tokens.borderStrong}`,
-            color: textMute,
-            fontSize: '0.78rem',
-            background: tokens.surface,
-          }}>
-            No active alerts for the selected site.
-          </div>
-        ) : activeAlerts.map(alert => {
+        {activeAlerts.map(alert => {
           const p = severityPalette[alert.severity] ?? severityPalette.info;
           return (
             <div
@@ -423,7 +238,7 @@ const Dashboard: React.FC = () => {
               <AlertTriangle size={13} color={p.color} style={{ flexShrink: 0 }} />
               {alert.fault_code && (
                 <span style={{
-                  fontSize: '0.65rem', fontWeight: 700, fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+                  fontSize: '0.75rem', fontWeight: 700, fontFamily: "'Fira Code', 'Fira Code', monospace",
                   padding: '1px 6px', borderRadius: 4,
                   background: p.bg, border: `1px solid ${p.border}`, color: p.color, flexShrink: 0,
                 }}>
@@ -434,7 +249,7 @@ const Dashboard: React.FC = () => {
                 {alert.message}
               </span>
                 {alert.status && (
-                  <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: p.color, opacity: 0.7, flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: p.color, opacity: 0.7, flexShrink: 0 }}>
                     {alert.status}
                   </span>
                 )}
@@ -449,31 +264,35 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="admin-container responsive-page" style={{ paddingBottom: 40, background: bg }}>
+      {/* ── Content: header, health band, tabs and panel share one 1400 px column (mockup alignment) ── */}
+      <div style={{ maxWidth: 1400, margin: '0 auto', minWidth: 0 }}>
 
       <PageHeader
         title="Dashboard"
-        subtitle="Live site health and energy intelligence"
+        subtitle="Live site health and energy"
         rightSlot={
-          <div style={{ position: 'relative' }}>
+          <>
+          <div style={{ position: 'relative', minWidth: 0 }}>
+          {/* Site switcher pill (mockup): status dot, site name, chevron; 44 px tall, shrinks with ellipsis */}
           <button
             onClick={() => setDropdownOpen(o => !o)}
+            aria-expanded={dropdownOpen}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '8px 14px', borderRadius: 999,
+              display: 'inline-flex', alignItems: 'center', gap: 10,
+              height: 44, padding: '0 16px', borderRadius: 999, maxWidth: '100%', minWidth: 0, boxSizing: 'border-box',
               border: `1px solid ${border}`,
               background: surface,
               cursor: 'pointer', color: textMain,
-              fontSize: '0.8125rem', fontWeight: 600,
+              fontSize: 14, fontWeight: 500, fontFamily: "'Rubik', sans-serif",
               userSelect: 'none', transition: 'background 150ms',
-              boxShadow: isDark ? 'none' : tokens.shadow,
             }}
           >
-            {selectedSite && <span style={onlineDot(siteIsOnline(selectedSite))} />}
-            <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedSite?.display_name ?? 'Select site'}
+            {selectedSite && <span style={{ ...onlineDot(siteIsOnline(selectedSite)), width: 8, height: 8, boxShadow: 'none' }} />}
+            <span style={{ minWidth: 0, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedSite ? `${selectedSite.site_id} · ${selectedSite.display_name}` : 'Select site'}
             </span>
             {selectedSite && selectedSite.devices.length > 1 && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: textSub }}>
+              <span style={{ fontSize: 12, fontWeight: 600, padding: '1px 8px', borderRadius: 999, background: tokens.surfaceMuted, color: textSub, whiteSpace: 'nowrap', flexShrink: 0 }}>
                 {selectedSite.devices.length} devices
               </span>
             )}
@@ -540,13 +359,13 @@ const Dashboard: React.FC = () => {
                             <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {site.display_name}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: textMute, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.75rem', color: textMute, fontFamily: "'Fira Code', 'Fira Code', monospace", marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {site.devices.length === 0 ? 'No devices' : site.devices.map(d => d.device_serial).join(' · ')}
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
                             {site.devices.length > 1 && (
-                              <span style={{ fontSize: '0.65rem', fontWeight: 600, color: textSub, background: tokens.surfaceMuted, padding: '1px 6px', borderRadius: 999 }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: textSub, background: tokens.surfaceMuted, padding: '1px 6px', borderRadius: 999 }}>
                                 {site.devices.length} devices
                               </span>
                             )}
@@ -559,21 +378,41 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '7px 14px', borderTop: `1px solid ${tokens.border}`, fontSize: '0.7rem', color: textMute }}>
+                <div style={{ padding: '7px 14px', borderTop: `1px solid ${tokens.border}`, fontSize: '0.75rem', color: textMute }}>
                   {filteredSites.length} of {sites.length} site{sites.length !== 1 ? 's' : ''}
                 </div>
               </div>
             </>
           )}
           </div>
+          {/* Avatar circle (mockup): opens the profile */}
+          <Link to="/profile" title="My Profile" aria-label="My Profile" style={{
+            width: 44, height: 44, borderRadius: '50%', flexShrink: 0, textDecoration: 'none',
+            background: tokens.surfaceMuted, color: textMain,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Rubik', sans-serif", fontSize: 14, fontWeight: 600,
+          }}>{initials}</Link>
+          </>
         }
       />
 
-      {/* ── Content ── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: 'clamp(16px, 2vw, 28px) clamp(12px, 2vw, 24px) 0' }}>
-
-        {/* Site KPIs */}
-        {renderSiteKPIs()}
+        {/* Site health */}
+        {selectedSite && (
+          <HealthBand
+            devicesOnline={selectedSite.devices.filter(d => d.is_online).length}
+            devicesTotal={selectedSite.devices.length}
+            pvKw={selectedSite.capacity_kw}
+            inverterKw={selectedSite.inverter_capacity_kw ?? null}
+            latitude={selectedSite.latitude} longitude={selectedSite.longitude} timezone={selectedSite.timezone}
+            isActive={selectedSite.is_active !== false}
+            alertCount={activeAlerts.length}
+            hasCritical={activeAlerts.some(a => a.severity === 'critical')}
+            onToggleAlerts={() => setAlertsCollapsed(c => !c)}
+            alertsOpen={!alertsCollapsed}
+            equipmentHealth={equipmentHealth}
+            isDark={isDark}
+          />
+        )}
 
         {/* Alerts error */}
         {alertsError && (
@@ -610,24 +449,18 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Active alerts strip */}
-        {renderAlertsStrip()}
-
-
-
-        {/* Site info strip */}
-        {renderSiteInfoStrip()}
+        {/* Active alerts: only when there are some and the health band opened them */}
+        {activeAlerts.length > 0 && !alertsCollapsed && renderAlertsStrip()}
 
         {/* Energy intelligence (SiteDataPanel) */}
+        {/* SiteDataPanel brings its own 24 px top margin */}
         {selectedSiteId && (
-          <div style={{ marginTop: 24 }}>
-            <SiteDataPanel
-              key={selectedSiteId}
-              siteId={selectedSiteId}
-              autoRefresh
-              inverterCapacityKw={selectedSite?.inverter_capacity_kw}
-            />
-          </div>
+          <SiteDataPanel
+            key={selectedSiteId}
+            siteId={selectedSiteId}
+            autoRefresh
+            inverterCapacityKw={selectedSite?.inverter_capacity_kw}
+          />
         )}
       </div>
     </div>

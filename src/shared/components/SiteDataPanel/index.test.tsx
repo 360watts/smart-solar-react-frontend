@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import SiteDataPanel, { __resetMeterOnlyMemory } from './index';
 import { apiService } from '../../../services/api';
 
@@ -14,6 +14,7 @@ jest.mock('./tabs/HistoryTab', () => ({ __esModule: true, default: () => null, H
 jest.mock('./tabs/ForecastTab', () => () => null);
 jest.mock('./tabs/PhaseLoadTab', () => () => null);
 jest.mock('./tabs/UsageTab', () => () => <div>USAGE-CONTENT</div>);
+jest.mock('../../../features/staff/viewer/ViewerDevices', () => () => <div>DEVICES-CONTENT</div>);
 jest.mock('../../../services/api', () => ({
   apiService: new Proxy({ getStaffOverview: jest.fn() }, {
     get: (t: any, k: string) => (k in t ? t[k] : (t[k] = jest.fn().mockResolvedValue(null))),
@@ -56,6 +57,19 @@ it('inverter site: Overview renders after the answer', async () => {
   expect(seen[0]).toBe('overview');
 });
 
+// docs/test-scenarios/dashboard-redesign.md row 25
+it('Today / Refresh sit in the tab row, not a separate bar; Refresh refetches', async () => {
+  await open({ meter_only: false, has_meter: false, weather: { temp: 30 } });
+  const refresh = screen.getAllByRole('button', { name: /refresh/i });
+  expect(refresh).toHaveLength(1);
+  expect(screen.getByTestId('tab-row').contains(refresh[0])).toBe(true);
+  expect(screen.getByTestId('tab-row').contains(screen.getByRole('option', { name: 'Today' }))).toBe(true);
+  const forecast = apiService.getSiteForecast as jest.Mock;
+  const before = forecast.mock.calls.length;
+  await act(async () => { fireEvent.click(refresh[0]); });
+  expect(forecast.mock.calls.length).toBeGreaterThan(before);
+});
+
 async function firstAnswer(siteId: string, answer: any) {
   overview.mockResolvedValue(answer);
   const u = render(<SiteDataPanel siteId={siteId} autoRefresh />);
@@ -88,4 +102,36 @@ it('a failed second overview answer keeps the remembered value', async () => {
   await act(async () => { await Promise.resolve(); });
   expect(screen.queryByText('USAGE-CONTENT')).not.toBeNull();
   expect(screen.queryByText('OVERVIEW-CONTENT')).toBeNull();
+});
+
+describe('fetch failed (viewer-devices TB-5 / TB-6)', () => {
+  const forecast = () => apiService.getSiteForecast as jest.Mock;
+  beforeEach(() => {
+    overview.mockResolvedValue({ meter_only: false, has_meter: false });
+    forecast().mockRejectedValue(new Error('boom'));
+  });
+  afterEach(() => { forecast().mockResolvedValue(null); });
+  const failed = () => waitFor(() => expect(screen.queryByText(/Failed to load data/)).not.toBeNull());
+  const devicesTab = () => screen.queryAllByRole('tab').find(t => t.textContent === 'Devices');
+
+  it("visibleTabs ['devices']: Devices tab and its content still show", async () => {
+    render(<SiteDataPanel siteId="1" autoRefresh visibleTabs={['devices']} />);
+    await waitFor(() => expect(screen.queryByText('DEVICES-CONTENT')).not.toBeNull());
+    expect(devicesTab()).not.toBeUndefined();
+  });
+
+  it('other tabs show the error; Devices stays selectable', async () => {
+    render(<SiteDataPanel siteId="1" autoRefresh visibleTabs={['overview', 'devices']} />);
+    await failed();
+    expect(screen.queryByText('OVERVIEW-CONTENT')).toBeNull();
+    fireEvent.click(devicesTab()!);
+    expect(screen.queryByText('DEVICES-CONTENT')).not.toBeNull();
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+  });
+
+  it('without devices in visibleTabs: error only, no tab bar (unchanged)', async () => {
+    render(<SiteDataPanel siteId="1" autoRefresh visibleTabs={['overview']} />);
+    await failed();
+    expect(screen.queryByRole('tablist')).toBeNull();
+  });
 });

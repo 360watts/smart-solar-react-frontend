@@ -1,7 +1,7 @@
 /**
  * DetailsTab — premium SCADA-style energy monitoring panel.
  * Uses inline styles + useTheme() to match SiteDataPanel aesthetics.
- * Framer Motion for all transitions. JetBrains Mono for values.
+ * Framer Motion for all transitions. Fira Code for values.
  */
 import * as React from 'react';
 import { useState } from 'react';
@@ -120,7 +120,7 @@ const PALETTE: Record<ComponentType, {
     border: (d) => d ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.4)',
   },
   battery: {
-    accent: '#10b981',
+    accent: '#0F9F8F',
     glow: 'rgba(16, 185, 129, 0.3)',
     bg: (d) => d ? 'rgba(16, 185, 129, 0.08)' : 'rgba(209, 250, 229, 0.7)',
     border: (d) => d ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.4)',
@@ -256,7 +256,7 @@ const MetricCell: React.FC<{
       <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fontWeight: 600, color: tok.textMuted, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontSize: 18, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: accent ?? tok.textPrimary, lineHeight: 1.1 }}>
+      <div style={{ fontSize: 18, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: accent ?? tok.textPrimary, lineHeight: 1.1 }}>
         {value}
       </div>
       {subValue && (
@@ -276,7 +276,7 @@ const SectionHeader: React.FC<{ title: string; isDark: boolean; accent: string; 
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: accent }} />
-        <span style={{ fontSize: 13, fontFamily: 'Urbanist, sans-serif', fontWeight: 700, color: tok.textPrimary, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 13, fontFamily: 'Rubik, sans-serif', fontWeight: 700, color: tok.textPrimary, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
           {title}
         </span>
       </div>
@@ -337,7 +337,7 @@ const PhaseStrip: React.FC<{
           ].map(row => (
             <div key={row.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary }}>{row.l}</span>
-              <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
+              <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
             </div>
           ))}
         </div>
@@ -368,7 +368,7 @@ const EnergyRow: React.FC<{
           {i > 0 && <div style={{ position: 'absolute' }} />}
           <div style={{ textAlign: 'center', padding: '0 4px' }}>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 3 }}>{item.label}</div>
-            <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: item.color ?? tok.textPrimary }}>{item.value}</div>
+            <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: item.color ?? tok.textPrimary }}>{item.value}</div>
           </div>
         </React.Fragment>
       ))}
@@ -406,13 +406,13 @@ const SolarDetails: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <ArcGauge pct={pct} color={accent} size={72} label="Output">
-            <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent }}>
+            <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: accent }}>
               {pvKw != null ? `${pvKw.toFixed(1)}` : '—'}
             </span>
             <span style={{ fontSize: 9, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: -1 }}>kW</span>
           </ArcGauge>
           <div>
-            <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent, lineHeight: 1 }}>
+            <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: accent, lineHeight: 1 }}>
               {pvKw != null ? `${pvKw.toFixed(2)} kW` : '—'}
             </div>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: 4 }}>
@@ -424,7 +424,7 @@ const SolarDetails: React.FC<{
         {achievedPct != null && (
           <StatusPill
             label={`${achievedPct}% forecast`}
-            color={achievedPct >= 90 ? '#10b981' : achievedPct >= 70 ? '#f59e0b' : '#ef4444'}
+            color={achievedPct >= 90 ? '#0F9F8F' : achievedPct >= 70 ? '#f59e0b' : '#ef4444'}
             bgColor={isDark ? 'rgba(30,41,59,0.6)' : 'rgba(241,245,249,0.8)'}
           />
         )}
@@ -454,7 +454,7 @@ const SolarDetails: React.FC<{
                   ].map(row => (
                     <div key={row.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                       <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary }}>{row.l}</span>
-                      <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
+                      <span style={{ fontSize: 12, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: tok.textPrimary }}>{row.v}</span>
                     </div>
                   ))}
                   <div style={{ marginTop: 6, height: 3, borderRadius: 2, background: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
@@ -491,7 +491,7 @@ const BatteryDetails: React.FC<{
   const powerKw = batPowerKw ?? (t.battery_power_w != null ? Number(t.battery_power_w) / 1000 : null);
   const isCharging = (powerKw ?? 0) < -0.05;
   const isDischarging = (powerKw ?? 0) > 0.05;
-  const socColor = soc != null ? (soc > 60 ? '#10b981' : soc > 25 ? '#f59e0b' : '#ef4444') : tok.textPrimary;
+  const socColor = soc != null ? (soc > 60 ? '#0F9F8F' : soc > 25 ? '#f59e0b' : '#ef4444') : tok.textPrimary;
   const temp = t.battery_temp_c != null ? Number(t.battery_temp_c) : null;
 
   return (
@@ -499,20 +499,20 @@ const BatteryDetails: React.FC<{
       {/* Header row with SOC gauge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <ArcGauge pct={soc ?? 0} color={socColor} size={80} label="SOC">
-          <span style={{ fontSize: 14, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: socColor }}>
+          <span style={{ fontSize: 14, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: socColor }}>
             {soc != null ? `${soc.toFixed(0)}` : '—'}
           </span>
           <span style={{ fontSize: 9, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginTop: -1 }}>%</span>
         </ArcGauge>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: isCharging ? '#10b981' : isDischarging ? '#ef4444' : tok.textPrimary }}>
+            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: isCharging ? '#0F9F8F' : isDischarging ? '#ef4444' : tok.textPrimary }}>
               {powerKw != null ? `${Math.abs(powerKw).toFixed(2)} kW` : '—'}
             </span>
             {(isCharging || isDischarging) && (
               <StatusPill
                 label={isCharging ? '↓ Charging' : '↑ Discharging'}
-                color={isCharging ? '#10b981' : '#ef4444'}
+                color={isCharging ? '#0F9F8F' : '#ef4444'}
                 bgColor={isDark ? (isCharging ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') : (isCharging ? 'rgba(209,250,229,0.8)' : 'rgba(254,226,226,0.8)')}
               />
             )}
@@ -520,7 +520,7 @@ const BatteryDetails: React.FC<{
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
             <MetricCell label="Voltage" value={t.battery_voltage_v != null ? `${Number(t.battery_voltage_v).toFixed(1)} V` : '—'} isDark={isDark} />
             <MetricCell label="Current" value={t.battery_current_a != null ? `${Number(t.battery_current_a).toFixed(2)} A` : '—'} isDark={isDark} />
-            <MetricCell label="Temp" value={temp != null ? `${temp.toFixed(0)}°C` : '—'} accent={temp != null ? (temp > 45 ? '#ef4444' : temp > 35 ? '#f59e0b' : '#10b981') : undefined} isDark={isDark} />
+            <MetricCell label="Temp" value={temp != null ? `${temp.toFixed(0)}°C` : '—'} accent={temp != null ? (temp > 45 ? '#ef4444' : temp > 35 ? '#f59e0b' : '#0F9F8F') : undefined} isDark={isDark} />
           </div>
         </div>
       </div>
@@ -529,7 +529,7 @@ const BatteryDetails: React.FC<{
       {t.battery_status != null && (() => {
         const BAT_STATUS: Record<number, { label: string; color: string }> = {
           0: { label: 'Standby',      color: 'var(--muted-foreground)' },
-          1: { label: 'Charging',     color: '#10b981' },
+          1: { label: 'Charging',     color: '#0F9F8F' },
           2: { label: 'Discharging',  color: '#f59e0b' },
           3: { label: 'Fault',        color: '#ef4444' },
         };
@@ -550,14 +550,14 @@ const BatteryDetails: React.FC<{
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
           {[
-            { label: 'Charged Today', value: formatEnergyKwhOrWh(t.batt_charge_today_kwh != null ? Number(t.batt_charge_today_kwh) : null, 2), color: '#10b981' },
+            { label: 'Charged Today', value: formatEnergyKwhOrWh(t.batt_charge_today_kwh != null ? Number(t.batt_charge_today_kwh) : null, 2), color: '#0F9F8F' },
             { label: 'Discharged Today', value: formatEnergyKwhOrWh(t.batt_discharge_today_kwh != null ? Number(t.batt_discharge_today_kwh) : null, 2), color: '#ef4444' },
-            { label: 'Charged Total', value: formatEnergyKwhOrWh(t.batt_charge_total_kwh != null ? Number(t.batt_charge_total_kwh) : null, 1), color: '#34d399' },
+            { label: 'Charged Total', value: formatEnergyKwhOrWh(t.batt_charge_total_kwh != null ? Number(t.batt_charge_total_kwh) : null, 1), color: '#0F9F8F' },
             { label: 'Discharged Total', value: formatEnergyKwhOrWh(t.batt_discharge_total_kwh != null ? Number(t.batt_discharge_total_kwh) : null, 1), color: '#f87171' },
           ].map(item => (
             <div key={item.label} style={{ background: tok.bgCell, border: `1px solid ${tok.border}`, borderRadius: 10, padding: '10px 12px' }}>
               <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: item.color }}>{item.value}</div>
+              <div style={{ fontSize: 15, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: item.color }}>{item.value}</div>
             </div>
           ))}
         </div>
@@ -579,7 +579,7 @@ const GridDetails: React.FC<{
   const exporting = (gKw ?? 0) < -0.05;
   const importing = (gKw ?? 0) > 0.05;
   const nearZero  = !exporting && !importing && gKw != null;
-  const flowColor = exporting ? '#10b981' : importing ? '#3b82f6' : tok.textSecondary;
+  const flowColor = exporting ? '#0F9F8F' : importing ? '#3b82f6' : tok.textSecondary;
 
   const phases = [
     { label: 'L1', p: t.grid_l1_power_w, v: t.grid_l1_voltage_v, a: t.grid_l1_current_a },
@@ -593,7 +593,7 @@ const GridDetails: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: flowColor }}>
+            <span style={{ fontSize: 22, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: flowColor }}>
               {gKw != null ? `${Math.abs(gKw).toFixed(2)} kW` : '—'}
             </span>
             <StatusPill
@@ -606,7 +606,7 @@ const GridDetails: React.FC<{
             <MetricCell label="Total Power" value={t.grid_power_w != null ? `${Number(t.grid_power_w).toFixed(0)} W` : '—'} isDark={isDark} />
             <MetricCell label="Frequency"
               value={t.grid_frequency_hz != null ? `${Number(t.grid_frequency_hz).toFixed(2)} Hz` : '—'}
-              accent={t.grid_frequency_hz != null ? (Math.abs(Number(t.grid_frequency_hz) - 50) > 2 ? '#ef4444' : Math.abs(Number(t.grid_frequency_hz) - 50) > 0.5 ? '#f59e0b' : '#10b981') : undefined}
+              accent={t.grid_frequency_hz != null ? (Math.abs(Number(t.grid_frequency_hz) - 50) > 2 ? '#ef4444' : Math.abs(Number(t.grid_frequency_hz) - 50) > 0.5 ? '#f59e0b' : '#0F9F8F') : undefined}
               isDark={isDark}
             />
           </div>
@@ -624,7 +624,7 @@ const GridDetails: React.FC<{
       {/* Energy stats */}
       <EnergyRow isDark={isDark} items={[
         { label: 'Bought Today', value: formatEnergyKwhOrWh(t.grid_buy_today_kwh != null ? Number(t.grid_buy_today_kwh) : null, 2), color: '#3b82f6' },
-        { label: 'Sold Today', value: formatEnergyKwhOrWh(t.grid_sell_today_kwh != null ? Number(t.grid_sell_today_kwh) : null, 2), color: '#10b981' },
+        { label: 'Sold Today', value: formatEnergyKwhOrWh(t.grid_sell_today_kwh != null ? Number(t.grid_sell_today_kwh) : null, 2), color: '#0F9F8F' },
         { label: 'Bought Total', value: formatEnergyKwhOrWh(t.grid_buy_total_kwh != null ? Number(t.grid_buy_total_kwh) : null, 1) },
         { label: 'Sold Total', value: formatEnergyKwhOrWh(t.grid_sell_total_kwh != null ? Number(t.grid_sell_total_kwh) : null, 1) },
       ]} />
@@ -652,7 +652,7 @@ const LoadDetails: React.FC<{
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: accent, marginBottom: 8 }}>
+          <div style={{ fontSize: 22, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: accent, marginBottom: 8 }}>
             {loadKw != null ? `${loadKw.toFixed(2)} kW` : '—'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -673,7 +673,7 @@ const LoadDetails: React.FC<{
                 <div style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
                   Phase {ph.label}
                 </div>
-                <div style={{ fontSize: 16, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>
+                <div style={{ fontSize: 16, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: tok.textPrimary }}>
                   {ph.p != null ? `${Math.abs(Number(ph.p)).toFixed(0)} W` : '—'}
                 </div>
                 <PowerBar pct={totalW ? (Math.abs(Number(ph.p ?? 0)) / totalW) * 100 : 0} color={accent} isDark={isDark} />
@@ -697,9 +697,9 @@ const InverterDetails: React.FC<{
   const tok = useTokens(isDark);
   const accent = PALETTE.inverter.accent;
   const temp = invTemp ?? (t.inverter_temp_c != null ? Number(t.inverter_temp_c) : null);
-  const tempColor = temp != null ? (temp > 70 ? '#ef4444' : temp > 55 ? '#f59e0b' : '#10b981') : tok.textPrimary;
+  const tempColor = temp != null ? (temp > 70 ? '#ef4444' : temp > 55 ? '#f59e0b' : '#0F9F8F') : tok.textPrimary;
   const dcTemp = t.dc_temp_c != null ? Number(t.dc_temp_c) : null;
-  const dcTempColor = dcTemp != null ? (dcTemp > 70 ? '#ef4444' : dcTemp > 55 ? '#f59e0b' : '#10b981') : tok.textPrimary;
+  const dcTempColor = dcTemp != null ? (dcTemp > 70 ? '#ef4444' : dcTemp > 55 ? '#f59e0b' : '#0F9F8F') : tok.textPrimary;
   // ac_output_power_w is phase-L1-only (see FAULT_LOG.md F-048), not total AC
   // output — inv_total_power_w is the real total and must be used for % of rated.
   const acPctOfRated = t.inv_total_power_w != null && t.rated_power_w
@@ -715,13 +715,13 @@ const InverterDetails: React.FC<{
             {runStateLabel && (
               <StatusPill
                 label={runStateLabel}
-                color={runIsActive ? '#10b981' : '#f59e0b'}
+                color={runIsActive ? '#0F9F8F' : '#f59e0b'}
                 bgColor={isDark ? (runIsActive ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)') : (runIsActive ? 'rgba(209,250,229,0.8)' : 'rgba(254,243,199,0.8)')}
               />
             )}
             {t.data_source === 'deye_cloud' && (
               <span style={{
-                fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+                fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 6,
                 background: isDark ? 'rgba(59,130,246,0.12)' : 'rgba(59,130,246,0.08)',
                 border: '1px solid rgba(59,130,246,0.35)',
                 color: '#3b82f6',
@@ -742,7 +742,7 @@ const InverterDetails: React.FC<{
         {t.rated_power_w != null && (
           <div style={{ background: tok.bgCell, border: `1px solid ${tok.border}`, borderRadius: 10, padding: '10px 14px' }}>
             <div style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: tok.textSecondary, marginBottom: 4 }}>Rated Capacity</div>
-            <div style={{ fontSize: 20, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 700, color: tok.textPrimary }}>
+            <div style={{ fontSize: 20, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 700, color: tok.textPrimary }}>
               {(Number(t.rated_power_w) / 1000).toFixed(1)} kW
             </div>
             {acPctOfRated != null && (
@@ -768,14 +768,14 @@ const InverterDetails: React.FC<{
             {temp != null && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <ArcGauge pct={(temp / 100) * 100} color={tempColor} size={72} label="Heatsink">
-                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: tempColor }}>{temp.toFixed(0)}°</span>
+                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: tempColor }}>{temp.toFixed(0)}°</span>
                 </ArcGauge>
               </div>
             )}
             {dcTemp != null && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <ArcGauge pct={(dcTemp / 100) * 100} color={dcTempColor} size={72} label="DC Module">
-                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: dcTempColor }}>{dcTemp.toFixed(0)}°</span>
+                  <span style={{ fontSize: 13, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: dcTempColor }}>{dcTemp.toFixed(0)}°</span>
                 </ArcGauge>
               </div>
             )}
@@ -818,7 +818,7 @@ const InverterDetails: React.FC<{
               <MetricCell
                 label="Fault Codes"
                 value={faultSummary}
-                accent={anyFault ? '#ef4444' : '#10b981'}
+                accent={anyFault ? '#ef4444' : '#0F9F8F'}
                 isDark={isDark}
                 wide={!workModeLabel}
                 tooltip="Fault registers 103–107. Non-zero values indicate an active fault code — cross-reference with the Deye fault code table in the manual. All zeros means the inverter reports no faults."
@@ -887,7 +887,7 @@ const SelectorCard: React.FC<{
       </div>
 
       {/* Value */}
-      <div style={{ fontSize: 17, fontFamily: "'Fira Code', 'JetBrains Mono', monospace", fontWeight: 800, color: isActive ? pal.accent : tok.textPrimary, lineHeight: 1.1 }}>
+      <div style={{ fontSize: 17, fontFamily: "'Fira Code', 'Fira Code', monospace", fontWeight: 800, color: isActive ? pal.accent : tok.textPrimary, lineHeight: 1.1 }}>
         {value}
       </div>
       {subValue && (

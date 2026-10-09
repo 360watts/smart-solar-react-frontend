@@ -5,7 +5,7 @@
 /* ── staff ── */
 .staff-main,
 .staff-main * {
-  font-family: 'Fira Sans', 'DM Sans', -apple-system, sans-serif;
+  font-family: 'Rubik', 'Rubik', -apple-system, sans-serif;
 }
 
 .staff-data,
@@ -15,7 +15,7 @@
 .staff-main .metric-value,
 .staff-main code,
 .staff-main pre {
-  font-family: 'Fira Code', 'JetBrains Mono', 'Monaco', monospace !important;
+  font-family: 'Fira Code', 'Fira Code', 'Monaco', monospace !important;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }

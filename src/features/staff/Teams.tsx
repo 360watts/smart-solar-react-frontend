@@ -402,7 +402,7 @@ const Teams: React.FC = () => {
         padding: 22,
         background: isDark
           ? `linear-gradient(135deg, ${tokens.surface} 0%, ${tokens.surfaceRaised} 100%)`
-          : `linear-gradient(135deg, ${tokens.surface} 0%, #f8fbf8 62%, #eef8f2 100%)`,
+          : `linear-gradient(135deg, ${tokens.surface} 0%, #F8FBFB 62%, #EEF8F7 100%)`,
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, alignItems: 'stretch' }}>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 18 }}>
@@ -416,7 +416,7 @@ const Teams: React.FC = () => {
                 background: tokens.primarySoft,
                 border: `1px solid ${tokens.border}`,
                 color: tokens.primary,
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -425,7 +425,7 @@ const Teams: React.FC = () => {
               </div>
               <h2 style={{
                 margin: '14px 0 10px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Rubik', sans-serif",
                 fontSize: '2rem',
                 lineHeight: 1.02,
                 letterSpacing: '-0.04em',
@@ -464,7 +464,7 @@ const Teams: React.FC = () => {
                 padding: '16px 14px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
                     {label}
                   </span>
                   <Icon size={16} color={accent} />
@@ -695,7 +695,7 @@ const Teams: React.FC = () => {
             padding: 0,
             background: isDark
               ? `linear-gradient(180deg, ${tokens.surfaceRaised} 0%, ${tokens.pageBg} 100%)`
-              : `linear-gradient(180deg, ${tokens.surfaceRaised} 0%, #f8fbf8 100%)`,
+              : `linear-gradient(180deg, ${tokens.surfaceRaised} 0%, #F8FBFB 100%)`,
             borderLeft: `1px solid ${tokens.border}`,
             display: 'flex',
             flexDirection: 'column',
@@ -726,7 +726,7 @@ const Teams: React.FC = () => {
                     background: tokens.primarySoft,
                     border: `1px solid ${tokens.border}`,
                     color: tokens.primary,
-                    fontSize: '0.72rem',
+                    fontSize: '0.75rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -737,7 +737,7 @@ const Teams: React.FC = () => {
                     style={{
                       marginTop: 14,
                       color: tokens.text,
-                      fontFamily: "'Outfit', sans-serif",
+                      fontFamily: "'Rubik', sans-serif",
                       fontSize: '1.55rem',
                       fontWeight: 800,
                       letterSpacing: '-0.03em',
@@ -885,7 +885,7 @@ const Teams: React.FC = () => {
             background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(248,251,248,0.88)',
           }}>
             <div>
-              <div style={{ fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
                 About this team
               </div>
               <div style={{ marginTop: 8, color: tokens.text, fontWeight: 700 }}>
@@ -902,7 +902,7 @@ const Teams: React.FC = () => {
               padding: '12px 12px 10px',
               alignSelf: 'stretch',
             }}>
-              <div style={{ fontSize: '0.72rem', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.75rem', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
                 Preview code
               </div>
               <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: '0.84rem', color: tokens.text }}>
@@ -993,7 +993,7 @@ const Teams: React.FC = () => {
             border: `1px solid ${tokens.danger}`,
             background: tokens.dangerSoft,
           }}>
-            <div style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.danger, fontWeight: 800 }}>
+            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.danger, fontWeight: 800 }}>
               Removal impact
             </div>
             <p style={{ margin: '10px 0 0', color: tokens.text, lineHeight: 1.6, fontSize: '0.9rem' }}>
@@ -1137,7 +1137,7 @@ function MetricRow({
       border: `1px solid ${tokens.border}`,
       padding: '14px 14px 12px',
     }}>
-      <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
+      <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: tokens.textMuted, fontWeight: 700 }}>
         {label}
       </div>
       <div style={{ marginTop: 12, fontSize: '1.2rem', fontWeight: 800, color: tokens.text, fontVariantNumeric: 'tabular-nums' }}>
@@ -1170,7 +1170,7 @@ function SectionTitle({
 const headerStyle = (tokens: ReturnType<typeof getDesignTokens>): React.CSSProperties => ({
   textAlign: 'left',
   padding: '14px 14px',
-  fontSize: '0.72rem',
+  fontSize: '0.75rem',
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
   color: tokens.textMuted,
@@ -1191,7 +1191,7 @@ const statusChipStyle = (tokens: ReturnType<typeof getDesignTokens>, active: boo
   borderRadius: 999,
   background: active ? tokens.successSoft : tokens.warningSoft,
   color: active ? tokens.success : tokens.warning,
-  fontSize: '0.74rem',
+  fontSize: '0.75rem',
   fontWeight: 700,
 });
 
@@ -1365,7 +1365,7 @@ function TeamDialog({
                 background: accent.bg,
                 border: `1px solid ${tokens.border}`,
                 color: accent.fg,
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -1374,7 +1374,7 @@ function TeamDialog({
               </div>
               <h3 style={{
                 margin: '14px 0 8px',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Rubik', sans-serif",
                 fontSize: '1.55rem',
                 lineHeight: 1.05,
                 letterSpacing: '-0.03em',

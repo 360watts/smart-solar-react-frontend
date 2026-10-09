@@ -1,6 +1,6 @@
 // src/shared/components/SiteDataPanel/types.tsx
 import React from 'react';
-import { Home, CloudSun, TrendingUp, Sun, Layers, Activity, HeartPulse, Zap } from 'lucide-react';
+import { Home, CloudSun, TrendingUp, Sun, Layers, Activity, HeartPulse, Zap, Server, Plug } from 'lucide-react';
 
 const tabIconSize = 16;
 
@@ -12,7 +12,9 @@ export const TABS = [
   { id: 'history',    label: 'History',  icon: <TrendingUp size={tabIconSize} /> },
   { id: 'forecast',   label: 'Solar',    icon: <Sun size={tabIconSize} /> },
   { id: 'phase-load', label: 'Load',     icon: <Layers size={tabIconSize} /> },
+  { id: 'plugs',      label: 'Smart plugs', icon: <Plug size={tabIconSize} /> },
   { id: 'usage',      label: 'Usage',    icon: <Zap size={tabIconSize} /> },
+  { id: 'devices',    label: 'Devices',  icon: <Server size={tabIconSize} /> },
 ] as const;
 
 export type TabId = typeof TABS[number]['id'];

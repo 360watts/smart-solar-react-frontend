@@ -580,8 +580,8 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
           })}
           <tfoot>
             <tr style={{ borderTop: '1px solid var(--line-2, rgba(0,0,0,0.1))' }}>
-              <td colSpan={3} style={{ fontSize: '0.65rem', color: 'var(--fg-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', paddingLeft: 4 }}>Totals</td>
-              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
+              <td colSpan={3} style={{ fontSize: '0.75rem', color: 'var(--fg-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', paddingLeft: 4 }}>Totals</td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--fg-muted)', paddingRight: 4 }}>
                 {liveRows.reduce((s, r) => s + (r.qty || 0), 0)}
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--fg)', fontWeight: 600, paddingRight: 8 }}>
@@ -590,23 +590,23 @@ function BomTable({ prefix, form }: { prefix: 'optionA' | 'optionB'; form: UseFo
               <td />
             </tr>
             <tr>
-              <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>PM Surya Ghar Subsidy</td>
-              <td style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
+              <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem' }}>PM Surya Ghar Subsidy</td>
+              <td style={{ textAlign: 'right', color: 'var(--green, #0F9F8F)', fontWeight: 600, paddingRight: 8 }}>
                 − {formatINR(subsidy)}
               </td>
               <td />
             </tr>
             {discount > 0 && (
               <tr>
-                <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.65rem' }}>Discount</td>
-                <td style={{ textAlign: 'right', color: 'var(--green, #00a63e)', fontWeight: 600, paddingRight: 8 }}>
+                <td colSpan={4} style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem' }}>Discount</td>
+                <td style={{ textAlign: 'right', color: 'var(--green, #0F9F8F)', fontWeight: 600, paddingRight: 8 }}>
                   − {formatINR(discount)}
                 </td>
                 <td />
               </tr>
             )}
             <tr>
-              <td colSpan={4} style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '0.68rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
+              <td colSpan={4} style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '0.75rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
                 Net Investment
               </td>
               <td style={{ textAlign: 'right', color: 'var(--amber, #f59e0b)', fontSize: '1rem', fontWeight: 700, paddingRight: 8 }}>

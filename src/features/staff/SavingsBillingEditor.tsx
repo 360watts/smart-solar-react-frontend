@@ -88,7 +88,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   // ── Styles ────────────────────────────────────────────────────────────────
 
   const container: React.CSSProperties = {
-    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+    fontFamily: '"Fira Code", "Fira Code", monospace',
     background: '#09111E',
     border: '1px solid rgba(233,185,73,0.18)',
     borderRadius: 4,
@@ -101,7 +101,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    fontSize: '0.65rem',
+    fontSize: '0.75rem',
     fontWeight: 700,
     letterSpacing: '0.12em',
     color: '#E9B949',
@@ -120,7 +120,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   };
 
   const sectionLabel: React.CSSProperties = {
-    fontSize: '0.62rem',
+    fontSize: '0.75rem',
     fontWeight: 700,
     letterSpacing: '0.14em',
     color: 'rgba(255,255,255,0.3)',
@@ -147,7 +147,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   };
 
   const inputStyle: React.CSSProperties = {
-    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+    fontFamily: '"Fira Code", "Fira Code", monospace',
     background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(233,185,73,0.35)',
     borderRadius: 2,
@@ -167,7 +167,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   };
 
   const btnPrimary: React.CSSProperties = {
-    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+    fontFamily: '"Fira Code", "Fira Code", monospace',
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
@@ -183,7 +183,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
   };
 
   const btnGhost: React.CSSProperties = {
-    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+    fontFamily: '"Fira Code", "Fira Code", monospace',
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
@@ -197,7 +197,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
     cursor: 'pointer',
   };
 
-  const statusColor = (s: string) => s === 'paid' ? '#2FBF71' : s === 'overdue' ? '#E55A5A' : '#E9B949';
+  const statusColor = (s: string) => s === 'paid' ? 'var(--brand-green)' : s === 'overdue' ? '#E55A5A' : '#E9B949';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
               </div>
               <div>
                 <div style={sectionLabel}>Calculated Savings</div>
-                <div style={{ ...valueAmt, color: '#2FBF71' }}>₹{fmt(data.savings.savingsAmount)}</div>
+                <div style={{ ...valueAmt, color: 'var(--brand-green)' }}>₹{fmt(data.savings.savingsAmount)}</div>
               </div>
               <div>
                 <div style={sectionLabel}>Savings %</div>
@@ -337,7 +337,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                 <div>
                   <div style={sectionLabel}>Latest EB bill date</div>
                   <input type="date" style={inputStyle} value={anchor} onChange={e => setAnchor(e.target.value)} />
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
                     The date printed on your most recent TANGEDCO bill. Billing periods run 2 months from it.
                   </div>
                 </div>
@@ -351,7 +351,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                     onChange={e => setWalletKwh(e.target.value)}
                     placeholder="Banked units on the previous TANGEDCO bill"
                   />
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
                     Enter the banked units carried forward on the bill BEFORE {data.electricityBill.period}.
                     This period's own surplus is added automatically when the next period starts.
                   </div>
@@ -392,7 +392,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
                 </div>
                 <div>
                   <div style={sectionLabel}>Cumulative Savings</div>
-                  <div style={{ ...valueAmt, color: '#2FBF71' }}>₹{fmt(data.investment.savedAmount)}</div>
+                  <div style={{ ...valueAmt, color: 'var(--brand-green)' }}>₹{fmt(data.investment.savedAmount)}</div>
                 </div>
                 {data.energyWallet && (
                   <div>
@@ -413,7 +413,7 @@ export default function SavingsBillingEditor({ siteId }: Props) {
             )}
 
             {/* Tariff footnote */}
-            <div style={{ marginTop: 16, fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.04em' }}>
+            <div style={{ marginTop: 16, fontSize: '0.75rem', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.04em' }}>
               Pending Setu BBPS integration for EB bill auto-fetch
             </div>
           </>

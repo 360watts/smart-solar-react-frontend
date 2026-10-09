@@ -13,7 +13,7 @@ const SEV_CFG = {
   info:     { Icon: Info,          color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
 };
 const STATUS_COLOR: Record<string, string> = {
-  active: '#F87171', acknowledged: '#F59E0B', resolved: '#2FBF71',
+  active: '#F87171', acknowledged: '#F59E0B', resolved: 'var(--brand-green)',
 };
 
 const isResolvedAlert = (alert: AlertItem) => alert.resolved || alert.status === 'resolved';
@@ -76,19 +76,19 @@ const MobileAlerts: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const pill = (active: boolean, color = '#2FBF71'): React.CSSProperties => ({
-    padding: '5px 13px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600,
+  const pill = (active: boolean, color = 'var(--brand-green)'): React.CSSProperties => ({
+    padding: '5px 13px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600,
     cursor: 'pointer', border: `1px solid ${active ? color+'44' : border}`,
     whiteSpace: 'nowrap' as const, flexShrink: 0,
     background: active ? `${color}18` : 'transparent',
     color: active ? color : muted,
-    fontFamily: "'DM Sans', sans-serif",
+    fontFamily: "'Rubik', sans-serif",
   });
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100dvh', background:bg, gap:10, color:muted }}>
       <RefreshCw size={18} style={{ animation:'spin 1s linear infinite' }}/>
-      <span style={{ fontSize:'0.875rem', fontFamily:"'DM Sans', sans-serif" }}>Loading…</span>
+      <span style={{ fontSize:'0.875rem', fontFamily:"'Rubik', sans-serif" }}>Loading…</span>
       <style>{`@keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }`}</style>
     </div>
   );
@@ -106,21 +106,21 @@ const MobileAlerts: React.FC = () => {
       }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)', flexShrink: 0 }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Rubik', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, cursor: 'pointer', color: '#2FBF71', padding: '6px', display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, cursor: 'pointer', color: 'var(--brand-green)', padding: '6px', display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize:'0.6rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:muted, fontFamily:"'DM Sans', sans-serif" }}>Alerts</div>
-            <div style={{ fontSize:'1rem', fontWeight:700, color:text, marginTop:2, fontFamily:"'Outfit', sans-serif" }}>
+            <div style={{ fontSize:'0.75rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', color:muted, fontFamily:"'Rubik', sans-serif" }}>Alerts</div>
+            <div style={{ fontSize:'1rem', fontWeight:700, color:text, marginTop:2, fontFamily:"'Rubik', sans-serif" }}>
               {counts.active} active
-              {counts.critical > 0 && <span style={{ fontSize:'0.78rem', color:'#F87171', fontWeight:500, fontFamily:"'DM Sans', sans-serif" }}> · {counts.critical} critical</span>}
+              {counts.critical > 0 && <span style={{ fontSize:'0.78rem', color:'#F87171', fontWeight:500, fontFamily:"'Rubik', sans-serif" }}> · {counts.critical} critical</span>}
             </div>
           </div>
           <button onClick={() => { setRefreshing(true); fetchAlerts(true); }}
@@ -133,11 +133,11 @@ const MobileAlerts: React.FC = () => {
           {[
             { label:'Active',   val:counts.active,   color:'#F87171' },
             { label:'Critical', val:counts.critical, color:'#F87171' },
-            { label:'Resolved', val:counts.resolved, color:'#2FBF71' },
+            { label:'Resolved', val:counts.resolved, color:'var(--brand-green)' },
           ].map(({ label, val, color }) => (
             <div key={label} style={{ flex:1, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderRadius:12, padding:'8px 4px', textAlign:'center', border:`1px solid ${border}` }}>
-              <div style={{ fontSize:'1.1rem', fontWeight:700, color, lineHeight:1, fontFamily:"'JetBrains Mono', monospace" }}>{val}</div>
-              <div style={{ fontSize:'0.57rem', color:muted, marginTop:3, fontFamily:"'DM Sans', sans-serif" }}>{label}</div>
+              <div style={{ fontSize:'1.1rem', fontWeight:700, color, lineHeight:1, fontFamily:"'Fira Code', monospace" }}>{val}</div>
+              <div style={{ fontSize:'0.75rem', color:muted, marginTop:3, fontFamily:"'Rubik', sans-serif" }}>{label}</div>
             </div>
           ))}
         </div>
@@ -152,7 +152,7 @@ const MobileAlerts: React.FC = () => {
               width:'100%', background: surface, backdropFilter: 'blur(16px)',
               border:`1px solid ${border}`, borderRadius:12,
               padding:'9px 10px 9px 34px', fontSize:'0.8rem', color:text,
-              outline:'none', boxSizing:'border-box', fontFamily:"'DM Sans', sans-serif",
+              outline:'none', boxSizing:'border-box', fontFamily:"'Rubik', sans-serif",
             }}
           />
           {search && (
@@ -165,7 +165,7 @@ const MobileAlerts: React.FC = () => {
 
         <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:1 }}>
           {(['all','active','acknowledged','resolved'] as FilterStatus[]).map(s => (
-            <button key={s} style={pill(filterStatus===s, STATUS_COLOR[s]??'#2FBF71')} onClick={() => setFilterStatus(s)}>
+            <button key={s} style={pill(filterStatus===s, STATUS_COLOR[s]??'var(--brand-green)')} onClick={() => setFilterStatus(s)}>
               {s === 'all' ? 'All' : s.charAt(0).toUpperCase()+s.slice(1)}
             </button>
           ))}
@@ -178,12 +178,12 @@ const MobileAlerts: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ padding:'8px 14px 2px', display:'flex', alignItems:'center', gap:4, fontSize:'0.7rem', color:muted, fontFamily:"'DM Sans', sans-serif" }}>
+      <div style={{ padding:'8px 14px 2px', display:'flex', alignItems:'center', gap:4, fontSize:'0.75rem', color:muted, fontFamily:"'Rubik', sans-serif" }}>
         <span>{filtered.length} alert{filtered.length!==1?'s':''}</span>
-        {totalPages > 1 && <span style={{ color: '#2FBF71' }}> · page {page}/{totalPages}</span>}
+        {totalPages > 1 && <span style={{ color: 'var(--brand-green)' }}> · page {page}/{totalPages}</span>}
         {(filterStatus !== 'all' || filterSeverity !== 'all' || search) && (
           <button onClick={() => { setFilterStatus('all'); setFilterSeverity('all'); setSearch(''); }}
-            style={{ marginLeft:6, background:'none', border:'none', cursor:'pointer', color:'#2FBF71', fontSize:'0.7rem', fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}>
+            style={{ marginLeft:6, background:'none', border:'none', cursor:'pointer', color:'var(--brand-green)', fontSize:'0.75rem', fontWeight:600, fontFamily:"'Rubik', sans-serif" }}>
             Clear filters
           </button>
         )}
@@ -191,9 +191,9 @@ const MobileAlerts: React.FC = () => {
 
       {filtered.length === 0 && (
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'64px 20px', gap:12 }}>
-          <CheckCircle size={40} color="#2FBF71" strokeWidth={1.5}/>
-          <div style={{ fontSize:'1rem', fontWeight:700, color:text, fontFamily:"'Outfit', sans-serif" }}>All clear</div>
-          <div style={{ fontSize:'0.78rem', color:muted, fontFamily:"'DM Sans', sans-serif" }}>
+          <CheckCircle size={40} color="var(--brand-green)" strokeWidth={1.5}/>
+          <div style={{ fontSize:'1rem', fontWeight:700, color:text, fontFamily:"'Rubik', sans-serif" }}>All clear</div>
+          <div style={{ fontSize:'0.78rem', color:muted, fontFamily:"'Rubik', sans-serif" }}>
             {search || filterStatus !== 'all' || filterSeverity !== 'all' ? 'Try adjusting your search or filters' : 'No alerts at this time'}
           </div>
         </div>
@@ -229,21 +229,21 @@ const MobileAlerts: React.FC = () => {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5, flexWrap:'wrap' }}>
                     {a.fault_code && (
-                      <span style={{ fontSize:'0.6rem', fontWeight:700, fontFamily:"'JetBrains Mono', monospace", padding:'2px 7px', borderRadius:999, background:cfg.bg, color:cfg.color, flexShrink:0 }}>
+                      <span style={{ fontSize:'0.75rem', fontWeight:700, fontFamily:"'Fira Code', monospace", padding:'2px 7px', borderRadius:999, background:cfg.bg, color:cfg.color, flexShrink:0 }}>
                         {a.fault_code}
                       </span>
                     )}
-                    <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:'0.6rem', fontWeight:700, color:statusCol, padding:'2px 7px', borderRadius:999, background:`${statusCol}15`, flexShrink:0, fontFamily:"'DM Sans', sans-serif" }}>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:'0.75rem', fontWeight:700, color:statusCol, padding:'2px 7px', borderRadius:999, background:`${statusCol}15`, flexShrink:0, fontFamily:"'Rubik', sans-serif" }}>
                       <span style={{ width:5, height:5, borderRadius:'50%', background:statusCol, display:'inline-block' }}/>
                       {(a.status ?? (isResolved ? 'resolved' : 'active')).toUpperCase()}
                     </span>
                   </div>
-                  <div style={{ fontSize:'0.8rem', fontWeight:600, color:text, lineHeight:1.4, marginBottom:5, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any, fontFamily:"'DM Sans', sans-serif" }}>
+                  <div style={{ fontSize:'0.8rem', fontWeight:600, color:text, lineHeight:1.4, marginBottom:5, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any, fontFamily:"'Rubik', sans-serif" }}>
                     {a.message}
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                    <span style={{ fontSize:'0.62rem', color:muted, fontFamily:"'JetBrains Mono', monospace" }}>Dev {a.device_serial ?? a.device_id}</span>
-                    <span style={{ fontSize:'0.62rem', color:muted, display:'flex', alignItems:'center', gap:2, marginLeft:'auto', fontFamily:"'DM Sans', sans-serif" }}>
+                    <span style={{ fontSize:'0.75rem', color:muted, fontFamily:"'Fira Code', monospace" }}>Dev {a.device_serial ?? a.device_id}</span>
+                    <span style={{ fontSize:'0.75rem', color:muted, display:'flex', alignItems:'center', gap:2, marginLeft:'auto', fontFamily:"'Rubik', sans-serif" }}>
                       <Clock size={10}/>{new Date(a.timestamp).toLocaleString('en-IN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
                     </span>
                   </div>
@@ -257,7 +257,7 @@ const MobileAlerts: React.FC = () => {
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 12px 4px' }}>
           <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
-            style={{ padding: '6px 16px', background: page > 1 ? 'rgba(47,191,113,0.12)' : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? '#2FBF71' : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily:"'DM Sans', sans-serif" }}>
+            style={{ padding: '6px 16px', background: page > 1 ? 'rgba(15,159,143,0.12)' : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page > 1 ? 'pointer' : 'default', color: page > 1 ? 'var(--brand-green)' : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily:"'Rubik', sans-serif" }}>
             Prev
           </button>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -265,14 +265,14 @@ const MobileAlerts: React.FC = () => {
               const p = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : page >= totalPages - 3 ? totalPages - 6 + i : page - 3 + i;
               return (
                 <button key={p} onClick={() => setPage(p)}
-                  style={{ width: 28, height: 28, borderRadius: 999, border: `1px solid ${p === page ? '#2FBF71' : border}`, background: p === page ? 'rgba(47,191,113,0.15)' : 'transparent', cursor: 'pointer', color: p === page ? '#2FBF71' : muted, fontSize: '0.72rem', fontWeight: 700, fontFamily:"'JetBrains Mono', monospace" }}>
+                  style={{ width: 28, height: 28, borderRadius: 999, border: `1px solid ${p === page ? 'var(--brand-green)' : border}`, background: p === page ? 'rgba(15,159,143,0.15)' : 'transparent', cursor: 'pointer', color: p === page ? 'var(--brand-green)' : muted, fontSize: '0.75rem', fontWeight: 700, fontFamily:"'Fira Code', monospace" }}>
                   {p}
                 </button>
               );
             })}
           </div>
           <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
-            style={{ padding: '6px 16px', background: page < totalPages ? 'rgba(47,191,113,0.12)' : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? '#2FBF71' : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily:"'DM Sans', sans-serif" }}>
+            style={{ padding: '6px 16px', background: page < totalPages ? 'rgba(15,159,143,0.12)' : 'transparent', border: `1px solid ${border}`, borderRadius: 999, cursor: page < totalPages ? 'pointer' : 'default', color: page < totalPages ? 'var(--brand-green)' : muted, fontSize: '0.75rem', fontWeight: 600, fontFamily:"'Rubik', sans-serif" }}>
             Next
           </button>
         </div>
@@ -302,19 +302,19 @@ const MobileAlerts: React.FC = () => {
                   <Icon size={20} color={cfg.color}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:'0.92rem', fontWeight:700, color:text, lineHeight:1.4, marginBottom:8, fontFamily:"'DM Sans', sans-serif" }}>{a.message}</div>
+                  <div style={{ fontSize:'0.92rem', fontWeight:700, color:text, lineHeight:1.4, marginBottom:8, fontFamily:"'Rubik', sans-serif" }}>{a.message}</div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                     {a.fault_code && (
-                      <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.65rem', fontWeight:700, fontFamily:"'JetBrains Mono', monospace", background:cfg.bg, color:cfg.color }}>
+                      <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.75rem', fontWeight:700, fontFamily:"'Fira Code', monospace", background:cfg.bg, color:cfg.color }}>
                         {a.fault_code}
                       </span>
                     )}
-                    <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.65rem', fontWeight:700,
+                    <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.75rem', fontWeight:700,
                       background:`${STATUS_COLOR[a.status??'']??cfg.color}18`,
-                      color:STATUS_COLOR[a.status??'']??cfg.color, fontFamily:"'DM Sans', sans-serif" }}>
+                      color:STATUS_COLOR[a.status??'']??cfg.color, fontFamily:"'Rubik', sans-serif" }}>
                       {(a.status ?? (isResolved ? 'resolved' : 'active')).toUpperCase()}
                     </span>
-                    <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.65rem', fontWeight:700, background:cfg.bg, color:cfg.color, fontFamily:"'DM Sans', sans-serif" }}>
+                    <span style={{ padding:'3px 9px', borderRadius:999, fontSize:'0.75rem', fontWeight:700, background:cfg.bg, color:cfg.color, fontFamily:"'Rubik', sans-serif" }}>
                       {(a.severity ?? 'info').toUpperCase()}
                     </span>
                   </div>
@@ -330,20 +330,20 @@ const MobileAlerts: React.FC = () => {
                   ...(a.resolved_at ? [{ label:'Resolved', value:new Date(a.resolved_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderRadius:12, padding:'10px 12px', border:`1px solid ${border}` }}>
-                    <div style={{ fontSize:'0.58rem', color:muted, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4, fontFamily:"'DM Sans', sans-serif" }}>{label}</div>
-                    <div style={{ fontSize:'0.78rem', fontWeight:600, color:text, wordBreak:'break-all', fontFamily:"'JetBrains Mono', monospace" }}>{value}</div>
+                    <div style={{ fontSize:'0.75rem', color:muted, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4, fontFamily:"'Rubik', sans-serif" }}>{label}</div>
+                    <div style={{ fontSize:'0.78rem', fontWeight:600, color:text, wordBreak:'break-all', fontFamily:"'Fira Code', monospace" }}>{value}</div>
                   </div>
                 ))}
               </div>
 
               {isResolved && a.resolved_at && (
-                <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:8, background:'rgba(47,191,113,0.08)', border:'1px solid rgba(47,191,113,0.2)', borderRadius:12, padding:'10px 12px', fontSize:'0.75rem', color:'#2FBF71', fontFamily:"'DM Sans', sans-serif" }}>
+                <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:8, background:'rgba(15,159,143,0.08)', border:'1px solid rgba(15,159,143,0.2)', borderRadius:12, padding:'10px 12px', fontSize:'0.75rem', color:'var(--brand-green)', fontFamily:"'Rubik', sans-serif" }}>
                   <CheckCircle size={14}/> Resolved on {new Date(a.resolved_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
                 </div>
               )}
 
               <button onClick={() => setSelected(null)}
-                style={{ width:'100%', marginTop:16, padding:'13px', background:'rgba(47,191,113,0.1)', border:'1px solid rgba(47,191,113,0.25)', borderRadius:12, cursor:'pointer', color:'#2FBF71', fontSize:'0.85rem', fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}>
+                style={{ width:'100%', marginTop:16, padding:'13px', background:'rgba(15,159,143,0.1)', border:'1px solid rgba(15,159,143,0.25)', borderRadius:12, cursor:'pointer', color:'var(--brand-green)', fontSize:'0.85rem', fontWeight:600, fontFamily:"'Rubik', sans-serif" }}>
                 Done
               </button>
             </div>

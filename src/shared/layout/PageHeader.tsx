@@ -17,10 +17,10 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      gap: 12, marginBottom: 28, flexWrap: 'wrap',
+      gap: 16, marginBottom: 24, flexWrap: 'wrap', minWidth: 0,
     }}>
-      {/* Left: optional back + title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Left: optional back + title (min-width 0 so a long title ellipsizes instead of overflowing) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 auto', minWidth: 0 }}>
         {backAction && (
           <button
             onClick={backAction}
@@ -39,22 +39,22 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
             </svg>
           </button>
         )}
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h1 style={{
             margin: 0,
-            fontSize: '1.625rem',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
+            fontFamily: "'Rubik', sans-serif",
+            fontSize: 26,
+            fontWeight: 600,
             color: tokens.text,
             lineHeight: 1.2,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {title}
           </h1>
           <p style={{
-            margin: '3px 0 0',
-            fontSize: '0.8125rem',
+            margin: '2px 0 0',
+            fontSize: 13,
             color: tokens.textMuted,
-            letterSpacing: '-0.01em',
           }}>
             {subtitle}
           </p>
@@ -63,7 +63,7 @@ export default function PageHeader({ title, subtitle, rightSlot, backAction }: P
 
       {/* Right slot */}
       {rightSlot && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, maxWidth: '100%' }}>
           {rightSlot}
         </div>
       )}

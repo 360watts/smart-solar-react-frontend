@@ -50,9 +50,9 @@ export function StatTile({ label, value, sub, accent }: { label: string; value: 
       background: tokens.surfaceMuted, border: `1px solid ${tokens.border}`,
       borderRadius: 12, padding: '12px 14px', minWidth: 120, flex: 1,
     }}>
-      <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: tokens.textDim }}>{label}</div>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: tokens.textDim }}>{label}</div>
       <div style={{ fontSize: '1.35rem', fontWeight: 800, color: accent ?? tokens.text, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.72rem', color: tokens.textMuted, marginTop: 2 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '0.75rem', color: tokens.textMuted, marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }

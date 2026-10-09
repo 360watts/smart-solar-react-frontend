@@ -1,7 +1,7 @@
 import { tabsFor, tabLabel, resolveTab } from './tabVisibility';
 import { TABS, type TabId } from './types';
 
-const inverterTabs = TABS.map(t => t.id).filter(id => id !== 'usage');
+const inverterTabs = TABS.map(t => t.id).filter(id => id !== 'usage' && id !== 'devices' && id !== 'plugs');
 
 describe('tabsFor', () => {
   it('meter-only gives usage only', () => {
@@ -50,6 +50,47 @@ describe('tabsFor', () => {
     expect(tabsFor({ meterOnly: undefined })).toEqual(inverterTabs);
     expect(tabsFor({ meterOnly: null })).toEqual(inverterTabs);
     expect(tabsFor({ meterOnly: undefined, visibleTabs: ['usage', 'history'] })).toEqual(['history']);
+  });
+});
+
+describe('tabsFor devices (opt-in)', () => {
+  it('never shows devices unless visibleTabs lists it (TB-4)', () => {
+    expect(tabsFor({ meterOnly: false })).not.toContain('devices');
+    expect(tabsFor({ meterOnly: true })).not.toContain('devices');
+    expect(tabsFor({ meterOnly: false, hasMeter: true })).not.toContain('devices');
+  });
+
+  it('puts devices last on inverter and meter-only sites when listed (TB-3)', () => {
+    expect(tabsFor({ meterOnly: false, visibleTabs: ['overview', 'devices'] })).toEqual(['overview', 'devices']);
+    expect(tabsFor({ meterOnly: false, hasMeter: true, visibleTabs: ['devices', 'overview', 'usage'] })).toEqual(['overview', 'usage', 'devices']);
+    expect(tabsFor({ meterOnly: true, visibleTabs: ['overview', 'usage', 'devices'] })).toEqual(['usage', 'devices']);
+  });
+});
+
+describe('tabsFor plugs (smart-plugs-tab.md)', () => {
+  const withPlugs = (tabs: TabId[]) => [...tabs.slice(0, tabs.indexOf('phase-load') + 1), 'plugs', ...tabs.slice(tabs.indexOf('phase-load') + 1)];
+
+  it('adds plugs after Load on inverter sites with a plug (PV-1)', () => {
+    expect(tabsFor({ meterOnly: false, hasPlugs: true })).toEqual(withPlugs(inverterTabs as TabId[]));
+    expect(tabsFor({ meterOnly: false, hasMeter: true, hasPlugs: true, visibleTabs: ['overview', 'phase-load', 'plugs', 'usage', 'devices'] }))
+      .toEqual(['overview', 'phase-load', 'plugs', 'usage', 'devices']);
+  });
+
+  it('never shows plugs without a plug (PV-2)', () => {
+    expect(tabsFor({ meterOnly: false, hasPlugs: false })).not.toContain('plugs');
+    expect(tabsFor({ meterOnly: false, hasPlugs: null })).not.toContain('plugs');
+    expect(tabsFor({ meterOnly: false })).not.toContain('plugs');
+  });
+
+  it('meter-only sites get usage then plugs (PV-3, PV-4)', () => {
+    expect(tabsFor({ meterOnly: true, hasPlugs: true })).toEqual(['usage', 'plugs']);
+    expect(tabsFor({ meterOnly: true, hasPlugs: true, visibleTabs: ['usage', 'plugs', 'devices'] })).toEqual(['usage', 'plugs', 'devices']);
+    expect(tabsFor({ meterOnly: true, hasPlugs: false })).toEqual(['usage']);
+  });
+
+  it('respects visibleTabs (PV-5)', () => {
+    expect(tabsFor({ meterOnly: false, hasPlugs: true, visibleTabs: ['overview'] })).toEqual(['overview']);
+    expect(tabsFor({ meterOnly: true, hasPlugs: true, visibleTabs: ['usage'] })).toEqual(['usage']);
   });
 });
 

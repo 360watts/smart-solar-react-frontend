@@ -1279,7 +1279,7 @@ const DevicePresets: React.FC = () => {
                                 Remove
                               </button>
                             ) : (
-                              <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981', marginRight: '8px' }} title="Add to preset">
+                              <button onClick={() => handleAttachSlaveToPreset(slave)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0F9F8F', marginRight: '8px' }} title="Add to preset">
                                 Add
                               </button>
                             )}
@@ -1598,7 +1598,7 @@ const DevicePresets: React.FC = () => {
                   width: 48,
                   height: 48,
                   borderRadius: 12,
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                   boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1645,7 +1645,7 @@ const DevicePresets: React.FC = () => {
                   padding: '10px 18px',
                   borderRadius: 8,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                   color: 'white',
                   fontSize: '0.875rem',
                   fontWeight: 600,

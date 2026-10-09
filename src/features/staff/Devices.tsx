@@ -134,10 +134,10 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
             Slave {slave.slave_id} — {slave.device_name}
           </span>
           {!slave.enabled && (
-            <span style={{ fontSize: '0.68rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: textD }}>disabled</span>
+            <span style={{ fontSize: '0.75rem', padding: '1px 7px', borderRadius: 99, background: 'rgba(148,163,184,0.12)', color: textD }}>disabled</span>
           )}
         </div>
-        <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: slave.received === slave.configured ? '#22c55e' : '#f59e0b' }}>
+        <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, Fira Code, monospace', color: slave.received === slave.configured ? '#0F9F8F' : '#f59e0b' }}>
           {slave.received}/{slave.configured}
         </span>
       </button>
@@ -148,7 +148,7 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
             <thead>
               <tr style={{ color: 'var(--muted-foreground)' }}>
                 {['Label', 'Addr', 'Category', 'Unit', 'Value', 'Status'].map(h => (
-                  <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '4px 8px 6px', textAlign: 'left', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -164,24 +164,24 @@ const SlaveRegisterSection: React.FC<{ slave: any; isDark: boolean }> = ({ slave
                   onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = reg.received ? 'transparent' : isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.03)')}
                 >
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, Fira Code, monospace', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
                     {reg.label}
                   </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', color: textD }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, Fira Code, monospace', color: textD }}>
                     {reg.address}
                   </td>
                   <td style={{ padding: '5px 8px', color: 'var(--muted-foreground)' }}>
                     {reg.category || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', color: 'var(--muted-foreground)', fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                  <td style={{ padding: '5px 8px', color: 'var(--muted-foreground)', fontFamily: 'Fira Code, Fira Code, monospace' }}>
                     {reg.unit || '—'}
                   </td>
-                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, JetBrains Mono, monospace', fontWeight: 600, color: reg.received ? '#22c55e' : textD }}>
+                  <td style={{ padding: '5px 8px', fontFamily: 'Fira Code, Fira Code, monospace', fontWeight: 600, color: reg.received ? '#0F9F8F' : textD }}>
                     {reg.value != null ? reg.value : '—'}
                   </td>
                   <td style={{ padding: '5px 8px' }}>
                     {reg.received
-                      ? <CheckCircle2 size={13} style={{ color: '#22c55e' }} />
+                      ? <CheckCircle2 size={13} style={{ color: '#0F9F8F' }} />
                       : <X size={13} style={{ color: '#ef4444' }} />
                     }
                   </td>
@@ -952,17 +952,17 @@ const Devices: React.FC = () => {
               <ChevronLeft size={18} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-              <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, fontFamily: 'Fira Code, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {selectedDevice.device_serial}
               </h1>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0,
-                padding: '2px 8px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
+                padding: '2px 8px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600,
                 background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                color: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)',
+                color: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)',
                 border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block' }} />
                 {selectedDevice.is_online ? 'Online' : 'Offline'}
               </span>
             </div>
@@ -1016,7 +1016,7 @@ const Devices: React.FC = () => {
         {/* ── Device KPI Cards ── */}
         {(() => {
           const statusPalette = {
-            ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
+            ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#0F9F8F', border: 'rgba(16,185,129,0.2)'  },
             warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
             err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
           };
@@ -1099,7 +1099,7 @@ const Devices: React.FC = () => {
                   padding: 20, borderRadius: 14, position: 'relative', overflow: 'hidden',
                   cursor: href ? 'pointer' : 'default',
                   background: T.surface,
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)'}`,
+                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,159,143,0.15)'}`,
                   boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
                   transition: 'transform 150ms, box-shadow 150ms',
                   textDecoration: 'none', color: 'inherit', display: 'block',
@@ -1114,7 +1114,7 @@ const Devices: React.FC = () => {
                     </div>
                     <div style={{ fontSize: '0.78rem', color: textSub, marginBottom: 4, fontWeight: 500 }}>{label}</div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: textMain, marginBottom: 4, lineHeight: 1.2 }}>{value}</div>
-                    <div style={{ fontSize: '0.72rem', color: textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
+                    <div style={{ fontSize: '0.75rem', color: textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
                     <div style={{ marginTop: 14, height: 3, width: 48, borderRadius: 999, background: s.color, opacity: 0.4 }} />
                   </>
                 );
@@ -1145,13 +1145,13 @@ const Devices: React.FC = () => {
             <div style={{
               marginBottom: 24,
               borderRadius: 14,
-              border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
+              border: `1px solid ${isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.10)'}`,
               background: T.surface,
               overflow: 'hidden',
             }}>
               <div style={{
                 padding: '14px 18px',
-                borderBottom: `1px solid ${isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.08)'}`,
+                borderBottom: `1px solid ${isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1181,7 +1181,7 @@ const Devices: React.FC = () => {
                     { label: 'Info', value: info, color: '#3b82f6' },
                   ].map(chip => (
                     <span key={chip.label} style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
                       padding: '3px 8px',
                       borderRadius: 999,
@@ -1221,7 +1221,7 @@ const Devices: React.FC = () => {
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span style={{
-                            fontSize: '0.7rem',
+                            fontSize: '0.75rem',
                             fontWeight: 700,
                             textTransform: 'uppercase',
                             letterSpacing: '0.04em',
@@ -1231,8 +1231,8 @@ const Devices: React.FC = () => {
                           </span>
                           {alert.fault_code && (
                             <code style={{
-                              fontSize: '0.72rem',
-                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '0.75rem',
+                              fontFamily: 'Fira Code, monospace',
                               padding: '2px 6px',
                               borderRadius: 5,
                               background: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.12)',
@@ -1264,7 +1264,7 @@ const Devices: React.FC = () => {
 
         {/* ── Site Energy Dashboard ── */}
         {siteLoading && !siteDetails && (
-          <div style={{ marginBottom: 24, padding: 24, borderRadius: 14, background: T.surface, border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.12)'}`, display: 'flex', alignItems: 'center', gap: 10, color: T.textD }}>
+          <div style={{ marginBottom: 24, padding: 24, borderRadius: 14, background: T.surface, border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,159,143,0.12)'}`, display: 'flex', alignItems: 'center', gap: 10, color: T.textD }}>
             <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '0.875rem' }}>Loading site energy data…</span>
           </div>
@@ -1298,15 +1298,15 @@ const Devices: React.FC = () => {
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '4px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600,
                     background: selectedDevice.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                    color: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)',
+                    color: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)',
                     border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block' }} />
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block' }} />
                     {selectedDevice.is_online ? 'Online' : 'Offline'}
                   </span>
                 )},
-                { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
-                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', color: T.textM }}>{selectedDevice.hw_id || '—'}</span> },
+                { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
+                { label: 'MAC / HW ID', content: <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.85rem', color: T.textM }}>{selectedDevice.hw_id || '—'}</span> },
                 { label: 'Model', content: <span>{selectedDevice.model || '—'}</span> },
                 { label: 'Assigned User', content: <span>{selectedDevice.user || '—'}</span> },
                 {
@@ -1315,7 +1315,7 @@ const Devices: React.FC = () => {
                 },
                 {
                   label: 'Network IP',
-                  content: <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem' }}>{selectedDevice.network_ip || '—'}</span>,
+                  content: <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.82rem' }}>{selectedDevice.network_ip || '—'}</span>,
                 },
                 {
                   label: 'Signal',
@@ -1340,7 +1340,7 @@ const Devices: React.FC = () => {
                 },
               ].map(({ label, content }) => (
                 <div key={label}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>{label}</div>
                   <div style={{ fontSize: '0.9rem', color: T.text }}>{content}</div>
                 </div>
               ))}
@@ -1366,7 +1366,7 @@ const Devices: React.FC = () => {
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '5px',
                       padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '500',
-                      backgroundColor: '#dcfce7', color: '#166534'
+                      backgroundColor: '#DEFAF9', color: '#166560'
                     }}>✓ Synced</span>
                   )}
                 </div>
@@ -1388,7 +1388,7 @@ const Devices: React.FC = () => {
                         backgroundColor: T.cardEl, 
                         borderRadius: '6px',
                         gridColumn: '1 / -1',
-                        border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #dcfce7' : '2px solid #fef9c3'
+                        border: selectedDevice.config_ack_ver === devicePreset.version ? '2px solid #DEFAF9' : '2px solid #fef9c3'
                       }} className="config-info-box">
                         <div style={{ color: T.textM, marginBottom: '4px' }} className="config-label">Version Status</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1400,7 +1400,7 @@ const Devices: React.FC = () => {
                             <span style={{ fontWeight: '500', fontFamily: 'monospace', color: 'inherit' }}>v{devicePreset.version}</span>
                           </div>
                           {selectedDevice.config_ack_ver === devicePreset.version ? (
-                            <span style={{ color: '#166534', fontSize: '0.75rem', fontWeight: '500' }}>✓ Up to date</span>
+                            <span style={{ color: '#166560', fontSize: '0.75rem', fontWeight: '500' }}>✓ Up to date</span>
                           ) : (
                             <span style={{ color: '#854d0e', fontSize: '0.75rem', fontWeight: '500' }}>⟳ Update available</span>
                           )}
@@ -1456,13 +1456,13 @@ const Devices: React.FC = () => {
                 )}
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Provisioned At</div>
-                <div style={{ fontSize: '0.9rem', fontFamily: 'JetBrains Mono, monospace', color: T.text }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Provisioned At</div>
+                <div style={{ fontSize: '0.9rem', fontFamily: 'Fira Code, monospace', color: T.text }}>
                   {selectedDevice.provisioned_at ? new Date(selectedDevice.provisioned_at).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Created By</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Created By</div>
                 <div style={{ fontSize: '0.9rem', color: T.text }}>{selectedDevice.created_by_username || '—'}</div>
               </div>
               {canOps && (<>
@@ -1505,7 +1505,7 @@ const Devices: React.FC = () => {
         <div style={{
           marginTop: 24,
           borderRadius: 14,
-          border: `1px solid ${isDark ? 'rgba(47,191,113,0.15)' : 'rgba(47,191,113,0.10)'}`,
+          border: `1px solid ${isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.10)'}`,
           background: T.surface,
           overflow: 'hidden',
         }}>
@@ -1515,22 +1515,22 @@ const Devices: React.FC = () => {
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer',
-              borderBottom: regCoverageExpanded ? `1px solid ${isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.08)'}` : 'none',
+              borderBottom: regCoverageExpanded ? `1px solid ${isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)'}` : 'none',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Activity size={16} style={{ color: '#22c55e' }} />
-              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: T.text, fontFamily: 'Poppins, sans-serif' }}>
+              <Activity size={16} style={{ color: '#0F9F8F' }} />
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: T.text, fontFamily: 'Rubik, sans-serif' }}>
                 Register Coverage
               </span>
               {regCoverage && !regCoverageLoading && (
                 <span style={{
                   padding: '2px 10px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700,
                   background: regCoverage.coverage_pct >= 80
-                    ? 'rgba(34,197,94,0.15)' : regCoverage.coverage_pct >= 50
+                    ? 'rgba(15,159,143,0.15)' : regCoverage.coverage_pct >= 50
                     ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)',
-                  color: regCoverage.coverage_pct >= 80 ? '#22c55e' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
-                  border: `1px solid ${regCoverage.coverage_pct >= 80 ? 'rgba(34,197,94,0.3)' : regCoverage.coverage_pct >= 50 ? 'rgba(251,191,36,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                  color: regCoverage.coverage_pct >= 80 ? '#0F9F8F' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
+                  border: `1px solid ${regCoverage.coverage_pct >= 80 ? 'rgba(15,159,143,0.3)' : regCoverage.coverage_pct >= 50 ? 'rgba(251,191,36,0.3)' : 'rgba(239,68,68,0.3)'}`,
                 }}>
                   {regCoverage.coverage_pct}%
                 </span>
@@ -1538,7 +1538,7 @@ const Devices: React.FC = () => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {regCoverage && !regCoverageLoading && (
-                <span style={{ fontSize: '0.78rem', color: T.textD, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>
+                <span style={{ fontSize: '0.78rem', color: T.textD, fontFamily: 'Fira Code, Fira Code, monospace' }}>
                   {regCoverage.total_received} / {regCoverage.total_configured} registers
                 </span>
               )}
@@ -1572,13 +1572,13 @@ const Devices: React.FC = () => {
                   <div style={{ padding: '12px 20px 8px', display: 'flex', gap: 20, flexWrap: 'wrap', borderBottom: `1px solid ${T.borderM}` }}>
                     {[
                       { label: 'Configured', value: regCoverage.total_configured, color: T.textM },
-                      { label: 'Received', value: regCoverage.total_received, color: '#22c55e' },
+                      { label: 'Received', value: regCoverage.total_received, color: '#0F9F8F' },
                       { label: 'Missing', value: regCoverage.total_configured - regCoverage.total_received, color: '#ef4444' },
                       { label: 'Last sample', value: new Date(regCoverage.last_telemetry_at).toLocaleTimeString(), color: T.textM },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textM }}>{label}</span>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color, fontFamily: 'Fira Code, JetBrains Mono, monospace' }}>{value}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textM }}>{label}</span>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color, fontFamily: 'Fira Code, Fira Code, monospace' }}>{value}</span>
                       </div>
                     ))}
                   </div>
@@ -1589,7 +1589,7 @@ const Devices: React.FC = () => {
                       <div style={{
                         height: '100%', borderRadius: 99, transition: 'width 600ms ease',
                         width: `${regCoverage.coverage_pct}%`,
-                        background: regCoverage.coverage_pct >= 80 ? '#22c55e' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
+                        background: regCoverage.coverage_pct >= 80 ? '#0F9F8F' : regCoverage.coverage_pct >= 50 ? '#f59e0b' : '#ef4444',
                       }} />
                     </div>
                   </div>
@@ -1670,14 +1670,14 @@ const Devices: React.FC = () => {
                     <thead>
                       <tr style={{ background: T.borderM }}>
                         {['Filename', 'Size', 'Uploaded', ''].map(h => (
-                          <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: T.textD, fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                          <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 600, color: T.textD, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {deviceLogFiles.map((f: any) => (
                         <tr key={f.id} style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' }}>
-                          <td style={{ padding: '8px 14px', color: T.text, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
+                          <td style={{ padding: '8px 14px', color: T.text, fontFamily: 'Fira Code, monospace', fontSize: '0.78rem' }}>{f.filename}</td>
                           <td style={{ padding: '8px 14px', color: T.textM, whiteSpace: 'nowrap' }}>{(f.file_size / 1024).toFixed(1)} KB</td>
                           <td style={{ padding: '8px 14px', color: T.textM, whiteSpace: 'nowrap' }}>{new Date(f.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                           <td style={{ padding: '8px 14px' }}>
@@ -2300,7 +2300,7 @@ const Devices: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <div style={{
                     width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                     boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -2330,7 +2330,7 @@ const Devices: React.FC = () => {
                   onClick={() => setSuccessModal({ show: false, message: '' })}
                   style={{
                     padding: '10px 18px', borderRadius: 8, border: 'none',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                     color: 'white', fontSize: '0.875rem', fontWeight: 600,
                     cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
                   }}
@@ -2356,10 +2356,10 @@ const Devices: React.FC = () => {
               {/* Modal header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {['#ef4444','#f59e0b','#10b981'].map(c => <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: 'var(--muted-foreground)', marginLeft: 6 }}>{viewingFileName}</span>
+                  {['#ef4444','#f59e0b','#0F9F8F'].map(c => <span key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7, display: 'inline-block' }} />)}
+                  <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: 'var(--muted-foreground)', marginLeft: 6 }}>{viewingFileName}</span>
                   {viewingFileContent && (
-                    <span style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginLeft: 4 }}>— {viewingFileContent.split('\n').filter(Boolean).length} lines</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginLeft: 4 }}>— {viewingFileContent.split('\n').filter(Boolean).length} lines</span>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -2376,7 +2376,7 @@ const Devices: React.FC = () => {
                 </div>
               </div>
               {/* Modal body */}
-              <div style={{ overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', flex: 1 }}>
+              <div style={{ overflowY: 'auto', fontFamily: 'Fira Code, monospace', fontSize: '0.8rem', flex: 1 }}>
                 {viewingFileLoading && (
                   <p style={{ color: 'var(--muted-foreground)', padding: '20px 16px', margin: 0 }}>Loading…</p>
                 )}
@@ -2390,7 +2390,7 @@ const Devices: React.FC = () => {
                   const lineBg = isError ? 'rgba(248,113,113,0.07)' : 'transparent';
                   return (
                     <div key={i} style={{ display: 'flex', gap: 12, padding: '3px 16px', background: lineBg, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                      <span style={{ color: 'var(--muted-foreground)', flexShrink: 0, fontSize: '0.7rem', minWidth: 32, textAlign: 'right', userSelect: 'none' }}>{i + 1}</span>
+                      <span style={{ color: 'var(--muted-foreground)', flexShrink: 0, fontSize: '0.75rem', minWidth: 32, textAlign: 'right', userSelect: 'none' }}>{i + 1}</span>
                       <span style={{ color: lineColor, wordBreak: 'break-all' }}>{line}</span>
                     </div>
                   );
@@ -2416,18 +2416,18 @@ const Devices: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>⚡</div>
                   <div>
-                    <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Day Scan — {scanDateLabel}</div>
-                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
+                    <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9', letterSpacing: '-0.01em' }}>Day Scan — {scanDateLabel}</div>
+                    <div style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: 1 }}>
                       {scanLoading ? 'Scanning all files for the day…' : scanMeta ? `${scanMeta.files_scanned} file${scanMeta.files_scanned !== 1 ? 's' : ''} scanned` : ''}
                     </div>
                   </div>
                 </div>
                 {scanMeta && !scanLoading && (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 12 }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.73rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.75rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
                       {scanMeta.total_errors} error{scanMeta.total_errors !== 1 ? 's' : ''}
                     </span>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: '0.73rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: '0.75rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>
                       {scanMeta.total_warnings} warning{scanMeta.total_warnings !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -2461,7 +2461,7 @@ const Devices: React.FC = () => {
                         key={sev}
                         onClick={() => setScanSeverityFilter(sev)}
                         style={{
-                          padding: '5px 11px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                          padding: '5px 11px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
                           fontFamily: '"Fira Code", monospace', textTransform: 'capitalize',
                           border: `1px solid ${scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.4)' : sev === 'warning' ? 'rgba(251,191,36,0.4)' : 'rgba(148,163,184,0.4)') : 'rgba(255,255,255,0.08)'}`,
                           background: scanSeverityFilter === sev ? (sev === 'error' ? 'rgba(239,68,68,0.15)' : sev === 'warning' ? 'rgba(251,191,36,0.12)' : 'rgba(148,163,184,0.12)') : 'transparent',
@@ -2474,7 +2474,7 @@ const Devices: React.FC = () => {
                     onClick={() => setScanGrouped(g => !g)}
                     title={scanGrouped ? 'Show every line individually' : 'Group repeated alerts together'}
                     style={{
-                      padding: '5px 11px', borderRadius: 7, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                      padding: '5px 11px', borderRadius: 7, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
                       fontFamily: '"Fira Code", monospace', display: 'flex', alignItems: 'center', gap: 5,
                       border: `1px solid ${scanGrouped ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
                       background: scanGrouped ? 'rgba(96,165,250,0.12)' : 'transparent',
@@ -2489,15 +2489,15 @@ const Devices: React.FC = () => {
                 {scanLoading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 14 }}>
                     <div style={{ width: 36, height: 36, border: '3px solid rgba(239,68,68,0.2)', borderTop: '3px solid #ef4444', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ color: 'var(--muted-foreground)', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
+                    <span style={{ color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif', fontSize: '0.85rem' }}>Server scanning all log files for {scanDateLabel}…</span>
                   </div>
                 ) : scanResults ? (() => {
                   const filesWithIssues = scanResults.filter(r => r.errors.length > 0 || r.warnings.length > 0);
                   if (filesWithIssues.length === 0) return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 20px', gap: 12 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
-                      <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#22c55e' }}>Clean day</div>
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.8rem', color: 'var(--muted-foreground)', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(15,159,143,0.12)', border: '1px solid rgba(15,159,143,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>✓</div>
+                      <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, fontSize: '0.95rem', color: '#0F9F8F' }}>Clean day</div>
+                      <div style={{ fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem', color: 'var(--muted-foreground)', textAlign: 'center' }}>No ERROR or WARNING lines found across {scanMeta?.files_scanned ?? 0} file{(scanMeta?.files_scanned ?? 0) !== 1 ? 's' : ''}.</div>
                     </div>
                   );
 
@@ -2507,7 +2507,7 @@ const Devices: React.FC = () => {
 
                   const noMatches = (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', gap: 10 }}>
-                      <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>No alerts match the current filters.</div>
+                      <div style={{ fontFamily: 'Rubik, sans-serif', fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>No alerts match the current filters.</div>
                     </div>
                   );
 
@@ -2534,23 +2534,23 @@ const Devices: React.FC = () => {
                                 })}
                                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: bg, cursor: group.count > 1 ? 'pointer' : 'default' }}
                               >
-                                <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', fontWeight: 700, color, minWidth: 30, textAlign: 'center', padding: '2px 6px', borderRadius: 10, background: isErr ? 'rgba(239,68,68,0.14)' : 'rgba(251,191,36,0.12)', flexShrink: 0 }}>
+                                <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', fontWeight: 700, color, minWidth: 30, textAlign: 'center', padding: '2px 6px', borderRadius: 10, background: isErr ? 'rgba(239,68,68,0.14)' : 'rgba(251,191,36,0.12)', flexShrink: 0 }}>
                                   ×{group.count}
                                 </span>
-                                <span style={{ flex: 1, fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: isErr ? '#fca5a5' : '#fde68a', wordBreak: 'break-all', lineHeight: 1.5 }}>
+                                <span style={{ flex: 1, fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: isErr ? '#fca5a5' : '#fde68a', wordBreak: 'break-all', lineHeight: 1.5 }}>
                                   {group.sampleText}
                                 </span>
                                 {fileCount > 1 && (
-                                  <span style={{ fontSize: '0.65rem', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>{fileCount} files</span>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>{fileCount} files</span>
                                 )}
                                 {group.count > 1 && (
-                                  <span style={{ color: 'var(--muted-foreground)', fontSize: '0.7rem', flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▸</span>
+                                  <span style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem', flexShrink: 0, transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>▸</span>
                                 )}
                               </div>
                               {expanded && group.count > 1 && (
                                 <div style={{ padding: '2px 12px 8px', display: 'flex', flexDirection: 'column', gap: 2, background: 'rgba(0,0,0,0.15)' }}>
                                   {group.occurrences.map((occ, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', color: 'var(--muted-foreground)', padding: '3px 4px' }}>
+                                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: 'var(--muted-foreground)', padding: '3px 4px' }}>
                                       <span style={{ minWidth: 130, flexShrink: 0, color: 'var(--muted-foreground)' }}>{occ.filename}:{occ.line}</span>
                                       <span style={{ wordBreak: 'break-all' }}>{occ.text}</span>
                                     </div>
@@ -2580,20 +2580,20 @@ const Devices: React.FC = () => {
                           {/* File header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px 8px', background: 'rgba(255,255,255,0.02)' }}>
                             <span style={{ fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>{file.filename}</span>
-                            {file.errors.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.errors.length}E</span>}
-                            {file.warnings.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', fontSize: '0.68rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.warnings.length}W</span>}
+                            {file.errors.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: '0.75rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.errors.length}E</span>}
+                            {file.warnings.length > 0 && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', fontSize: '0.75rem', fontWeight: 700, fontFamily: '"Fira Code", monospace' }}>{file.warnings.length}W</span>}
                           </div>
                           <div style={{ padding: '0 20px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {file.errors.map((entry, i) => (
                               <div key={`e${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(239,68,68,0.14)' }}>
-                                <div style={{ padding: '5px 10px', background: 'rgba(239,68,68,0.1)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.1)' }}>{entry.line}</div>
-                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fca5a5', background: 'rgba(239,68,68,0.04)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
+                                <div style={{ padding: '5px 10px', background: 'rgba(239,68,68,0.1)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(239,68,68,0.1)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#fca5a5', background: 'rgba(239,68,68,0.04)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
                               </div>
                             ))}
                             {file.warnings.map((entry, i) => (
                               <div key={`w${i}`} style={{ display: 'flex', borderRadius: 5, overflow: 'hidden', border: '1px solid rgba(251,191,36,0.1)' }}>
-                                <div style={{ padding: '5px 10px', background: 'rgba(251,191,36,0.07)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.68rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.08)' }}>{entry.line}</div>
-                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.72rem', color: '#fde68a', background: 'rgba(251,191,36,0.03)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
+                                <div style={{ padding: '5px 10px', background: 'rgba(251,191,36,0.07)', color: 'var(--muted-foreground)', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', minWidth: 48, textAlign: 'right', flexShrink: 0, borderRight: '1px solid rgba(251,191,36,0.08)' }}>{entry.line}</div>
+                                <div style={{ padding: '5px 10px', fontFamily: '"Fira Code", monospace', fontSize: '0.75rem', color: '#fde68a', background: 'rgba(251,191,36,0.03)', wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.text}</div>
                               </div>
                             ))}
                           </div>
@@ -2625,7 +2625,7 @@ const Devices: React.FC = () => {
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h2 style={{ margin: 0 }}>Devices</h2>
-            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: T.borderM, color: T.textM }}>{filteredDevices.length}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, background: T.borderM, color: T.textM }}>{filteredDevices.length}</span>
           </div>
           <div className="card-actions">
             <input
@@ -2661,12 +2661,12 @@ const Devices: React.FC = () => {
                 padding: '9px 18px',
                 borderRadius: '10px',
                 border: 'none',
-                background: `linear-gradient(90deg, #2FBF71, #1A9A56)`,
+                background: `linear-gradient(90deg, #0F9F8F, #1A9A92)`,
                 color: '#fff',
                 fontSize: '0.825rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(47,191,113,0.35)',
+                boxShadow: '0 4px 12px rgba(15,159,143,0.35)',
                 letterSpacing: '0.01em',
                 display: 'flex',
                 alignItems: 'center',
@@ -2737,7 +2737,7 @@ const Devices: React.FC = () => {
                 key={device.id}
                 onClick={() => handleViewDevice(device)}
                 style={{
-                  background: selectedDevices.has(device.id) ? 'rgba(47,191,113,0.08)' : 'transparent',
+                  background: selectedDevices.has(device.id) ? 'rgba(15,159,143,0.08)' : 'transparent',
                   cursor: 'pointer'
                 }}
                 className="clickable-row"
@@ -2753,7 +2753,7 @@ const Devices: React.FC = () => {
                   />
                 </td>
                 )}
-                <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                <td style={{ textAlign: 'center', fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
                 <td style={{ textAlign: 'center' }}>
                   {(() => {
                     const dt = device.device_type || 'gateway';
@@ -2761,8 +2761,8 @@ const Devices: React.FC = () => {
                     return (
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700,
-                        fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.03em',
+                        padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 700,
+                        fontFamily: 'Fira Code, monospace', letterSpacing: '0.03em',
                         background: isGateway ? 'rgba(59,130,246,0.10)' : 'rgba(245,158,11,0.10)',
                         color: isGateway ? '#3B82F6' : '#F59E0B',
                         border: `1px solid ${isGateway ? 'rgba(59,130,246,0.25)' : 'rgba(245,158,11,0.25)'}`,
@@ -2776,12 +2776,12 @@ const Devices: React.FC = () => {
                 <td style={{ textAlign: 'center' }}>
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '3px 9px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 600,
+                    padding: '3px 9px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600,
                     background: device.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
-                    color: device.is_online ? '#10b981' : 'var(--muted-foreground)',
+                    color: device.is_online ? '#0F9F8F' : 'var(--muted-foreground)',
                     border: device.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#10b981' : 'var(--muted-foreground)', display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block', flexShrink: 0 }} />
                     {device.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
@@ -2800,7 +2800,7 @@ const Devices: React.FC = () => {
                         gap: 5,
                         padding: '3px 9px',
                         borderRadius: 999,
-                        fontSize: '0.72rem',
+                        fontSize: '0.75rem',
                         fontWeight: 700,
                         background: 'rgba(245,158,11,0.15)',
                         color: '#f59e0b',
@@ -2906,7 +2906,7 @@ const Devices: React.FC = () => {
                             padding: '6px 10px',
                             border: i === currentPage ? `1px solid ${T.accent}` : `1px solid ${T.border}`,
                             borderRadius: '8px',
-                            background: i === currentPage ? 'rgba(47,191,113,0.12)' : 'transparent',
+                            background: i === currentPage ? 'rgba(15,159,143,0.12)' : 'transparent',
                             color: i === currentPage ? T.accent : T.textM,
                             cursor: 'pointer',
                             fontWeight: i === currentPage ? 700 : 400,
@@ -3141,7 +3141,7 @@ const Devices: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <div style={{
                 width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                 boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
@@ -3171,7 +3171,7 @@ const Devices: React.FC = () => {
               onClick={() => setSuccessModal({ show: false, message: '' })}
               style={{
                 padding: '10px 18px', borderRadius: 8, border: 'none',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                 color: 'white', fontSize: '0.875rem', fontWeight: 600,
                 cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
               }}

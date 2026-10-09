@@ -50,7 +50,7 @@ function getOnlineStatus(latest: SmartDeviceNode['latest']): 'online' | 'offline
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  online: '#19AC24',
+  online: '#19ACA3',
   offline: '#EF4444',
   unknown: 'var(--muted-foreground)',
 };
@@ -267,7 +267,7 @@ export default function DeviceDetailPanel({
                       style={{
                         fontSize: 11,
                         fontWeight: 600,
-                        color: latest.switch_on ? '#19AC24' : '#EF4444',
+                        color: latest.switch_on ? '#19ACA3' : '#EF4444',
                         background: latest.switch_on ? '#19AC2422' : '#EF444422',
                         padding: '2px 8px',
                         borderRadius: 10,
@@ -336,8 +336,8 @@ export default function DeviceDetailPanel({
                       <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
                         <defs>
                           <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#20B835" stopOpacity={0.15} />
-                            <stop offset="95%" stopColor="#20B835" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#20B8AF" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#20B8AF" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <Tooltip
@@ -361,7 +361,7 @@ export default function DeviceDetailPanel({
                         <Area
                           type="monotone"
                           dataKey="v"
-                          stroke="#20B835"
+                          stroke="#20B8AF"
                           strokeWidth={1.5}
                           fill="url(#sparkGrad)"
                           dot={false}

@@ -4,7 +4,7 @@
  * Aesthetic: Luxury Tech Dashboard
  * - Refined geometric layouts with asymmetrical balance
  * - Sophisticated color palette (cyan + amber accents on dark)
- * - Premium typography (Outfit display + DM Sans body)
+ * - Premium typography (Rubik display + Rubik body)
  * - Glassmorphism with selective blur and transparency
  * - Organized information hierarchy via tabs and cards
  * - Subtle animations and micro-interactions
@@ -44,14 +44,14 @@ const PALETTE_DARK = {
   panelColor: '#10ffcb',        // cyan/mint
 
   // State colors
-  success: '#4ade80',
+  success: '#2EF0CC',
   warning: '#facc15',
   critical: '#f87171',
 
   // Gradients
   gradientPrimary: 'linear-gradient(135deg, #60a5fa 0%, #00d4ff 100%)',
   gradientWarm: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-  gradientGreen: 'linear-gradient(135deg, #10ffcb 0%, #4ade80 100%)',
+  gradientGreen: 'linear-gradient(135deg, #10ffcb 0%, #2EF0CC 100%)',
 };
 
 const PALETTE_LIGHT = {
@@ -70,26 +70,26 @@ const PALETTE_LIGHT = {
   // Accent colors (component-specific)
   inverterColor: '#2563eb',    // blue
   batteryColor: '#d97706',      // amber
-  panelColor: '#059669',        // green
+  panelColor: '#138881',        // green
 
   // State colors
-  success: '#16a34a',
+  success: '#0F9F8F',
   warning: '#ca8a04',
   critical: '#dc2626',
 
   // Gradients
   gradientPrimary: 'linear-gradient(135deg, #2563eb 0%, #0284c7 100%)',
   gradientWarm: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-  gradientGreen: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+  gradientGreen: 'linear-gradient(135deg, #138881 0%, #0F9F8F 100%)',
 };
 
 const mkPalette = (isDark: boolean) => isDark ? PALETTE_DARK : PALETTE_LIGHT;
 const PALETTE = PALETTE_DARK;
 
 const TYPOGRAPHY = {
-  display: "'Outfit', 'Outfit', sans-serif",
-  body: "'DM Sans', sans-serif",
-  mono: "'JetBrains Mono', monospace",
+  display: "'Rubik', 'Rubik', sans-serif",
+  body: "'Rubik', sans-serif",
+  mono: "'Fira Code', monospace",
 };
 
 // ─── Tab Navigation Component ──────────────────────────────────────────────

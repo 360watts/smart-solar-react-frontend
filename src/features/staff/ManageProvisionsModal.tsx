@@ -35,7 +35,7 @@ const timeAgo = (iso: string): string => {
 };
 
 const STATUS_STYLE: Record<DeviceClaim['status'], { bg: string; color: string; label: string }> = {
-  pending: { bg: 'rgba(47,191,113,0.12)', color: '#2FBF71', label: 'Pending' },
+  pending: { bg: 'rgba(15,159,143,0.12)', color: 'var(--brand-green)', label: 'Pending' },
   claimed: { bg: 'rgba(59,130,246,0.12)', color: '#3B82F6', label: 'Claimed' },
   expired: { bg: 'rgba(148,163,184,0.14)', color: '#94A3B8', label: 'Expired' },
 };
@@ -138,12 +138,12 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
     },
     panel: {
       background: 'var(--card)',
-      border: `1px solid ${isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.15)'}`,
+      border: `1px solid ${isDark ? 'rgba(15,159,143,0.18)' : 'rgba(15,159,143,0.15)'}`,
       borderRadius: 16,
       width: '100%', maxWidth: 560, maxHeight: '84vh',
       display: 'flex', flexDirection: 'column',
       boxShadow: isDark
-        ? '0 0 0 1px rgba(47,191,113,0.06), 0 32px 64px rgba(0,0,0,0.6)'
+        ? '0 0 0 1px rgba(15,159,143,0.06), 0 32px 64px rgba(0,0,0,0.6)'
         : '0 32px 64px rgba(0,0,0,0.15)',
       transform: open ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)',
       transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
@@ -168,10 +168,10 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
     generateBtn: {
       display: 'flex', alignItems: 'center', gap: 6,
       padding: '9px 16px', borderRadius: 8, border: 'none',
-      background: 'linear-gradient(135deg, #2FBF71, #1A9A56)',
+      background: 'linear-gradient(135deg, #0F9F8F, #1A9A92)',
       color: '#fff', fontSize: '0.8rem', fontWeight: 700,
       cursor: generating ? 'wait' : 'pointer', opacity: generating ? 0.7 : 1,
-      boxShadow: '0 3px 10px rgba(47,191,113,0.3)',
+      boxShadow: '0 3px 10px rgba(15,159,143,0.3)',
     },
     list: { overflowY: 'auto', flex: 1, padding: '10px 12px' },
   };
@@ -183,11 +183,11 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-              background: 'linear-gradient(135deg, rgba(47,191,113,0.16), rgba(26,154,86,0.08))',
-              border: '1px solid rgba(47,191,113,0.28)',
+              background: 'linear-gradient(135deg, rgba(15,159,143,0.16), rgba(26,154,86,0.08))',
+              border: '1px solid rgba(15,159,143,0.28)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <QrCode size={18} color="#2FBF71" />
+              <QrCode size={18} color="var(--brand-green)" />
             </div>
             <div>
               <div id="manage-provisions-title" style={{
@@ -211,8 +211,8 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
           ) : (
             <div style={{
               borderRadius: 10, padding: 14,
-              background: isDark ? 'rgba(47,191,113,0.06)' : 'rgba(47,191,113,0.05)',
-              border: '1px solid rgba(47,191,113,0.2)',
+              background: isDark ? 'rgba(15,159,143,0.06)' : 'rgba(15,159,143,0.05)',
+              border: '1px solid rgba(15,159,143,0.2)',
               display: 'flex', gap: 14, alignItems: 'center',
             }}>
               {newClaim.qrCode && (
@@ -229,13 +229,13 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 }}>
                   <span style={{
-                    flex: 1, fontSize: '0.72rem', color: 'var(--foreground)',
-                    fontFamily: 'Fira Code, JetBrains Mono, monospace', overflow: 'hidden',
+                    flex: 1, fontSize: '0.75rem', color: 'var(--foreground)',
+                    fontFamily: 'Fira Code, Fira Code, monospace', overflow: 'hidden',
                     textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{newClaim.claimToken}</span>
                   <button onClick={copyToken} title="Copy token" style={{
                     background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
-                    color: copied ? '#2FBF71' : 'var(--muted-foreground)', display: 'flex',
+                    color: copied ? 'var(--brand-green)' : 'var(--muted-foreground)', display: 'flex',
                   }}>
                     {copied ? <Check size={14} /> : <Copy size={14} />}
                   </button>
@@ -244,7 +244,7 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
                   onClick={() => setNewClaim(null)}
                   style={{
                     marginTop: 8, background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '0.7rem', color: 'var(--muted-foreground)', textDecoration: 'underline', padding: 0,
+                    fontSize: '0.75rem', color: 'var(--muted-foreground)', textDecoration: 'underline', padding: 0,
                   }}
                 >
                   Dismiss
@@ -287,7 +287,7 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
                 background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
               }}>
                 <span style={{
-                  padding: '3px 9px', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700,
+                  padding: '3px 9px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.03em', flexShrink: 0,
                   background: s.bg, color: s.color,
                 }}>{s.label}</span>
@@ -295,14 +295,14 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: '0.8rem', fontWeight: 600, color: 'var(--foreground)',
-                    fontFamily: 'Fira Code, JetBrains Mono, monospace',
+                    fontFamily: 'Fira Code, Fira Code, monospace',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
                     {claim.claimedDeviceSerial || claim.hwId || 'Unbound — waiting for a device'}
                   </div>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, flexWrap: 'wrap',
-                    fontSize: '0.68rem', color: 'var(--muted-foreground)',
+                    fontSize: '0.75rem', color: 'var(--muted-foreground)',
                   }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Clock size={10} /> created {timeAgo(claim.createdAt)}

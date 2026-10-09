@@ -159,13 +159,13 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
 
   // Styles — Solar Noir portal palette
   const modalBg     = isDark ? 'rgba(10,20,14,0.99)' : 'rgba(252,255,253,0.99)';
-  const modalBorder = isDark ? 'rgba(47,191,113,0.16)' : 'rgba(47,191,113,0.2)';
+  const modalBorder = isDark ? 'rgba(15,159,143,0.16)' : 'rgba(15,159,143,0.2)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
-  const inputBorder = isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.22)';
+  const inputBorder = isDark ? 'rgba(15,159,143,0.18)' : 'rgba(15,159,143,0.22)';
   const inputText   = 'var(--success-soft)';
   const labelText   = isDark ? 'rgba(240,247,242,0.5)' : 'rgba(13,35,24,0.5)';
-  const buttonBg    = '#2FBF71';
-  const buttonHover = '#1A9955';
+  const buttonBg    = 'var(--brand-green)';
+  const buttonHover = '#0B7F73';
 
   const modal = (
     <div style={{
@@ -223,13 +223,13 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
             <div style={{
               width: 48,
               height: 48,
-              background: 'rgba(34,197,94,0.1)',
+              background: 'rgba(15,159,143,0.1)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
-              color: '#22C55E',
+              color: '#0F9F8F',
             }}>
               <Check size={24} />
             </div>
@@ -350,7 +350,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                         <div style={{
                           height: 4,
                           flex: 1,
-                          background: passwordStrength < 50 ? '#EF4444' : passwordStrength < 75 ? '#F59E0B' : '#22C55E',
+                          background: passwordStrength < 50 ? '#EF4444' : passwordStrength < 75 ? '#F59E0B' : '#0F9F8F',
                           borderRadius: 2,
                         }} />
                         <span style={{ color: labelText, fontSize: 11 }}>
@@ -374,7 +374,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                       width: '100%',
                       padding: '10px 12px',
                       background: inputBg,
-                      border: `1px solid ${newPassword && confirmPassword && newPassword === confirmPassword ? '#22C55E' : newPassword && confirmPassword ? '#EF4444' : inputBorder}`,
+                      border: `1px solid ${newPassword && confirmPassword && newPassword === confirmPassword ? '#0F9F8F' : newPassword && confirmPassword ? '#EF4444' : inputBorder}`,
                       borderRadius: 8,
                       color: inputText,
                       fontSize: 14,
@@ -385,7 +385,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                     <div style={{
                       marginTop: 6,
                       fontSize: 12,
-                      color: newPassword === confirmPassword ? '#22C55E' : '#EF4444',
+                      color: newPassword === confirmPassword ? '#0F9F8F' : '#EF4444',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
@@ -617,7 +617,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                             <div style={{
                               height: 4,
                               flex: 1,
-                              background: passwordStrength < 50 ? '#EF4444' : passwordStrength < 75 ? '#F59E0B' : '#22C55E',
+                              background: passwordStrength < 50 ? '#EF4444' : passwordStrength < 75 ? '#F59E0B' : '#0F9F8F',
                               borderRadius: 2,
                             }} />
                             <span style={{ color: labelText, fontSize: 11 }}>
@@ -641,7 +641,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                           width: '100%',
                           padding: '10px 12px',
                           background: inputBg,
-                          border: `1px solid ${newPassword && confirmPassword && newPassword === confirmPassword ? '#22C55E' : newPassword && confirmPassword ? '#EF4444' : inputBorder}`,
+                          border: `1px solid ${newPassword && confirmPassword && newPassword === confirmPassword ? '#0F9F8F' : newPassword && confirmPassword ? '#EF4444' : inputBorder}`,
                           borderRadius: 8,
                           color: inputText,
                           fontSize: 14,
@@ -652,7 +652,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ onClose }) =>
                         <div style={{
                           marginTop: 6,
                           fontSize: 12,
-                          color: newPassword === confirmPassword ? '#22C55E' : '#EF4444',
+                          color: newPassword === confirmPassword ? '#0F9F8F' : '#EF4444',
                           display: 'flex',
                           alignItems: 'center',
                           gap: 4,

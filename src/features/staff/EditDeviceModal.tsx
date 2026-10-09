@@ -2,7 +2,7 @@
  * EditDeviceModal — Industrial Command-Centre Design
  *
  * Aesthetic: Dark OLED server-room panel. Amber telemetry readouts,
- * electric-blue editable fields, JetBrains Mono precision typography,
+ * electric-blue editable fields, Fira Code precision typography,
  * thin scan-line dividers, LED status indicators.
  *
  * Layout: Fixed left info panel (telemetry) + scrollable right edit panel
@@ -81,15 +81,15 @@ const P = {
   amberDim:     'rgba(245,158,11,0.12)',
   blue:         '#3B82F6',
   blueDim:      'rgba(59,130,246,0.12)',
-  green:        '#10B981',
+  green:        '#0F9F8F',
   greenDim:     'rgba(16,185,129,0.12)',
   red:          '#EF4444',
   redDim:       'rgba(239,68,68,0.12)',
   text:         '#E2E8F0',
   textMid:      'var(--muted-foreground)',
   textDim:      'var(--text-dim)',
-  mono:         '"JetBrains Mono", "Fira Code", ui-monospace, monospace',
-  sans:         '"Fira Sans", system-ui, sans-serif',
+  mono:         '"Fira Code", "Fira Code", ui-monospace, monospace',
+  sans:         '"Rubik", system-ui, sans-serif',
 };
 
 // Light mode overrides
@@ -343,9 +343,12 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
         config_version: formData.config_version,
         logs_enabled: formData.logs_enabled,
         auto_reboot_enabled: formData.auto_reboot_enabled,
-        wifi_ssid: formData.wifi_ssid,
         alerts_muted_until: formData.alerts_muted_until || null,
       };
+      // Wi-Fi is admin-only (employees get no SSID back). Send the SSID only when an admin changed it.
+      if (canWifiPassword && (formData.wifi_ssid || '') !== (device?.wifi_ssid || '')) {
+        payload.wifi_ssid = formData.wifi_ssid;
+      }
       if (canWifiPassword && showWifi && formData.wifi_password) {
         payload.wifi_password = formData.wifi_password;
       }
@@ -671,13 +674,17 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         </button>)}
                       </div>
 
-                      <EditField
-                        label="SSID"
-                        value={formData.wifi_ssid || ''}
-                        onChange={v => set('wifi_ssid', v)}
-                        placeholder="Network name"
-                        isDark={isDark}
-                      />
+                      {canWifiPassword ? (
+                        <EditField
+                          label="SSID"
+                          value={formData.wifi_ssid || ''}
+                          onChange={v => set('wifi_ssid', v)}
+                          placeholder="Network name"
+                          isDark={isDark}
+                        />
+                      ) : (
+                        <ReadonlyField label="SSID" value="Managed by an admin" color={C.textDim} />
+                      )}
 
                       <AnimatePresence>
                         {canWifiPassword && showWifi && (

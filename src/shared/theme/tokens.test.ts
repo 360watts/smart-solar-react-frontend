@@ -27,7 +27,7 @@ describe('360watts design tokens', () => {
 
     expect(charts.pv).toBe('#E9B949');
     expect(charts.load).toBe('#3B82F6');
-    expect(charts.battery).toBe('#2FBF71');
+    expect(charts.battery).toBe('var(--brand-green)');
     expect(charts.danger).toBe('#EF4444');
   });
 });

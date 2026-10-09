@@ -72,7 +72,7 @@ src/
     mobile/       — Mobile-specific staff/ variants (customer-facing mobile/portal/ variant removed with the portal decommission)
     quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
   shared/
-    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...)
+    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...); EnergyFlow/flowModel.ts holds the pure flow helpers (mix shares, line geometry); smart plugs are listed in the site panel's Smart plugs tab (`SiteDataPanel/tabs/PlugsTab.tsx`, read-only, helpers in `EnergyFlow/plugHelpers.tsx`), the flow only shows load totals + an "N smart plugs ›" link
     guards/       — StaffRoute (AdminRoute is no longer used by any route)
     access/       — Feature keys, `useAccess()`, `RequireAccess` (see "Role-based access")
     hooks/        — Custom React hooks
@@ -125,6 +125,7 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 
 ### Notable `src/features/staff/` Components
 
+- `HealthBand.tsx` — one-row site health on the Dashboard (status, alerts button, devices, capacities, location); replaced the KPI cards and chip row 2026-10-09. Spec: `smart-solar-django-backend/docs/superpowers/specs/2026-10-09-dashboard-redesign-design.md`
 - `CommissioningWizard.tsx` — new-site commissioning flow
 - `SavingsBillingEditor.tsx` — savings/billing editor (EB bill, investment, payment status, latest bill date / billing anchor, energy-wallet balance override)
 - `SiteOnboarding.tsx` + `onboardingProgress.ts` — staff page to complete a site's customer, system, appliance and billing details (`/sites/onboarding?site=<id>`, sidebar entry under Sites). The Billing section also holds the EB account fields (consumer number + EB-registered mobile). Redesigned 2026-10-09 as "Site setup": entered from the Sites list (Needs setup chip, Finish setup / Edit setup per row; no nav entry), built on Tailwind classes and the `needed`/`done`/`forest` tokens in `index.css`, with a shared time zone list (`timezones.ts`). Not built: a `/sites/:id/setup` route and retiring the wizard. Two legacy-CSS traps for new pages are in `UI_GUIDE.md` section 8 (F-013-UI). Spec: `smart-solar-django-backend/docs/superpowers/specs/2026-10-07-site-onboarding-page-design.md`
@@ -132,7 +133,7 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
 - `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `can('ai_chat')`, admin only)
 - `employees/` — the Employees page: `EmployeesPage.tsx`, `PeopleList.tsx`, `PersonPanel.tsx` (role, assigned sites, device-operations switch), `AddTeammateDialog.tsx`, `roles.ts` (role copy and payload rules; keep in sync with the backend tiers)
-- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view
+- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` + `DeviceDrawer.tsx` are the site panel's Devices tab (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
 - `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
 
 ### Customer Portal Decommission

@@ -81,7 +81,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
     <th
       onClick={() => setSortKey(key)}
       style={{
-        padding: '10px 14px', textAlign: 'right', fontSize: '0.72rem', fontWeight: 700,
+        padding: '10px 14px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700,
         letterSpacing: '0.04em', textTransform: 'uppercase', color: sortKey === key ? tokens.primary : tokens.textDim,
         cursor: 'pointer', whiteSpace: 'nowrap',
       }}
@@ -100,7 +100,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
           { label: 'Total Alerts', value: String(fleetKpis.totalAlerts), accent: fleetKpis.totalAlerts > 0 ? tokens.warning : undefined },
         ].map(k => (
           <div key={k.label} style={{ flex: 1, minWidth: 160, background: tokens.surface, border: `1px solid ${tokens.border}`, borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: tokens.textDim }}>{k.label}</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: tokens.textDim }}>{k.label}</div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: k.accent ?? tokens.text, marginTop: 6 }}>{k.value}</div>
           </div>
         ))}
@@ -115,7 +115,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
       <div style={{ background: tokens.surface, border: `1px solid ${tokens.border}`, borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${tokens.border}`, fontWeight: 800, color: tokens.text }}>
           Site Leaderboard <span style={{ fontWeight: 500, fontSize: '0.78rem', color: tokens.textMuted }}>· click a row to open its deep-dive · click a column to sort</span>
-          <div style={{ fontWeight: 500, fontSize: '0.74rem', color: tokens.textDim, marginTop: 4 }}>
+          <div style={{ fontWeight: 500, fontSize: '0.75rem', color: tokens.textDim, marginTop: 4 }}>
             "Gateway Uptime" is RS-485 heartbeat connectivity only — a site can still be actively reporting via Deye Cloud / smart-device fallback while this reads low.
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: tokens.textDim }}>Site</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: tokens.textDim }}>Site</th>
                   {col('specificYieldKwhPerKwp', 'Specific Yield (7d)')}
                   {col('availabilityPct', 'Gateway Uptime')}
                   {col('epiPct', 'EPI (7d)')}
@@ -145,7 +145,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: tokens.text, fontSize: '0.85rem' }}>
-                      {row.displayName} <span style={{ color: tokens.textDim, fontSize: '0.72rem' }}>· {row.siteId}</span>
+                      {row.displayName} <span style={{ color: tokens.textDim, fontSize: '0.75rem' }}>· {row.siteId}</span>
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: tokens.text }}>
                       {row.specificYieldKwhPerKwp != null ? row.specificYieldKwhPerKwp.toFixed(2) : '—'}

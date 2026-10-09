@@ -59,7 +59,7 @@ export default function SolarResourceSection({ telemetry, capacityKw }: Props) {
           label="Best Day"
           value={bestDay ? bestDay.psh.toFixed(2) : '—'}
           sub={bestDay ? new Date(bestDay.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : undefined}
-          accent="#34d399"
+          accent="#0F9F8F"
         />
         <StatTile
           label="Worst Day"

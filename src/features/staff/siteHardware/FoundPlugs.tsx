@@ -120,7 +120,7 @@ export default function FoundPlugs({
                     {meters && (
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3,
-                        fontSize: '0.72rem', fontWeight: 600, color: t.goodInk, background: t.goodBg,
+                        fontSize: '0.75rem', fontWeight: 600, color: t.goodInk, background: t.goodBg,
                         borderRadius: 999, padding: '1px 8px',
                       }}>
                         <Zap size={10} /> measures power

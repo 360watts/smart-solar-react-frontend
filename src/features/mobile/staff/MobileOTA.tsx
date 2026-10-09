@@ -27,7 +27,7 @@ interface DeviceStatus {
 
 const S: Record<string, { color: string; label: string }> = {
   idle:        { color: 'var(--muted-foreground)', label: 'Idle' },
-  healthy:     { color: '#2FBF71', label: 'Healthy' },
+  healthy:     { color: 'var(--brand-green)', label: 'Healthy' },
   trial:       { color: '#60A5FA', label: 'Trial' },
   downloading: { color: '#F59E0B', label: 'Downloading' },
   flashing:    { color: '#a78bfa', label: 'Flashing' },
@@ -64,10 +64,10 @@ const MobileOTA: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
-  const accent  = '#2FBF71';
+  const accent  = 'var(--brand-green)';
   const inp     = isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC';
 
-  const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
+  const mono: React.CSSProperties = { fontFamily: "'Fira Code', monospace" };
 
   const [firmwares, setFirmwares]     = useState<FirmwareVersion[]>([]);
   const [devices, setDevices]         = useState<DeviceStatus[]>([]);
@@ -193,7 +193,7 @@ const MobileOTA: React.FC = () => {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', background: inp, border: `1px solid ${border}`, borderRadius: 10,
-    padding: '10px 14px', fontSize: '0.82rem', color: text, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif",
+    padding: '10px 14px', fontSize: '0.82rem', color: text, outline: 'none', boxSizing: 'border-box', fontFamily: "'Rubik', sans-serif",
   };
 
   const counts = {
@@ -203,8 +203,8 @@ const MobileOTA: React.FC = () => {
   };
 
   const sectionLabel: React.CSSProperties = {
-    fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em',
-    textTransform: 'uppercase', color: muted, marginBottom: 8, fontFamily: "'DM Sans', sans-serif",
+    fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em',
+    textTransform: 'uppercase', color: muted, marginBottom: 8, fontFamily: "'Rubik', sans-serif",
   };
 
   return (
@@ -213,21 +213,21 @@ const MobileOTA: React.FC = () => {
       <div style={{ position:'sticky', top:0, zIndex:20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${border}`, padding:'12px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)', flexShrink: 0 }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Rubik', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, cursor: 'pointer', color: '#2FBF71', padding: '6px', display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, cursor: 'pointer', color: 'var(--brand-green)', padding: '6px', display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div style={{ ...mono, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: accent, marginBottom: 3 }}>
+            <div style={{ ...mono, fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: accent, marginBottom: 3 }}>
               OTA · Firmware Manager
             </div>
-            <div style={{ fontSize: '0.82rem', color: muted, display: 'flex', gap: 8, flexWrap: 'wrap', fontFamily: "'DM Sans', sans-serif" }}>
+            <div style={{ fontSize: '0.82rem', color: muted, display: 'flex', gap: 8, flexWrap: 'wrap', fontFamily: "'Rubik', sans-serif" }}>
               <span style={{ color: text, fontWeight: 600 }}>{firmwares.length} versions</span>
               <span>·</span>
               <span style={{ color: text, fontWeight: 600 }}>{devices.length} devices</span>
@@ -242,7 +242,7 @@ const MobileOTA: React.FC = () => {
             </button>
             {canOps && (
             <button onClick={() => openDeploy()}
-              style={{ background: accent, border: 'none', borderRadius: 10, cursor: 'pointer', color: '#fff', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>
+              style={{ background: accent, border: 'none', borderRadius: 10, cursor: 'pointer', color: '#fff', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 700, fontFamily: "'Rubik', sans-serif" }}>
               <Plus size={14} /> Deploy
             </button>
             )}
@@ -252,7 +252,7 @@ const MobileOTA: React.FC = () => {
         {devices.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
             {[
-              { label: 'Healthy',  value: counts.healthy, color: '#2FBF71' },
+              { label: 'Healthy',  value: counts.healthy, color: 'var(--brand-green)' },
               { label: 'Updating', value: counts.active,  color: '#F59E0B' },
               { label: 'Failed',   value: counts.failed,  color: '#F87171' },
             ].map(({ label, value, color }) => (
@@ -260,7 +260,7 @@ const MobileOTA: React.FC = () => {
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, animation: label === 'Updating' && value > 0 ? 'pulse 2s ease-in-out infinite' : 'none' }}/>
                 <div>
                   <div style={{ ...mono, fontSize: '1.1rem', fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
-                  <div style={{ fontSize: '0.57rem', color: `${color}bb`, fontWeight: 600, marginTop: 1, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
+                  <div style={{ fontSize: '0.75rem', color: `${color}bb`, fontWeight: 600, marginTop: 1, fontFamily: "'Rubik', sans-serif" }}>{label}</div>
                 </div>
               </div>
             ))}
@@ -271,7 +271,7 @@ const MobileOTA: React.FC = () => {
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: 12 }}>
           <RefreshCw size={20} color={muted} style={{ animation: 'spin 1s linear infinite' }} />
-          <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Loading…</div>
+          <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>Loading…</div>
         </div>
       ) : (
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -288,18 +288,18 @@ const MobileOTA: React.FC = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                             <span style={{ ...mono, fontSize: '0.88rem', fontWeight: 700, color: text }}>v{c.version}</span>
                             {c.failed > 0 && (
-                              <span style={{ fontSize: '0.6rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: 'rgba(248,113,113,0.12)', color: '#F87171', fontFamily: "'DM Sans', sans-serif" }}>
+                              <span style={{ fontSize: '0.75rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: 'rgba(248,113,113,0.12)', color: '#F87171', fontFamily: "'Rubik', sans-serif" }}>
                                 {c.failed} failed
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: muted, marginTop: 3, fontFamily: "'DM Sans', sans-serif" }}>
+                          <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
                             {c.devices.length} device{c.devices.length !== 1 ? 's' : ''} in progress
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ ...mono, fontSize: '1.15rem', fontWeight: 800, color: '#F59E0B', lineHeight: 1 }}>{c.avgProgress}%</div>
-                          <div style={{ fontSize: '0.57rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>avg progress</div>
+                          <div style={{ fontSize: '0.75rem', color: muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>avg progress</div>
                         </div>
                       </div>
                       <div style={{ height: 5, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)', borderRadius: 99 }}>
@@ -312,7 +312,7 @@ const MobileOTA: React.FC = () => {
                             <div key={d.deviceId} title={`${d.deviceId} · ${sc.label}`}
                               style={{ display: 'flex', alignItems: 'center', gap: 4, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderRadius: 6, padding: '3px 7px', border: `1px solid ${border}` }}>
                               <div style={{ width: 5, height: 5, borderRadius: '50%', background: sc.color, animation: ACTIVE_STATUSES.slice(0, 3).includes(d.status) ? 'pulse 1.5s ease-in-out infinite' : 'none' }} />
-                              <span style={{ ...mono, fontSize: '0.58rem', color: muted }}>{d.deviceId.slice(-6)}</span>
+                              <span style={{ ...mono, fontSize: '0.75rem', color: muted }}>{d.deviceId.slice(-6)}</span>
                             </div>
                           );
                         })}
@@ -327,20 +327,20 @@ const MobileOTA: React.FC = () => {
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={sectionLabel}>Firmware Library</div>
-              <div style={{ ...mono, fontSize: '0.6rem', color: muted }}>{firmwares.length} versions</div>
+              <div style={{ ...mono, fontSize: '0.75rem', color: muted }}>{firmwares.length} versions</div>
             </div>
 
             <input value={fwSearch} onChange={e => setFwSearch(e.target.value)} placeholder="Search version or name…" style={{ ...inputStyle, marginBottom: 8 }} />
 
             {filteredFW.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '28px', color: muted, fontSize: '0.78rem', fontFamily: "'DM Sans', sans-serif" }}>
+              <div style={{ textAlign: 'center', padding: '28px', color: muted, fontSize: '0.78rem', fontFamily: "'Rubik', sans-serif" }}>
                 {fwSearch ? 'No versions match.' : 'No firmware uploaded yet.'}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {filteredFW.map(fw => {
                   const isExp = expandedFW.has(fw.id);
-                  const statusColor = fw.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)';
+                  const statusColor = fw.status === 'stable' ? 'var(--brand-green)' : 'var(--muted-foreground)';
                   return (
                     <div key={fw.id} style={card(fw.is_active ? accent : statusColor)}>
                       <button
@@ -352,15 +352,15 @@ const MobileOTA: React.FC = () => {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
                             <span style={{ ...mono, fontSize: '0.9rem', fontWeight: 700, color: text }}>v{fw.version}</span>
-                            <span style={{ fontSize: '0.6rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: `${statusColor}12`, color: statusColor, fontFamily: "'DM Sans', sans-serif" }}>{fw.status}</span>
-                            {fw.is_active && <span style={{ fontSize: '0.6rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'DM Sans', sans-serif" }}>ACTIVE</span>}
+                            <span style={{ fontSize: '0.75rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: `${statusColor}12`, color: statusColor, fontFamily: "'Rubik', sans-serif" }}>{fw.status}</span>
+                            {fw.is_active && <span style={{ fontSize: '0.75rem', padding: '2px 7px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'Rubik', sans-serif" }}>ACTIVE</span>}
                           </div>
-                          <div style={{ fontSize: '0.68rem', color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                          <div style={{ fontSize: '0.75rem', color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Rubik', sans-serif" }}>
                             Firmware v{fw.version} · {fw.deviceModel ?? 'Unknown'}
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.65rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{fmtBytes(fw.size)}</span>
+                          <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}>{fmtBytes(fw.size)}</span>
                           {isExp ? <ChevronUp size={13} color={muted} /> : <ChevronDown size={13} color={muted} />}
                         </div>
                       </button>
@@ -369,26 +369,26 @@ const MobileOTA: React.FC = () => {
                         <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${border}` }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12, marginBottom: 14 }}>
                             <div>
-                              <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Uploaded</div>
-                              <div style={{ fontSize: '0.72rem', color: text, fontFamily: "'DM Sans', sans-serif" }}>{fmtDate(fw.uploadDate)}</div>
+                              <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Uploaded</div>
+                              <div style={{ fontSize: '0.75rem', color: text, fontFamily: "'Rubik', sans-serif" }}>{fmtDate(fw.uploadDate)}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Signature</div>
-                              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: fw.signatureValid ? '#2FBF71' : '#F87171', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Signature</div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: fw.signatureValid ? 'var(--brand-green)' : '#F87171', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 {fw.signatureValid ? <CheckCircle size={11} /> : <XCircle size={11} />}
                                 {fw.signatureValid ? 'Valid' : 'Invalid'}
                               </div>
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                              <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Checksum</div>
-                              <div style={{ ...mono, fontSize: '0.63rem', color: muted, background: surface2, padding: '5px 8px', borderRadius: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', border: `1px solid ${border}` }}>
+                              <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Checksum</div>
+                              <div style={{ ...mono, fontSize: '0.75rem', color: muted, background: surface2, padding: '5px 8px', borderRadius: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', border: `1px solid ${border}` }}>
                                 {fw.checksum?.slice(0, 24) ?? '—'}…
                               </div>
                             </div>
                             {fw.releaseNotes && (
                               <div style={{ gridColumn: '1 / -1' }}>
-                                <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5, fontFamily: "'DM Sans', sans-serif" }}>Release Notes</div>
-                                <div style={{ fontSize: '0.72rem', color: muted, lineHeight: 1.6, background: surface2, padding: '9px 12px', borderRadius: 9, border: `1px solid ${border}`, fontFamily: "'DM Sans', sans-serif" }}>
+                                <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5, fontFamily: "'Rubik', sans-serif" }}>Release Notes</div>
+                                <div style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.6, background: surface2, padding: '9px 12px', borderRadius: 9, border: `1px solid ${border}`, fontFamily: "'Rubik', sans-serif" }}>
                                   {fw.releaseNotes}
                                 </div>
                               </div>
@@ -398,13 +398,13 @@ const MobileOTA: React.FC = () => {
                           <div style={{ display: 'flex', gap: 7 }}>
                             {canOps && (
                             <button onClick={() => openDeploy(fw.id)}
-                              style={{ flex: 1, padding: '9px', background: `${accent}12`, border: `1px solid ${accent}25`, borderRadius: 10, cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                              style={{ flex: 1, padding: '9px', background: `${accent}12`, border: `1px solid ${accent}25`, borderRadius: 10, cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'Rubik', sans-serif" }}>
                               <Play size={12} /> Deploy
                             </button>
                             )}
                             {!fw.is_active && (
                               <button onClick={() => handleActivate(fw.id)}
-                                style={{ flex: 1, padding: '9px', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                                style={{ flex: 1, padding: '9px', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}`, borderRadius: 10, cursor: 'pointer', color: muted, fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'Rubik', sans-serif" }}>
                                 <CheckCircle size={12} /> Set Active
                               </button>
                             )}
@@ -425,7 +425,7 @@ const MobileOTA: React.FC = () => {
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={sectionLabel}>Device Fleet</div>
-              <div style={{ ...mono, fontSize: '0.6rem', color: muted }}>{filteredDevices.length} / {devices.length}</div>
+              <div style={{ ...mono, fontSize: '0.75rem', color: muted }}>{filteredDevices.length} / {devices.length}</div>
             </div>
 
             <div style={{ display: 'flex', gap: 5, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
@@ -433,7 +433,7 @@ const MobileOTA: React.FC = () => {
                 const c = S[f]?.color ?? accent;
                 return (
                   <button key={f} onClick={() => setDevFilter(f)}
-                    style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0, background: devFilter === f ? `${c}18` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'), color: devFilter === f ? c : muted, fontFamily: "'DM Sans', sans-serif" }}>
+                    style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0, background: devFilter === f ? `${c}18` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'), color: devFilter === f ? c : muted, fontFamily: "'Rubik', sans-serif" }}>
                     {f === 'all' ? 'All' : S[f]?.label ?? f}
                   </button>
                 );
@@ -441,7 +441,7 @@ const MobileOTA: React.FC = () => {
             </div>
 
             {filteredDevices.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '28px', color: muted, fontSize: '0.78rem', fontFamily: "'DM Sans', sans-serif" }}>No devices match.</div>
+              <div style={{ textAlign: 'center', padding: '28px', color: muted, fontSize: '0.78rem', fontFamily: "'Rubik', sans-serif" }}>No devices match.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {filteredDevices.map(d => {
@@ -456,7 +456,7 @@ const MobileOTA: React.FC = () => {
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: sc.color, flexShrink: 0, animation: isAnimating ? 'pulse 1.5s ease-in-out infinite' : 'none' }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ ...mono, fontSize: '0.82rem', fontWeight: 700, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deviceId}</div>
-                          <div style={{ fontSize: '0.67rem', color: muted, marginTop: 3, display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, display: 'flex', gap: 6, alignItems: 'center' }}>
                             <span style={{ ...mono }}>v{d.currentVersion}</span>
                             {d.targetVersion && d.targetVersion !== d.currentVersion && (
                               <><ArrowRight size={9} color={muted} /><span style={{ ...mono, color: '#F59E0B' }}>v{d.targetVersion}</span></>
@@ -464,9 +464,9 @@ const MobileOTA: React.FC = () => {
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                          <span style={{ fontSize: '0.62rem', fontWeight: 700, color: sc.color, fontFamily: "'DM Sans', sans-serif" }}>{sc.label}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: sc.color, fontFamily: "'Rubik', sans-serif" }}>{sc.label}</span>
                           {d.progress != null && ACTIVE_STATUSES.includes(d.status) && (
-                            <span style={{ ...mono, fontSize: '0.6rem', color: muted }}>{d.progress}%</span>
+                            <span style={{ ...mono, fontSize: '0.75rem', color: muted }}>{d.progress}%</span>
                           )}
                           {isExp ? <ChevronUp size={12} color={muted} /> : <ChevronDown size={12} color={muted} />}
                         </div>
@@ -482,17 +482,17 @@ const MobileOTA: React.FC = () => {
                         <div style={{ padding: '10px 14px 14px', borderTop: `1px solid ${border}` }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                             <div>
-                              <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Slot</div>
+                              <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Slot</div>
                               <div style={{ ...mono, fontSize: '0.78rem', color: text }}>{d.activeSlot}</div>
                             </div>
                             <div>
-                              <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Boot Count</div>
+                              <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Boot Count</div>
                               <div style={{ ...mono, fontSize: '0.78rem', color: text }}>{d.bootCount}</div>
                             </div>
                             {d.lastCheckedAt && (
                               <div style={{ gridColumn: '1 / -1' }}>
-                                <div style={{ fontSize: '0.57rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'DM Sans', sans-serif" }}>Last Checked</div>
-                                <div style={{ fontSize: '0.72rem', color: text, fontFamily: "'DM Sans', sans-serif" }}>
+                                <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, fontFamily: "'Rubik', sans-serif" }}>Last Checked</div>
+                                <div style={{ fontSize: '0.75rem', color: text, fontFamily: "'Rubik', sans-serif" }}>
                                   {new Date(d.lastCheckedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </div>
@@ -501,12 +501,12 @@ const MobileOTA: React.FC = () => {
                           {d.lastError && (
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 9, padding: '8px 10px', marginBottom: 10 }}>
                               <AlertTriangle size={11} color="#F87171" style={{ marginTop: 1, flexShrink: 0 }} />
-                              <span style={{ fontSize: '0.7rem', color: '#F87171', lineHeight: 1.4, fontFamily: "'DM Sans', sans-serif" }}>{d.lastError}</span>
+                              <span style={{ fontSize: '0.75rem', color: '#F87171', lineHeight: 1.4, fontFamily: "'Rubik', sans-serif" }}>{d.lastError}</span>
                             </div>
                           )}
                           {canOps && ['failed', 'trial'].includes(d.status) && (
                             <button onClick={() => handleRollback(d.deviceId)}
-                              style={{ width: '100%', padding: '9px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, cursor: 'pointer', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                              style={{ width: '100%', padding: '9px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, cursor: 'pointer', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontFamily: "'Rubik', sans-serif" }}>
                               <RotateCcw size={12} /> Rollback
                             </button>
                           )}
@@ -531,8 +531,8 @@ const MobileOTA: React.FC = () => {
               <div style={{ width: 36, height: 4, borderRadius: 2, background: border, margin: '0 auto 14px' }} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif" }}>New Deployment</div>
-                  <div style={{ fontSize: '0.68rem', color: muted, marginTop: 3, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif" }}>New Deployment</div>
+                  <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>
                     {deployDevices.size > 0
                       ? `${deployDevices.size} device${deployDevices.size > 1 ? 's' : ''} selected`
                       : selectedFW ? `v${selectedFW.version} selected` : 'Choose firmware & devices'}
@@ -548,7 +548,7 @@ const MobileOTA: React.FC = () => {
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
               {deployErr && (
-                <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, padding: '9px 12px', fontSize: '0.73rem', color: '#F87171', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
+                <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, padding: '9px 12px', fontSize: '0.75rem', color: '#F87171', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Rubik', sans-serif" }}>
                   <AlertTriangle size={12} /> {deployErr}
                 </div>
               )}
@@ -558,7 +558,7 @@ const MobileOTA: React.FC = () => {
                   <div style={sectionLabel}>Firmware</div>
                   {selectedFW && !pickingFW && (
                     <button onClick={() => setPickingFW(true)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.68rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
                       Change
                     </button>
                   )}
@@ -570,16 +570,16 @@ const MobileOTA: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span style={{ ...mono, fontSize: '0.88rem', fontWeight: 700, color: accent }}>v{selectedFW.version}</span>
-                        <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: selectedFW.status === 'stable' ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)', color: selectedFW.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{selectedFW.status}</span>
+                        <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: selectedFW.status === 'stable' ? 'rgba(15,159,143,0.12)' : 'rgba(100,116,139,0.12)', color: selectedFW.status === 'stable' ? 'var(--brand-green)' : 'var(--muted-foreground)', fontFamily: "'Rubik', sans-serif" }}>{selectedFW.status}</span>
                       </div>
-                      <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{selectedFW.version} · {fmtBytes(selectedFW.size)}</div>
+                      <div style={{ fontSize: '0.75rem', color: muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>Firmware v{selectedFW.version} · {fmtBytes(selectedFW.size)}</div>
                     </div>
                     <CheckCircle size={15} color={accent} style={{ flexShrink: 0 }} />
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {firmwares.length === 0 ? (
-                      <div style={{ fontSize: '0.78rem', color: muted, fontStyle: 'italic', fontFamily: "'DM Sans', sans-serif" }}>No firmware available</div>
+                      <div style={{ fontSize: '0.78rem', color: muted, fontStyle: 'italic', fontFamily: "'Rubik', sans-serif" }}>No firmware available</div>
                     ) : firmwares.map(f => {
                       const sel = deployFWId === f.id;
                       return (
@@ -589,10 +589,10 @@ const MobileOTA: React.FC = () => {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                               <span style={{ ...mono, fontSize: '0.83rem', fontWeight: 700, color: sel ? accent : text }}>v{f.version}</span>
-                              <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: f.status === 'stable' ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: f.status === 'stable' ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{f.status}</span>
-                              {f.is_active && <span style={{ fontSize: '0.58rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'DM Sans', sans-serif" }}>active</span>}
+                              <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: f.status === 'stable' ? 'rgba(15,159,143,0.1)' : 'rgba(100,116,139,0.1)', color: f.status === 'stable' ? 'var(--brand-green)' : 'var(--muted-foreground)', fontFamily: "'Rubik', sans-serif" }}>{f.status}</span>
+                              {f.is_active && <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: 999, fontWeight: 700, background: `${accent}12`, color: accent, fontFamily: "'Rubik', sans-serif" }}>active</span>}
                             </div>
-                            <div style={{ fontSize: '0.67rem', color: muted, marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>Firmware v{f.version} · {fmtBytes(f.size)}</div>
+                            <div style={{ fontSize: '0.75rem', color: muted, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>Firmware v{f.version} · {fmtBytes(f.size)}</div>
                           </div>
                         </button>
                       );
@@ -617,14 +617,14 @@ const MobileOTA: React.FC = () => {
                         else
                           setDeployDevices(new Set(outdatedDevices.map(d => d.deviceId)));
                       }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.68rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>
                       {deployDevices.size === outdatedDevices.length ? 'Clear' : 'Select outdated'}
                     </button>
                   )}
                 </div>
 
                 {outdatedDevices.length === 0 && selectedFW ? (
-                  <div style={{ fontSize: '0.78rem', color: muted, textAlign: 'center', padding: '16px', background: `${accent}07`, borderRadius: 10, border: `1px solid ${accent}18`, fontFamily: "'DM Sans', sans-serif" }}>
+                  <div style={{ fontSize: '0.78rem', color: muted, textAlign: 'center', padding: '16px', background: `${accent}07`, borderRadius: 10, border: `1px solid ${accent}18`, fontFamily: "'Rubik', sans-serif" }}>
                     All devices are already on v{selectedFW.version}
                   </div>
                 ) : (
@@ -642,8 +642,8 @@ const MobileOTA: React.FC = () => {
                             <div style={{ ...mono, fontSize: '0.78rem', fontWeight: 600, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.deviceId}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                               <div style={{ width: 5, height: 5, borderRadius: '50%', background: sc.color, flexShrink: 0 }} />
-                              <span style={{ fontSize: '0.6rem', color: sc.color, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{sc.label}</span>
-                              <span style={{ ...mono, fontSize: '0.6rem', color: muted }}>· v{d.currentVersion}</span>
+                              <span style={{ fontSize: '0.75rem', color: sc.color, fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{sc.label}</span>
+                              <span style={{ ...mono, fontSize: '0.75rem', color: muted }}>· v{d.currentVersion}</span>
                             </div>
                           </div>
                         </button>
@@ -655,7 +655,7 @@ const MobileOTA: React.FC = () => {
 
               <div>
                 <button onClick={() => setShowNotes(v => !v)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.72rem', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'DM Sans', sans-serif" }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Rubik', sans-serif" }}>
                   {showNotes ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   {showNotes ? 'Hide notes' : 'Add deployment notes (optional)'}
                 </button>
@@ -665,7 +665,7 @@ const MobileOTA: React.FC = () => {
                     onChange={e => setNotes(e.target.value)}
                     placeholder="Reason for deployment, version highlights…"
                     rows={3}
-                    style={{ ...inputStyle, marginTop: 8, resize: 'none', fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }}
+                    style={{ ...inputStyle, marginTop: 8, resize: 'none', fontFamily: "'Rubik', sans-serif", lineHeight: 1.5 }}
                   />
                 )}
               </div>
@@ -686,7 +686,7 @@ const MobileOTA: React.FC = () => {
                   color: deploying || !deployFWId || deployDevices.size === 0 ? muted : '#fff',
                   fontSize: '0.88rem', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                  transition: 'all 0.2s', fontFamily: "'DM Sans', sans-serif",
+                  transition: 'all 0.2s', fontFamily: "'Rubik', sans-serif",
                 }}>
                 <Play size={14} />
                 {deploying ? 'Deploying…' : deployDevices.size > 0 ? `Deploy to ${deployDevices.size} device${deployDevices.size > 1 ? 's' : ''}` : 'Select devices to deploy'}

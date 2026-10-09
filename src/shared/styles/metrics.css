@@ -190,7 +190,7 @@
 }
 
 .metric-card:hover {
-  box-shadow: 0 0 0 2px rgba(47,191,113,0.2), 0 8px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 0 0 2px rgba(15,159,143,0.2), 0 8px 24px rgba(0,0,0,0.18);
 }
 
 .metric-value {
@@ -208,7 +208,7 @@
 }
 
 .metric-value {
-  background: linear-gradient(135deg, #4ade80, #86efac, #fdba74, #4ade80);
+  background: linear-gradient(135deg, #2EF0CC, #2EF0CC, #fdba74, #2EF0CC);
   background-size: 300% 100%;
   animation: btnGradient 6s ease infinite;
   -webkit-background-clip: text;
@@ -222,12 +222,12 @@
 
 .metric-large, .metric-value, .kpi-hero-value,
 .metric-number, td.cell-numeric, .data-value {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Fira Code', 'Fira Code', monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .metric-value {
-  background: linear-gradient(135deg, #007a55, #00a63e, #d96b1e, #007a55) !important;
+  background: linear-gradient(135deg, #0F6B65, #0F9F8F, #d96b1e, #0F6B65) !important;
   background-size: 300% 100% !important;
 }
 
@@ -240,30 +240,30 @@
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Rubik', sans-serif;
 }
 
-.kpi-delta--up   { color: #10b981; background: rgba(16, 185, 129, 0.12); }
+.kpi-delta--up   { color: #0F9F8F; background: rgba(16, 185, 129, 0.12); }
 
 .kpi-delta--down { color: #ef4444; background: rgba(239, 68, 68, 0.12);  }
 
 .kpi-hero-card {
   background:
-    radial-gradient(at 75% 25%, rgba(47, 191, 113, 0.15) 0%, transparent 55%),
+    radial-gradient(at 75% 25%, rgba(15,159,143, 0.15) 0%, transparent 55%),
     radial-gradient(at 15% 80%, rgba(240, 117, 34, 0.1) 0%, transparent 50%),
     var(--bg-card);
-  border-color: rgba(47, 191, 113, 0.18);
+  border-color: rgba(15,159,143, 0.18);
 }
 
 .kpi-hero-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Fira Code', monospace;
   font-size: 2.6rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #4ade80 0%, #00a63e 60%);
+  background: linear-gradient(135deg, #2EF0CC 0%, #0F9F8F 60%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -272,12 +272,12 @@
 }
 
 .kpi-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-muted);
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Rubik', sans-serif;
 }
 
 .kpi-sub {
@@ -288,14 +288,14 @@
 
 .kpi-hero-card {
   background:
-    radial-gradient(at 75% 25%, rgba(47, 191, 113, 0.09) 0%, transparent 55%),
+    radial-gradient(at 75% 25%, rgba(15,159,143, 0.09) 0%, transparent 55%),
     radial-gradient(at 15% 80%, rgba(240, 117, 34, 0.06) 0%, transparent 50%),
     rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(47, 191, 113, 0.15) !important;
+  border-color: rgba(15,159,143, 0.15) !important;
 }
 
 .kpi-hero-value {
-  background: linear-gradient(135deg, #007a55 0%, #00a63e 60%) !important;
+  background: linear-gradient(135deg, #0F6B65 0%, #0F9F8F 60%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;

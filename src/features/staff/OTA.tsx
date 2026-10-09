@@ -75,7 +75,7 @@ const tok = {
 
   // Borders
   border:   (d: boolean) => d ? 'rgba(255,255,255,0.08)' : 'var(--border-strong)',
-  borderFocus: '#22C55E',
+  borderFocus: '#0F9F8F',
 
   // Text
   textPrimary:   (d: boolean) => d ? '#F8FAFC' : '#0F172A',
@@ -83,7 +83,7 @@ const tok = {
   textMuted:     (_d: boolean) => 'var(--text-dim)',
 
   // Accents
-  green:  '#22C55E',
+  green:  '#0F9F8F',
   indigo: '#6366F1',
   amber:  '#F59E0B',
   red:    '#EF4444',
@@ -172,7 +172,7 @@ const STATUS_CONFIG: Record<DeviceStatus['status'], { label: string; bg: string;
   flashing:   { label: 'Flashing',    bg: 'rgba(245,158,11,0.15)',  text: '#F59E0B', dot: '#F59E0B' },
   rebooting:  { label: 'Rebooting',   bg: 'rgba(251,146,60,0.15)',  text: '#FB923C', dot: '#FB923C' },
   trial:      { label: 'Notified',    bg: 'rgba(99,102,241,0.15)',  text: '#818CF8', dot: '#818CF8' },
-  healthy:    { label: 'Healthy',     bg: 'rgba(34,197,94,0.15)',   text: '#22C55E', dot: '#22C55E' },
+  healthy:    { label: 'Healthy',     bg: 'rgba(15,159,143,0.15)',   text: '#0F9F8F', dot: '#0F9F8F' },
   failed:     { label: 'Failed',      bg: 'rgba(239,68,68,0.15)',   text: '#EF4444', dot: '#EF4444' },
   rolledback: { label: 'Rolled Back', bg: 'rgba(139,92,246,0.15)',  text: '#A78BFA', dot: '#A78BFA' },
 };
@@ -726,7 +726,7 @@ export const OTA: React.FC = () => {
         {[
           { label: 'Total Devices', value: statusMetrics.total, icon: <Cpu size={18} />, color: '#6366F1', glow: 'rgba(99,102,241,0.25)' },
           { label: 'In Progress',   value: statusMetrics.inProgress, icon: <Activity size={18} />, color: '#06B6D4', glow: 'rgba(6,182,212,0.25)' },
-          { label: 'Healthy',       value: statusMetrics.healthy, icon: <CheckCircle2 size={18} />, color: '#22C55E', glow: 'rgba(34,197,94,0.25)' },
+          { label: 'Healthy',       value: statusMetrics.healthy, icon: <CheckCircle2 size={18} />, color: '#0F9F8F', glow: 'rgba(15,159,143,0.25)' },
           { label: 'Failed',        value: statusMetrics.failed, icon: <AlertCircle size={18} />, color: '#EF4444', glow: 'rgba(239,68,68,0.25)' },
           { label: 'Rolled Back',   value: statusMetrics.rolledBack, icon: <RotateCcw size={18} />, color: '#A78BFA', glow: 'rgba(167,139,250,0.25)' },
         ].map(kpi => (
@@ -830,7 +830,7 @@ export const OTA: React.FC = () => {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               style={{
-                border: `2px dashed ${dragOver ? '#6366F1' : (uploadForm.file ? '#22C55E' : bdr)}`,
+                border: `2px dashed ${dragOver ? '#6366F1' : (uploadForm.file ? '#0F9F8F' : bdr)}`,
                 borderRadius: 10,
                 padding: '20px 16px',
                 textAlign: 'center',
@@ -838,7 +838,7 @@ export const OTA: React.FC = () => {
                 background: dragOver
                   ? 'rgba(99,102,241,0.08)'
                   : uploadForm.file
-                    ? 'rgba(34,197,94,0.06)'
+                    ? 'rgba(15,159,143,0.06)'
                     : tok.bgMuted(isDark),
                 transition: 'all 0.2s',
                 marginBottom: 16,
@@ -847,8 +847,8 @@ export const OTA: React.FC = () => {
               <input ref={fileInputRef} type="file" accept=".bin" onChange={handleInputChange} style={{ display: 'none' }} />
               {uploadForm.file ? (
                 <div>
-                  <CheckCircle2 size={24} color="#22C55E" style={{ marginBottom: 6 }} />
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#22C55E' }}>{uploadForm.file.name}</div>
+                  <CheckCircle2 size={24} color="#0F9F8F" style={{ marginBottom: 6 }} />
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0F9F8F' }}>{uploadForm.file.name}</div>
                   <div style={{ fontSize: '0.75rem', color: sub, marginTop: 3 }}>
                     {(uploadForm.file.size / 1024).toFixed(1)} KB · SHA-256 auto-calculated
                   </div>
@@ -953,10 +953,10 @@ export const OTA: React.FC = () => {
                   .map(([deviceType, group]) => (
                   <div key={deviceType}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: sub }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: sub }}>
                         {deviceTypeLabel(deviceType)}
                       </span>
-                      <span style={{ fontSize: '0.7rem', color: sub, background: tok.bgSub(isDark), borderRadius: 20, padding: '1px 7px' }}>{group.length}</span>
+                      <span style={{ fontSize: '0.75rem', color: sub, background: tok.bgSub(isDark), borderRadius: 20, padding: '1px 7px' }}>{group.length}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {group.map(fw => (
@@ -969,9 +969,9 @@ export const OTA: React.FC = () => {
                     }}>
                       <div style={{
                         width: 38, height: 38, borderRadius: 8, flexShrink: 0,
-                        background: fw.status === 'stable' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+                        background: fw.status === 'stable' ? 'rgba(15,159,143,0.12)' : 'rgba(245,158,11,0.12)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: fw.status === 'stable' ? '#22C55E' : '#F59E0B',
+                        color: fw.status === 'stable' ? '#0F9F8F' : '#F59E0B',
                       }}>
                         <Cpu size={17} />
                       </div>
@@ -980,14 +980,14 @@ export const OTA: React.FC = () => {
                           <span style={{ fontWeight: 700, fontSize: '0.875rem', color: txt }}>{fw.name}</span>
                           <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#818CF8', background: 'rgba(99,102,241,0.12)', padding: '1px 6px', borderRadius: 4 }}>v{fw.version}</code>
                           <span style={{
-                            fontSize: '0.7rem', fontWeight: 700,
+                            fontSize: '0.75rem', fontWeight: 700,
                             padding: '2px 8px', borderRadius: 20,
-                            background: fw.status === 'stable' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
-                            color: fw.status === 'stable' ? '#22C55E' : '#F59E0B',
+                            background: fw.status === 'stable' ? 'rgba(15,159,143,0.15)' : 'rgba(245,158,11,0.15)',
+                            color: fw.status === 'stable' ? '#0F9F8F' : '#F59E0B',
                           }}>
                             {fw.status === 'stable' ? 'ACTIVE' : 'INACTIVE'}
                           </span>
-                          {fw.signatureValid && <Check size={12} color="#22C55E" />}
+                          {fw.signatureValid && <Check size={12} color="#0F9F8F" />}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: sub, marginTop: 3 }}>
                           {fw.deviceModel} · {(fw.size / 1024).toFixed(0)} KB · {new Date(fw.uploadDate).toLocaleDateString()}
@@ -996,8 +996,8 @@ export const OTA: React.FC = () => {
                       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         {fw.status === 'draft' ? (
                           <button onClick={() => handleMarkAsStable(fw.id)} style={{
-                            ...btnBase, background: 'rgba(34,197,94,0.15)', color: '#22C55E',
-                            border: '1px solid rgba(34,197,94,0.3)', padding: '5px 10px', fontSize: '0.75rem',
+                            ...btnBase, background: 'rgba(15,159,143,0.15)', color: '#0F9F8F',
+                            border: '1px solid rgba(15,159,143,0.3)', padding: '5px 10px', fontSize: '0.75rem',
                           }}>Activate</button>
                         ) : (
                           <button onClick={() => handleDeactivateFirmware(fw)} style={{
@@ -1123,8 +1123,8 @@ export const OTA: React.FC = () => {
                   />
                   <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>{device.deviceId}</code>
                   <span style={{ color: sub, fontSize: '0.75rem' }}>({device.currentVersion})</span>
-                  {device.status === 'failed' && <span style={{ fontSize: '0.65rem', color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>FAILED</span>}
-                  {device.status === 'trial' && <span style={{ fontSize: '0.65rem', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>AWAITING</span>}
+                  {device.status === 'failed' && <span style={{ fontSize: '0.75rem', color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>FAILED</span>}
+                  {device.status === 'trial' && <span style={{ fontSize: '0.75rem', color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>AWAITING</span>}
                 </label>
               ))
             )}
@@ -1135,7 +1135,7 @@ export const OTA: React.FC = () => {
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, color: txt }}>
               <input type="checkbox" checked={deploymentConfig.autoRollback}
                 onChange={e => setDeploymentConfig(c => ({ ...c, autoRollback: e.target.checked }))}
-                style={{ accentColor: '#22C55E', width: 16, height: 16, cursor: 'pointer' }}
+                style={{ accentColor: '#0F9F8F', width: 16, height: 16, cursor: 'pointer' }}
               />
               Auto Rollback on Failure
             </label>
@@ -1187,12 +1187,12 @@ export const OTA: React.FC = () => {
               marginBottom: 20,
               background: activeDeployment.status === 'in_progress'
                 ? 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))'
-                : 'rgba(34,197,94,0.08)',
-              border: `1px solid ${activeDeployment.status === 'in_progress' ? 'rgba(99,102,241,0.35)' : 'rgba(34,197,94,0.25)'}`,
+                : 'rgba(15,159,143,0.08)',
+              border: `1px solid ${activeDeployment.status === 'in_progress' ? 'rgba(99,102,241,0.35)' : 'rgba(15,159,143,0.25)'}`,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDeployment.status === 'in_progress' ? '#6366F1' : '#22C55E', animation: activeDeployment.status === 'in_progress' ? 'pulse 1.5s infinite' : 'none' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeDeployment.status === 'in_progress' ? '#6366F1' : '#0F9F8F', animation: activeDeployment.status === 'in_progress' ? 'pulse 1.5s infinite' : 'none' }} />
                   <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: txt }}>
                     {activeDeployment.status === 'in_progress' ? 'Active Campaign' : 'Deployment Complete'}
                   </span>
@@ -1204,7 +1204,7 @@ export const OTA: React.FC = () => {
                   {canOps && activeDeployment.status === 'in_progress' && (
                     <button onClick={handleCancelDeployment} style={{
                       ...btnBase, background: 'rgba(239,68,68,0.12)', color: '#EF4444',
-                      border: '1px solid rgba(239,68,68,0.3)', padding: '3px 10px', fontSize: '0.7rem',
+                      border: '1px solid rgba(239,68,68,0.3)', padding: '3px 10px', fontSize: '0.75rem',
                     }}>
                       Cancel
                     </button>
@@ -1221,7 +1221,7 @@ export const OTA: React.FC = () => {
                   { label: 'Started', value: new Date(activeDeployment.created_at).toLocaleTimeString() },
                 ].map(item => (
                   <div key={item.label} style={{ background: tok.bgMuted(isDark), borderRadius: 6, padding: '8px 10px' }}>
-                    <div style={{ fontSize: '0.7rem', color: sub, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                    <div style={{ fontSize: '0.75rem', color: sub, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: txt, fontFamily: typeof item.value === 'string' && item.value.startsWith('v') ? 'monospace' : 'inherit' }}>{item.value}</div>
                   </div>
                 ))}
@@ -1233,7 +1233,7 @@ export const OTA: React.FC = () => {
                     <div style={{
                       height: '100%',
                       width: `${Math.round((activeDeployment.devices_updated / activeDeployment.devices_total) * 100)}%`,
-                      background: activeDeployment.status === 'in_progress' ? 'linear-gradient(90deg, #6366F1, #22C55E)' : '#22C55E',
+                      background: activeDeployment.status === 'in_progress' ? 'linear-gradient(90deg, #6366F1, #0F9F8F)' : '#0F9F8F',
                       transition: 'width 0.5s ease',
                       borderRadius: 4,
                     }} />
@@ -1304,11 +1304,11 @@ export const OTA: React.FC = () => {
                             <div style={{ height: 3, borderRadius: 3, background: bdr, overflow: 'hidden' }}>
                               <div style={{ width: `${device.progress}%`, height: '100%', background: '#06B6D4', transition: 'width 0.3s' }} />
                             </div>
-                            <span style={{ fontSize: '0.7rem', color: '#06B6D4' }}>{device.progress}%</span>
+                            <span style={{ fontSize: '0.75rem', color: '#06B6D4' }}>{device.progress}%</span>
                           </div>
                         )}
                         {device.lastCheckedAt && (
-                          <div style={{ fontSize: '0.7rem', color: tok.textMuted(isDark), marginTop: 2 }}>
+                          <div style={{ fontSize: '0.75rem', color: tok.textMuted(isDark), marginTop: 2 }}>
                             {new Date(device.lastCheckedAt).toLocaleTimeString()}
                           </div>
                         )}
@@ -1417,7 +1417,7 @@ export const OTA: React.FC = () => {
                     />
                   </th>
                   {['Device ID', 'Current', 'Target', 'Status', 'Boot #', 'Last Error'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: sub }}>{h}</th>
+                    <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: sub }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1546,11 +1546,11 @@ export const OTA: React.FC = () => {
       {/* ── Success Modal ── */}
       <Modal show={successModal.show} onClose={() => setSuccessModal({ show: false, message: '' })}
         icon={<CheckCircle2 size={20} color="white" />}
-        gradient="linear-gradient(135deg, #10B981, #059669)"
+        gradient="linear-gradient(135deg, #0F9F8F, #138881)"
         glow="rgba(16,185,129,0.45)"
         title="Success"
         isDark={isDark}
-        footer={<button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ ...btnBase, background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>Done</button>}
+        footer={<button onClick={() => setSuccessModal({ show: false, message: '' })} style={{ ...btnBase, background: 'linear-gradient(135deg, #0F9F8F, #138881)', color: 'white', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>Done</button>}
       >
         <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{successModal.message}</p>
       </Modal>

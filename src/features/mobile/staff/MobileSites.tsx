@@ -27,7 +27,7 @@ interface SiteRow {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  active: '#2FBF71', commissioning: '#F59E0B', inactive: 'var(--muted-foreground)', archived: 'var(--text-dim)',
+  active: 'var(--brand-green)', commissioning: '#F59E0B', inactive: 'var(--muted-foreground)', archived: 'var(--text-dim)',
 };
 
 const MobileSites: React.FC = () => {
@@ -39,7 +39,7 @@ const MobileSites: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
-  const accent  = '#2FBF71';
+  const accent  = 'var(--brand-green)';
 
   const [sites,        setSites]        = useState<SiteRow[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -92,7 +92,7 @@ const MobileSites: React.FC = () => {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
       <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.8rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
+      <span style={{ fontSize: '0.8rem', fontFamily: "'Rubik', sans-serif" }}>Loading…</span>
     </div>
   );
 
@@ -102,26 +102,26 @@ const MobileSites: React.FC = () => {
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '12px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)', flexShrink: 0 }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text, fontFamily: "'Rubik', sans-serif", letterSpacing: '-0.01em' }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, cursor: 'pointer', color: '#2FBF71', padding: '6px', display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, cursor: 'pointer', color: 'var(--brand-green)', padding: '6px', display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif" }}>Sites</div>
-            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", marginTop: 1 }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: accent }}>{counts.total}</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'DM Sans', sans-serif", marginLeft: 6 }}>{counts.online} online</span>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif" }}>Sites</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif", marginTop: 1 }}>
+              <span style={{ fontFamily: "'Fira Code', monospace", color: accent }}>{counts.total}</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: muted, fontFamily: "'Rubik', sans-serif", marginLeft: 6 }}>{counts.online} online</span>
             </div>
           </div>
           <button
             onClick={() => { setRefreshing(true); fetchSites(true); }}
-            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ background: `${accent}18`, border: `1px solid ${accent}30`, borderRadius: 10, cursor: 'pointer', color: accent, padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}
           >
             <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             Refresh
@@ -135,8 +135,8 @@ const MobileSites: React.FC = () => {
             { label: 'Offline', value: counts.total - counts.online, color: 'var(--muted-foreground)' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)', border: `1px solid ${border}` }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', fontWeight: 700, color }}>{value}</span>
-              <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+              <span style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.85rem', fontWeight: 700, color }}>{value}</span>
+              <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -147,8 +147,8 @@ const MobileSites: React.FC = () => {
         {counts.capacity > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 12 }}>
             <Zap size={13} color="#F59E0B" />
-            <span style={{ fontSize: '0.7rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>Fleet capacity</span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', fontWeight: 700, color: '#F59E0B', marginLeft: 'auto' }}>{counts.capacity.toFixed(1)} kWp</span>
+            <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>Fleet capacity</span>
+            <span style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.8rem', fontWeight: 700, color: '#F59E0B', marginLeft: 'auto' }}>{counts.capacity.toFixed(1)} kWp</span>
           </div>
         )}
 
@@ -158,7 +158,7 @@ const MobileSites: React.FC = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search sites…"
-            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '0.8rem', color: text, fontFamily: "'Rubik', sans-serif" }}
           />
           {search && (
             <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
@@ -175,7 +175,7 @@ const MobileSites: React.FC = () => {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'DM Sans', sans-serif" }}
+                style={{ padding: '5px 14px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? color + '50' : border}`, whiteSpace: 'nowrap', flexShrink: 0, background: active ? `${color}20` : 'transparent', color: active ? color : muted, fontFamily: "'Rubik', sans-serif" }}
               >
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
@@ -183,7 +183,7 @@ const MobileSites: React.FC = () => {
           })}
         </div>
 
-        <div style={{ fontSize: '0.65rem', color: muted, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+        <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif", fontWeight: 500 }}>
           {filtered.length} site{filtered.length !== 1 ? 's' : ''}
         </div>
 
@@ -191,7 +191,7 @@ const MobileSites: React.FC = () => {
           {filtered.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 20px', background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, borderRadius: 16 }}>
               <MapPin size={32} color={border} style={{ marginBottom: 10 }} />
-              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No sites match filter</div>
+              <div style={{ fontSize: '0.85rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No sites match filter</div>
             </div>
           ) : filtered.map(site => {
             const gwOnline  = site.gateway_device?.is_online;
@@ -214,20 +214,20 @@ const MobileSites: React.FC = () => {
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{site.display_name}</span>
-                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: `color-mix(in srgb, ${sc} 20%, transparent)`, color: sc, fontFamily: "'DM Sans', sans-serif", border: `1px solid color-mix(in srgb, ${sc} 40%, transparent)` }}>{status}</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{site.display_name}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 9px', borderRadius: 999, flexShrink: 0, background: `color-mix(in srgb, ${sc} 20%, transparent)`, color: sc, fontFamily: "'Rubik', sans-serif", border: `1px solid color-mix(in srgb, ${sc} 40%, transparent)` }}>{status}</span>
                         </div>
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', color: muted, marginBottom: 5 }}>{site.site_id}</div>
+                        <div style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.75rem', color: muted, marginBottom: 5 }}>{site.site_id}</div>
                         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.67rem', color: gwOnline ? '#2FBF71' : 'var(--muted-foreground)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{gwOnline ? '● Online' : '○ Offline'}</span>
-                          {devCount > 0 && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{onlineDev}/{devCount} devices</span>}
-                          {site.capacity_kw && <span style={{ fontSize: '0.67rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{site.capacity_kw} kWp</span>}
+                          <span style={{ fontSize: '0.75rem', color: gwOnline ? 'var(--brand-green)' : 'var(--muted-foreground)', fontWeight: 600, fontFamily: "'Rubik', sans-serif" }}>{gwOnline ? '● Online' : '○ Offline'}</span>
+                          {devCount > 0 && <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{onlineDev}/{devCount} devices</span>}
+                          {site.capacity_kw && <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}>{site.capacity_kw} kWp</span>}
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
                         <button
                           onClick={e => { e.stopPropagation(); navigate(`/sites/${site.site_id}`); }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 10px', borderRadius: 8, background: `${accent}18`, border: `1px solid ${accent}35`, cursor: 'pointer', color: accent, fontSize: '0.65rem', fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '5px 10px', borderRadius: 8, background: `${accent}18`, border: `1px solid ${accent}35`, cursor: 'pointer', color: accent, fontSize: '0.75rem', fontWeight: 700, fontFamily: "'Rubik', sans-serif" }}
                         >
                           Open <ChevronRight size={11} />
                         </button>
@@ -241,44 +241,44 @@ const MobileSites: React.FC = () => {
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             {site.capacity_kw && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Capacity</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Zap size={10} color="#F59E0B" />{site.capacity_kw} kWp</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Capacity</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}><Zap size={10} color="#F59E0B" />{site.capacity_kw} kWp</div>
                               </div>
                             )}
                             {site.latitude != null && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Location</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><MapPin size={10} color={muted} />{site.latitude.toFixed(3)}°, {site.longitude?.toFixed(3)}°</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Location</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}><MapPin size={10} color={muted} />{site.latitude.toFixed(3)}°, {site.longitude?.toFixed(3)}°</div>
                               </div>
                             )}
                             {site.timezone && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Timezone</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Globe size={10} color={muted} />{site.timezone}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Timezone</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}><Globe size={10} color={muted} />{site.timezone}</div>
                               </div>
                             )}
                             {site.inverter_capacity_kw && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Inverter cap.</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}><Activity size={10} color={muted} />{site.inverter_capacity_kw} kW</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Inverter cap.</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}><Activity size={10} color={muted} />{site.inverter_capacity_kw} kW</div>
                               </div>
                             )}
                             {updated && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Updated</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Clock size={10} color={muted} />{updated}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Updated</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}><Clock size={10} color={muted} />{updated}</div>
                               </div>
                             )}
                             {site.gateway_device?.model && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Gateway</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}><Cpu size={10} color={muted} />{site.gateway_device.model}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Gateway</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}><Cpu size={10} color={muted} />{site.gateway_device.model}</div>
                               </div>
                             )}
                             {site.gateway_device?.firmware_version && (
                               <div>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 2 }}>Firmware</div>
-                                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.68rem', color: muted }}>{site.gateway_device.firmware_version}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 2 }}>Firmware</div>
+                                <div style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.75rem', color: muted }}>{site.gateway_device.firmware_version}</div>
                               </div>
                             )}
                           </div>
@@ -286,21 +286,21 @@ const MobileSites: React.FC = () => {
                           {(gwHealth === 'warn' || gwHealth === 'critical') && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 11px', borderRadius: 10, background: gwHealth === 'critical' ? 'rgba(248,113,113,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${gwHealth === 'critical' ? 'rgba(248,113,113,0.25)' : 'rgba(245,158,11,0.25)'}` }}>
                               <AlertTriangle size={13} color={gwHealth === 'critical' ? '#F87171' : '#F59E0B'} />
-                              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: gwHealth === 'critical' ? '#F87171' : '#F59E0B', fontFamily: "'DM Sans', sans-serif" }}>Gateway health: {gwHealth}</span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: gwHealth === 'critical' ? '#F87171' : '#F59E0B', fontFamily: "'Rubik', sans-serif" }}>Gateway health: {gwHealth}</span>
                             </div>
                           )}
 
                           {(site.devices?.length ?? 0) > 0 && (
                             <div>
-                              <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>Devices</div>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.45, color: text, fontFamily: "'Rubik', sans-serif", marginBottom: 6 }}>Devices</div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {site.devices!.map(d => (
                                   <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 9, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: `1px solid ${border}` }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                      {d.is_online ? <Wifi size={12} color="#2FBF71" /> : <WifiOff size={12} color="var(--muted-foreground)" />}
-                                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', fontWeight: 600, color: text }}>{d.device_serial}</span>
+                                      {d.is_online ? <Wifi size={12} color="var(--brand-green)" /> : <WifiOff size={12} color="var(--muted-foreground)" />}
+                                      <span style={{ fontFamily: "'Fira Code', monospace", fontSize: '0.75rem', fontWeight: 600, color: text }}>{d.device_serial}</span>
                                     </div>
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: d.is_online ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>{d.is_online ? 'Online' : 'Offline'}</span>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: d.is_online ? 'var(--brand-green)' : 'var(--muted-foreground)', fontFamily: "'Rubik', sans-serif" }}>{d.is_online ? 'Online' : 'Offline'}</span>
                                   </div>
                                 ))}
                               </div>

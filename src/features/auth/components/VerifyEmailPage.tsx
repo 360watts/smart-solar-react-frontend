@@ -36,7 +36,7 @@ const VerifyEmailPage: React.FC = () => {
     <div style={{
       flex: 1, minHeight: '100vh', width: '100%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#080C14', padding: 20, fontFamily: "'DM Sans', sans-serif",
+      background: '#080C14', padding: 20, fontFamily: "'Rubik', sans-serif",
     }}>
       <div style={{
         width: '100%', maxWidth: 400, textAlign: 'center',
@@ -63,15 +63,15 @@ const VerifyEmailPage: React.FC = () => {
           <>
             <div style={{
               width: 72, height: 72, borderRadius: '50%',
-              background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.35)',
+              background: 'rgba(15,159,143,0.12)', border: '2px solid rgba(15,159,143,0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 24px',
             }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0F9F8F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
+            <h2 style={{ margin: '0 0 12px', fontSize: 24, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Rubik', sans-serif" }}>
               Verification successful!
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.7 }}>
@@ -101,7 +101,7 @@ const VerifyEmailPage: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px', fontSize: 26,
             }}>✕</div>
-            <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Outfit', sans-serif" }}>
+            <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 700, color: '#f0f4ff', fontFamily: "'Rubik', sans-serif" }}>
               Verification failed
             </h2>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>

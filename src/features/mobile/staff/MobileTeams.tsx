@@ -205,7 +205,7 @@ const MobileTeams: React.FC = () => {
             }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: tokens.text, fontFamily: "'Outfit', sans-serif" }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: tokens.text, fontFamily: "'Rubik', sans-serif" }}>
               360Watts
             </span>
           </div>
@@ -227,10 +227,10 @@ const MobileTeams: React.FC = () => {
 
         <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: '0.62rem', color: tokens.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontSize: '0.75rem', color: tokens.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Teams
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: tokens.text, marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>
+            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: tokens.text, marginTop: 2, fontFamily: "'Rubik', sans-serif" }}>
               {stats.total} teams configured
             </div>
           </div>
@@ -265,7 +265,7 @@ const MobileTeams: React.FC = () => {
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: item.color, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
                 {item.value}
               </div>
-              <div style={{ marginTop: 2, fontSize: '0.58rem', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <div style={{ marginTop: 2, fontSize: '0.75rem', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {item.label}
               </div>
             </div>
@@ -347,13 +347,13 @@ const MobileTeams: React.FC = () => {
                       borderRadius: 999,
                       background: team.is_active ? tokens.successSoft : tokens.warningSoft,
                       color: team.is_active ? tokens.success : tokens.warning,
-                      fontSize: '0.66rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
                     }}>
                       {team.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <div style={{ marginTop: 6, color: tokens.textMuted, fontSize: '0.74rem', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ marginTop: 6, color: tokens.textMuted, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                     {team.slug}
                   </div>
                 </div>
@@ -377,8 +377,8 @@ const MobileTeams: React.FC = () => {
               </div>
 
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div style={{ fontSize: '0.72rem', color: tokens.textMuted }}>Created</div>
-                <div style={{ fontSize: '0.74rem', color: tokens.text, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '0.75rem', color: tokens.textMuted }}>Created</div>
+                <div style={{ fontSize: '0.75rem', color: tokens.text, fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' }}>
                   {formatDate(team.created_at)}
                 </div>
               </div>

@@ -1,17 +1,22 @@
 /**
  * OverviewTab — extracted from SiteDataPanel.tsx (lines 5074–5419)
- * Renders: Deye Cloud banner, RS-485 stale banner, EnergyFlow block, KPI cards,
- *          per-phase grid/load cards, energy breakdown row, insights row.
+ * Renders: Deye Cloud banner, RS-485 stale banner, EnergyFlow block, six KPI tiles in one row.
  */
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Sun } from 'lucide-react';
-import KpiCard, { IconSunKpi, IconBattery, IconLoad, IconGrid, IconThermometer } from '../components/KpiCard';
-import EnergyBreakdownRow from '../components/EnergyBreakdownRow';
-import InsightsRow from '../components/InsightsRow';
+import KpiCard from '../components/KpiCard';
 import { EnergyFlowHealthRow } from '../../../../features/staff/EnergyFlowHealthRow';
+import { FLOW_COLORS } from '../../EnergyFlow/FlowLines';
+import type { EnergyFlowBlockProps } from '../../EnergyFlow/types';
 
-const iconSize = 16;
+// Tiles below the flow: the six live tiles in one row on desktop (min 150 px), wrapping on narrow screens, 16 px gaps. Inline grid, not the `grid` class (UI_GUIDE §8).
+const TILE_GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 };
+// "Needs a look" pill: amber, never red (UI_GUIDE §3).
+const staleBadge = (text: string) => (
+  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', background: 'var(--warning-soft)', padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+    {text}
+  </span>
+);
 
 const tabTransition = {
   type: 'spring' as const,
@@ -28,6 +33,7 @@ interface OverviewTabProps {
   batPowerKw: number | null;
   batSoc: number | null;
   todayKwh: number | null;
+  flowToday?: EnergyFlowBlockProps['today'];
   totalPvKwh: number | null;
   invTemp: number | null;
   pvPowerDisplay: { value: string; unit: string };
@@ -39,11 +45,12 @@ interface OverviewTabProps {
   latest: any | null;
   smartDevices: any[];
   siteId: string;
+  /** Switches the panel to the Smart plugs tab (the flow's "N smart plugs ›" link). */
+  onOpenPlugs?: () => void;
   inverterPhasesForFlow: any;
   isDeyeCloud: boolean;
   rs485Stale: boolean;
   isLatestToday: boolean;
-  achievedPct: number | null;
   runStateBadge: { label: string; color: string } | null;
   // Deye cloud internals
   loggerOffline: boolean;
@@ -65,21 +72,17 @@ interface OverviewTabProps {
   acOutputKw: number | null;
   inverterCapacityKw?: number | null;
   invTempColor: string;
-  // Phase data
-  gridPhases: { label: string; powerW: number | null; voltageV: number | null; currentA: number | null }[] | null;
-  phaseDataStale: boolean;
-  loadPhases: { label: string; powerW: number | null }[] | null;
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
   isDark,
-  isTouch,
   pvKw,
   loadKw,
   gridKw,
   batPowerKw,
   batSoc,
   todayKwh,
+  flowToday,
   totalPvKwh,
   invTemp,
   pvPowerDisplay,
@@ -91,11 +94,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   latest,
   smartDevices,
   siteId,
+  onOpenPlugs,
   inverterPhasesForFlow,
   isDeyeCloud,
   rs485Stale,
   isLatestToday,
-  achievedPct,
   loggerOffline,
   gatewayOffline,
   deyeCloudAgeMs,
@@ -112,9 +115,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   acOutputKw,
   inverterCapacityKw,
   invTempColor,
-  gridPhases,
-  phaseDataStale,
-  loadPhases,
 }) => {
   return (
     <motion.div
@@ -155,7 +155,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600,
+                padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600,
                 background: gatewayOffline ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
                 color: gatewayOffline ? '#ef4444' : '#3b82f6',
                 border: `1px solid ${gatewayOffline ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`,
@@ -165,7 +165,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               </span>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '2px 8px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600,
+                padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600,
                 background: loggerOffline ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
                 color: loggerOffline ? '#ef4444' : '#3b82f6',
                 border: `1px solid ${loggerOffline ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`,
@@ -219,17 +219,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </motion.div>
       )}
 
-      {/* ── Solar Observatory — flow + health 50/50 ── */}
-      <div style={{ marginBottom: 20 }}>
-        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} latest={latest} />
+      {/* ── Energy flow ── */}
+      <div style={{ marginBottom: 24 }}>
+        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} latest={latest} today={flowToday} onOpenPlugs={onOpenPlugs} />
       </div>
 
-      {/* ── KPI Cards ── */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+      {/* ── Below the flow: flat tiles in the flow's card language, one 16 px rhythm ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 16 }}>
+      <div data-overview-tiles style={TILE_GRID}>
         <KpiCard
-          index={0}
           label="Solar PV"
-          noHover={isTouch}
           value={pvPowerDisplay.value}
           unit={pvPowerDisplay.unit}
           sub={rs485Stale && !isDeyeCloud
@@ -237,42 +236,29 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             : todayKwh != null && isLatestToday
               ? `${todayKwh.toFixed(2)} kWh today${totalPvKwh != null ? ` · ${totalPvKwh.toFixed(1)} kWh total` : ''}`
               : undefined}
-          accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#F07522'}
-          icon={<IconSunKpi />}
-          badge={rs485Stale && !isDeyeCloud ? (
-            <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-              STALE
-            </span>
-          ) : undefined}
+          dot={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : FLOW_COLORS.solar}
+          badge={rs485Stale && !isDeyeCloud ? staleBadge('Stale') : undefined}
         />
         <KpiCard
-          index={1}
           label="Battery"
-          noHover={isTouch}
           value={batSoc != null ? batSoc.toFixed(0) : '—'}
           unit="%"
           sub={[
             batPowerKw != null ? (Math.abs(batPowerKw) < 0.01 ? `Idle ${batteryPowerDisplay.value} ${batteryPowerDisplay.unit}` : `${batCharging ? 'Charging' : 'Discharging'} ${batteryPowerDisplay.value} ${batteryPowerDisplay.unit}`) : null,
             latest?.battery_temp_c != null ? `${Number(latest.battery_temp_c).toFixed(0)}°C` : null,
           ].filter(Boolean).join(' · ') || undefined}
-          accent="#00a63e"
-          icon={<IconBattery />}
+          dot={FLOW_COLORS.batt}
           badge={
-            batDataStale && batDataAgeLabel ? (
-              <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-                {batDataAgeLabel}
-              </span>
-            ) : batVoltage != null ? (
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+            batDataStale && batDataAgeLabel ? staleBadge(batDataAgeLabel)
+            : batVoltage != null ? (
+              <span style={{ fontSize: 13, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
                 {batVoltage.toFixed(1)} V
               </span>
             ) : undefined
           }
         />
         <KpiCard
-          index={2}
           label="Load"
-          noHover={isTouch}
           value={loadPowerDisplay.value}
           unit={loadPowerDisplay.unit}
           sub={rs485Stale && !isDeyeCloud
@@ -280,18 +266,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             : latest?.load_today_kwh != null && isLatestToday
               ? `${Number(latest.load_today_kwh).toFixed(2)} kWh today`
               : undefined}
-          accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#8b5cf6'}
-          icon={<IconLoad />}
-          badge={rs485Stale && !isDeyeCloud ? (
-            <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-              STALE
-            </span>
-          ) : undefined}
+          badge={rs485Stale && !isDeyeCloud ? staleBadge('Stale') : undefined}
         />
         <KpiCard
-          index={3}
           label="Grid"
-          noHover={isTouch}
           value={gridPowerDisplay.value}
           unit={gridPowerDisplay.unit}
           sub={
@@ -303,136 +281,26 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 : 'No flow'
               : undefined
           }
-          accent={gridExporting ? '#10b981' : gridImporting ? '#3b82f6' : 'var(--muted-foreground)'}
-          icon={<IconGrid />}
+          dot={gridExporting || gridImporting ? FLOW_COLORS.grid : 'var(--muted-foreground)'}
         />
         <KpiCard
-          index={4}
           label="Temp"
-          noHover={isTouch}
           value={invTemp != null ? invTemp.toFixed(1) : '—'}
           unit="°C"
           sub={dcTemp != null ? `Heat sink · DC ${dcTemp.toFixed(1)}°C` : 'Heat sink'}
-          accent={invTempColor}
-          icon={<IconThermometer />}
+          dot={invTempColor}
         />
         {acOutputKw != null && acOutputKw > 0 && (
           <KpiCard
-            index={5}
             label="AC Output"
-            noHover={isTouch}
             value={acOutputPowerDisplay.value}
             unit={acOutputPowerDisplay.unit}
             sub={rs485Stale && !isDeyeCloud ? 'RS-485 frozen — value unreliable' : 'Inverter output'}
-            accent={rs485Stale && !isDeyeCloud ? 'var(--muted-foreground)' : '#a78bfa'}
-            icon={<Zap size={iconSize} />}
-            badge={rs485Stale && !isDeyeCloud ? (
-              <span style={{ fontSize: '0.65rem', color: '#d97706', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-                STALE
-              </span>
-            ) : undefined}
-          />
-        )}
-        {inverterCapacityKw != null && (
-          <KpiCard
-            index={6}
-            label="Inv. Capacity"
-            noHover={isTouch}
-            value={inverterCapacityKw.toFixed(1)}
-            unit="kW"
-            sub="Rated output"
-            accent="#6366f1"
-            icon={<Zap size={iconSize} />}
-          />
-        )}
-        {achievedPct != null && (
-          <KpiCard
-            index={7}
-            label="Forecast"
-            noHover={isTouch}
-            value={achievedPct.toString()}
-            unit="%"
-            sub="Actual vs P50 so far"
-            accent={achievedPct >= 90 ? '#00a63e' : achievedPct >= 70 ? '#f59e0b' : '#ef4444'}
-            icon={<Sun size={iconSize} />}
+            badge={rs485Stale && !isDeyeCloud ? staleBadge('Stale') : undefined}
           />
         )}
       </div>
-
-      {/* ── Per-Phase Grid Cards ── */}
-      {gridPhases && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Grid Phases (EB)
-            </div>
-            {phaseDataStale && (
-              <span style={{ fontSize: '0.65rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '1px 6px', borderRadius: 4 }}>
-                stale — inverter standby
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', opacity: phaseDataStale ? 0.45 : 1 }}>
-            {gridPhases.map((ph, i) => {
-              const exporting = !phaseDataStale && ph.powerW != null && ph.powerW <= -1;
-              const importing = !phaseDataStale && ph.powerW != null && ph.powerW >= 1;
-              const accent = phaseDataStale ? 'var(--muted-foreground)' : exporting ? '#10b981' : importing ? '#3b82f6' : 'var(--muted-foreground)';
-              const powerLabel = phaseDataStale ? '—'
-                : ph.powerW != null
-                  ? `${Math.abs(ph.powerW).toFixed(0)} W ${exporting ? '↑' : importing ? '↓' : ''}`
-                  : '—';
-              const subParts: string[] = [];
-              if (!phaseDataStale && ph.voltageV != null) subParts.push(`${ph.voltageV.toFixed(1)} V`);
-              if (!phaseDataStale && ph.currentA != null) subParts.push(`${Math.abs(ph.currentA).toFixed(2)} A`);
-              return (
-                <KpiCard
-                  key={ph.label}
-                  index={i}
-                  label={`Phase ${ph.label}`}
-                  value={powerLabel}
-                  accent={accent}
-                  sub={subParts.join(' · ') || undefined}
-                  icon={<IconGrid />}
-                  noHover={isTouch}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Per-Phase Load Cards ── */}
-      {loadPhases && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
-            Load Phases
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {loadPhases.map((ph, i) => {
-              const hasLoad = ph.powerW != null && ph.powerW > 1;
-              const accent = hasLoad ? '#8b5cf6' : 'var(--muted-foreground)';
-              const powerLabel = ph.powerW != null ? `${Math.abs(ph.powerW).toFixed(0)} W` : '—';
-              return (
-                <KpiCard
-                  key={ph.label}
-                  index={i}
-                  label={`Phase ${ph.label}`}
-                  value={powerLabel}
-                  accent={accent}
-                  icon={<IconLoad />}
-                  noHover={isTouch}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Energy breakdown ── */}
-      <EnergyBreakdownRow latest={latest} isLatestToday={isLatestToday} />
-
-      {/* ── Insights ── */}
-      <InsightsRow latest={latest} isLatestToday={isLatestToday} />
+      </div>
 
     </motion.div>
   );

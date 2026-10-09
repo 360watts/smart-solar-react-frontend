@@ -44,12 +44,12 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
         background: isDark
           ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.75))'
           : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9))',
-        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
+        border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
       }}
     >
-      <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <CloudSun size={16} color="#00a63e" />
+      <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <CloudSun size={16} color="#0F9F8F" />
         24 h Weather Outlook
       </p>
       <div style={{ overflowX: 'auto', paddingTop: 8, paddingBottom: 4, WebkitOverflowScrolling: 'touch' as const }}>
@@ -88,15 +88,15 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   background: isNow
-                    ? 'linear-gradient(135deg, rgba(0, 166, 62, 0.25), rgba(0, 166, 62, 0.08))'
+                    ? 'linear-gradient(135deg, rgba(15,159,143, 0.25), rgba(15,159,143, 0.08))'
                     : isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.6)',
-                  border: `1px solid ${isNow ? 'rgba(0, 166, 62, 0.4)' : isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+                  border: `1px solid ${isNow ? 'rgba(15,159,143, 0.4)' : isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
                   borderRadius: 12,
                   padding: '12px 14px',
                   minWidth: 72,
                   gap: 3,
                   position: 'relative',
-                  boxShadow: isNow ? '0 4px 12px rgba(0, 166, 62, 0.25)' : 'none',
+                  boxShadow: isNow ? '0 4px 12px rgba(15,159,143, 0.25)' : 'none',
                   cursor: 'pointer',
                 }}
               >
@@ -106,20 +106,20 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                     style={{
                       position: 'absolute',
                       top: -10,
-                      fontSize: '0.625rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
-                      background: '#2FBF71',
+                      background: 'var(--brand-green)',
                       color: '#0A0E1A',
                       padding: '2px 8px',
                       borderRadius: 6,
-                      fontFamily: 'Poppins, sans-serif',
-                      boxShadow: '0 2px 8px rgba(0, 166, 62, 0.4)',
+                      fontFamily: 'Rubik, sans-serif',
+                      boxShadow: '0 2px 8px rgba(15,159,143, 0.4)',
                     }}
                   >
                     NOW
                   </motion.span>
                 )}
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>{time}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontWeight: 600 }}>{time}</span>
                 <motion.span
                   whileHover={{ rotate: 360, scale: 1.2 }}
                   transition={{ duration: 0.6 }}
@@ -127,7 +127,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                 >
                   {wi}
                 </motion.span>
-                <span style={{ fontSize: '0.875rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'Fira Code, monospace', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {temp.toFixed(1)}°
                 </span>
                 {/* GHI mini-bar with animation */}
@@ -139,7 +139,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                     style={{ height: '100%', background: ghiColor, borderRadius: 2 }}
                   />
                 </div>
-                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>{Math.round(ghi)} W/m²</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif' }}>{Math.round(ghi)} W/m²</span>
                 {/* Humidity bar */}
                 {humPct != null && (
                   <>
@@ -151,7 +151,7 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                         style={{ height: '100%', background: humColor, borderRadius: 2 }}
                       />
                     </div>
-                    <span style={{ fontSize: '0.625rem', color: humColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                    <span style={{ fontSize: '0.75rem', color: humColor, fontFamily: 'Rubik, sans-serif', fontWeight: 600 }}>
                       💧{Math.round(humPct)}%
                     </span>
                   </>
@@ -167,12 +167,12 @@ const WeatherHourlyStrip = ({ hourly }: { hourly: any[] }) => {
                         style={{ height: '100%', background: precipColor, borderRadius: 2 }}
                       />
                     </div>
-                    <span style={{ fontSize: '0.625rem', color: precipColor, fontFamily: 'Poppins, sans-serif', fontWeight: 600 }}>
+                    <span style={{ fontSize: '0.75rem', color: precipColor, fontFamily: 'Rubik, sans-serif', fontWeight: 600 }}>
                       🌧{Math.round(precip)}%
                     </span>
                   </>
                 )}
-                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif' }}>
                   {wind.toFixed(1)} m/s
                 </span>
               </motion.div>

@@ -825,12 +825,12 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       width: 52,
                       height: 28,
                       borderRadius: 14,
-                      background: slaveForm.enabled ? '#22c55e' : ('var(--muted-foreground)'),
+                      background: slaveForm.enabled ? '#0F9F8F' : ('var(--muted-foreground)'),
                       cursor: 'pointer',
                       position: 'relative',
                       transition: 'background 0.2s ease',
                       flexShrink: 0,
-                      boxShadow: slaveForm.enabled ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none',
+                      boxShadow: slaveForm.enabled ? '0 0 0 3px rgba(15,159,143, 0.2)' : 'none',
                     }}
                     title={slaveForm.enabled ? 'Click to disable' : 'Click to enable'}
                   >
@@ -851,13 +851,13 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       }}
                     >
                       {slaveForm.enabled ? (
-                        <CheckCircle2 size={14} color="#22c55e" />
+                        <CheckCircle2 size={14} color="#0F9F8F" />
                       ) : (
                         <XCircle size={14} color={'var(--muted-foreground)'} />
                       )}
                     </div>
                   </div>
-                  <small style={{ fontSize: '0.75rem', color: slaveForm.enabled ? '#22c55e' : ('var(--muted-foreground)'), marginTop: 6, fontWeight: 600 }}>
+                  <small style={{ fontSize: '0.75rem', color: slaveForm.enabled ? '#0F9F8F' : ('var(--muted-foreground)'), marginTop: 6, fontWeight: 600 }}>
                     {slaveForm.enabled ? 'Enabled' : 'Disabled'}
                   </small>
                 </div>
@@ -1332,11 +1332,11 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         width: 52,
                         height: 28,
                         borderRadius: 14,
-                        background: registerForm.enabled ? '#22c55e' : ('var(--muted-foreground)'),
+                        background: registerForm.enabled ? '#0F9F8F' : ('var(--muted-foreground)'),
                         cursor: 'pointer',
                         position: 'relative',
                         transition: 'background 0.2s ease',
-                        boxShadow: registerForm.enabled ? '0 0 0 3px rgba(34, 197, 94, 0.2)' : 'none',
+                        boxShadow: registerForm.enabled ? '0 0 0 3px rgba(15,159,143, 0.2)' : 'none',
                       }}
                       title={registerForm.enabled ? 'Click to disable' : 'Click to enable'}
                     >
@@ -1357,7 +1357,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         }}
                       >
                         {registerForm.enabled ? (
-                          <CheckCircle2 size={14} color="#22c55e" />
+                          <CheckCircle2 size={14} color="#0F9F8F" />
                         ) : (
                           <XCircle size={14} color={'var(--muted-foreground)'} />
                         )}
@@ -1533,7 +1533,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                       <span style={{ color: 'var(--muted-foreground)' }}>
                         {bulkResult.valid.length + bulkResult.errors.length} rows parsed
                       </span>
-                      <span style={{ color: '#22c55e', fontWeight: 600 }}>
+                      <span style={{ color: '#0F9F8F', fontWeight: 600 }}>
                         {bulkResult.valid.length} valid
                       </span>
                       {bulkResult.errors.length > 0 && (
@@ -1667,7 +1667,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                         {selectedRegisters.size} selected
                       </span>
                       <button type="button" onClick={() => setSelectedEnabled(true)}
-                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#16a34a', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(15,159,143,0.15)', color: '#0F9F8F', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600 }}>
                         Enable
                       </button>
                       <button type="button" onClick={() => setSelectedEnabled(false)}
@@ -1798,10 +1798,10 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                                     cursor: 'pointer',
                                     userSelect: 'none',
                                     background: reg.enabled 
-                                      ? 'rgba(34, 197, 94, 0.15)' 
+                                      ? 'rgba(15,159,143, 0.15)' 
                                       : (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.1)'),
-                                    color: reg.enabled ? '#22c55e' : '#ef4444',
-                                    border: `1px solid ${reg.enabled ? '#22c55e' : '#ef4444'}`,
+                                    color: reg.enabled ? '#0F9F8F' : '#ef4444',
+                                    border: `1px solid ${reg.enabled ? '#0F9F8F' : '#ef4444'}`,
                                     transition: 'all 0.2s ease',
                                   }}
                                 >

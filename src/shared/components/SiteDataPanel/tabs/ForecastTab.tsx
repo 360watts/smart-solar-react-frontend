@@ -43,7 +43,7 @@ interface ChartCardProps {
 }
 
 const ChartCard: React.FC<ChartCardProps> = ({
-  title, subtitle, isDark, isLive, isLoading, height, accentColor = '#00a63e',
+  title, subtitle, isDark, isLive, isLoading, height, accentColor = '#0F9F8F',
   delay = 0, children, headerRight,
 }) => {
   const cardBg = isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)';
@@ -63,20 +63,20 @@ const ChartCard: React.FC<ChartCardProps> = ({
       <div style={{ padding: '16px 20px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--foreground)' }}>{title}</h3>
+            <h3 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--foreground)' }}>{title}</h3>
             {isLive && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00a63e', border: '1px solid rgba(0,166,62,0.3)', borderRadius: 999, padding: '2px 7px' }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} />Live
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#0F9F8F', border: '1px solid rgba(15,159,143,0.3)', borderRadius: 999, padding: '2px 7px' }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0F9F8F', display: 'inline-block' }} />Live
               </span>
             )}
           </div>
-          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: 'var(--muted-foreground)' }}>{subtitle}</p>}
+          {subtitle && <p style={{ margin: '3px 0 0', fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>{subtitle}</p>}
         </div>
         {headerRight && <div style={{ flexShrink: 0 }}>{headerRight}</div>}
       </div>
       <div style={{ padding: '16px 20px', minHeight: height }}>
         {isLoading ? (
-          <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>Loading…</div>
+          <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>Loading…</div>
         ) : children}
       </div>
     </motion.div>
@@ -105,7 +105,7 @@ export const ForecastTable = ({ data }: { data: any[] }) => {
             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Regime</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: `2px solid var(--border)` }}>P10 ↓</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid var(--border)` }}>P50</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid var(--border)` }}>P50</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid var(--border)` }}>P90 ↑</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Physics</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: `2px solid var(--border)` }}>GHI W/m²</th>
@@ -116,13 +116,13 @@ export const ForecastTable = ({ data }: { data: any[] }) => {
             const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: 'var(--text-muted)' }) : null;
             return (
               <tr key={i} style={{ borderBottom: rowBorder, transition: 'background 0.2s' }}>
-                <td style={{ padding: '10px 16px', color: 'var(--text-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
-                  {row.dateLabel ? <span style={{ marginRight: 8, color: '#00a63e', fontWeight: 700 }}>{row.dateLabel}</span> : null}
+                <td style={{ padding: '10px 16px', color: 'var(--text-primary)', fontFamily: 'Fira Code, monospace' }}>
+                  {row.dateLabel ? <span style={{ marginRight: 8, color: '#0F9F8F', fontWeight: 700 }}>{row.dateLabel}</span> : null}
                   {row.timeLabel ?? row.time}
                 </td>
                 <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                   {row.regime && rc && (
-                    <span style={{ fontSize: '0.688rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: rc.bg, color: rc.color, padding: '3px 8px', borderRadius: 6, fontFamily: 'Poppins, sans-serif' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: rc.bg, color: rc.color, padding: '3px 8px', borderRadius: 6, fontFamily: 'Rubik, sans-serif' }}>
                       {row.regime}
                     </span>
                   )}
@@ -152,17 +152,17 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number | null; ac
           <tr>
             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid var(--border)` }}>Actual PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid var(--border)` }}>P50 Forecast (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid var(--border)` }}>P50 Forecast (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Δ %</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
+              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -177,8 +177,8 @@ const _CAUSE_COLOR: Record<string, string> = {
   non_weather: '#ef4444',
   cloud_shadow: '#f59e0b',
   minor_underperformance: '#3b82f6',
-  normal: '#00a63e',
-  satellite_mismatch: '#00a63e',
+  normal: '#0F9F8F',
+  satellite_mismatch: '#0F9F8F',
   no_telemetry: '#8B87A8',
 };
 
@@ -197,14 +197,14 @@ export const SatelliteKtDailyChart: React.FC<{ satelliteKt: any[]; isDark: boole
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
       },
       zoom: createDragZoomPlugins(() => ktZoom.onZoomComplete.current()),
     },
     scales: {
       x: { stacked: true, ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
-      y: { stacked: true, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, stepSize: 1 }, grid: { display: false } },
+      y: { stacked: true, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, stepSize: 1 }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -247,8 +247,8 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: {
           title: (items: any[]) => items[0]?.label ?? '',
           label: (item: TooltipItem<'bar'>) => {
@@ -262,7 +262,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
-      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -281,7 +281,7 @@ export const SatelliteKtSlotTimeline: React.FC<{ slots: any[]; isDark: boolean }
       headerRight={
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           {Object.entries(_CAUSE_COLOR).filter(([k]) => k !== 'no_telemetry').map(([cause, color]) => (
-            <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.6rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+            <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
               <span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: 'inline-block' }} />
               {cause.replace(/_/g, ' ')}
             </span>
@@ -311,7 +311,7 @@ export interface EnhancedKPICardProps {
 }
 
 export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, accent, isDark, trend, status, index = 0 }) => {
-  const statusColors: Record<string, string> = { good: '#10b981', warning: '#f59e0b', critical: '#ef4444' };
+  const statusColors: Record<string, string> = { good: '#0F9F8F', warning: '#f59e0b', critical: '#ef4444' };
   const statusColor = status ? statusColors[status] : accent;
 
   return (
@@ -330,26 +330,26 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, 
     >
       <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
       {status && <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />}
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem', background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '1.6rem', background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           {value}
         </div>
         {trend && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700, color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700, color: trend.direction === 'down' ? '#0F9F8F' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)' }}>
             {trend.direction === 'down' && '↓'} {trend.direction === 'up' && '↑'} {trend.pct.toFixed(1)}%
           </motion.div>
         )}
       </div>
-      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)' }}>{sub}</div>
+      <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)' }}>{sub}</div>
     </motion.div>
   );
 };
 
 // ── PerformanceGauge ──────────────────────────────────────────────────────────
 
-export const PerformanceGauge: React.FC<{ label: string; value: number; max: number; isDark: boolean; color?: string }> = ({ label, value, max, isDark, color = '#00a63e' }) => {
+export const PerformanceGauge: React.FC<{ label: string; value: number; max: number; isDark: boolean; color?: string }> = ({ label, value, max, isDark, color = '#0F9F8F' }) => {
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (percentage / 100) * circumference;
@@ -364,8 +364,8 @@ export const PerformanceGauge: React.FC<{ label: string; value: number; max: num
           initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset: offset }} transition={{ duration: 0.8, ease: 'easeOut' }} />
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
-        <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginTop: 2 }}>{label}</div>
+        <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '1.4rem', color }}>{percentage.toFixed(0)}%</div>
+        <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginTop: 2 }}>{label}</div>
       </div>
     </motion.div>
   );
@@ -397,8 +397,8 @@ export const SatelliteKtCalendarPicker: React.FC<{
   const containerStyle: React.CSSProperties = {
     display: 'inline-block', padding: '10px 12px', borderRadius: 10,
     background: 'var(--popover)',
-    border: `1px solid ${isDark ? 'rgba(0,166,62,0.25)' : 'rgba(0,166,62,0.2)'}`,
-    fontFamily: 'Poppins, sans-serif',
+    border: `1px solid ${isDark ? 'rgba(15,159,143,0.25)' : 'rgba(15,159,143,0.2)'}`,
+    fontFamily: 'Rubik, sans-serif',
     boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.12)',
   };
   const navBtnStyle: React.CSSProperties = {
@@ -410,17 +410,17 @@ export const SatelliteKtCalendarPicker: React.FC<{
   return (
     <div style={containerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#0F9F8F'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month - 1))}>
           <ChevronLeft size={15} />
         </button>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--foreground)' }}>{_MONTH_NAMES[month]} {year}</span>
-        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#00a63e'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
+        <button style={navBtnStyle} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#0F9F8F'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted-foreground)'; }} onClick={() => setCurrentMonth(new Date(year, month + 1))}>
           <ChevronRight size={15} />
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 30px)', gap: 2 }}>
         {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-          <div key={d} style={{ width: 30, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 600, color: '#b8d0ec', letterSpacing: '0.04em' }}>{d}</div>
+          <div key={d} style={{ width: 30, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600, color: '#b8d0ec', letterSpacing: '0.04em' }}>{d}</div>
         ))}
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ width: 30, height: 30 }} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -430,8 +430,8 @@ export const SatelliteKtCalendarPicker: React.FC<{
           const selected = ds === selectedDate;
           return (
             <div key={ds} onClick={() => avail && onSelect(ds)}
-              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: selected ? 700 : avail ? 500 : 400, borderRadius: '50%', cursor: avail ? 'pointer' : 'default', color: selected ? '#fff' : avail ? '#00a63e' : ('var(--muted-foreground)'), background: selected ? '#00a63e' : 'transparent', transition: 'all 0.15s', userSelect: 'none' }}
-              onMouseEnter={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'rgba(0,166,62,0.15)'; }}
+              style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: selected ? 700 : avail ? 500 : 400, borderRadius: '50%', cursor: avail ? 'pointer' : 'default', color: selected ? '#fff' : avail ? '#0F9F8F' : ('var(--muted-foreground)'), background: selected ? '#0F9F8F' : 'transparent', transition: 'all 0.15s', userSelect: 'none' }}
+              onMouseEnter={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'rgba(15,159,143,0.15)'; }}
               onMouseLeave={e => { if (avail && !selected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
               {day}
@@ -440,10 +440,10 @@ export const SatelliteKtCalendarPicker: React.FC<{
         })}
       </div>
       <div style={{ display: 'flex', gap: 10, marginTop: 8, paddingTop: 6, borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, justifyContent: 'center' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} /> Has data
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#0F9F8F', display: 'inline-block' }} /> Has data
         </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--muted-foreground)', display: 'inline-block' }} /> No data
         </span>
       </div>
@@ -475,8 +475,8 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: {
           title: (items: any[]) => items[0]?.label ?? '',
           label: (item: TooltipItem<'bar'>) => {
@@ -491,13 +491,13 @@ export const SatelliteKtDayDetailChart: React.FC<{ slots: any[]; causeFilter: st
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 8 }, maxRotation: 60 }, grid: { display: false } },
-      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      y: { min: 0, max: 1.4, ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark, causeFilter]);
 
   if (filtered.length === 0) {
-    return <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No slots match this filter</div>;
+    return <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem' }}>No slots match this filter</div>;
   }
 
   const barData = {
@@ -569,17 +569,17 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
   };
 
   const kpiCards = [
-    { label: 'System Health', value: healthPct != null ? `${healthPct.toFixed(1)}%` : '—', sub: `${normalCount} / ${totalDaytime} slots normal`, color: healthPct != null ? (healthPct >= 80 ? '#00a63e' : healthPct >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
+    { label: 'System Health', value: healthPct != null ? `${healthPct.toFixed(1)}%` : '—', sub: `${normalCount} / ${totalDaytime} slots normal`, color: healthPct != null ? (healthPct >= 80 ? '#0F9F8F' : healthPct >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
     { label: 'Non-Weather Faults', value: String(nonWeatherCount), sub: 'Red: kt < 0.30, GHI ≥ 300 W/m²', color: '#ef4444' },
     { label: 'Cloud Events', value: String(cloudCount), sub: 'Amber: kt < 0.30, GHI < 300 W/m²', color: '#f59e0b' },
-    { label: 'Avg Daytime kt', value: avgKt != null ? avgKt.toFixed(3) : '—', sub: 'kt = actual kW / expected kW', color: avgKt != null ? (avgKt >= 0.70 ? '#00a63e' : avgKt >= 0.30 ? '#3b82f6' : '#ef4444') : 'var(--muted-foreground)' },
-    { label: 'Time to 1st Fault', value: timeToFirstFault ?? 'None', sub: 'First non-weather/cloud event', color: timeToFirstFault ? '#f59e0b' : '#00a63e' },
-    { label: '7-Day Health Trend', value: avgHealthPct7d != null ? `${avgHealthPct7d.toFixed(1)}%` : '—', sub: 'Rolling average of system health', color: avgHealthPct7d != null ? (avgHealthPct7d >= 80 ? '#00a63e' : avgHealthPct7d >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
+    { label: 'Avg Daytime kt', value: avgKt != null ? avgKt.toFixed(3) : '—', sub: 'kt = actual kW / expected kW', color: avgKt != null ? (avgKt >= 0.70 ? '#0F9F8F' : avgKt >= 0.30 ? '#3b82f6' : '#ef4444') : 'var(--muted-foreground)' },
+    { label: 'Time to 1st Fault', value: timeToFirstFault ?? 'None', sub: 'First non-weather/cloud event', color: timeToFirstFault ? '#f59e0b' : '#0F9F8F' },
+    { label: '7-Day Health Trend', value: avgHealthPct7d != null ? `${avgHealthPct7d.toFixed(1)}%` : '—', sub: 'Rolling average of system health', color: avgHealthPct7d != null ? (avgHealthPct7d >= 80 ? '#0F9F8F' : avgHealthPct7d >= 60 ? '#f59e0b' : '#ef4444') : 'var(--muted-foreground)' },
   ];
 
   if (!accuracy) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>
         <Satellite size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
         <div style={{ fontWeight: 600, marginBottom: 6 }}>No satellite data available</div>
         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Satellite kt data will appear once the forecast accuracy fetch completes.</div>
@@ -597,9 +597,9 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {kpiCards.map((card) => (
           <div key={card.label} style={cardBase}>
-            <div style={{ fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{card.label}</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.5rem', color: card.color, lineHeight: 1 }}>{card.value}</div>
-            <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', opacity: 0.75 }}>{card.sub}</div>
+            <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)' }}>{card.label}</div>
+            <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '1.5rem', color: card.color, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', opacity: 0.75 }}>{card.sub}</div>
           </div>
         ))}
       </div>
@@ -611,7 +611,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             const isActive = analyticsView === tab.id as any;
             return (
               <button key={tab.id} onClick={() => setAnalyticsView(tab.id as any)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.2s', border: `1px solid ${isActive ? '#00a63e' : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`, background: isActive ? 'rgba(0,166,62,0.12)' : 'transparent', color: isActive ? '#00a63e' : 'var(--text-muted)', boxShadow: isActive ? '0 0 0 2px rgba(0,166,62,0.1)' : 'none' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif', cursor: 'pointer', transition: 'all 0.2s', border: `1px solid ${isActive ? '#0F9F8F' : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`, background: isActive ? 'rgba(15,159,143,0.12)' : 'transparent', color: isActive ? '#0F9F8F' : 'var(--text-muted)', boxShadow: isActive ? '0 0 0 2px rgba(15,159,143,0.1)' : 'none' }}>
                 <Icon size={14} />{tab.label}
               </button>
             );
@@ -621,7 +621,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
           {analyticsView === 'overview' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
               {[
-                { label: 'System Health', value: `${healthPct !== null ? healthPct.toFixed(1) : '—'}%`, description: `${normalCount} / ${totalDaytime} normal slots`, color: healthPct !== null && healthPct >= 80 ? '#00a63e' : healthPct !== null && healthPct >= 60 ? '#f59e0b' : '#ef4444' },
+                { label: 'System Health', value: `${healthPct !== null ? healthPct.toFixed(1) : '—'}%`, description: `${normalCount} / ${totalDaytime} normal slots`, color: healthPct !== null && healthPct >= 80 ? '#0F9F8F' : healthPct !== null && healthPct >= 60 ? '#f59e0b' : '#ef4444' },
                 { label: 'Non-Weather Faults', value: nonWeatherCount, description: 'kt < 0.30, GHI ≥ 300 W/m²', color: '#ef4444' },
                 { label: 'Cloud Events', value: cloudCount, description: 'kt < 0.30, GHI < 300 W/m²', color: '#f59e0b' },
                 { label: 'Avg Daytime kt', value: daytimeSlots.filter((s: any) => s.kt !== null).length > 0 ? (daytimeSlots.filter((s: any) => s.kt !== null).reduce((sum: number, s: any) => sum + s.kt, 0) / daytimeSlots.filter((s: any) => s.kt !== null).length).toFixed(3) : '—', description: 'Clearness index (0–1)', color: '#3b82f6' },
@@ -633,9 +633,9 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
                 >
                   <div style={{ position: 'absolute', top: -40, right: -40, width: 100, height: 100, borderRadius: '50%', background: `${item.color}08`, pointerEvents: 'none' }} />
                   <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 12 }}>{item.label}</div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '2rem', fontWeight: 900, color: item.color, lineHeight: 1, marginBottom: 8 }}>{item.value}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', opacity: 0.65 }}>{item.description}</div>
+                    <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 12 }}>{item.label}</div>
+                    <div style={{ fontFamily: 'Fira Code, monospace', fontSize: '2rem', fontWeight: 900, color: item.color, lineHeight: 1, marginBottom: 8 }}>{item.value}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', opacity: 0.65 }}>{item.description}</div>
                   </div>
                 </div>
               ))}
@@ -644,23 +644,23 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
           {analyticsView === 'scatter' && scatterData.length > 0 && (
             <div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-                {[{ label: 'Normal', color: '#00a63e', count: scatterData.filter(d => d.cause === 'normal').length }, { label: 'Minor Underperf', color: '#3b82f6', count: scatterData.filter(d => d.cause === 'minor_underperformance').length }, { label: 'Cloud Shadow', color: '#f59e0b', count: scatterData.filter(d => d.cause === 'cloud_shadow').length }, { label: 'Non-Weather', color: '#ef4444', count: scatterData.filter(d => d.cause === 'non_weather').length }].map(item => (
+                {[{ label: 'Normal', color: '#0F9F8F', count: scatterData.filter(d => d.cause === 'normal').length }, { label: 'Minor Underperf', color: '#3b82f6', count: scatterData.filter(d => d.cause === 'minor_underperformance').length }, { label: 'Cloud Shadow', color: '#f59e0b', count: scatterData.filter(d => d.cause === 'cloud_shadow').length }, { label: 'Non-Weather', color: '#ef4444', count: scatterData.filter(d => d.cause === 'non_weather').length }].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', padding: '6px 10px', borderRadius: 6, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', border: `1px solid ${item.color}40` }}>
                     <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color }} />
                     <span style={{ fontWeight: 600 }}>{item.label}: {item.count}</span>
                   </div>
                 ))}
               </div>
-              <div style={{ overflowX: 'auto', fontSize: '0.7rem' }}>
+              <div style={{ overflowX: 'auto', fontSize: '0.75rem' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem' }}>GHI Range</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#00a63e', textTransform: 'uppercase', fontSize: '0.65rem' }}>Normal</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', fontSize: '0.65rem' }}>Underperf</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', fontSize: '0.65rem' }}>Cloud</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', fontSize: '0.65rem' }}>Non-Weather</th>
-                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.65rem' }}>Total</th>
+                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.75rem' }}>GHI Range</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#0F9F8F', textTransform: 'uppercase', fontSize: '0.75rem' }}>Normal</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', fontSize: '0.75rem' }}>Underperf</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', fontSize: '0.75rem' }}>Cloud</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', fontSize: '0.75rem' }}>Non-Weather</th>
+                      <th style={{ padding: '8px', textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.75rem' }}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -675,7 +675,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
                         return (
                           <tr key={range.label} style={{ borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)'}` }}>
                             <td style={{ padding: '8px', fontWeight: 500 }}>{range.label}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', background: normal > 0 ? 'rgba(0, 166, 62, 0.1)' : 'transparent' }}>{normal}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', background: normal > 0 ? 'rgba(15,159,143, 0.1)' : 'transparent' }}>{normal}</td>
                             <td style={{ padding: '8px', textAlign: 'center', background: underperf > 0 ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>{underperf}</td>
                             <td style={{ padding: '8px', textAlign: 'center', background: cloud > 0 ? 'rgba(245, 158, 11, 0.1)' : 'transparent' }}>{cloud}</td>
                             <td style={{ padding: '8px', textAlign: 'center', background: nonWeather > 0 ? 'rgba(239, 68, 68, 0.1)' : 'transparent' }}>{nonWeather}</td>
@@ -703,17 +703,17 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
       <div style={detailCardStyle}>
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: 'var(--foreground)' }}>
+            <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '0.8rem', color: 'var(--foreground)' }}>
               {detailView === 'day' ? `${activeDate ?? 'Today'} — 15-min Slot Detail` : 'Monthly — Daily Anomaly Counts'}
             </div>
-            <div style={{ fontFamily: 'Poppins, sans-serif', fontSize: '0.63rem', color: 'var(--text-muted)', marginTop: 2 }}>
+            <div style={{ fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
               {detailView === 'day' ? 'kt = actual kW / expected kW · EUMETSAT IODC satellite · drag to zoom' : `EUMETSAT IODC · last ${satelliteKt.length} days · stacked non-weather + cloud shadow`}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: 3, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: 3 }}>
               {(['day', 'month'] as const).map(v => (
-                <button key={v} onClick={() => setDetailView(v)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.15s', background: detailView === v ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.12)') : 'transparent', color: detailView === v ? '#00a63e' : 'var(--text-muted)', border: detailView === v ? '1px solid rgba(0,166,62,0.3)' : '1px solid transparent' }}>
+                <button key={v} onClick={() => setDetailView(v)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', cursor: 'pointer', transition: 'all 0.15s', background: detailView === v ? (isDark ? 'rgba(15,159,143,0.2)' : 'rgba(15,159,143,0.12)') : 'transparent', color: detailView === v ? '#0F9F8F' : 'var(--text-muted)', border: detailView === v ? '1px solid rgba(15,159,143,0.3)' : '1px solid transparent' }}>
                   {v === 'day' ? 'Day' : 'Month'}
                 </button>
               ))}
@@ -721,7 +721,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             {detailView === 'day' && availableDates.length > 0 && (
               <div ref={calendarRef} style={{ position: 'relative' }}>
                 <button onClick={() => setCalendarOpen(o => !o)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 7, fontSize: '0.72rem', fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer', border: `1px solid ${calendarOpen ? '#00a63e' : (isDark ? 'rgba(0,166,62,0.35)' : 'rgba(0,166,62,0.3)')}`, background: calendarOpen ? 'rgba(0,166,62,0.12)' : (isDark ? 'rgba(15,23,42,0.9)' : '#fff'), color: 'var(--success)', outline: 'none', transition: 'all 0.15s' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 7, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Fira Code, monospace', cursor: 'pointer', border: `1px solid ${calendarOpen ? '#0F9F8F' : (isDark ? 'rgba(15,159,143,0.35)' : 'rgba(15,159,143,0.3)')}`, background: calendarOpen ? 'rgba(15,159,143,0.12)' : (isDark ? 'rgba(15,23,42,0.9)' : '#fff'), color: 'var(--success)', outline: 'none', transition: 'all 0.15s' }}>
                   <CalendarDays size={13} />{activeDate ?? 'Select date'}
                 </button>
                 <AnimatePresence>
@@ -736,10 +736,10 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             {detailView === 'day' && (
               <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                 {_CAUSE_FILTER_OPTIONS.map(({ key, label }) => {
-                  const activeColor = key === 'all' ? '#00a63e' : (_CAUSE_COLOR[key] ?? '#00a63e');
+                  const activeColor = key === 'all' ? '#0F9F8F' : (_CAUSE_COLOR[key] ?? '#0F9F8F');
                   return (
                     <button key={key} onClick={() => setCauseFilter(key)}
-                      style={{ padding: '4px 9px', borderRadius: 6, fontSize: '0.65rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${causeFilter === key ? activeColor : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`, background: causeFilter === key ? activeColor + '20' : 'transparent', color: causeFilter === key ? activeColor : 'var(--text-muted)' }}>
+                      style={{ padding: '4px 9px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif', cursor: 'pointer', transition: 'all 0.15s', border: `1px solid ${causeFilter === key ? activeColor : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.12)')}`, background: causeFilter === key ? activeColor + '20' : 'transparent', color: causeFilter === key ? activeColor : 'var(--text-muted)' }}>
                       {label}
                     </button>
                   );
@@ -747,7 +747,7 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
               </div>
             )}
             {detailView === 'month' && Object.entries(_CAUSE_COLOR).filter(([k]) => k === 'non_weather' || k === 'cloud_shadow').map(([cause, color]) => (
-              <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+              <span key={cause} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 7, height: 7, borderRadius: 2, background: color, display: 'inline-block' }} />{cause.replace(/_/g, ' ')}
               </span>
             ))}
@@ -759,11 +759,11 @@ export const SatelliteKtTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
               {detailView === 'day' ? (
                 daytimeSlots.length > 0
                   ? <SatelliteKtDayDetailChart slots={slots} causeFilter={causeFilter} isDark={isDark} />
-                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No daytime slot data for today</div>
+                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem' }}>No daytime slot data for today</div>
               ) : (
                 satelliteKt.length > 0
                   ? <SatelliteKtDailyChart satelliteKt={satelliteKt} isDark={isDark} />
-                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.8rem' }}>No monthly data available</div>
+                  : <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem' }}>No monthly data available</div>
               )}
             </motion.div>
           </AnimatePresence>
@@ -796,7 +796,7 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
   const chartData = useMemo(() => hourly.map((h: any) => {
     const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(2) : null;
     const ratio = mae != null ? mae / maxMae : 0;
-    const barColor = ratio < 0.33 ? '#00a63e' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
+    const barColor = ratio < 0.33 ? '#0F9F8F' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
     const rawPct = h.mean_error_pct ?? h.error_pct;
     const errorPct = rawPct != null ? +Number(rawPct).toFixed(1) : (mae != null && overallMaeKw > 0 ? +(mae / overallMaeKw * 100).toFixed(1) : null);
     return { hour: `${String(h.hour_utc).padStart(2, '0')}:00`, mae, barColor, errorPct };
@@ -806,12 +806,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
+      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(15,159,143,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'Fira Code, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(2)} kW` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => v.toFixed(2) }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -819,12 +819,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'JetBrains Mono, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
+      tooltip: { backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'), borderColor: 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10, bodyFont: { family: 'Fira Code, monospace', size: 11 }, callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` } },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -835,12 +835,12 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}>
+        <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}>
           Performance Summary — Last {daysComputed} days
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <EnhancedKPICard label="MAE" value={maeKw != null ? `${Number(maeKw).toFixed(2)} kW` : '—'} sub="Mean absolute error" accent="#00a63e" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.2 ? 'down' : 'up', pct: 2.3 }} index={0} />
+        <EnhancedKPICard label="MAE" value={maeKw != null ? `${Number(maeKw).toFixed(2)} kW` : '—'} sub="Mean absolute error" accent="#0F9F8F" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.2 ? 'down' : 'up', pct: 2.3 }} index={0} />
         <EnhancedKPICard label="RMSE" value={rmseKw != null ? `${Number(rmseKw).toFixed(2)} kW` : '—'} sub="Root mean sq error" accent="#3b82f6" isDark={isDark} status={getMaeStatus(rmseKw)} index={1} />
         <EnhancedKPICard label="Day Error" value={dayErrorPct != null ? `${Number(dayErrorPct).toFixed(1)}%` : '—'} sub="Avg (06–18 IST)" accent="#f59e0b" isDark={isDark} index={2} />
         <EnhancedKPICard label="Coverage" value={coverage != null ? `${Number(coverage).toFixed(1)}%` : '—'} sub="P10–P90 band" accent="#06b6d4" isDark={isDark} status={getCoverageStatus(coverage)} index={3} />
@@ -849,19 +849,19 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
       <ChartCard
         title={chartMode === 'mae' ? 'MAE by Hour of Day (UTC)' : 'Error % by Hour of Day'}
         subtitle={chartMode === 'mae' ? 'Color-coded severity · green/amber/red = low/med/high error' : 'Relative forecast error across hours'}
-        isDark={isDark} height={240} accentColor={chartMode === 'mae' ? '#00a63e' : '#3b82f6'} delay={0.3}
+        isDark={isDark} height={240} accentColor={chartMode === 'mae' ? '#0F9F8F' : '#3b82f6'} delay={0.3}
         headerRight={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 4, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '4px 4px' }}>
               {[{ mode: 'mae' as const, label: 'MAE', icon: '📊' }, { mode: 'error' as const, label: 'Error %', icon: '📈' }].map(({ mode, label, icon }) => (
                 <button key={mode} onClick={() => setChartMode(mode)}
-                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(0,166,62,0.2)' : 'rgba(0,166,62,0.1)') : 'transparent', color: chartMode === mode ? ('var(--success)') : ('var(--muted-foreground)'), border: chartMode === mode ? `1px solid rgba(0,166,62,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  style={{ padding: '6px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif', background: chartMode === mode ? (isDark ? 'rgba(15,159,143,0.2)' : 'rgba(15,159,143,0.1)') : 'transparent', color: chartMode === mode ? ('var(--success)') : ('var(--muted-foreground)'), border: chartMode === mode ? `1px solid rgba(15,159,143,0.3)` : '1px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
                   {icon} {label}
                 </button>
               ))}
             </div>
-            {[['#00a63e', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
-              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {[['#0F9F8F', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
               </span>
             ))}
@@ -1045,20 +1045,20 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,166,62,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(15,159,143,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} ${unit}`; } },
       },
       zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
       ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1068,20 +1068,20 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
     responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Poppins, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
+      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
       tooltip: {
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
       },
       zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
       pct: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1109,11 +1109,11 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
             onClick={() => setForecastSubTab(st.id)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              border: `1px solid ${forecastSubTab === st.id ? '#00a63e' : 'rgba(0,166,62,0.2)'}`,
-              background: forecastSubTab === st.id ? 'rgba(0, 166, 62, 0.12)' : 'transparent',
-              color: forecastSubTab === st.id ? '#00a63e' : 'var(--text-muted)',
+              border: `1px solid ${forecastSubTab === st.id ? '#0F9F8F' : 'rgba(15,159,143,0.2)'}`,
+              background: forecastSubTab === st.id ? 'rgba(15,159,143, 0.12)' : 'transparent',
+              color: forecastSubTab === st.id ? '#0F9F8F' : 'var(--text-muted)',
               borderRadius: 8, padding: '6px 14px', fontSize: '0.75rem', fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
               textTransform: 'uppercase', letterSpacing: '0.05em',
             }}
           >
@@ -1133,7 +1133,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
           <div style={{ display: 'flex', gap: 8 }}>
             {(['chart', 'table'] as const).map(mode => (
               <button key={mode} onClick={() => setForecastView(mode)}
-                style={{ border: '1px solid rgba(0, 166, 62, 0.25)', background: forecastView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent', color: forecastView === mode ? '#00a63e' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: forecastView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent', color: forecastView === mode ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {mode}
               </button>
             ))}
@@ -1141,12 +1141,12 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {(['P10', 'P50', 'P90'] as const).map(key => (
               <button key={key} onClick={() => setShowBands(prev => ({ ...prev, [key]: !prev[key] }))}
-                style={{ border: '1px solid rgba(0, 166, 62, 0.25)', background: showBands[key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent', color: showBands[key] ? '#00a63e' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: showBands[key] ? 'rgba(15,159,143, 0.14)' : 'transparent', color: showBands[key] ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}>
                 {key}
               </button>
             ))}
             <button onClick={() => setShowBands(prev => ({ ...prev, GHI: !prev.GHI }))}
-              style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: showBands.GHI ? 'rgba(234, 179, 8, 0.14)' : 'transparent', color: showBands.GHI ? '#eab308' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: showBands.GHI ? 'rgba(234, 179, 8, 0.14)' : 'transparent', color: showBands.GHI ? '#eab308' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: showBands.GHI ? '#eab308' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
               GHI
             </button>
@@ -1155,7 +1155,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
         </div>
 
         {forecastGeneratedAt && (
-          <p style={{ margin: '0 0 10px', color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Poppins, sans-serif' }}>
+          <p style={{ margin: '0 0 10px', color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif' }}>
             Forecast generated {forecastGeneratedAt.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', timeZone: IST })}
           </p>
         )}
@@ -1166,7 +1166,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
           isDark={isDark} isLive={false} height={360} accentColor="#f59e0b" delay={0.1}
         >
           {forecastData.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>No forecast points for the selected window.</p>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>No forecast points for the selected window.</p>
           ) : forecastView === 'chart' ? (
             <div style={{ width: '100%', height: 360 }}>
               <CJLine
@@ -1175,7 +1175,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                   labels: forecastData.map(d => d.time),
                   datasets: [
                     showBands.P10 && { label: 'P10', data: forecastData.map(d => d.p10), borderColor: '#f59e0b', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: false },
-                    showBands.P50 && { label: 'P50', data: forecastData.map(d => d.p50), borderColor: '#00a63e', borderWidth: 2.4, tension: 0.3, pointRadius: 0, fill: showBands.P10 ? '-1' : false, backgroundColor: 'rgba(0,166,62,0.08)' },
+                    showBands.P50 && { label: 'P50', data: forecastData.map(d => d.p50), borderColor: '#0F9F8F', borderWidth: 2.4, tension: 0.3, pointRadius: 0, fill: showBands.P10 ? '-1' : false, backgroundColor: 'rgba(15,159,143,0.08)' },
                     showBands.P90 && { label: 'P90', data: forecastData.map(d => d.p90), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: showBands.P50 ? '-1' : false, backgroundColor: 'rgba(59,130,246,0.06)' },
                     { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#8B87A8', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
                     showBands.GHI && { label: 'GHI', yAxisID: 'ghi', data: forecastData.map(d => d.ghi), borderColor: '#eab308', borderWidth: 1.3, tension: 0.3, pointRadius: 0, fill: true, backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#eab30820'; return makeGradient(chart.ctx, chart.chartArea, '#eab308', 0.15, 0.01); } },
@@ -1191,14 +1191,14 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {[`P10 = ${fcastP10.toFixed(2)} kWh`, `P50 = ${fcastP50.toFixed(2)} kWh`, `P90 = ${fcastP90.toFixed(2)} kWh`, `Points ${forecastData.length}`].map((chip, idx) => (
-            <span key={`${chip}-${idx}`} style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', border: '1px solid rgba(0, 166, 62, 0.2)', borderRadius: 999, padding: '5px 10px', background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)' }}>
+            <span key={`${chip}-${idx}`} style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', border: '1px solid rgba(15,159,143, 0.2)', borderRadius: 999, padding: '5px 10px', background: isDark ? 'rgba(15,159,143, 0.08)' : 'rgba(15,159,143, 0.05)' }}>
               {chip}
             </span>
           ))}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
+          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-primary)' }}>
             Forecast vs Actual — {vsActual7d ? 'Last 7 Days' : 'Today'}
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1208,18 +1208,18 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                 setVsActual7d(!vsActual7d);
               }}
               aria-pressed={vsActual7d}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem', transition: 'all 0.15s ease' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', transition: 'all 0.15s ease' }}>
               <Activity size={12} />Last 7 Days
             </button>
             {(['chart', 'table'] as const).map(mode => (
               <button key={mode} onClick={() => setVsActualView(mode)}
-                style={{ border: '1px solid rgba(0, 166, 62, 0.25)', background: vsActualView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent', color: vsActualView === mode ? '#00a63e' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: vsActualView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent', color: vsActualView === mode ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 {mode}
               </button>
             ))}
             {VS_ACTUAL_SERIES.map(series => (
               <button key={series.key} onClick={() => setShowVsActualSeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
-                style={{ border: '1px solid rgba(0, 166, 62, 0.25)', background: showVsActualSeries[series.key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent', color: showVsActualSeries[series.key] ? '#00a63e' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: showVsActualSeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent', color: showVsActualSeries[series.key] ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}>
                 {series.label}
               </button>
             ))}
@@ -1227,7 +1227,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
           </div>
         </div>
 
-        <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}` }}>
+        <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}` }}>
           {activeVsActualData.length === 0 ? (
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>{vsActual7d ? 'No scored forecast slots for the last 7 days yet.' : 'No overlap points yet between forecast and telemetry for today.'}</p>
           ) : vsActualView === 'chart' ? (
@@ -1238,7 +1238,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
                   labels: activeVsActualData.map(d => d.label),
                   datasets: [
                     showVsActualSeries.Actual && { label: 'Actual', data: activeVsActualData.map(d => d.actual), borderColor: '#F07522', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false },
-                    showVsActualSeries.P50 && { label: 'P50', data: activeVsActualData.map(d => d.p50), borderColor: '#00a63e', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false },
+                    showVsActualSeries.P50 && { label: 'P50', data: activeVsActualData.map(d => d.p50), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false },
                     showVsActualSeries.Delta && { label: 'Δ %', yAxisID: 'pct', data: activeVsActualData.map(d => d.diffPct), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, borderDash: [4, 4], fill: false },
                   ].filter(Boolean) as any[],
                 }}

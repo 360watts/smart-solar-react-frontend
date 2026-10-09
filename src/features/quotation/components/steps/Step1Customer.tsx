@@ -117,7 +117,7 @@ export function Step1Customer({ form }: Props) {
       {/* Site photo */}
       <div className="sq-field">
         <label className="sq-label">
-          Site Photo <span style={{ color: 'var(--sq-muted)', textTransform: 'none', letterSpacing: 0, fontSize: '0.65rem' }}>— optional</span>
+          Site Photo <span style={{ color: 'var(--sq-muted)', textTransform: 'none', letterSpacing: 0, fontSize: '0.75rem' }}>— optional</span>
         </label>
 
         {photo ? (
@@ -155,7 +155,7 @@ export function Step1Customer({ form }: Props) {
             }}
           >
             <Upload style={{ width: 20, height: 20 }} />
-            <span style={{ fontFamily: 'var(--sq-mono)', fontSize: '0.6rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <span style={{ fontFamily: 'var(--sq-mono)', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Click to upload
             </span>
           </div>

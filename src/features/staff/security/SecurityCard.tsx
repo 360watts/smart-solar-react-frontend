@@ -15,7 +15,7 @@ const SecurityCard: React.FC<SecurityCardProps> = ({ triggerOnly = false, custom
   const [showModal, setShowModal] = useState(false);
   const [hovered, setHovered] = useState(false);
   const styles = getSecurityCardStyles(isDark, customerMode);
-  const accent = '#2FBF71';
+  const accent = 'var(--brand-green)';
 
   const button = (
     <button

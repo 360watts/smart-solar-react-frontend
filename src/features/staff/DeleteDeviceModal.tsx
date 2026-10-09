@@ -151,12 +151,12 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
       display: 'flex', alignItems: 'center', gap: 10,
     },
     serialText: {
-      fontFamily: 'Fira Code, JetBrains Mono, monospace',
+      fontFamily: 'Fira Code, Fira Code, monospace',
       fontSize: '0.875rem', fontWeight: 600, letterSpacing: '0.02em',
       color: 'var(--destructive)',
     },
     sectionLabel: {
-      fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+      fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em',
       textTransform: 'uppercase' as const,
       color: 'var(--text-dim)',
       marginBottom: 10,
@@ -165,12 +165,12 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
       display: 'flex', alignItems: 'flex-start', gap: 12,
       padding: '11px 12px', borderRadius: 10, marginBottom: 6, cursor: 'pointer',
       border: `1px solid ${checked
-        ? (danger ? 'rgba(239,68,68,0.35)' : 'rgba(47,191,113,0.3)')
+        ? (danger ? 'rgba(239,68,68,0.35)' : 'rgba(15,159,143,0.3)')
         : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)')}`,
       background: checked
         ? (danger
           ? isDark ? 'rgba(239,68,68,0.07)' : 'rgba(239,68,68,0.04)'
-          : isDark ? 'rgba(47,191,113,0.07)' : 'rgba(47,191,113,0.04)')
+          : isDark ? 'rgba(15,159,143,0.07)' : 'rgba(15,159,143,0.04)')
         : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'),
       transition: 'all 0.15s ease',
       userSelect: 'none' as const,
@@ -178,9 +178,9 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     checkbox: (checked: boolean, danger: boolean) => ({
       width: 18, height: 18, borderRadius: 5, flexShrink: 0, marginTop: 1,
       border: `2px solid ${checked
-        ? (danger ? '#EF4444' : '#2FBF71')
+        ? (danger ? '#EF4444' : 'var(--brand-green)')
         : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)')}`,
-      background: checked ? (danger ? '#EF4444' : '#2FBF71') : 'transparent',
+      background: checked ? (danger ? '#EF4444' : 'var(--brand-green)') : 'transparent',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'all 0.15s',
     }),
@@ -195,13 +195,13 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
     },
     confirmInput: {
       width: '100%', padding: '10px 12px',
-      fontFamily: 'Fira Code, JetBrains Mono, monospace',
+      fontFamily: 'Fira Code, Fira Code, monospace',
       fontSize: '0.825rem', letterSpacing: '0.04em',
       background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
       border: `1px solid ${confirmText && !confirmed
         ? '#EF4444'
         : confirmed
-          ? '#2FBF71'
+          ? 'var(--brand-green)'
           : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
       borderRadius: 8, color: 'var(--foreground)',
       outline: 'none', boxSizing: 'border-box' as const,
@@ -271,7 +271,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
             <div style={{ ...S.serialBox, alignItems: 'flex-start' }}>
               <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0, marginTop: 2 }} />
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 4 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginBottom: 4 }}>
                   Devices to delete
                 </div>
                 <div style={{ maxHeight: 100, overflowY: 'auto' }}>
@@ -285,7 +285,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
             <div style={S.serialBox}>
               <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginBottom: 2 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginBottom: 2 }}>
                   Device to delete
                 </div>
                 <div style={S.serialText}>{device!.device_serial}</div>
@@ -313,13 +313,13 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                 <div style={{
                   width: 32, height: 32, borderRadius: 8, flexShrink: 0,
                   background: checked
-                    ? (danger ? 'rgba(239,68,68,0.12)' : 'rgba(47,191,113,0.1)')
+                    ? (danger ? 'rgba(239,68,68,0.12)' : 'rgba(15,159,143,0.1)')
                     : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.15s',
                 }}>
                   <Icon size={15} color={
-                    checked ? (danger ? '#EF4444' : '#2FBF71')
+                    checked ? (danger ? '#EF4444' : 'var(--brand-green)')
                       : 'var(--muted-foreground)'
                   } />
                 </div>
@@ -335,17 +335,17 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                     }}>{label}</span>
                     {recommended && (
                       <span style={{
-                        fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em',
+                        fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
                         textTransform: 'uppercase',
                         padding: '1px 5px', borderRadius: 4,
-                        background: 'rgba(47,191,113,0.12)',
-                        color: '#2FBF71',
-                        border: '1px solid rgba(47,191,113,0.2)',
+                        background: 'rgba(15,159,143,0.12)',
+                        color: 'var(--brand-green)',
+                        border: '1px solid rgba(15,159,143,0.2)',
                       }}>Recommended</span>
                     )}
                     {danger && (
                       <span style={{
-                        fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em',
+                        fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
                         textTransform: 'uppercase',
                         padding: '1px 5px', borderRadius: 4,
                         background: 'rgba(239,68,68,0.1)',
@@ -355,7 +355,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
                     )}
                   </div>
                   <div style={{
-                    fontSize: '0.72rem', lineHeight: 1.5,
+                    fontSize: '0.75rem', lineHeight: 1.5,
                     color: 'var(--muted-foreground)',
                   }}>{description}</div>
                 </div>
@@ -372,7 +372,7 @@ export const DeleteDeviceModal: React.FC<DeleteDeviceModalProps> = ({
           }}>
             <Lock size={13} color={'var(--text-dim)'} style={{ flexShrink: 0 }} />
             <span style={{
-              fontSize: '0.7rem',
+              fontSize: '0.75rem',
               color: 'var(--text-dim)',
             }}>
               Telemetry, energy readings, and S3 archives are always retained and cannot be deleted.

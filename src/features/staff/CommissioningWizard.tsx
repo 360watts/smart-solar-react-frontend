@@ -83,13 +83,13 @@ export default function CommissioningWizard() {
   // ── Tokens ──
   const bg          = 'var(--background)';
   const surface     = 'var(--card)';
-  const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
+  const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,159,143,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
   const textMain    = 'var(--foreground)';
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
-  const primary     = '#00a63e';
+  const primary     = '#0F9F8F';
   const nativeSelectBg = inputBg;
   const nativeSelectFg = textMain;
 
@@ -101,7 +101,7 @@ export default function CommissioningWizard() {
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', 
+    fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', 
     letterSpacing: '0.05em', color: textMute, display: 'flex', alignItems: 'center', gap: 6
   };
 
@@ -113,7 +113,7 @@ export default function CommissioningWizard() {
       : primary,
     color: isSecondary ? textMain : '#fff',
     fontSize: '0.85rem', fontWeight: 600, transition: 'all 150ms', opacity: busy ? 0.7 : 1,
-    boxShadow: isSecondary ? 'none' : '0 4px 12px rgba(0,166,62,0.25)'
+    boxShadow: isSecondary ? 'none' : '0 4px 12px rgba(15,159,143,0.25)'
   });
 
   const fetchNextSiteId = async () => {
@@ -314,7 +314,7 @@ export default function CommissioningWizard() {
           const isActive = step === s.num;
           const isPast = step > s.num;
           const color = isActive || isPast ? primary : textMute;
-          const bg = isActive || isPast ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.1)') : inputBg;
+          const bg = isActive || isPast ? (isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.1)') : inputBg;
 
           return (
             <React.Fragment key={s.num}>
@@ -322,11 +322,11 @@ export default function CommissioningWizard() {
                 <div style={{ 
                   width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: bg, color: color, border: `1px solid ${isActive || isPast ? primary : inputBorder}`,
-                  transition: 'all 300ms', boxShadow: isActive ? '0 0 0 4px rgba(0,166,62,0.1)' : 'none'
+                  transition: 'all 300ms', boxShadow: isActive ? '0 0 0 4px rgba(15,159,143,0.1)' : 'none'
                 }}>
                   {isPast ? <Check size={16} /> : s.icon}
                 </div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: isActive ? textMain : textMute, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isActive ? textMain : textMute, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
                   {s.label}
                 </span>
               </div>
@@ -391,7 +391,7 @@ export default function CommissioningWizard() {
         {/* Form Container */}
         <div style={{
           background: surface, border: `1px solid ${border}`, borderRadius: 16,
-          padding: 32, boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,166,62,0.04)',
+          padding: 32, boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 20px rgba(15,159,143,0.04)',
           width: '100%', position: 'relative', overflow: 'hidden'
         }}>
           
@@ -502,7 +502,7 @@ export default function CommissioningWizard() {
                   </div>
 
                   <div style={{ borderTop: `1px solid ${border}`, paddingTop: 16 }}>
-                    <div style={{ fontSize: '0.72rem', color: textMute, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.75rem', color: textMute, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, fontWeight: 700 }}>
                       Optional commissioning details (editable later)
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -513,7 +513,7 @@ export default function CommissioningWizard() {
                       <div>
                         <label style={labelStyle}>Inverter serial number</label>
                         <input value={inverterSerial} onChange={e => setInverterSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 2509273375" />
-                        <p style={{ fontSize: '0.7rem', color: textSub, margin: '6px 0 0' }}>
+                        <p style={{ fontSize: '0.75rem', color: textSub, margin: '6px 0 0' }}>
                           The number on the inverter's label. Deye Cloud uses it to send full readings (needs the inverter capacity above).
                         </p>
                       </div>
@@ -524,7 +524,7 @@ export default function CommissioningWizard() {
                       <div>
                         <label style={labelStyle}>Deye Station ID</label>
                         <input value={loggerSerial} onChange={e => setLoggerSerial(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g. 12616 (from Deye Cloud portal)" />
-                        <p style={{ fontSize: '0.7rem', color: textSub, margin: '6px 0 0' }}>
+                        <p style={{ fontSize: '0.75rem', color: textSub, margin: '6px 0 0' }}>
                           A separate Wi-Fi dongle serial is optional — add it later from the site's Deye settings if Deye needs it.
                         </p>
                       </div>
@@ -704,7 +704,7 @@ export default function CommissioningWizard() {
             {step === 4 && (
               <motion.div key="step4" variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: MOTION_EASE }} style={{ textAlign: 'center' }}>
                 <div style={{ 
-                  width: 64, height: 64, borderRadius: '50%', background: 'rgba(0,166,62,0.1)', border: '1px solid rgba(0,166,62,0.2)',
+                  width: 64, height: 64, borderRadius: '50%', background: 'rgba(15,159,143,0.1)', border: '1px solid rgba(15,159,143,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: primary
                 }}>
                   <CheckCircle2 size={32} />

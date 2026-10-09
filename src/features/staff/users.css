@@ -59,7 +59,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-6);
-  box-shadow: 0 12px 40px rgba(47, 191, 113, 0.3);
+  box-shadow: 0 12px 40px rgba(15,159,143, 0.3);
 }
 
 .user-details p,
@@ -99,7 +99,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 24px;
-  box-shadow: 0 10px 30px rgba(47, 191, 113, 0.3);
+  box-shadow: 0 10px 30px rgba(15,159,143, 0.3);
 }
 
 .user-details p,
@@ -133,8 +133,8 @@
 }
 
 .user-info-card {
-  background: linear-gradient(135deg, #007a55 0%, #00a63e 40%, #d96b1e 100%);
+  background: linear-gradient(135deg, #0F6B65 0%, #0F9F8F 40%, #d96b1e 100%);
   box-shadow: 0 16px 48px rgba(0, 122, 85, 0.4), var(--glow-primary);
 }
 
-.user-info-card { background: linear-gradient(135deg, #007a55 0%, #00a63e 45%, #d96b1e 100%) !important; }
+.user-info-card { background: linear-gradient(135deg, #0F6B65 0%, #0F9F8F 45%, #d96b1e 100%) !important; }

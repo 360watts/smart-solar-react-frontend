@@ -27,7 +27,7 @@
   font-size: var(--font-4xl);
   color: var(--primary-foreground);
   font-weight: 700;
-  box-shadow: 0 8px 24px rgba(47, 191, 113, 0.3);
+  box-shadow: 0 8px 24px rgba(15,159,143, 0.3);
 }
 
 .profile-name {
@@ -123,7 +123,7 @@
     display: block;
     padding-bottom: 0 !important;
     color: var(--text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -145,7 +145,7 @@
 
 .profile-hero-banner {
   height: 72px;
-  background: linear-gradient(135deg, rgba(47,191,113,0.12) 0%, rgba(47,191,113,0.08) 100%);
+  background: linear-gradient(135deg, rgba(15,159,143,0.12) 0%, rgba(15,159,143,0.08) 100%);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 

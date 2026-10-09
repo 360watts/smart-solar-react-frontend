@@ -31,11 +31,11 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
           padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
           borderRadius: 16, fontSize: '0.875rem',
           background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
-          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,159,143,0.15)'}`,
         }}
       >
         <BarChart2 size={28} style={{ marginBottom: 10 }} />
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No weather accuracy data yet</div>
+        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, marginBottom: 6 }}>No weather accuracy data yet</div>
         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Needs overlapping weather forecast and observation records for past hours. Data appears as recent forecasts become verifiable.</div>
       </motion.div>
     );
@@ -59,8 +59,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
         titleColor: resolveCssVar('--foreground'),
         bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(234,179,8,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'bar'>) => ` ${Number(item.parsed.y).toFixed(1)} W/m²` },
       },
       zoom: createDragZoomPlugins(() => ghiErrorZoom.onZoomComplete.current()),
@@ -91,8 +91,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
         titleColor: resolveCssVar('--foreground'),
         bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` ${Number(item.parsed.y).toFixed(2)}°C` },
       },
       zoom: createDragZoomPlugins(() => tempErrorZoom.onZoomComplete.current()),
@@ -112,7 +112,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
         style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--muted-foreground)' }}
       >
         <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
+        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
         <div style={{ fontSize: '0.8rem', opacity: 0.65, maxWidth: 340, margin: '0 auto' }}>Accuracy scores are computed nightly. Data will appear tomorrow after the first overnight run.</div>
       </motion.div>
     );
@@ -130,8 +130,8 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
             { label: 'Hours', value: summary.hours_compared ?? '—', color: '#8b5cf6' },
           ].map(c => (
             <div key={c.label} style={{ padding: '10px 14px', borderRadius: 12, background: isDark ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.95)', border: `1px solid ${c.color}30` }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)', fontFamily: 'Poppins, sans-serif', marginBottom: 3 }}>{c.label}</div>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.1rem', color: c.color }}>{c.value}</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif', marginBottom: 3 }}>{c.label}</div>
+              <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '1.1rem', color: c.color }}>{c.value}</div>
             </div>
           ))}
         </div>
@@ -240,12 +240,12 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
             onClick={() => setWeatherSubTab(st.id)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              border: `1px solid ${weatherSubTab === st.id ? '#00a63e' : 'rgba(0,166,62,0.2)'}`,
-              background: weatherSubTab === st.id ? 'rgba(0, 166, 62, 0.12)' : 'transparent',
-              color: weatherSubTab === st.id ? '#00a63e' : 'var(--text-muted)',
+              border: `1px solid ${weatherSubTab === st.id ? '#0F9F8F' : 'rgba(15,159,143,0.2)'}`,
+              background: weatherSubTab === st.id ? 'rgba(15,159,143, 0.12)' : 'transparent',
+              color: weatherSubTab === st.id ? '#0F9F8F' : 'var(--text-muted)',
               borderRadius: 8, padding: '6px 14px',
               fontSize: '0.75rem', fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+              cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
               textTransform: 'uppercase', letterSpacing: '0.05em',
             }}
           >
@@ -264,10 +264,10 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
             borderRadius: 16,
             marginBottom: 14,
             background: isDark ? 'rgba(15, 23, 42, 0.55)' : 'rgba(255, 255, 255, 0.86)',
-            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
+            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
           }}
         >
-          <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <p style={{ margin: '0 0 10px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Current Weather
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -283,12 +283,12 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'Rubik, sans-serif',
                   color: 'var(--text-secondary)',
-                  border: '1px solid rgba(0, 166, 62, 0.2)',
+                  border: '1px solid rgba(15,159,143, 0.2)',
                   borderRadius: 999,
                   padding: '6px 10px',
-                  background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)',
+                  background: isDark ? 'rgba(15,159,143, 0.08)' : 'rgba(15,159,143, 0.05)',
                 }}
               >
                 {item.label}: <span style={{ color: 'var(--text-primary)' }}>{item.value}</span>
@@ -310,7 +310,7 @@ const WeatherTab: React.FC<WeatherTabProps> = ({
             color: 'var(--muted-foreground)',
             borderRadius: 16,
             background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(249, 250, 251, 0.8)',
-            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
+            border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
           }}
         >
           No hourly weather forecast available.

@@ -70,17 +70,17 @@
 }
 
 .slave-option-content.active {
-  background: rgba(47, 191, 113, 0.03);
+  background: rgba(15,159,143, 0.03);
 }
 
 .slave-option-card {
   background: rgba(240, 253, 244, 0.4) !important;
-  border-color: rgba(47, 191, 113, 0.1) !important;
+  border-color: rgba(15,159,143, 0.1) !important;
 }
 
 .slave-option-header {
   background: rgba(240, 253, 244, 0.7) !important;
-  border-bottom-color: rgba(47, 191, 113, 0.08) !important;
+  border-bottom-color: rgba(15,159,143, 0.08) !important;
 }
 
 .slave-grid {
@@ -126,6 +126,6 @@
   color: var(--text-secondary);
 }
 
-.slave-card-btn-edit:hover   { background: rgba(47,191,113,0.1); color: #2FBF71; border-color: rgba(47,191,113,0.3); }
+.slave-card-btn-edit:hover   { background: rgba(15,159,143,0.1); color: #0F9F8F; border-color: rgba(15,159,143,0.3); }
 
 .slave-card-btn-delete:hover { background: rgba(239,68,68,0.1); color: var(--danger-color); border-color: rgba(239,68,68,0.3); }

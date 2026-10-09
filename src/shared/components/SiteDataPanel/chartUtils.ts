@@ -27,8 +27,8 @@ export function createDragZoomPlugins(onZoomComplete: () => void) {
       wheel:  { enabled: true, speed: 0.08 },
       drag: {
         enabled: true,
-        backgroundColor: 'rgba(0,166,62,0.14)',
-        borderColor:     'rgba(0,166,62,0.7)',
+        backgroundColor: 'rgba(15,159,143,0.14)',
+        borderColor:     'rgba(15,159,143,0.7)',
         borderWidth: 1,
       },
       pinch:  { enabled: true },
@@ -51,15 +51,15 @@ export function useChartZoomState() {
 }
 
 const zoomResetButtonStyle: React.CSSProperties = {
-  border:       '1px solid rgba(0, 166, 62, 0.25)',
+  border:       '1px solid rgba(15,159,143, 0.25)',
   background:   'transparent',
-  color:        '#00a63e',
+  color:        '#0F9F8F',
   borderRadius: 8,
   padding:      '6px 12px',
   fontSize:     '0.75rem',
   fontWeight:   700,
   cursor:       'pointer',
-  fontFamily:   'Poppins, sans-serif',
+  fontFamily:   'Rubik, sans-serif',
 };
 
 /**

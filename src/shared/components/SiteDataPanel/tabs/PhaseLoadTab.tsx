@@ -32,7 +32,7 @@ interface ChartCardProps {
 }
 
 const ChartCard: React.FC<ChartCardProps> = ({
-  title, subtitle, isDark, isLive, height, accentColor = '#00a63e',
+  title, subtitle, isDark, isLive, height, accentColor = '#0F9F8F',
   delay = 0, children, headerRight,
 }) => {
   const cardBg = isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)';
@@ -67,23 +67,23 @@ const ChartCard: React.FC<ChartCardProps> = ({
       }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--foreground)' }}>
+            <h3 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '0.875rem', color: 'var(--foreground)' }}>
               {title}
             </h3>
             {isLive && (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.1em', color: '#00a63e',
-                border: '1px solid rgba(0,166,62,0.3)', borderRadius: 999, padding: '2px 7px',
+                fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.1em', color: '#0F9F8F',
+                border: '1px solid rgba(15,159,143,0.3)', borderRadius: 999, padding: '2px 7px',
               }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#00a63e', display: 'inline-block' }} />
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#0F9F8F', display: 'inline-block' }} />
                 Live
               </span>
             )}
           </div>
           {subtitle && (
-            <p style={{ margin: '3px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.7rem', color: 'var(--muted-foreground)' }}>
+            <p style={{ margin: '3px 0 0', fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
               {subtitle}
             </p>
           )}
@@ -112,7 +112,7 @@ interface EnhancedKPICardProps {
 }
 
 const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, accent, isDark, trend, status, index = 0 }) => {
-  const statusColors: Record<string, string> = { good: '#10b981', warning: '#f59e0b', critical: '#ef4444' };
+  const statusColors: Record<string, string> = { good: '#0F9F8F', warning: '#f59e0b', critical: '#ef4444' };
   const statusColor = status ? statusColors[status] : accent;
 
   return (
@@ -131,12 +131,12 @@ const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, ac
     >
       <div style={{ position: 'absolute', inset: 0, opacity: 0.08, background: `radial-gradient(circle at top right, ${statusColor}, transparent 60%)`, pointerEvents: 'none' }} />
       {status && <div style={{ position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%', background: statusColor, boxShadow: `0 0 12px ${statusColor}80` }} />}
-      <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 8 }}>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginBottom: 8 }}>
         {label}
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
         <div style={{
-          fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '1.6rem',
+          fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '1.6rem',
           background: `linear-gradient(135deg, ${statusColor}, ${statusColor}cc)`,
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
         }}>
@@ -149,14 +149,14 @@ const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, ac
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             style={{
               display: 'flex', alignItems: 'center', gap: 2, fontSize: '0.75rem', fontWeight: 700,
-              color: trend.direction === 'down' ? '#10b981' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)',
+              color: trend.direction === 'down' ? '#0F9F8F' : trend.direction === 'up' ? '#ef4444' : 'var(--muted-foreground)',
             }}
           >
             {trend.direction === 'down' && '↓'} {trend.direction === 'up' && '↑'} {trend.pct.toFixed(1)}%
           </motion.div>
         )}
       </div>
-      <div style={{ fontSize: '0.62rem', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)' }}>{sub}</div>
+      <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)' }}>{sub}</div>
     </motion.div>
   );
 };
@@ -166,7 +166,7 @@ const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, ac
 export const LOAD_SOURCE_META = {
   inverter: { label: 'Inverter Load', color: '#f59e0b' },
   grid: { label: 'Grid Load', color: '#60a5fa' },
-  ev: { label: 'EV Load', color: '#34d399' },
+  ev: { label: 'EV Load', color: '#0F9F8F' },
 } as const;
 type LoadSourceKey = keyof typeof LOAD_SOURCE_META;
 
@@ -217,20 +217,20 @@ export const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts,
       <div style={{ position: 'absolute', inset: 0, opacity: 0.12, background: `radial-gradient(circle at top right, ${color}, transparent 70%)`, pointerEvents: 'none' }} />
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <span style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--foreground)' }}>
+          <span style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--foreground)' }}>
             Phase {phase}
           </span>
           {estimated && (
-            <span style={{ fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 6, background: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.12)', color: '#d97706' }}>est.</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 6, background: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.12)', color: '#d97706' }}>est.</span>
           )}
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, boxShadow: `0 0 14px ${color}` }} />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 3 }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginBottom: 3 }}>
             Power
           </div>
           <div style={{
-            fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: '2rem',
+            fontFamily: 'Fira Code, monospace', fontWeight: 800, fontSize: '2rem',
             background: `linear-gradient(135deg, ${color}, ${color}cc)`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
           }}>
@@ -239,14 +239,14 @@ export const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts,
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 2 }}>Voltage</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, fontSize: '1rem', color: 'var(--foreground)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginBottom: 2 }}>Voltage</div>
+            <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 600, fontSize: '1rem', color: 'var(--foreground)' }}>
               {volts != null ? `${dV.toFixed(1)} V` : '—'}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Poppins, sans-serif', color: 'var(--muted-foreground)', marginBottom: 2 }}>Current</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, fontSize: '1rem', color: 'var(--foreground)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Rubik, sans-serif', color: 'var(--muted-foreground)', marginBottom: 2 }}>Current</div>
+            <div style={{ fontFamily: 'Fira Code, monospace', fontWeight: 600, fontSize: '1rem', color: 'var(--foreground)' }}>
               {amps != null ? `${dA.toFixed(2)} A` : '—'}
             </div>
           </div>
@@ -268,7 +268,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
   const chartData = useMemo(() => hourly.map((h: any) => {
     const mae = h.mae_kw != null ? +Number(h.mae_kw).toFixed(3) : null;
     const ratio = mae != null ? mae / maxMae : 0;
-    const barColor = ratio < 0.33 ? '#10b981' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
+    const barColor = ratio < 0.33 ? '#0F9F8F' : ratio < 0.66 ? '#f59e0b' : '#ef4444';
     const errorPct = h.mean_error_pct != null ? +Number(h.mean_error_pct).toFixed(1) : null;
     return { hour: `${String(h.hour_utc).padStart(2, '0')}:00`, mae, barColor, errorPct };
   }), [hourly, maxMae]);
@@ -282,15 +282,15 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
         titleColor: resolveCssVar('--foreground'),
         bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'bar'>) => ` MAE: ${Number(item.parsed.y).toFixed(3)} kW` },
       },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => v.toFixed(3) }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => v.toFixed(3) }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -303,15 +303,15 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
         titleColor: resolveCssVar('--foreground'),
         bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(16,185,129,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` Error: ${Number(item.parsed.y).toFixed(1)}%` },
       },
       zoom: createDragZoomPlugins(() => chartZoom.onZoomComplete.current()),
     },
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => `${v}%` }, grid: { display: false } },
     },
   }), [isDark]);
 
@@ -329,11 +329,11 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
           padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
           borderRadius: 16, fontSize: '0.875rem',
           background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
-          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,166,62,0.15)'}`,
+          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,159,143,0.15)'}`,
         }}
       >
         <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
-        <div style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
+        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Load forecast accuracy data will appear once historical forecasts become verifiable.</div>
       </motion.div>
     );
@@ -346,7 +346,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <div style={{ fontSize: '0.7rem', fontFamily: 'Poppins, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}>
+        <div style={{ fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}>
           Performance Summary — Last {daysComputed} days
         </div>
       </div>
@@ -354,7 +354,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
         <EnhancedKPICard
           label="MAE" value={maeKw != null ? `${Number(maeKw).toFixed(3)} kW` : '—'} sub="Mean absolute error"
-          accent="#10b981" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.15 ? 'down' : 'up', pct: 1.8 }} index={0}
+          accent="#0F9F8F" isDark={isDark} status={getMaeStatus(maeKw)} trend={{ direction: maeKw < 0.15 ? 'down' : 'up', pct: 1.8 }} index={0}
         />
         <EnhancedKPICard
           label="RMSE" value={rmseKw != null ? `${Number(rmseKw).toFixed(3)} kW` : '—'} sub="Root mean sq error"
@@ -375,7 +375,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
         subtitle={chartMode === 'mae' ? 'Mean absolute error (kW) · green/amber/red = low/med/high error' : 'Relative load forecast error across hours'}
         isDark={isDark}
         height={240}
-        accentColor="#10b981"
+        accentColor="#0F9F8F"
         delay={0.3}
         headerRight={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -388,7 +388,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
                   key={mode}
                   onClick={() => setChartMode(mode)}
                   style={{
-                    padding: '6px 10px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600, fontFamily: 'Poppins, sans-serif',
+                    padding: '6px 10px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif',
                     background: chartMode === mode ? (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)') : 'transparent',
                     color: chartMode === mode ? ('var(--success)') : ('var(--muted-foreground)'),
                     border: chartMode === mode ? `1px solid rgba(16,185,129,0.3)` : '1px solid transparent',
@@ -399,8 +399,8 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
                 </button>
               ))}
             </div>
-            {[['#10b981', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
-              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', fontFamily: 'Poppins, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {[['#0F9F8F', 'Low'], ['#f59e0b', 'Med'], ['#ef4444', 'High']].map(([c, l]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: c as string, display: 'inline-block' }} />{l}
               </span>
             ))}
@@ -441,9 +441,9 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
                   datasets: [{
                     label: 'Error %',
                     data: chartData.map((d: any) => d.errorPct),
-                    borderColor: '#10b981', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
+                    borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.4, pointRadius: 0,
                     fill: true,
-                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#10b98120'; return makeGradient(chart.ctx, chart.chartArea, '#10b981', 0.40, 0.02); },
+                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#0F9F8F20'; return makeGradient(chart.ctx, chart.chartArea, '#0F9F8F', 0.40, 0.02); },
                   }],
                 }}
                 options={errorPctChartOptions}
@@ -1007,7 +1007,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         display: true, position: 'top', align: 'center',
         labels: {
           color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
           boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 16,
         },
       },
@@ -1015,8 +1015,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: {
           title: (items: TooltipItem<'line'>[]) => {
             const row = resolvedLoadChartDataRef.current[items[0]?.dataIndex ?? -1];
@@ -1034,7 +1034,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           display: true,
           text: loadChartHasMultipleDays ? 'Day / Time (IST)' : 'Time (IST)',
           color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
           padding: { top: 10, bottom: 0 },
         },
         ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
@@ -1045,12 +1045,12 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           display: true,
           text: loadChartCumulative ? 'Energy (kWh)' : (loadChartUseWatts ? 'Load (W)' : 'Load (kW)'),
           color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Poppins, sans-serif', size: 11, weight: 700 as any },
+          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
           padding: { bottom: 6 },
         },
         ticks: {
           color: resolveCssVar('--muted-foreground'),
-          font: { family: 'JetBrains Mono, monospace', size: 11 },
+          font: { family: 'Fira Code, monospace', size: 11 },
           callback: (v: any) => loadChartCumulative ? Number(v).toFixed(1) : (loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1)),
         },
         grid: { display: false },
@@ -1068,15 +1068,15 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
       },
       zoom: createDragZoomPlugins(() => loadForecastChartZoom.onZoomComplete.current()),
     } as any,
     scales: {
       x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 } }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -1089,7 +1089,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         display: true,
         labels: {
           color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Poppins, sans-serif', size: 11 },
+          font: { family: 'Rubik, sans-serif', size: 11 },
           boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14,
           filter: (item: any) => item.text !== 'P10',
         },
@@ -1098,10 +1098,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         backgroundColor: resolveCssVar('--popover'),
         titleColor: resolveCssVar('--foreground'),
         bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(0,166,62,0.3)' : 'rgba(0,166,62,0.2)',
+        borderColor: isDark ? 'rgba(15,159,143,0.3)' : 'rgba(15,159,143,0.2)',
         borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Urbanist, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
+        bodyFont: { family: 'Fira Code, monospace', size: 11 },
         callbacks: {
           label: (item: TooltipItem<'line'>) =>
             item.dataset.label !== 'P10' ? ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` : '',
@@ -1115,7 +1115,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, padding: 8 },
         grid: { display: false },
       },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'JetBrains Mono, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { display: false } },
+      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [isDark]);
@@ -1126,10 +1126,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       {/* ── Header row with hours selector ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h2 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--foreground)' }}>
+          <h2 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--foreground)' }}>
             Load Source Monitoring
           </h2>
-          <p style={{ margin: '2px 0 0', fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+          <p style={{ margin: '2px 0 0', fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
             Inverter, energy meter, and EV demand across live and recent windows
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load forecast sub tabs">
@@ -1137,10 +1137,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               onClick={() => setPhaseForecastSubTab('chart')}
               aria-pressed={phaseForecastSubTab === 'chart'}
               style={{
-                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'chart' ? `1px solid #00a63e` : '1px solid transparent',
-                background: phaseForecastSubTab === 'chart' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
+                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'chart' ? `1px solid #0F9F8F` : '1px solid transparent',
+                background: phaseForecastSubTab === 'chart' ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)') : 'transparent',
                 color: phaseForecastSubTab === 'chart' ? ('var(--success)') : 'var(--muted-foreground)',
-                cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem'
               }}
             >
               Forecast
@@ -1149,10 +1149,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               onClick={() => setPhaseForecastSubTab('accuracy')}
               aria-pressed={phaseForecastSubTab === 'accuracy'}
               style={{
-                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'accuracy' ? `1px solid #00a63e` : '1px solid transparent',
-                background: phaseForecastSubTab === 'accuracy' ? (isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)') : 'transparent',
+                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'accuracy' ? `1px solid #0F9F8F` : '1px solid transparent',
+                background: phaseForecastSubTab === 'accuracy' ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)') : 'transparent',
                 color: phaseForecastSubTab === 'accuracy' ? ('var(--success)') : 'var(--muted-foreground)',
-                cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.75rem'
+                cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem'
               }}
             >
               Accuracy
@@ -1177,7 +1177,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
               borderRadius: 10, padding: '7px 10px', fontSize: '0.78rem',
               color: 'var(--foreground)',
-              fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+              fontFamily: 'Rubik, sans-serif', fontWeight: 600,
             }}
           />
           <select
@@ -1188,7 +1188,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
               borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem',
               color: 'var(--foreground)',
-              cursor: 'pointer', fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'Rubik, sans-serif', fontWeight: 600,
               backdropFilter: 'blur(10px)',
             }}
           >
@@ -1230,8 +1230,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                       borderLeft: i > 0 ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
                       background: isActive ? (isDark ? `${color}22` : `${color}15`) : 'transparent',
                       color: isActive ? color : 'var(--muted-foreground)',
-                      padding: '5px 10px', fontSize: '0.67rem', fontWeight: isActive ? 700 : 600,
-                      cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                      padding: '5px 10px', fontSize: '0.75rem', fontWeight: isActive ? 700 : 600,
+                      cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
                       display: 'inline-flex', alignItems: 'center', gap: 5,
                       transition: 'all 0.15s ease',
                       position: 'relative',
@@ -1262,10 +1262,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     style={{
                       border: 'none',
                       borderLeft: label === 'kWh' ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
-                      background: isActive ? (isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.12)') : 'transparent',
-                      color: isActive ? '#2FBF71' : 'var(--muted-foreground)',
-                      padding: '5px 10px', fontSize: '0.67rem', fontWeight: isActive ? 700 : 600,
-                      cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                      background: isActive ? (isDark ? 'rgba(15,159,143,0.18)' : 'rgba(15,159,143,0.12)') : 'transparent',
+                      color: isActive ? 'var(--brand-green)' : 'var(--muted-foreground)',
+                      padding: '5px 10px', fontSize: '0.75rem', fontWeight: isActive ? 700 : 600,
+                      cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       transition: 'all 0.15s ease',
                     }}
@@ -1284,8 +1284,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                   border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.4)' : (isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)')}`,
                   background: loadTotalCombined ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)') : 'transparent',
                   color: loadTotalCombined ? '#38bdf8' : 'var(--muted-foreground)',
-                  borderRadius: 10, padding: '5px 10px', fontSize: '0.67rem', fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+                  borderRadius: 10, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   transition: 'all 0.15s ease',
                 }}
@@ -1299,7 +1299,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         }
       >
         {resolvedLoadChartData.length === 0 ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>
             <Layers size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
             <div>No load source data for this period.</div>
             <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Inverter load, energy meter load, and EV smart-device history appear when those sources are mapped and reporting.</div>
@@ -1315,9 +1315,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
               return (
                 <div style={{ marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☀ 06:00 IST</span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--muted-foreground)', fontFamily: 'Poppins, sans-serif' }}>{pct.toFixed(0)}% of solar day elapsed</span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6366f1', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☾ 06:00 IST</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Rubik, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☀ 06:00 IST</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif' }}>{pct.toFixed(0)}% of solar day elapsed</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6366f1', fontFamily: 'Rubik, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☾ 06:00 IST</span>
                   </div>
                   <div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)', overflow: 'hidden', position: 'relative' }}>
                     <div style={{
@@ -1341,10 +1341,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     borderRadius: 999,
                     background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
                     border: `1px solid ${chip.color}28`,
-                    fontSize: '0.65rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif',
                   }}
                 >
-                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.58rem', letterSpacing: '0.04em' }}>{chip.label}</span>
+                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.04em' }}>{chip.label}</span>
                   <span style={{ color: 'var(--muted-foreground)' }}>{chip.value}</span>
                 </span>
               ))}
@@ -1356,7 +1356,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     borderRadius: 999,
                     background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
                     border: `1px solid ${LOAD_SOURCE_META[key].color}28`,
-                    fontSize: '0.65rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif',
+                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif',
                   }}
                 >
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: LOAD_SOURCE_META[key].color, flexShrink: 0 }} />
@@ -1456,7 +1456,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           isDark={isDark}
           isLive={false}
           height={showVsActual ? (vsActualChartData.length > 0 ? 250 : 170) : (loadForecast.length > 0 ? 230 : 170)}
-          accentColor={showVsActual ? '#00a63e' : '#ef4444'}
+          accentColor={showVsActual ? '#0F9F8F' : '#ef4444'}
           delay={0.4}
           headerRight={
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1467,10 +1467,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '5px 10px', borderRadius: 8,
-                  border: `1px solid ${showVsActual ? (isDark ? 'rgba(0,166,62,0.5)' : 'rgba(0,166,62,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
-                  background: showVsActual ? (isDark ? 'rgba(0,166,62,0.15)' : 'rgba(0,166,62,0.1)') : 'transparent',
+                  border: `1px solid ${showVsActual ? (isDark ? 'rgba(15,159,143,0.5)' : 'rgba(15,159,143,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
+                  background: showVsActual ? (isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.1)') : 'transparent',
                   color: showVsActual ? ('var(--success)') : ('var(--muted-foreground)'),
-                  cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+                  cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -1488,7 +1488,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
                     background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
                     color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'),
-                    cursor: 'pointer', fontWeight: 700, fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+                    cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -1514,7 +1514,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                       { label: 'P10', data: vsActualChartData.map(d => d.p10), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false },
                       { label: 'P10–P90 Band', data: vsActualChartData.map(d => d.p90), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.1)' },
                       { label: 'Historical Forecast (P50)', data: vsActualChartData.map(d => d.p50), borderColor: '#ef4444', borderWidth: 2, tension: 0.4, pointRadius: 0, fill: false, borderDash: [4, 3] },
-                      { label: 'Actual Load', data: vsActualChartData.map(d => d.actual), borderColor: '#00a63e', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: false },
+                      { label: 'Actual Load', data: vsActualChartData.map(d => d.actual), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: false },
                     ],
                   }}
                   options={vsActualLoadChartOptions}

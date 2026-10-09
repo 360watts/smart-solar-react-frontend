@@ -3,7 +3,7 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
     ? (isDark ? 'rgba(10,20,14,0.96)' : 'rgba(252,255,253,0.97)')
     : (isDark ? 'linear-gradient(145deg, #0F1623 0%, #0D1320 100%)' : '#FFFFFF');
   const cardBorder = customerMode
-    ? (isDark ? 'rgba(47,191,113,0.13)' : 'rgba(47,191,113,0.18)')
+    ? (isDark ? 'rgba(15,159,143,0.13)' : 'rgba(15,159,143,0.18)')
     : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)');
   const divider = customerMode
     ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')
@@ -14,7 +14,7 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
   const descColor = customerMode
     ? (isDark ? 'rgba(240,247,242,0.45)' : 'rgba(13,35,24,0.45)')
     : ('var(--muted-foreground)');
-  const font = customerMode ? '"DM Sans", system-ui, sans-serif' : "'Outfit', sans-serif";
+  const font = customerMode ? '"Rubik", system-ui, sans-serif' : "'Rubik', sans-serif";
 
   return {
     card: {
@@ -35,11 +35,11 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
       width: 28,
       height: 28,
       borderRadius: 8,
-      background: 'rgba(47,191,113,0.1)',
+      background: 'rgba(15,159,143,0.1)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#2FBF71',
+      color: 'var(--brand-green)',
     },
     title: {
       margin: 0,
@@ -57,8 +57,8 @@ export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => 
     button: {
       padding: '10px 20px',
       background: 'transparent',
-      color: '#2FBF71',
-      border: '1.5px solid #2FBF71',
+      color: 'var(--brand-green)',
+      border: '1.5px solid #0F9F8F',
       borderRadius: 9,
       fontSize: 14,
       fontWeight: 600,

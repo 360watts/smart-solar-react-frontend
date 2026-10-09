@@ -6,15 +6,18 @@ import SiteDataPanel from '../../../shared/components/SiteDataPanel';
 import type { TabId } from '../../../shared/components/SiteDataPanel/types';
 import { useTokens } from '../siteHardware/ui';
 import { openLinkStyle } from './MySites';
+import { useAccess } from '../../../shared/access/useAccess';
 
-// Read-only monitoring tabs. Details (settings) and Health are left out. Usage only shows on meter-only sites (the panel decides).
-const VIEWER_TABS: TabId[] = ['overview', 'history', 'forecast', 'weather', 'phase-load', 'usage'];
+// Read-only monitoring tabs. Details (settings) and Health are left out. Usage and Smart plugs only show when the site has a meter / a plug (the panel decides).
+// Devices (list + device drawer) is added only with device control.
+const VIEWER_TABS: TabId[] = ['overview', 'history', 'forecast', 'weather', 'phase-load', 'plugs', 'usage'];
 
 const ViewerSite: React.FC = () => {
   const { siteId = '' } = useParams<{ siteId: string }>();
   const { user } = useAuth();
   const { isDark } = useTheme();
   const t = useTokens(isDark);
+  const canDevices = useAccess().can('device_control');
   const site = user?.assigned_sites?.find(s => s.site_id === siteId);
 
   if (!site) {
@@ -37,7 +40,7 @@ const ViewerSite: React.FC = () => {
       <h2 style={{ fontFamily: t.head, fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.015em', margin: '0 0 14px' }}>
         {site.display_name || site.site_id}
       </h2>
-      <SiteDataPanel key={site.site_id} siteId={site.site_id} autoRefresh hideHeader visibleTabs={VIEWER_TABS} />
+      <SiteDataPanel key={site.site_id} siteId={site.site_id} autoRefresh hideHeader visibleTabs={canDevices ? [...VIEWER_TABS, 'devices'] : VIEWER_TABS} />
       {/* ponytail: no reusable battery-control UI exists yet, so no Controls section (follow-up). */}
     </div>
   );

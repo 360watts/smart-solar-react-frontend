@@ -228,12 +228,12 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
     },
     panel: {
       background: 'var(--card)',
-      border: `1px solid ${isDark ? 'rgba(47,191,113,0.18)' : 'rgba(47,191,113,0.15)'}`,
+      border: `1px solid ${isDark ? 'rgba(15,159,143,0.18)' : 'rgba(15,159,143,0.15)'}`,
       borderRadius: 16,
       width: '100%', maxWidth: 600, maxHeight: '84vh',
       display: 'flex', flexDirection: 'column',
       boxShadow: isDark
-        ? '0 0 0 1px rgba(47,191,113,0.06), 0 32px 64px rgba(0,0,0,0.6)'
+        ? '0 0 0 1px rgba(15,159,143,0.06), 0 32px 64px rgba(0,0,0,0.6)'
         : '0 32px 64px rgba(0,0,0,0.15)',
       transform: open ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)',
       transition: 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)',
@@ -266,16 +266,16 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
     searchInput: {
       flex: 1, border: 'none', outline: 'none', background: 'transparent',
       fontSize: '0.825rem', color: 'var(--foreground)',
-      fontFamily: 'Fira Code, JetBrains Mono, monospace',
+      fontFamily: 'Fira Code, Fira Code, monospace',
     },
     typePill: (active: boolean) => ({
       padding: '7px 12px', borderRadius: 8, cursor: 'pointer',
       fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' as const,
-      border: `1px solid ${active ? 'rgba(47,191,113,0.4)' : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+      border: `1px solid ${active ? 'rgba(15,159,143,0.4)' : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
       background: active
-        ? 'rgba(47,191,113,0.14)'
+        ? 'rgba(15,159,143,0.14)'
         : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
-      color: active ? '#2FBF71' : 'var(--muted-foreground)',
+      color: active ? 'var(--brand-green)' : 'var(--muted-foreground)',
       transition: 'all 0.15s',
     }),
     bulkBar: {
@@ -335,11 +335,11 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
               borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
             }}>
               <span style={{
-                fontFamily: 'Fira Code, JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 600,
+                fontFamily: 'Fira Code, Fira Code, monospace', fontSize: '0.8rem', fontWeight: 600,
                 color: 'var(--destructive)',
               }}>{d.device_serial}</span>
               {rowErrors[d.id] && (
-                <span style={{ fontSize: '0.675rem', color: 'var(--muted-foreground)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
                   previously failed
                 </span>
               )}
@@ -351,7 +351,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           fontSize: '0.75rem', marginBottom: 8, display: 'block',
           color: 'var(--muted-foreground)',
         }}>
-          Type <span style={{ fontFamily: 'Fira Code, JetBrains Mono, monospace', color: 'var(--destructive)' }}>{requiredConfirmText}</span> to confirm
+          Type <span style={{ fontFamily: 'Fira Code, Fira Code, monospace', color: 'var(--destructive)' }}>{requiredConfirmText}</span> to confirm
         </label>
         <input
           autoFocus
@@ -362,13 +362,13 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           spellCheck={false}
           style={{
             width: '100%', padding: '10px 12px', marginBottom: 14,
-            fontFamily: 'Fira Code, JetBrains Mono, monospace',
+            fontFamily: 'Fira Code, Fira Code, monospace',
             fontSize: '0.825rem', letterSpacing: '0.04em',
             background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
             border: `1px solid ${confirmText && !isConfirmed
               ? '#EF4444'
               : isConfirmed
-                ? '#2FBF71'
+                ? 'var(--brand-green)'
                 : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
             borderRadius: 8, color: 'var(--foreground)',
             outline: 'none', boxSizing: 'border-box',
@@ -421,11 +421,11 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-              background: 'linear-gradient(135deg, rgba(47,191,113,0.16), rgba(26,154,86,0.08))',
-              border: '1px solid rgba(47,191,113,0.28)',
+              background: 'linear-gradient(135deg, rgba(15,159,143,0.16), rgba(26,154,86,0.08))',
+              border: '1px solid rgba(15,159,143,0.28)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Archive size={18} color="#2FBF71" />
+              <Archive size={18} color="var(--brand-green)" />
             </div>
             <div>
               <div id="restore-modal-title" style={{
@@ -545,11 +545,11 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '12px 12px', borderRadius: 11, marginBottom: rowError ? 0 : 6,
-                    border: `1px solid ${isFlashing ? 'rgba(47,191,113,0.5)' : isSelected ? 'rgba(239,68,68,0.35)' : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+                    border: `1px solid ${isFlashing ? 'rgba(15,159,143,0.5)' : isSelected ? 'rgba(239,68,68,0.35)' : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
                     borderBottomLeftRadius: rowError ? 0 : 11,
                     borderBottomRightRadius: rowError ? 0 : 11,
                     background: isFlashing
-                      ? 'rgba(47,191,113,0.1)'
+                      ? 'rgba(15,159,143,0.1)'
                       : isSelected
                         ? isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.04)'
                         : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
@@ -578,7 +578,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     position: 'relative',
                   }}>
                     {isFlashing ? (
-                      <HeartPulse size={16} color="#2FBF71" style={{ animation: 'pulseBeat 0.6s ease-in-out' }} />
+                      <HeartPulse size={16} color="var(--brand-green)" style={{ animation: 'pulseBeat 0.6s ease-in-out' }} />
                     ) : (
                       <Icon size={15} color={'var(--muted-foreground)'} />
                     )}
@@ -587,12 +587,12 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                       <span style={{
-                        fontFamily: 'Fira Code, JetBrains Mono, monospace',
+                        fontFamily: 'Fira Code, Fira Code, monospace',
                         fontSize: '0.825rem', fontWeight: 600, letterSpacing: '0.01em',
                         color: 'var(--foreground)',
                       }}>{device.device_serial}</span>
                       <span style={{
-                        fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                        fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
                         padding: '1px 6px', borderRadius: 4,
                         background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
                         color: 'var(--muted-foreground)',
@@ -600,7 +600,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     </div>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexWrap: 'wrap',
-                      fontSize: '0.7rem', color: 'var(--muted-foreground)',
+                      fontSize: '0.75rem', color: 'var(--muted-foreground)',
                     }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                         <Clock size={10} /> deleted {timeAgo(device.deleted_at)}
@@ -622,11 +622,11 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                         display: 'flex', alignItems: 'center', gap: 6,
                         padding: '7px 12px', borderRadius: 8, border: 'none',
                         background: isFlashing
-                          ? 'rgba(47,191,113,0.25)'
-                          : 'linear-gradient(135deg, #2FBF71, #1A9A56)',
+                          ? 'rgba(15,159,143,0.25)'
+                          : 'linear-gradient(135deg, #0F9F8F, #1A9A92)',
                         color: '#fff', fontSize: '0.75rem', fontWeight: 700,
                         cursor: isRestoring ? 'wait' : 'pointer',
-                        boxShadow: '0 3px 10px rgba(47,191,113,0.3)',
+                        boxShadow: '0 3px 10px rgba(15,159,143,0.3)',
                         opacity: isRestoring ? 0.7 : 1,
                       }}
                     >
@@ -667,7 +667,7 @@ export const RestoreArchivedDeviceModal: React.FC<RestoreArchivedDeviceModalProp
                     border: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.18)'}`,
                     borderTop: 'none',
                     background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.04)',
-                    fontSize: '0.7rem', color: 'var(--destructive)',
+                    fontSize: '0.75rem', color: 'var(--destructive)',
                   }}>
                     <ShieldAlert size={11} style={{ flexShrink: 0 }} /> {rowError}
                   </div>

@@ -9,6 +9,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { apiService } from '../../services/api';
 import type { HardwareHealthData, ComponentHealth } from '../../services/api';
 import EnergyFlowBlock from '../../shared/components/EnergyFlow';
+import type { EnergyFlowBlockProps } from '../../shared/components/EnergyFlow/types';
 import ComponentDetailModalPremium from './ComponentDetailModalPremium';
 import { CountUp } from '../../shared/components/CountUp';
 
@@ -53,20 +54,20 @@ const B_LIGHT = {
   cyanG:   'rgba(2,132,199,0.15)',
   cyanD:   'rgba(2,132,199,0.08)',
 
-  mint:    '#059669',  mintG:  'rgba(5,150,105,0.12)',
+  mint:    '#138881',  mintG:  'rgba(5,150,105,0.12)',
   amber:   '#d97706',  amberG: 'rgba(217,119,6,0.12)',
   red:     '#dc2626',  redG:   'rgba(220,38,38,0.12)',
 
   invColor: '#2563eb',  invG: 'rgba(37,99,235,0.12)',
   batColor: '#ca8a04',  batG: 'rgba(202,138,4,0.12)',
-  pvColor:  '#059669',  pvG:  'rgba(5,150,105,0.12)',
+  pvColor:  '#138881',  pvG:  'rgba(5,150,105,0.12)',
 };
 
 const mkB = (isDark: boolean) => isDark ? B_DARK : B_LIGHT;
 
-const SYNE = "'Outfit','Outfit',sans-serif";
-const BODY = "'DM Sans',sans-serif";
-const MONO = "'JetBrains Mono','Fira Code',monospace";
+const SYNE = "'Rubik','Rubik',sans-serif";
+const BODY = "'Rubik',sans-serif";
+const MONO = "'Fira Code','Fira Code',monospace";
 
 function bLabel(s: 0|1|2) { return ['EXCELLENT','NEEDS ATTN','CRITICAL'][s]; }
 
@@ -478,113 +479,22 @@ function Skeleton({ B }: { B:ReturnType<typeof mkB> }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; latest?: any | null; }
+interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; latest?: any | null; today?: EnergyFlowBlockProps['today']; onOpenPlugs?: () => void; }
 
-export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, latest }: Props) {
-  const { isDark } = useTheme();
-  const B = mkB(isDark);
-  const { values, age } = useLiveTelemetry(latest ?? null);
-  const [healthData, setHealthData] = useState<HardwareHealthData|null>(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-
-  useEffect(() => {
-    if (!siteId) return;
-    setHealthLoading(true);
-    // Staggered for the same reason as useLiveTelemetry's fetch above.
-    const kickoff = setTimeout(() => {
-      apiService.getSiteHardwareHealth(siteId)
-        .then(d => { setHealthData(d); setHealthLoading(false); })
-        .catch(() => setHealthLoading(false));
-    }, 1500);
-    return () => clearTimeout(kickoff);
-  }, [siteId]);
-
-  const fmtKw  = (v:number|null) => v != null ? `${Math.abs(v).toFixed(1)}` : '—';
-  const fmtPct = (v:number|null) => v != null ? `${Math.round(v)}` : '—';
-
-  const stats = [
-    { label:'Health',  v: healthData ? `${healthData.overall_score}%` : '—', unit:'',   color:B.cyan    },
-    { label:'Solar',   v: fmtKw(values.pvKw),                                unit:'kW', color:B.pvColor },
-    { label:'Battery', v: fmtPct(values.battSoc),                            unit:'%',  color:B.batColor },
-    { label:'Load',    v: fmtKw(values.loadKw),                              unit:'kW', color:'#a78bfa' },
-  ];
-
+export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, latest, today, onOpenPlugs }: Props) {
+  const { values } = useLiveTelemetry(latest ?? null);
+  // The old "observatory" header strip (site name, LIVE chip, Health/Solar/Battery/Load chips) is gone:
+  // EnergyFlowBlock has its own Live header, and the equipment health score moved to the Dashboard HealthBand.
   return (
-    <motion.div
-      initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-      transition={{ duration:0.35, ease:[0.25,0.46,0.45,0.94] }}>
-
-      <div style={{
-        borderRadius:16, overflow:'hidden',
-        boxShadow:`0 0 0 1px ${B.borderC}, 0 24px 64px rgba(0,0,0,0.7), 0 0 80px rgba(0,212,255,0.04)`,
-      }}>
-
-        {/* Glassmorphism command bar */}
-        <div style={{
-          position:'relative', overflow:'hidden',
-          background:B.glass,
-          backdropFilter:'blur(20px) saturate(160%)',
-          WebkitBackdropFilter:'blur(20px) saturate(160%)',
-          borderBottom:`1px solid ${B.borderC}`,
-          padding:'11px 20px',
-        }}>
-          <ScanLine B={B}/>
-          <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:1 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <span style={{ fontFamily:SYNE, fontSize:14, fontWeight:800, color:B.value,
-                letterSpacing:'-0.02em', textShadow:`0 0 20px rgba(232,244,255,0.2)` }}>{siteId}</span>
-              <div style={{ display:'flex', alignItems:'center', gap:6, padding:'3px 8px',
-                borderRadius:20, background:`rgba(0,212,255,0.1)`, border:`1px solid ${B.borderC}` }}>
-                <PulseDot color={B.cyan}/>
-                <span style={{ fontFamily:MONO, fontSize:8, color:B.cyan, letterSpacing:'0.1em', fontWeight:700 }}>LIVE</span>
-                {age && <span style={{ fontFamily:MONO, fontSize:8, color:B.dim }}>· {age}</span>}
-              </div>
-            </div>
-            <div style={{ display:'flex', gap:6 }}>
-              {stats.map(s => (
-                <div key={s.label} style={{
-                  padding:'5px 12px', borderRadius:8,
-                  background:`${s.color}0e`, border:`1px solid ${s.color}25`,
-                  textAlign:'center', minWidth:52,
-                }}>
-                  <div style={{ fontFamily:MONO, fontSize:13, fontWeight:700, color:s.color, lineHeight:1 }}>
-                    {s.v}<span style={{ fontSize:8, opacity:0.7, marginLeft:1 }}>{s.unit}</span>
-                  </div>
-                  <div style={{ fontFamily:BODY, fontSize:8, color:B.dim, marginTop:2, letterSpacing:'0.04em' }}>
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Live energy flow — full width. Health moved to its own tab (SystemHealthPanel
-            below) so the diagram isn't squeezed into half a row. */}
-        <div style={{
-          background:B.canvas,
-          backgroundImage:`
-            linear-gradient(rgba(0,212,255,0.022) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,212,255,0.022) 1px, transparent 1px)
-          `,
-          backgroundSize:'32px 32px',
-          display:'flex', flexDirection:'column',
-        }}>
-          {/* No section label here — EnergyFlowBlock renders its own "Energy Flow /
-              Live" header immediately below, so a second one just repeated it. */}
-          <div style={{ flex:1, padding:'4px 4px 4px', minWidth:0 }}>
-            <EnergyFlowBlock
-              pvKw={values.pvKw} loadKw={values.loadKw}
-              gridKw={values.gridKw} battKw={values.battKw}
-              battSoc={values.battSoc} siteId={siteId}
-              smartDevices={smartDevices}
-              ctReading={ctReading}
-            />
-          </div>
-        </div>
-
-      </div>
-    </motion.div>
+    <EnergyFlowBlock
+      pvKw={values.pvKw} loadKw={values.loadKw}
+      gridKw={values.gridKw} battKw={values.battKw}
+      battSoc={values.battSoc} siteId={siteId}
+      smartDevices={smartDevices}
+      ctReading={ctReading}
+      today={today}
+      onOpenPlugs={onOpenPlugs}
+    />
   );
 }
 

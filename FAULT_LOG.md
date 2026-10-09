@@ -470,7 +470,7 @@ Three stacked issues, found while tracing the full flow:
 |-------|--------|
 | **Date discovered** | 2026-10-09 (user screenshot of the redesigned Sites page) |
 | **Severity** | Low/Medium: no data impact; new Tailwind-styled pages rendered without padding and with the wrong grid columns, overlapping the old design. Likely also affects older files that use Tailwind classes. |
-| **Status** | Fixed locally for the two new pages and the reset; not committed. Wider cleanup open. |
+| **Status** | Fixed for the two new pages and the reset (committed `146b8eb`). Wider cleanup open. |
 
 #### Root Cause
 - `index.css` had `* { margin: 0; padding: 0; box-sizing: border-box }` outside any layer. In Tailwind v4 utilities live in a layer, and unlayered CSS beats layered CSS regardless of specificity, so every `p-*`/`m-*` class was ignored.
@@ -483,7 +483,6 @@ Three stacked issues, found while tracing the full flow:
 #### Residual
 - Other Tailwind users of `grid` (about 17 files use Tailwind classes) may still collide; shadcn components gain their intended padding because of the layer change, so check them visually.
 - Real fix: import `App.css` and the shared stylesheets into a lower layer (`@layer legacy`) so utilities always win; needs a visual pass over every screen.
-- Not committed.
 
 ---
 *Last updated: 2026-10-09 (F-013-UI added: legacy global CSS overrides Tailwind)*

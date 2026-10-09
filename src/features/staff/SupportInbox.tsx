@@ -14,7 +14,7 @@ const STATUS_CONFIG: Record<SupportInquiryStatus, { color: string; bg: string; l
   ai_handling: { color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)', label: 'AI Handling' },
   open:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', label: 'Open' },
   in_progress: { color: '#3B82F6', bg: 'rgba(59,130,246,0.12)', label: 'In Progress' },
-  resolved:    { color: '#10B981', bg: 'rgba(16,185,129,0.12)', label: 'Resolved' },
+  resolved:    { color: '#0F9F8F', bg: 'rgba(16,185,129,0.12)', label: 'Resolved' },
   closed:      { color: 'var(--muted-foreground)', bg: 'color-mix(in srgb, var(--muted-foreground) 12%, transparent)', label: 'Closed' },
 };
 

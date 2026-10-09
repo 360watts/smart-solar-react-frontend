@@ -15,11 +15,11 @@
    ──────────────────────────────────────────────────────────────────────────── */
 @theme inline {
   /* Radius — aligned with mobile AppTheme.radii */
-  --radius: 1.125rem;     /* 18px = AppTheme.radii.lg (card default) */
+  --radius: 1.375rem;     /* 18px = AppTheme.radii.lg (card default) */
   --radius-sm: 0.375rem;  /*  6px */
   --radius-md: 0.625rem;  /* 10px */
-  --radius-lg: 1.125rem;  /* 18px */
-  --radius-xl: 1.5rem;    /* 24px */
+  --radius-lg: 1.375rem;  /* 18px */
+  --radius-xl: 1.75rem;    /* 24px */
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -49,56 +49,56 @@
   --card-foreground: #12151A;
   /* Deliberately distinct from --card — tooltips/popovers float over cards of the
      same white, and an identical background made them read as invisible. */
-  --popover: #F2F5F1;
+  --popover: #F1F5F5;
   --popover-foreground: #12151A;
-  --primary: #2FBF71;
+  --primary: #0F9F8F;
   --primary-foreground: #0A0E1A;
   --text-inverse: #0A0E1A;
   --secondary: #E9B949;
   --secondary-foreground: #12151A;
   --cta: #F27521;
   --cta-soft: rgba(242,117,33,0.12);
-  --muted: #EEF3F0;
-  --muted-foreground: #4F6B5C;
+  --muted: #EEF3F3;
+  --muted-foreground: #4B6767;
   --accent: #E9B949;
   --accent-foreground: #12151A;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
   --border: rgba(18,21,26,0.09);
   --input: rgba(18,21,26,0.09);
-  --ring: #2FBF71;
+  --ring: #0F9F8F;
   /* Design system extended palette */
-  --green: #2FBF71;
-  --green-soft: rgba(47,191,113,0.12);
-  --primary-hover: #1A9955;
-  --primary-soft: rgba(47,191,113,0.12);
+  --green: #0F9F8F;
+  --green-soft: rgba(15,159,143,0.12);
+  --primary-hover: #0B7F73;
+  --primary-soft: rgba(15,159,143,0.12);
   --secondary-soft: rgba(233,185,73,0.14);
-  --success: #34D399;
-  --success-soft: rgba(52,211,153,0.14);
+  --success: #0F9F8F;
+  --success-soft: rgba(15,159,143,0.14);
   --warning: #F59E0B;
   --warning-soft: rgba(245,158,11,0.14);
   --danger-soft: rgba(220,38,38,0.12);
   --info: #3B82F6;
   --info-soft: rgba(59,130,246,0.12);
   --surface-raised: #FFFFFF;
-  --surface-muted: #EEF3F0;
+  --surface-muted: #EEF3F3;
   /* Brand-tinted secondary text — mixed toward the emerald accent rather than a flat grey/opacity.
      Percentages intentionally sum below 100%; color-mix treats the remainder as transparency,
      giving the same ~62%/~38% visual weight as before while adding the brand tint. */
-  --text-dim: #7C9186;
+  --text-dim: #7C9190;
   --border-strong: rgba(18,21,26,0.16);
   --shadow-card: 0 1px 3px rgba(18,21,26,0.07), 0 12px 30px rgba(18,21,26,0.07);
   --shadow-tooltip: 0 2px 6px rgba(18,21,26,0.06), 0 12px 28px rgba(18,21,26,0.10);
   --tooltip-border: rgba(18,21,26,0.16);
-  --font-display: 'Outfit', 'DM Sans', sans-serif;
-  --font-body: 'DM Sans', 'Fira Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Rubik', 'Rubik', sans-serif;
+  --font-body: 'Rubik', 'Rubik', sans-serif;
+  --font-mono: 'Fira Code', 'Fira Code', monospace;
   --chart-pv: #E9B949;
   --chart-load: #3B82F6;
-  --chart-battery: #2FBF71;
+  --chart-battery: #0F9F8F;
   --chart-grid: #8B87A8;
   --chart-import: #3B82F6;
-  --chart-export: #499761;
+  --chart-export: #14B8A6;
   --chart-warning: #F59E0B;
   --chart-danger: #EF4444;
   --chart-neutral: #8B87A8;
@@ -114,7 +114,7 @@
      same navy, and an identical background made them read as invisible. */
   --popover: #1B2536;
   --popover-foreground: #F0F4FF;
-  --primary: #2FBF71;
+  --primary: #2EF0CC;
   --primary-foreground: #0A0E1A;
   --text-inverse: #0A0E1A;
   --secondary: #E9B949;
@@ -122,22 +122,22 @@
   --cta: #F27521;
   --cta-soft: rgba(242,117,33,0.18);
   --muted: rgba(255,255,255,0.08);
-  --muted-foreground: #A8C9B8;
+  --muted-foreground: #A9C4C2;
   --accent: #E9B949;
   --accent-foreground: #0A0E1A;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
   --border: rgba(255,255,255,0.07);
   --input: rgba(255,255,255,0.1);
-  --ring: #5BBD79;
+  --ring: #2EF0CC;
   /* Design system extended palette */
-  --green: #2FBF71;
-  --green-soft: rgba(47,191,113,0.14);
-  --primary-hover: #5BBD79;
-  --primary-soft: rgba(47,191,113,0.14);
+  --green: #2EF0CC;
+  --green-soft: rgba(46,240,204,0.14);
+  --primary-hover: #26D9BC;
+  --primary-soft: rgba(46,240,204,0.14);
   --secondary-soft: rgba(233,185,73,0.16);
-  --success: #34D399;
-  --success-soft: rgba(52,211,153,0.16);
+  --success: #2EF0CC;
+  --success-soft: rgba(46,240,204,0.16);
   --warning: #F59E0B;
   --warning-soft: rgba(245,158,11,0.16);
   --danger-soft: rgba(220,38,38,0.16);
@@ -145,17 +145,17 @@
   --info-soft: rgba(96,165,250,0.16);
   --surface-raised: #111927;
   --surface-muted: #131B2E;
-  --text-dim: #7FA694;
+  --text-dim: #7FA6A4;
   --border-strong: rgba(255,255,255,0.14);
   --shadow-card: 0 2px 12px rgba(0,0,0,0.22), 0 18px 42px rgba(0,0,0,0.32);
   --shadow-tooltip: 0 2px 8px rgba(0,0,0,0.35), 0 16px 36px rgba(0,0,0,0.5);
   --tooltip-border: rgba(255,255,255,0.1);
   --chart-pv: #F0CB6C;
   --chart-load: #60A5FA;
-  --chart-battery: #5BBD79;
+  --chart-battery: #2EF0CC;
   --chart-grid: #A8A3C7;
   --chart-import: #60A5FA;
-  --chart-export: #7CCA94;
+  --chart-export: #7CCAC5;
   --chart-warning: #FBBF24;
   --chart-danger: #F87171;
   --chart-neutral: #A8A3C7;
@@ -184,11 +184,11 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
   background:
     linear-gradient(180deg, rgba(189,229,201,0.38) 0%, rgba(244,246,248,0) 34%),
-    radial-gradient(circle at 12% 0%, rgba(47,191,113,0.08), transparent 28rem),
+    radial-gradient(circle at 12% 0%, rgba(15,159,143,0.08), transparent 28rem),
     var(--background);
   color: var(--foreground);
   min-width: 320px;
@@ -219,21 +219,21 @@ table,
 
 code {
   font-family: var(--font-mono);
-  background: rgba(47, 191, 113, 0.1);
-  color: #244C30;
+  background: rgba(15,159,143, 0.1);
+  color: #244C4A;
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-size: 0.9em;
 }
 
 .dark-mode code {
-  color: #BDE5C9;
+  color: #BDE5E3;
 }
 
 /* Selection styling */
 ::selection {
-  background: rgba(47, 191, 113, 0.32);
-  color: #122618;
+  background: rgba(15,159,143, 0.32);
+  color: #122625;
 }
 
 /* Focus visible for accessibility */
@@ -346,16 +346,16 @@ select option {
   --needed: #F59E0B;
   --needed-soft: #FFF1CC;
   --needed-ink: #7A4A00;
-  --done: #2FBF71;
-  --done-soft: #E3F6EB;
-  --done-ink: #14663C;
-  --forest: #0C1A14;
+  --done: #0F9F8F;
+  --done-soft: #E3F6F5;
+  --done-ink: #146661;
+  --forest: #0C1A19;
 }
 .dark-mode {
   --needed-soft: rgba(245,158,11,0.16);
   --needed-ink: #F7C873;
-  --done-soft: rgba(47,191,113,0.16);
-  --done-ink: #8FE3B4;
+  --done-soft: rgba(46,240,204,0.16);
+  --done-ink: #8FE3DE;
 }
 @theme inline {
   --color-needed: var(--needed);

@@ -79,7 +79,7 @@ const SEVERITY_CONFIG = {
 };
 
 const STATUS_CONFIG = {
-  resolved:     { color: '#10B981', bg: 'rgba(16,185,129,0.12)', label: 'Resolved',    dot: '#10B981' },
+  resolved:     { color: '#0F9F8F', bg: 'rgba(16,185,129,0.12)', label: 'Resolved',    dot: '#0F9F8F' },
   acknowledged: { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', label: 'Acknowledged', dot: '#F59E0B' },
   active:       { color: '#EF4444', bg: 'rgba(239,68,68,0.12)',  label: 'Active',       dot: '#EF4444' },
 };
@@ -486,16 +486,16 @@ const Alerts: React.FC = () => {
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '6px 14px', borderRadius: 20, fontWeight: 700, fontSize: '0.8125rem',
             background: unresolvedAlerts.length === 0
-              ? 'rgba(34,197,94,0.12)'
+              ? 'rgba(15,159,143,0.12)'
               : unresolvedAlerts.some(a => a.severity === 'critical')
                 ? 'rgba(239,68,68,0.12)'
                 : 'rgba(245,158,11,0.12)',
             color: unresolvedAlerts.length === 0
-              ? '#22C55E'
+              ? '#0F9F8F'
               : unresolvedAlerts.some(a => a.severity === 'critical')
                 ? '#EF4444'
                 : '#F59E0B',
-            border: `1px solid ${unresolvedAlerts.length === 0 ? 'rgba(34,197,94,0.3)' : unresolvedAlerts.some(a => a.severity === 'critical') ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+            border: `1px solid ${unresolvedAlerts.length === 0 ? 'rgba(15,159,143,0.3)' : unresolvedAlerts.some(a => a.severity === 'critical') ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
           }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'currentColor' }} />
             {unresolvedAlerts.length === 0 ? 'All Clear' : `${unresolvedAlerts.length} Unresolved`}
@@ -521,7 +521,7 @@ const Alerts: React.FC = () => {
               label: 'Active Now',
               subtitle: unresolvedAlerts.length === 0 ? 'Fleet all clear' : 'need attention',
               value: unresolvedAlerts.length,
-              color: unresolvedAlerts.length === 0 ? '#10B981'
+              color: unresolvedAlerts.length === 0 ? '#0F9F8F'
                 : unresolvedAlerts.some(a => a.severity === 'critical') ? '#EF4444' : '#F59E0B',
               icon: <AlertCircle size={17} />,
               large: true,
@@ -554,34 +554,34 @@ const Alerts: React.FC = () => {
               display: 'flex', flexDirection: 'column', gap: 5,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{kpi.label}</span>
                 <div style={{ width: 26, height: 26, borderRadius: 7, background: `${kpi.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: kpi.color }}>
                   {kpi.icon}
                 </div>
               </div>
               <div style={{ fontSize: kpi.large ? '2.25rem' : '1.75rem', fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
-              <div style={{ fontSize: '0.68rem', color: tok.textMuted(isDark), fontStyle: 'italic' }}>{kpi.subtitle}</div>
+              <div style={{ fontSize: '0.75rem', color: tok.textMuted(isDark), fontStyle: 'italic' }}>{kpi.subtitle}</div>
             </div>
           ))}
         </div>
 
         {/* Row 2 — History context (compact strip) */}
         <div style={{ ...cardStyle(isDark), padding: '10px 18px', display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>History</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>History</span>
           <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
               <span style={{ fontSize: '1.1rem', fontWeight: 800, color: txt }}>{alerts.length}</span>
               <span style={{ fontSize: '0.75rem', color: sub }}>fetched</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10B981' }}>{resolvedCount}</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F9F8F' }}>{resolvedCount}</span>
               <span style={{ fontSize: '0.75rem', color: sub }}>resolved</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ height: 6, width: 100, borderRadius: 6, background: tok.bgMuted(isDark), overflow: 'hidden' }}>
-                <div style={{ width: `${resolutionPct}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6 }} />
+                <div style={{ width: `${resolutionPct}%`, height: '100%', background: 'linear-gradient(90deg, #0F9F8F, #0F9F8F)', borderRadius: 6 }} />
               </div>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#10B981' }}>{resolutionPct}%</span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0F9F8F' }}>{resolutionPct}%</span>
               <span style={{ fontSize: '0.75rem', color: sub }}>resolution rate</span>
             </div>
           </div>
@@ -607,7 +607,7 @@ const Alerts: React.FC = () => {
                 <span style={{
                   background: active ? '#6366F1' : tok.bgMuted(isDark),
                   color: active ? 'white' : sub,
-                  fontSize: '0.7rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
+                  fontSize: '0.75rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20,
                 }}>{tab.badge}</span>
               )}
             </button>
@@ -671,7 +671,7 @@ const Alerts: React.FC = () => {
             <div style={{ padding: '0 20px 18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub }}>Resolution Rate (Today)</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#10B981' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F9F8F' }}>
                   {(() => {
                     if (todayFleetHealthReport?.data?.fleet_summary) {
                       const summary = todayFleetHealthReport.data.fleet_summary;
@@ -692,7 +692,7 @@ const Alerts: React.FC = () => {
                     return totalAlerts > 0 ? Math.round(((totalAlerts - unresolvedAlerts) / totalAlerts) * 100) : 0;
                   }
                   return resolutionPct;
-                })()}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #22C55E)', borderRadius: 6, transition: 'width 0.5s' }} />
+                })()}%`, height: '100%', background: 'linear-gradient(90deg, #0F9F8F, #0F9F8F)', borderRadius: 6, transition: 'width 0.5s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: '0.75rem', color: sub }}>
                 <span>{(() => {
@@ -790,7 +790,7 @@ const Alerts: React.FC = () => {
             <div style={{ padding: '16px 20px' }}>
               {unresolvedCriticalAlerts.length === 0 ? (
                 <div style={{ padding: '2rem', textAlign: 'center', color: sub }}>
-                  <CheckCircle2 size={36} style={{ marginBottom: 10, color: '#22C55E', opacity: 0.6 }} />
+                  <CheckCircle2 size={36} style={{ marginBottom: 10, color: '#0F9F8F', opacity: 0.6 }} />
                   <div style={{ fontWeight: 600 }}>No critical alerts — system is stable</div>
                 </div>
               ) : (
@@ -975,7 +975,7 @@ const Alerts: React.FC = () => {
                   {/* Empty state */}
                   {!diagRunning && diagResults && diagResults.results.length === 0 && (
                     <div style={{ padding: '18px 16px', color: sub, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <CheckCircle2 size={16} style={{ color: '#10B981' }} />
+                      <CheckCircle2 size={16} style={{ color: '#0F9F8F' }} />
                       No active alerts with devices found — nothing to diagnose.
                     </div>
                   )}
@@ -984,7 +984,7 @@ const Alerts: React.FC = () => {
                   {!diagRunning && diagResults && diagResults.results.map((r, idx) => {
                     const diag = r.diagnostic;
                     const sevColor: Record<string, string> = {
-                      CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
+                      CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#0F9F8F',
                     };
                     const col = diag ? (sevColor[diag.severity] ?? '#6366F1') : sub;
                     const retryNeeded = Boolean(diag && isRetryableDiagnostic(diag));
@@ -1012,13 +1012,13 @@ const Alerts: React.FC = () => {
                             }}>{r.fault_code}</code>
                             <span style={{ fontSize: '0.8rem', color: sub }}>{r.device_serial ?? '—'}</span>
                             {r.triggered_at && (
-                              <span style={{ fontSize: '0.7rem', color: tok.textMuted(isDark) }}>
+                              <span style={{ fontSize: '0.75rem', color: tok.textMuted(isDark) }}>
                                 {new Date(r.triggered_at).toLocaleString()}
                               </span>
                             )}
                             {r.queue_status === 'queued' && (
                               <span style={{
-                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                                 background: 'rgba(99,102,241,0.12)', color: '#6366F1', border: '1px solid rgba(99,102,241,0.28)',
                               }}>
                                 Queued
@@ -1026,15 +1026,15 @@ const Alerts: React.FC = () => {
                             )}
                             {r.queue_status !== 'queued' && completedThisRun && (
                               <span style={{
-                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                                background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.28)',
+                                fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                background: 'rgba(16,185,129,0.12)', color: '#0F9F8F', border: '1px solid rgba(16,185,129,0.28)',
                               }}>
                                 Completed This Run
                               </span>
                             )}
                             {r.queue_status === 'done' && retryNeeded && (
                               <span style={{
-                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                                 background: 'rgba(245,158,11,0.12)', color: '#D97706', border: '1px solid rgba(245,158,11,0.28)',
                               }}>
                                 Retry Needed
@@ -1042,7 +1042,7 @@ const Alerts: React.FC = () => {
                             )}
                             {r.queue_status === 'done' && !completedThisRun && !retryNeeded && (
                               <span style={{
-                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                                fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                                 background: 'rgba(148,163,184,0.12)', color: 'var(--muted-foreground)', border: '1px solid rgba(148,163,184,0.28)',
                               }}>
                                 Historical
@@ -1064,7 +1064,7 @@ const Alerts: React.FC = () => {
                                 {diag.recommendation}
                               </div>
                               {diag.llm_model && (
-                                <div style={{ fontSize: '0.7rem', color: tok.textMuted(isDark), marginTop: 2 }}>
+                                <div style={{ fontSize: '0.75rem', color: tok.textMuted(isDark), marginTop: 2 }}>
                                   via {diag.llm_model}{diag.call_duration_ms ? ` · ${(diag.call_duration_ms / 1000).toFixed(1)}s` : ''}
                                 </div>
                               )}
@@ -1075,7 +1075,7 @@ const Alerts: React.FC = () => {
                         </div>
                         {diag && (
                           <span style={{
-                            padding: '3px 10px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700,
+                            padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700,
                             background: `${col}18`, color: col, border: `1px solid ${col}44`,
                             whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2,
                           }}>
@@ -1147,7 +1147,7 @@ const Alerts: React.FC = () => {
                               display: 'flex',
                               alignItems: 'center',
                               gap: 4,
-                              fontSize: '0.7rem',
+                              fontSize: '0.75rem',
                               fontWeight: 700,
                               cursor: 'pointer',
                             }}
@@ -1165,7 +1165,7 @@ const Alerts: React.FC = () => {
                         {/* Fault tag */}
                         {alert.generated === false && (
                           <span style={{
-                            fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                            fontSize: '0.75rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
                             background: 'rgba(148,163,184,0.1)', color: sub, border: `1px solid ${bdr}`,
                           }}>Fault</span>
                         )}
@@ -1305,7 +1305,7 @@ const Alerts: React.FC = () => {
         if (!alert || !alert.metadata?.diagnostic) return null;
         const diag = alert.metadata.diagnostic;
         const sevColor: Record<string, string> = {
-          CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#10B981',
+          CRITICAL: '#EF4444', HIGH: '#F97316', MEDIUM: '#F59E0B', LOW: '#0F9F8F',
         };
         const col = sevColor[diag.severity] ?? '#6366F1';
         
@@ -1402,7 +1402,7 @@ const Alerts: React.FC = () => {
               <div style={{ marginBottom: 20 }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                  fontSize: '0.875rem', fontWeight: 700, color: '#10B981', marginBottom: 8,
+                  fontSize: '0.875rem', fontWeight: 700, color: '#0F9F8F', marginBottom: 8,
                 }}>
                   <CheckCircle2 size={16} />
                   Recommendation
@@ -1489,13 +1489,13 @@ const Alerts: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   {[
                     { label: 'Total Occurrences', value: totalOccurrences.toString(), sub: `in last ${analyticsData.lookback_days}d`, color: '#6366F1', icon: <BarChart3 size={17} /> },
-                    { label: 'Active Faults', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear in this period' : 'Unresolved in period', color: totalActive === 0 ? '#10B981' : '#EF4444', icon: <AlertCircle size={17} /> },
+                    { label: 'Active Faults', value: totalActive.toString(), sub: totalActive === 0 ? 'All clear in this period' : 'Unresolved in period', color: totalActive === 0 ? '#0F9F8F' : '#EF4444', icon: <AlertCircle size={17} /> },
                     { label: 'Most Frequent', value: mostFrequent ? mostFrequent.fault_code : '—', sub: mostFrequent ? `${mostFrequent.total_occurrences}× — ${normalizeFaultTitle(mostFrequent.fault_code, mostFrequent.title)}` : 'No faults', color: mostFrequent ? (SEVERITY_CONFIG[mostFrequent.severity] ?? SEVERITY_CONFIG.info).color : sub, icon: <AlertTriangle size={17} /> },
                     { label: 'Avg Time to Resolve', value: fmtTTR(avgTTR), sub: resolvedFaults.length > 0 ? `across ${resolvedFaults.length} fault type${resolvedFaults.length > 1 ? 's' : ''}` : 'No resolved faults', color: '#F59E0B', icon: <Clock size={17} /> },
                   ].map(card => (
                     <div key={card.label} style={{ ...cardStyle(isDark), padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
                         <div style={{ width: 28, height: 28, borderRadius: 7, background: `${card.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>{card.icon}</div>
                       </div>
                       <div style={{ fontSize: '1.5rem', fontWeight: 800, color: card.color, lineHeight: 1, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.value}</div>
@@ -1520,7 +1520,7 @@ const Alerts: React.FC = () => {
                     <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                     <div style={{ minWidth: 730 }}>
                     {/* Header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 110px 70px 60px 120px 110px 110px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 110px 70px 60px 120px 110px 110px', gap: '0 12px', padding: '10px 20px', background: tok.bgSub(isDark), borderBottom: `1px solid ${bdr}`, fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       <span>Fault Code</span><span>Title</span><span>Severity</span><span>Count</span><span>Active</span><span>Avg Resolve</span><span>First Seen</span><span>Last Seen</span>
                     </div>
                     {[...analyticsData.fault_summaries].sort((a, b) => b.total_occurrences - a.total_occurrences).map(f => {
@@ -1537,7 +1537,7 @@ const Alerts: React.FC = () => {
                             </div>
                             <span style={{ fontSize: '0.875rem', color: txt, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{normalizeFaultTitle(f.fault_code, f.title)}</span>
                             <div>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>
                                 {sevCfg.icon} {sevCfg.label}
                               </span>
                             </div>
@@ -1574,7 +1574,7 @@ const Alerts: React.FC = () => {
                                         <div key={inst.id} style={{ background: tok.bgCard(isDark), border: `1px solid ${bdr}`, borderRadius: 10, padding: '12px 14px' }}>
                                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                                             <div style={{ fontSize: '0.8125rem', color: txt, flex: 1 }}>{inst.message}</div>
-                                            <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: stCfg.bg, color: stCfg.color }}>{stCfg.label}</span>
+                                            <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: stCfg.bg, color: stCfg.color }}>{stCfg.label}</span>
                                           </div>
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: '0.75rem', color: sub }}>
                                             <span><code style={{ fontFamily: 'monospace', color: txt }}>{inst.device_serial}</code></span>
@@ -1659,7 +1659,7 @@ const Alerts: React.FC = () => {
                                   background: isActive ? cfg.bg : tok.bgMuted(isDark),
                                   color: isActive ? cfg.color : sub,
                                   border: `1px solid ${isActive ? cfg.border : bdr}`,
-                                  fontSize: '0.7rem',
+                                  fontSize: '0.75rem',
                                   borderRadius: 4,
                                   opacity: isActive ? 1 : 0.6,
                                 }}
@@ -1676,7 +1676,7 @@ const Alerts: React.FC = () => {
                           style={{
                             ...btnBase,
                             padding: '6px 10px',
-                            background: showBrush ? 'linear-gradient(135deg, #10B981, #059669)' : tok.bgMuted(isDark),
+                            background: showBrush ? 'linear-gradient(135deg, #0F9F8F, #138881)' : tok.bgMuted(isDark),
                             color: showBrush ? 'white' : sub,
                             border: `1px solid ${bdr}`,
                             fontSize: '0.75rem',
@@ -1913,7 +1913,7 @@ const Alerts: React.FC = () => {
                 <div style={{ ...cardStyle(isDark), padding: 0 }}>
                   <button onClick={() => setCatalogueOpen(o => !o)} style={{ width: '100%', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: catalogueOpen ? `1px solid ${bdr}` : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg, #0F9F8F, #138881)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <BookOpen size={17} color="white" />
                       </div>
                       <div style={{ textAlign: 'left' }}>
@@ -1941,17 +1941,17 @@ const Alerts: React.FC = () => {
                                       {isExp ? <ChevronDown size={13} style={{ color: sub, flexShrink: 0 }} /> : <ChevronRight size={13} style={{ color: sub, flexShrink: 0 }} />}
                                       <code style={{ fontFamily: 'monospace', fontSize: '0.8125rem', fontWeight: 700, color: sevCfg.color, minWidth: 100 }}>{entry.fault_code}</code>
                                       <span style={{ fontSize: '0.875rem', color: txt, flex: 1 }}>{normalizeFaultTitle(entry.fault_code, entry.title)}</span>
-                                      <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>{sevCfg.label}</span>
+                                      <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, background: sevCfg.bg, color: sevCfg.color, border: `1px solid ${sevCfg.border}` }}>{sevCfg.label}</span>
                                     </button>
                                     {isExp && (
                                       <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                                         <div>
-                                          <div style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Reason</div>
+                                          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Reason</div>
                                           <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{normalizeFaultReason(entry.fault_code, entry.reason)}</div>
                                         </div>
                                         {entry.fix_guidance && (
                                           <div>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Fix Guidance</div>
+                                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Fix Guidance</div>
                                             <div style={{ fontSize: '0.875rem', color: txt, lineHeight: 1.5 }}>{entry.fix_guidance}</div>
                                           </div>
                                         )}
@@ -2034,7 +2034,7 @@ const Alerts: React.FC = () => {
               if ((summary.critical_alerts || 0) > 0) return { color: '#EF4444', label: '🔴 Critical', bg: 'rgba(239,68,68,0.12)' };
               if ((summary.unresolved_alerts || 0) > 0 || (summary.rs485_stale_events || 0) > 0) return { color: '#F59E0B', label: '🟡 Warning', bg: 'rgba(245,158,11,0.12)' };
               if ((summary.complete_failures || 0) > 0) return { color: '#000000', label: '⚫ Failed', bg: 'rgba(0,0,0,0.12)' };
-              return { color: '#10B981', label: '🟢 Healthy', bg: 'rgba(16,185,129,0.12)' };
+              return { color: '#0F9F8F', label: '🟢 Healthy', bg: 'rgba(16,185,129,0.12)' };
             };
             const healthStatus = getHealthStatus();
 
@@ -2093,14 +2093,14 @@ const Alerts: React.FC = () => {
                   <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                     {[
                       { label: 'Total Alerts',  value: summary.total_alerts || 0,       color: '#6366F1' },
-                      { label: 'Unresolved',    value: summary.unresolved_alerts || 0,  color: (summary.unresolved_alerts || 0) > 0 ? '#EF4444' : '#10B981' },
-                      { label: 'Critical',      value: summary.critical_alerts || 0,    color: (summary.critical_alerts || 0) > 0 ? '#EF4444' : '#10B981' },
-                      { label: 'RS-485 Stale',  value: summary.rs485_stale_events || 0, color: (summary.rs485_stale_events || 0) > 0 ? '#F59E0B' : '#10B981' },
-                      { label: 'Auto-Reboots', value: summary.auto_reboots || 0,        color: (summary.auto_reboots || 0) > 0 ? '#F59E0B' : '#10B981' },
+                      { label: 'Unresolved',    value: summary.unresolved_alerts || 0,  color: (summary.unresolved_alerts || 0) > 0 ? '#EF4444' : '#0F9F8F' },
+                      { label: 'Critical',      value: summary.critical_alerts || 0,    color: (summary.critical_alerts || 0) > 0 ? '#EF4444' : '#0F9F8F' },
+                      { label: 'RS-485 Stale',  value: summary.rs485_stale_events || 0, color: (summary.rs485_stale_events || 0) > 0 ? '#F59E0B' : '#0F9F8F' },
+                      { label: 'Auto-Reboots', value: summary.auto_reboots || 0,        color: (summary.auto_reboots || 0) > 0 ? '#F59E0B' : '#0F9F8F' },
                     ].map(s => (
                       <div key={s.label} style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '1.5rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                        <div style={{ fontSize: '0.65rem', color: tok.textMuted(isDark), marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
+                        <div style={{ fontSize: '0.75rem', color: tok.textMuted(isDark), marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
                       </div>
                     ))}
                   </div>
@@ -2153,9 +2153,9 @@ const Alerts: React.FC = () => {
                           ? { label: 'Offline', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)' }
                           : site.hasAlerts
                             ? { label: 'Warning', color: '#F59E0B', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.25)' }
-                            : { label: 'Healthy', color: '#10B981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' };
+                            : { label: 'Healthy', color: '#0F9F8F', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' };
                         const largestGap = Math.max(...site.devices.map((d: any) => d.telemetry?.largest_gap_minutes || 0), 0);
-                        const completenessColor = site.avgCompleteness < 70 ? '#EF4444' : site.avgCompleteness < 90 ? '#F59E0B' : '#10B981';
+                        const completenessColor = site.avgCompleteness < 70 ? '#EF4444' : site.avgCompleteness < 90 ? '#F59E0B' : '#0F9F8F';
 
                         return (
                           <div key={site.siteId} style={{ ...cardStyle(isDark), padding: 0, border: `1px solid ${isExpanded ? siteStatus.border : tok.border(isDark)}`, transition: 'border-color 0.15s' }}>
@@ -2182,7 +2182,7 @@ const Alerts: React.FC = () => {
                               <code style={{ fontSize: '0.9rem', fontFamily: 'monospace', color: txt, fontWeight: 800, flex: '0 0 auto' }}>{site.siteId}</code>
 
                               {/* Status pill */}
-                              <span style={{ padding: '2px 9px', borderRadius: 5, fontSize: '0.68rem', fontWeight: 700, color: siteStatus.color, background: siteStatus.bg, border: `1px solid ${siteStatus.border}`, flexShrink: 0 }}>{siteStatus.label}</span>
+                              <span style={{ padding: '2px 9px', borderRadius: 5, fontSize: '0.75rem', fontWeight: 700, color: siteStatus.color, background: siteStatus.bg, border: `1px solid ${siteStatus.border}`, flexShrink: 0 }}>{siteStatus.label}</span>
 
                               {/* Spacer */}
                               <div style={{ flex: 1 }} />
@@ -2191,20 +2191,20 @@ const Alerts: React.FC = () => {
                               <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexShrink: 0 }}>
                                 <div style={{ textAlign: 'center' }}>
                                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: txt, lineHeight: 1 }}>{site.devices.length}</div>
-                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Devices</div>
+                                  <div style={{ fontSize: '0.75rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Devices</div>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: completenessColor, lineHeight: 1 }}>{site.avgCompleteness.toFixed(0)}%</div>
-                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Data</div>
+                                  <div style={{ fontSize: '0.75rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Data</div>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: site.totalAlerts > 0 ? '#EF4444' : sub, lineHeight: 1 }}>{site.totalAlerts}</div>
-                                  <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Alerts</div>
+                                  <div style={{ fontSize: '0.75rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Alerts</div>
                                 </div>
                                 {largestGap > 0 && (
                                   <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: largestGap > 60 ? '#EF4444' : largestGap > 20 ? '#F59E0B' : sub, lineHeight: 1 }}>{largestGap >= 60 ? `${(largestGap/60).toFixed(1)}h` : `${largestGap.toFixed(0)}m`}</div>
-                                    <div style={{ fontSize: '0.62rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gap</div>
+                                    <div style={{ fontSize: '0.75rem', color: sub, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Gap</div>
                                   </div>
                                 )}
                               </div>
@@ -2214,7 +2214,7 @@ const Alerts: React.FC = () => {
                             {isExpanded && (
                               <div style={{ borderTop: `1px solid ${bdr}` }}>
                                 {/* Device table header */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 80px minmax(120px, 1fr)', gap: '0 8px', padding: '8px 18px 8px 42px', background: tok.bgSub(isDark), fontSize: '0.65rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `1px solid ${bdr}` }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 80px minmax(120px, 1fr)', gap: '0 8px', padding: '8px 18px 8px 42px', background: tok.bgSub(isDark), fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: `1px solid ${bdr}` }}>
                                   <span>Device</span><span>Status</span><span>Records</span><span>Data %</span><span>Alerts</span><span>Fault Codes</span>
                                 </div>
 
@@ -2225,7 +2225,7 @@ const Alerts: React.FC = () => {
                                       ? { label: 'Offline', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
                                       : device.alerts?.total > 0
                                         ? { label: 'Alerted', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
-                                        : { label: 'OK', color: '#10B981', bg: 'rgba(16,185,129,0.10)' };
+                                        : { label: 'OK', color: '#0F9F8F', bg: 'rgba(16,185,129,0.10)' };
                                     const alertCodes = Object.keys(device.alerts?.by_fault_code || {}).join(', ') || '—';
                                     const devCompleteness = device.telemetry?.data_completeness_pct || 0;
                                     const devCompletenessColor = devCompleteness < 70 ? '#EF4444' : devCompleteness < 90 ? '#F59E0B' : sub;
@@ -2255,7 +2255,7 @@ const Alerts: React.FC = () => {
                                           </div>
 
                                           {/* Status pill */}
-                                          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, fontSize: '0.65rem', fontWeight: 700, color: deviceStatus.color, background: deviceStatus.bg, width: 'fit-content' }}>{deviceStatus.label}</span>
+                                          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, fontSize: '0.75rem', fontWeight: 700, color: deviceStatus.color, background: deviceStatus.bg, width: 'fit-content' }}>{deviceStatus.label}</span>
 
                                           <span style={{ fontSize: '0.8125rem', color: sub, fontFamily: 'monospace' }}>{device.telemetry?.record_count || 0}</span>
 
@@ -2271,7 +2271,7 @@ const Alerts: React.FC = () => {
                                         {/* Alert detail rows (expanded) */}
                                         {isDeviceExpanded && deviceAlerts.length > 0 && (
                                           <div style={{ borderTop: `1px solid ${bdr}`, background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.025)', padding: '4px 0 8px' }}>
-                                            <div style={{ padding: '8px 18px 6px 58px', fontSize: '0.68rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                            <div style={{ padding: '8px 18px 6px 58px', fontSize: '0.75rem', fontWeight: 700, color: sub, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                               Alert history · {deviceAlerts.length} record{deviceAlerts.length !== 1 ? 's' : ''}
                                             </div>
                                             <div style={{ overflowX: 'auto' }}>
@@ -2279,7 +2279,7 @@ const Alerts: React.FC = () => {
                                                 <thead>
                                                   <tr style={{ borderBottom: `1px solid ${bdr}` }}>
                                                     {['Fault Code', 'Severity', 'Status', 'Duration', 'Cumul.', 'Freq', 'Triggered', 'Context / Insight'].map(h => (
-                                                      <th key={h} style={{ padding: h === 'Fault Code' ? '6px 12px 6px 58px' : '6px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.65rem', whiteSpace: 'nowrap' }} title={h === 'Cumul.' ? 'Total resolved time for this fault type today' : undefined}>{h}</th>
+                                                      <th key={h} style={{ padding: h === 'Fault Code' ? '6px 12px 6px 58px' : '6px 12px', textAlign: 'left', color: sub, fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }} title={h === 'Cumul.' ? 'Total resolved time for this fault type today' : undefined}>{h}</th>
                                                     ))}
                                                   </tr>
                                                 </thead>
@@ -2289,28 +2289,28 @@ const Alerts: React.FC = () => {
                                                       ? { color: '#EF4444', bg: 'rgba(239,68,68,0.15)' }
                                                       : alert.severity === 'warning'
                                                         ? { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)' }
-                                                        : { color: '#10B981', bg: 'rgba(16,185,129,0.15)' };
+                                                        : { color: '#0F9F8F', bg: 'rgba(16,185,129,0.15)' };
                                                     const stc = alert.status === 'active'
                                                       ? { color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
-                                                      : { color: '#10B981', bg: 'rgba(16,185,129,0.12)' };
+                                                      : { color: '#0F9F8F', bg: 'rgba(16,185,129,0.12)' };
                                                     return (
                                                       <tr key={alert.id} style={{ borderBottom: `1px solid ${bdr}` }}>
-                                                        <td style={{ padding: '7px 12px 7px 58px', fontFamily: 'monospace', fontSize: '0.72rem', color: txt, whiteSpace: 'nowrap' }}>{alert.fault_code || '—'}</td>
+                                                        <td style={{ padding: '7px 12px 7px 58px', fontFamily: 'monospace', fontSize: '0.75rem', color: txt, whiteSpace: 'nowrap' }}>{alert.fault_code || '—'}</td>
                                                         <td style={{ padding: '7px 12px' }}>
-                                                          <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.65rem' }}>{alert.severity}</span>
+                                                          <span style={{ background: sc.bg, color: sc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.75rem' }}>{alert.severity}</span>
                                                         </td>
                                                         <td style={{ padding: '7px 12px' }}>
-                                                          <span style={{ background: stc.bg, color: stc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.65rem' }}>{alert.status}</span>
+                                                          <span style={{ background: stc.bg, color: stc.color, padding: '2px 8px', borderRadius: 4, fontWeight: 700, fontSize: '0.75rem' }}>{alert.status}</span>
                                                         </td>
-                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                           {alert.duration_minutes != null ? `${alert.duration_minutes}m` : '—'}
                                                         </td>
-                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }} title="Total resolved time for this fault type today">
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }} title="Total resolved time for this fault type today">
                                                           {alert.cumulative_duration_minutes != null ? `${alert.cumulative_duration_minutes}m` : '—'}
                                                         </td>
-                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.72rem', fontFamily: 'monospace' }}>{alert.frequency || 1}×</td>
-                                                        <td style={{ padding: '7px 12px', color: sub, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{formatTime(alert.triggered_at)}</td>
-                                                        <td style={{ padding: '7px 12px 7px 12px', color: sub, fontSize: '0.72rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        <td style={{ padding: '7px 12px', color: txt, fontSize: '0.75rem', fontFamily: 'monospace' }}>{alert.frequency || 1}×</td>
+                                                        <td style={{ padding: '7px 12px', color: sub, fontSize: '0.75rem', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{formatTime(alert.triggered_at)}</td>
+                                                        <td style={{ padding: '7px 12px 7px 12px', color: sub, fontSize: '0.75rem', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                           {alert.context_insight || alert.message || '—'}
                                                         </td>
                                                       </tr>

@@ -23,7 +23,7 @@ const mkT = (isDark: boolean) => ({
   borderStrong:   isDark ? 'rgba(255,255,255,0.13)' : 'rgba(18,21,26,0.16)',
   text:           'var(--foreground)',
   textM:          'var(--muted-foreground)',
-  accent:         '#2FBF71',
+  accent:         'var(--brand-green)',
   amber:          '#E9B949',
   overlay:        isDark ? 'rgba(8,12,20,0.82)' : 'rgba(0,0,0,0.50)',
   glass:          isDark ? 'rgba(13,19,32,0.97)' : 'rgba(255,255,255,0.98)',
@@ -65,7 +65,7 @@ const labelStyle = (isDark: boolean): React.CSSProperties => ({
   fontSize: '0.75rem', fontWeight: 600,
   color: 'var(--muted-foreground)',
   display: 'block', marginBottom: 5,
-  fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.01em',
+  fontFamily: 'Rubik, sans-serif', letterSpacing: '0.01em',
 });
 
 // ── Motion constants ───────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   mc4:          '#a3e635',
   wiring:       '#38bdf8',
   accessories:  '#c084fc',
-  installation: '#34d399',
+  installation: '#0F9F8F',
   iot:          '#f87171',
 };
 
@@ -183,7 +183,7 @@ const SUGGESTED_KEYS: Record<string, { key: string; type: KVType }[]> = {
   accessories: [], installation: [],
 };
 
-const TYPE_COLORS: Record<KVType, string> = { text: '#94bfdc', number: '#60a5fa', boolean: '#22c55e' };
+const TYPE_COLORS: Record<KVType, string> = { text: '#94bfdc', number: '#60a5fa', boolean: '#0F9F8F' };
 
 const KVEditor: React.FC<{
   value: string; onChange: (json: string) => void;
@@ -210,7 +210,7 @@ const KVEditor: React.FC<{
       {label && (
         <label style={{ ...labelStyle(isDark), marginBottom: 7 }}>
           {label}
-          {hint && <span style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.7rem', color: T.textM }}>{hint}</span>}
+          {hint && <span style={{ fontWeight: 400, marginLeft: 6, fontSize: '0.75rem', color: T.textM }}>{hint}</span>}
         </label>
       )}
 
@@ -218,7 +218,7 @@ const KVEditor: React.FC<{
         <div style={{ border: rowBorder, borderRadius: 9, overflow: 'hidden', marginBottom: 7 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 76px 30px', background: T.surfaceRaised, borderBottom: rowBorder }}>
             {['Field', 'Value', 'Type', ''].map((h, i) => (
-              <div key={i} style={{ padding: '5px 8px', fontSize: '0.65rem', fontWeight: 700, color: T.textM, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif' }}>{h}</div>
+              <div key={i} style={{ padding: '5px 8px', fontSize: '0.75rem', fontWeight: 700, color: T.textM, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif' }}>{h}</div>
             ))}
           </div>
           <AnimatePresence initial={false}>
@@ -232,14 +232,14 @@ const KVEditor: React.FC<{
                 style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 76px 30px', borderBottom: idx < rows.length - 1 ? rowBorder : undefined }}
               >
                 <div style={{ borderRight: rowBorder, background: `${catColor}08` }}>
-                  <input value={row.key} onChange={e => setRow(row.id, { key: e.target.value })} style={{ ...inputBase, fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem', color: catColor }} placeholder="field_name" />
+                  <input value={row.key} onChange={e => setRow(row.id, { key: e.target.value })} style={{ ...inputBase, fontFamily: 'Fira Code, monospace', fontSize: '0.75rem', color: catColor }} placeholder="field_name" />
                 </div>
                 <div style={{ borderRight: rowBorder }}>
                   {row.type === 'boolean' ? (
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 8px' }}>
                       {['true', 'false'].map(v => (
                         <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.82rem', color: T.text, cursor: 'pointer' }}>
-                          <input type="radio" name={`kv-${row.id}`} checked={row.value === v} onChange={() => setRow(row.id, { value: v })} style={{ accentColor: '#22c55e' }} />
+                          <input type="radio" name={`kv-${row.id}`} checked={row.value === v} onChange={() => setRow(row.id, { value: v })} style={{ accentColor: '#0F9F8F' }} />
                           {v === 'true' ? 'Yes' : 'No'}
                         </label>
                       ))}
@@ -275,10 +275,10 @@ const KVEditor: React.FC<{
 
       {suggestions.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
-          <span style={{ fontSize: '0.68rem', color: T.textM, alignSelf: 'center', fontWeight: 600 }}>Quick add:</span>
+          <span style={{ fontSize: '0.75rem', color: T.textM, alignSelf: 'center', fontWeight: 600 }}>Quick add:</span>
           {suggestions.map(s => (
             <button key={s.key} onClick={() => addRow(s.key, '', s.type)}
-              style={{ padding: '2px 9px', borderRadius: 99, border: `1px solid ${catColor}35`, background: `${catColor}0d`, cursor: 'pointer', fontSize: '0.68rem', color: catColor, fontFamily: 'JetBrains Mono, monospace', transition: 'all 130ms' }}>
+              style={{ padding: '2px 9px', borderRadius: 99, border: `1px solid ${catColor}35`, background: `${catColor}0d`, cursor: 'pointer', fontSize: '0.75rem', color: catColor, fontFamily: 'Fira Code, monospace', transition: 'all 130ms' }}>
               + {s.key}
             </button>
           ))}
@@ -373,7 +373,7 @@ const DeleteModal: React.FC<{ open: boolean; label: string; onConfirm: () => voi
                   <Trash2 size={18} color="#ef4444" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: T.text, fontFamily: 'Outfit, Outfit, sans-serif' }}>Delete Product?</h3>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: T.text, fontFamily: 'Rubik, Rubik, sans-serif' }}>Delete Product?</h3>
                   <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: T.textM }}>This cannot be undone</p>
                 </div>
               </div>
@@ -524,7 +524,7 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
     if (ok > 0) onImported();
   };
 
-  const cellS: React.CSSProperties = { padding: '6px 10px', fontSize: '0.73rem', color: T.text, borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 };
+  const cellS: React.CSSProperties = { padding: '6px 10px', fontSize: '0.75rem', color: T.text, borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 };
   const pct = progress ? (progress.done / progress.total) * 100 : 0;
 
   return ReactDOM.createPortal(
@@ -538,7 +538,7 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
             {/* Header */}
             <div style={{ background: `linear-gradient(135deg, rgba(233,185,73,0.12) 0%, transparent 55%), ${T.surfaceRaised}`, padding: '18px 22px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: T.text, fontFamily: 'Outfit, sans-serif' }}>Bulk Import Products</h3>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: T.text, fontFamily: 'Rubik, sans-serif' }}>Bulk Import Products</h3>
                 <div style={{ fontSize: '0.75rem', color: T.textM, marginTop: 3 }}>Upload CSV or Excel · up to thousands of rows at once</div>
               </div>
               <button onClick={onClose} style={{ background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer', color: T.textM, width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -550,8 +550,8 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
               {/* Template */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', borderRadius: 10, background: `rgba(233,185,73,0.08)`, border: `1px solid rgba(233,185,73,0.25)` }}>
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: T.text, fontFamily: 'Outfit, sans-serif' }}>Download Template</div>
-                  <div style={{ fontSize: '0.72rem', color: T.textM, marginTop: 2 }}>CSV with all 16 columns + 2 example rows</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: T.text, fontFamily: 'Rubik, sans-serif' }}>Download Template</div>
+                  <div style={{ fontSize: '0.75rem', color: T.textM, marginTop: 2 }}>CSV with all 16 columns + 2 example rows</div>
                 </div>
                 <button onClick={downloadTemplate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: `1px solid rgba(233,185,73,0.4)`, background: 'transparent', color: '#E9B949', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
                   <Download size={13} /> Template
@@ -565,12 +565,12 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
                   onDragOver={e => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.csv,.xlsx,.xls'; inp.onchange=e=>{ const f=(e.target as HTMLInputElement).files?.[0]; if(f) handleFile(f); }; inp.click(); }}
-                  style={{ border: `2px dashed ${dragOver ? '#2FBF71' : T.borderStrong}`, borderRadius: 12, padding: '44px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 180ms', background: dragOver ? 'rgba(47,191,113,0.05)' : 'transparent', boxShadow: dragOver ? '0 0 0 4px rgba(47,191,113,0.1)' : 'none' }}
+                  style={{ border: `2px dashed ${dragOver ? 'var(--brand-green)' : T.borderStrong}`, borderRadius: 12, padding: '44px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 180ms', background: dragOver ? 'rgba(15,159,143,0.05)' : 'transparent', boxShadow: dragOver ? '0 0 0 4px rgba(15,159,143,0.1)' : 'none' }}
                 >
                   <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}>
-                    <Upload size={34} color={dragOver ? '#2FBF71' : T.textM} style={{ marginBottom: 12 }} />
+                    <Upload size={34} color={dragOver ? 'var(--brand-green)' : T.textM} style={{ marginBottom: 12 }} />
                   </motion.div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: T.text, fontFamily: 'Outfit, sans-serif' }}>Drop file here to import</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: T.text, fontFamily: 'Rubik, sans-serif' }}>Drop file here to import</div>
                   <div style={{ fontSize: '0.75rem', color: T.textM, marginTop: 6 }}>or click to browse · CSV, XLSX, XLS</div>
                 </div>
               )}
@@ -585,14 +585,14 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
                       Preview — {rows.length} row{rows.length !== 1 ? 's' : ''}
                       {errorRows.length > 0 && <span style={{ marginLeft: 8, color: '#ef4444', fontWeight: 600 }}>· {errorRows.length} with errors (skipped)</span>}
                     </div>
-                    <button onClick={reset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.73rem', color: T.textM, textDecoration: 'underline' }}>Different file</button>
+                    <button onClick={reset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: T.textM, textDecoration: 'underline' }}>Different file</button>
                   </div>
                   <div style={{ border: `1px solid ${T.border}`, borderRadius: 9, overflow: 'auto', maxHeight: 260 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: T.surfaceRaised }}>
                           {['#','category','brand','model','price','unit','stock','dealer','status'].map(h => (
-                            <th key={h} style={{ ...cellS, fontWeight: 700, color: T.textM, fontSize: '0.68rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>
+                            <th key={h} style={{ ...cellS, fontWeight: 700, color: T.textM, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -602,17 +602,17 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
                           return (
                             <tr key={row._row} style={{ background: hasErr ? (isDark ? 'rgba(239,68,68,0.07)' : '#fff5f5') : ri%2===1 ? T.surfaceRaised : 'transparent' }}>
                               <td style={{ ...cellS, color: T.textM }}>{row._row}</td>
-                              <td style={cellS}><span style={{ padding: '1px 7px', borderRadius: 99, fontSize: '0.65rem', fontWeight: 700, background: `${CATEGORY_COLORS[row.category]||'#888'}20`, color: CATEGORY_COLORS[row.category]||T.textM }}>{row.category}</span></td>
+                              <td style={cellS}><span style={{ padding: '1px 7px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, background: `${CATEGORY_COLORS[row.category]||'#888'}20`, color: CATEGORY_COLORS[row.category]||T.textM }}>{row.category}</span></td>
                               <td style={{ ...cellS, fontWeight: 600 }}>{row.brand}</td>
                               <td style={cellS}>{row.model_name}</td>
-                              <td style={{ ...cellS, fontFamily: 'JetBrains Mono, monospace', color: '#E9B949' }}>{row.price_per_unit}</td>
+                              <td style={{ ...cellS, fontFamily: 'Fira Code, monospace', color: '#E9B949' }}>{row.price_per_unit}</td>
                               <td style={cellS}>{row.price_unit}</td>
-                              <td style={{ ...cellS, color: row.in_stock?.toLowerCase() !== 'false' ? '#22c55e' : '#ef4444' }}>{row.in_stock}</td>
+                              <td style={{ ...cellS, color: row.in_stock?.toLowerCase() !== 'false' ? '#0F9F8F' : '#ef4444' }}>{row.in_stock}</td>
                               <td style={cellS}>{row.dealer_name}</td>
                               <td style={{ ...cellS, maxWidth: 200 }}>
                                 {hasErr
-                                  ? <span style={{ color: '#ef4444', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 3 }}><AlertCircle size={11} />{row._errors.join('; ')}</span>
-                                  : <span style={{ color: '#2FBF71', fontSize: '0.7rem', fontWeight: 700 }}>✓ OK</span>}
+                                  ? <span style={{ color: '#ef4444', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 3 }}><AlertCircle size={11} />{row._errors.join('; ')}</span>
+                                  : <span style={{ color: 'var(--brand-green)', fontSize: '0.75rem', fontWeight: 700 }}>✓ OK</span>}
                               </td>
                             </tr>
                           );
@@ -624,11 +624,11 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
                   {importing && progress && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: T.textM }}>
-                        <span>Importing…</span><span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{progress.done} / {progress.total}</span>
+                        <span>Importing…</span><span style={{ fontFamily: 'Fira Code, monospace' }}>{progress.done} / {progress.total}</span>
                       </div>
                       <div style={{ height: 7, borderRadius: 4, background: T.border, overflow: 'hidden' }}>
                         <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.2 }}
-                          style={{ height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #2FBF71 0%, #4DD68A 100%)', boxShadow: '0 0 8px rgba(47,191,113,0.5)' }} />
+                          style={{ height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #0F9F8F 0%, #26D9BC 100%)', boxShadow: '0 0 8px rgba(15,159,143,0.5)' }} />
                       </div>
                     </div>
                   )}
@@ -638,14 +638,14 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
               {/* Results */}
               {results && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 10, background: results.ok > 0 ? 'rgba(47,191,113,0.1)' : T.surfaceRaised, border: `1px solid ${results.ok > 0 ? 'rgba(47,191,113,0.3)' : T.border}` }}>
-                    <CheckCircle2 size={20} color="#2FBF71" />
-                    <div style={{ fontSize: '0.9rem', color: T.text }}><strong style={{ fontFamily: 'JetBrains Mono, monospace' }}>{results.ok}</strong> product{results.ok !== 1 ? 's' : ''} imported successfully</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 10, background: results.ok > 0 ? 'rgba(15,159,143,0.1)' : T.surfaceRaised, border: `1px solid ${results.ok > 0 ? 'rgba(15,159,143,0.3)' : T.border}` }}>
+                    <CheckCircle2 size={20} color="var(--brand-green)" />
+                    <div style={{ fontSize: '0.9rem', color: T.text }}><strong style={{ fontFamily: 'Fira Code, monospace' }}>{results.ok}</strong> product{results.ok !== 1 ? 's' : ''} imported successfully</div>
                   </div>
                   {results.failed.length > 0 && (
                     <div style={{ padding: '12px 16px', borderRadius: 9, background: isDark ? 'rgba(239,68,68,0.07)' : '#fff5f5', border: '1px solid rgba(239,68,68,0.25)' }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>{results.failed.length} failed:</div>
-                      {results.failed.map(f => <div key={f.row} style={{ fontSize: '0.73rem', color: '#ef4444' }}>Row {f.row}: {f.err}</div>)}
+                      {results.failed.map(f => <div key={f.row} style={{ fontSize: '0.75rem', color: '#ef4444' }}>Row {f.row}: {f.err}</div>)}
                     </div>
                   )}
                 </div>
@@ -656,7 +656,7 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
               <button onClick={onClose} className="btn btn-secondary">{results ? 'Close' : 'Cancel'}</button>
               {rows.length > 0 && !results && (
                 <button onClick={handleImport} disabled={importing || validRows.length === 0}
-                  style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #2FBF71 0%, #1a9e5a 100%)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: '0 4px 14px rgba(47,191,113,0.35)', opacity: (importing || validRows.length === 0) ? 0.5 : 1 }}>
+                  style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #0F9F8F 0%, #1A9E96 100%)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: '0 4px 14px rgba(15,159,143,0.35)', opacity: (importing || validRows.length === 0) ? 0.5 : 1 }}>
                   {importing ? 'Importing…' : `Import ${validRows.length} product${validRows.length !== 1 ? 's' : ''}`}
                 </button>
               )}
@@ -712,7 +712,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
   const secLabel = (label: string, icon: React.ReactNode) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '6px 0 2px' }}>
       <div style={{ width: 3, height: 14, borderRadius: 2, background: catColor, flexShrink: 0 }} />
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', fontWeight: 700, color: T.textM, letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif' }}>{icon}{label}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 700, color: T.textM, letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif' }}>{icon}{label}</span>
       <div style={{ flex: 1, height: 1, background: T.border }} />
     </div>
   );
@@ -733,9 +733,9 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: catColor, boxShadow: `0 0 6px ${catColor}80` }} />
-                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: catColor, letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif' }}>{catLabel}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: catColor, letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif' }}>{catLabel}</span>
                   </div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: T.text, fontFamily: 'Outfit, Outfit, sans-serif', lineHeight: 1.2 }}>{productTitle}</h3>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: T.text, fontFamily: 'Rubik, Rubik, sans-serif', lineHeight: 1.2 }}>{productTitle}</h3>
                 </div>
                 <button onClick={onClose} style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer', color: T.textM, width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={16} />
@@ -855,7 +855,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                 <div><label style={labelStyle(isDark)}>Dealer Location</label><input value={form.dealer_location ?? ''} onChange={e => f('dealer_location', e.target.value)} style={inputStyle(isDark)} placeholder="Coimbatore" /></div>
                 <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle(isDark)}>Stock Notes</label><input value={form.stock_notes ?? ''} onChange={e => f('stock_notes', e.target.value)} style={inputStyle(isDark)} placeholder="e.g., Pallet of 36" /></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={form.in_stock ?? true} onChange={e => f('in_stock', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#22c55e', cursor: 'pointer' }} />
+                  <input type="checkbox" checked={form.in_stock ?? true} onChange={e => f('in_stock', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#0F9F8F', cursor: 'pointer' }} />
                   <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>In Stock</label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -867,7 +867,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
               {secLabel('Display Order', <ListOrdered size={11} />)}
               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 11, alignItems: 'start' }}>
                 <div><label style={labelStyle(isDark)}>Sort Order</label><input type="number" value={form.sort_order ?? 0} onChange={e => f('sort_order', Number(e.target.value))} style={inputStyle(isDark)} placeholder="0" /></div>
-                <p style={{ margin: '22px 0 0', fontSize: '0.73rem', color: T.textM, lineHeight: 1.55 }}>Lower numbers appear first. Equal sort orders fall back to alphabetical by brand.</p>
+                <p style={{ margin: '22px 0 0', fontSize: '0.75rem', color: T.textM, lineHeight: 1.55 }}>Lower numbers appear first. Equal sort orders fall back to alphabetical by brand.</p>
               </div>
 
               {err && (
@@ -881,7 +881,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
             <div style={{ padding: '14px 22px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end', background: T.surfaceRaised }}>
               <button onClick={onClose} className="btn btn-secondary">Cancel</button>
               <button onClick={handleSave} disabled={saving}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: saving ? T.border : 'linear-gradient(135deg, #2FBF71 0%, #1a9e5a 100%)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: saving ? 'none' : '0 4px 14px rgba(47,191,113,0.35)', transition: 'all 150ms' }}>
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: saving ? T.border : 'linear-gradient(135deg, #0F9F8F 0%, #1A9E96 100%)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: saving ? 'none' : '0 4px 14px rgba(15,159,143,0.35)', transition: 'all 150ms' }}>
                 {saving ? 'Saving…' : item ? 'Save Changes' : 'Add Product'}
               </button>
             </div>
@@ -968,7 +968,7 @@ const ProductCatalog: React.FC = () => {
     ? 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)'
     : 'radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px)';
 
-  const thStyle: React.CSSProperties = { padding: '10px 14px', fontSize: '0.68rem', fontWeight: 700, color: T.textM, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif', borderBottom: `1px solid ${T.border}`, background: T.surfaceRaised, whiteSpace: 'nowrap' };
+  const thStyle: React.CSSProperties = { padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: T.textM, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif', borderBottom: `1px solid ${T.border}`, background: T.surfaceRaised, whiteSpace: 'nowrap' };
   const tdStyle: React.CSSProperties = { padding: '11px 14px', verticalAlign: 'middle', borderBottom: `1px solid ${T.border}` };
 
   return (
@@ -982,7 +982,7 @@ const ProductCatalog: React.FC = () => {
             <button onClick={() => setImportOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: `1px solid ${T.borderStrong}`, background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: T.textM, transition: 'all 140ms' }}>
               <Upload size={14} /> Import
             </button>
-            <button onClick={() => setModal({ open: true, item: null })} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #2FBF71 0%, #1a9e5a 100%)', color: '#fff', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 14px rgba(47,191,113,0.35)', transition: 'all 140ms' }}>
+            <button onClick={() => setModal({ open: true, item: null })} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #0F9F8F 0%, #1A9E96 100%)', color: '#fff', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 14px rgba(15,159,143,0.35)', transition: 'all 140ms' }}>
               <Plus size={14} /> Add Product
             </button>
           </div>
@@ -999,14 +999,14 @@ const ProductCatalog: React.FC = () => {
             <button key={ct.id} onClick={() => setCategory(ct.id)} style={{
               flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
               padding: '6px 14px', borderRadius: 99, border: `1px solid ${active ? color + '55' : T.border}`,
-              cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, transition: 'all 160ms', fontFamily: 'DM Sans, sans-serif',
+              cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, transition: 'all 160ms', fontFamily: 'Rubik, sans-serif',
               background: active ? `${color}18` : T.surfaceRaised,
               color: active ? color : T.textM,
               boxShadow: active ? `0 0 0 1px ${color}30, 0 0 14px ${color}20` : 'none',
             }}>
               <span style={{ fontSize: '0.82rem' }}>{ct.emoji}</span>
               {ct.label}
-              {cnt > 0 && <span style={{ fontSize: '0.65rem', fontFamily: 'JetBrains Mono, monospace', opacity: 0.75 }}>{cnt}</span>}
+              {cnt > 0 && <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, monospace', opacity: 0.75 }}>{cnt}</span>}
             </button>
           );
         })}
@@ -1026,7 +1026,7 @@ const ProductCatalog: React.FC = () => {
         />
         {hasActiveFilters && (
           <button onClick={() => { setSearch(''); setStockFilter('all'); setActiveFilter('all'); }}
-            style={{ padding: '4px 10px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: '0.73rem', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
+            style={{ padding: '4px 10px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
             ✕ Clear
           </button>
         )}
@@ -1080,12 +1080,12 @@ const ProductCatalog: React.FC = () => {
 
                       {/* Brand / Model — colored left border via borderLeft on first td */}
                       <td style={{ ...tdStyle, borderLeft: `3px solid ${cc}` }}>
-                        <div style={{ fontWeight: 700, color: T.text, fontFamily: 'Outfit, sans-serif', fontSize: '0.88rem' }}>{it.brand}</div>
+                        <div style={{ fontWeight: 700, color: T.text, fontFamily: 'Rubik, sans-serif', fontSize: '0.88rem' }}>{it.brand}</div>
                         <div style={{ fontSize: '0.75rem', color: T.textM, marginTop: 1 }}>{it.model_name}</div>
                       </td>
 
                       <td style={tdStyle}>
-                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 99, fontSize: '0.68rem', fontWeight: 700, background: `${cc}1a`, color: cc, border: `1px solid ${cc}30` }}>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, background: `${cc}1a`, color: cc, border: `1px solid ${cc}30` }}>
                           {it.category}
                         </span>
                       </td>
@@ -1093,15 +1093,15 @@ const ProductCatalog: React.FC = () => {
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                           {chips.length > 0 ? chips.map((chip, i) => (
-                            <span key={i} style={{ padding: '1px 7px', borderRadius: 4, fontSize: '0.68rem', fontFamily: 'JetBrains Mono, monospace', background: T.surfaceRaised, color: T.textM, border: `1px solid ${T.border}` }}>{chip}</span>
+                            <span key={i} style={{ padding: '1px 7px', borderRadius: 4, fontSize: '0.75rem', fontFamily: 'Fira Code, monospace', background: T.surfaceRaised, color: T.textM, border: `1px solid ${T.border}` }}>{chip}</span>
                           )) : <span style={{ color: T.textM, fontSize: '0.75rem' }}>—</span>}
                         </div>
                       </td>
 
                       <td style={tdStyle}>
                         {it.price_per_unit ? (
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: T.amber, fontSize: '0.88rem' }}>
-                            ₹{Number(it.price_per_unit).toLocaleString('en-IN')}<span style={{ fontSize: '0.72rem', fontWeight: 400, color: T.textM }}>/{it.price_unit}</span>
+                          <span style={{ fontFamily: 'Fira Code, monospace', fontWeight: 700, color: T.amber, fontSize: '0.88rem' }}>
+                            ₹{Number(it.price_per_unit).toLocaleString('en-IN')}<span style={{ fontSize: '0.75rem', fontWeight: 400, color: T.textM }}>/{it.price_unit}</span>
                           </span>
                         ) : <span style={{ color: T.textM }}>—</span>}
                       </td>
@@ -1110,17 +1110,17 @@ const ProductCatalog: React.FC = () => {
                         {it.dealer_name ? (
                           <>
                             <div style={{ fontSize: '0.8rem', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.dealer_name}</div>
-                            {it.dealer_location && <div style={{ fontSize: '0.7rem', color: T.textM }}>{it.dealer_location}</div>}
+                            {it.dealer_location && <div style={{ fontSize: '0.75rem', color: T.textM }}>{it.dealer_location}</div>}
                           </>
                         ) : <span style={{ color: T.textM }}>—</span>}
                       </td>
 
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ fontSize: '0.73rem', fontWeight: 700, color: it.in_stock ? '#22c55e' : '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: it.in_stock ? '#0F9F8F' : '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ fontSize: 8 }}>●</span>{it.in_stock ? 'In Stock' : 'Out'}
                           </span>
-                          <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: it.is_active ? 'rgba(34,197,94,0.10)' : 'rgba(148,163,184,0.12)', color: it.is_active ? '#22c55e' : T.textM, fontWeight: 600, width: 'fit-content' }}>
+                          <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: 4, background: it.is_active ? 'rgba(15,159,143,0.10)' : 'rgba(148,163,184,0.12)', color: it.is_active ? '#0F9F8F' : T.textM, fontWeight: 600, width: 'fit-content' }}>
                             {it.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </div>
@@ -1149,7 +1149,7 @@ const ProductCatalog: React.FC = () => {
         {/* Pagination */}
         {!loading && totalPages > 1 && (
           <div style={{ padding: '12px 18px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', background: T.surfaceRaised }}>
-            <span style={{ fontSize: '0.75rem', color: T.textM, fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ fontSize: '0.75rem', color: T.textM, fontFamily: 'Fira Code, monospace' }}>
               {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
             </span>
             <div style={{ display: 'flex', gap: 4 }}>

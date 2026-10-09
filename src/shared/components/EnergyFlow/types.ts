@@ -33,7 +33,7 @@ export interface SmartDeviceNode {
    * has a live connection to Tuya's servers over the internet. Informational
    * only here: it can stay true while a `local`-mode device is genuinely
    * unreachable on the site LAN, and its own offline detection has real
-   * lag — see EnergyFlow/index.tsx's isDeviceOffline for the actual
+   * lag — see EnergyFlow/plugHelpers.tsx's isDeviceOffline for the actual
    * "is this device delivering data" check, which uses reading recency
    * instead (the same ground truth the backend's own health check trusts).
    */
@@ -44,7 +44,7 @@ export interface SmartDeviceNode {
    * any single successful poll, so a plug with intermittent partial
    * connectivity can sit at 0-1 indefinitely while genuinely not reporting
    * for hours (confirmed on coim_002's AC(NEW), Sep 5 2026). Don't use this
-   * to decide "is this device offline" — see isDeviceOffline in index.tsx.
+   * to decide "is this device offline" — see isDeviceOffline in plugHelpers.tsx.
    */
   poller_consecutive_failures?: number;
   latest: SmartDeviceReading | null;
@@ -77,4 +77,8 @@ export interface EnergyFlowBlockProps {
   siteId?: string;
   inverterPhases?: InverterPhases;
   ctReading?: any | null;
+  /** Today's totals for the left rail; missing values render as "—". */
+  today?: { solarKwh?: number | null; usedKwh?: number | null; ownPct?: number | null; solarCurve?: number[]; solarCurveLabels?: string[]; usedPartial?: string | null };
+  /** Opens the site panel's Smart plugs tab; without it the load cards show the plug count as plain text. */
+  onOpenPlugs?: () => void;
 }

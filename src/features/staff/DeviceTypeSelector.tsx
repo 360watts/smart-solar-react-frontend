@@ -36,7 +36,7 @@ export const DeviceTypeSelector: React.FC<DeviceTypeSelectorProps> = ({
   const COLORS = {
     accentOrange: '#F97316',
     primarySlate: 'var(--border-strong)',
-    successGreen: '#10B981',
+    successGreen: '#0F9F8F',
     errorRed: '#EF4444',
     dark: {
       bg: '#0F172A',
@@ -278,7 +278,7 @@ export const DeviceTypeSelector: React.FC<DeviceTypeSelectorProps> = ({
                   textAlign: 'left',
                   lineHeight: 1.4,
                   fontWeight: 400,
-                  fontFamily: '"Fira Sans", sans-serif',
+                  fontFamily: '"Rubik", sans-serif',
                   opacity: isHovered && !disabled ? 1 : 0.8,
                   transition: 'opacity 200ms',
                 }}

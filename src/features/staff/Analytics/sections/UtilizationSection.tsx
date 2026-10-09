@@ -4,7 +4,7 @@ import { computeUtilizationByHour } from '../compute';
 import { SectionCard, StatRow, StatTile, useBarChartOptions, useChartZoomState, ZoomResetButton } from './shared';
 import type { TelemetryRow } from '../types';
 
-const ACCENT = '#34d399';
+const ACCENT = '#0F9F8F';
 
 interface Props { telemetry: TelemetryRow[]; capacityKw: number | null | undefined }
 

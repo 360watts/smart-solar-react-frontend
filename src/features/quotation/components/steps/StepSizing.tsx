@@ -52,7 +52,7 @@ export function StepSizing({ form, autofillBomQuantities }: Props) {
   const METRICS = [
     { key: 'avgBimonthlyKwh', label: 'Avg Bi-monthly', sub: `${calc.avgDailyKwh.toFixed(1)} kWh/day`, unit: 'kWh', val: Math.round(calc.avgBimonthlyKwh), Icon: Activity,  color: 'var(--blue, #3b82f6)'  },
     { key: 'tangedcoBill',   label: 'TANGEDCO Bill',  sub: 'bi-monthly avg',                          unit: '',    val: formatINR(calc.tangedcoBill),      Icon: TrendingUp, color: 'var(--amber, #f59e0b)' },
-    { key: 'annualSaving',   label: 'Annual Saving',  sub: 'rough estimate — refined in Step 4',      unit: '',    val: formatINR(calc.annualSaving),       Icon: Zap,        color: 'var(--green, #00a63e)' },
+    { key: 'annualSaving',   label: 'Annual Saving',  sub: 'rough estimate — refined in Step 4',      unit: '',    val: formatINR(calc.annualSaving),       Icon: Zap,        color: 'var(--green, #0F9F8F)' },
   ] as const;
 
   // Debounced live autofill — fires 600ms after any sizing-relevant field settles,
@@ -197,7 +197,7 @@ export function StepSizing({ form, autofillBomQuantities }: Props) {
           <svg viewBox="0 0 100 100">
             <circle cx={50} cy={50} r={DIAL_R} fill="none" stroke="var(--line-2, rgba(0,0,0,0.14))" strokeWidth={9} />
             <circle
-              cx={50} cy={50} r={DIAL_R} fill="none" stroke="var(--green, #00a63e)" strokeWidth={9}
+              cx={50} cy={50} r={DIAL_R} fill="none" stroke="var(--green, #0F9F8F)" strokeWidth={9}
               strokeLinecap="round" strokeDasharray={DIAL_C} strokeDashoffset={DIAL_C * (1 - dialFrac)}
               transform="rotate(-90 50 50)"
             />
@@ -249,7 +249,7 @@ export function StepSizing({ form, autofillBomQuantities }: Props) {
             <div className="sq-metric-value">
               {m.val}
               {m.unit && (
-                <span style={{ fontSize: '0.62rem', fontWeight: 400, marginLeft: 4, color: 'var(--sq-muted)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 400, marginLeft: 4, color: 'var(--sq-muted)' }}>
                   {m.unit}
                 </span>
               )}

@@ -59,11 +59,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description
             background: `linear-gradient(90deg, ${tokens.primary}, ${tokens.primaryHover})`,
             color: tokens.textInverse, fontSize: '0.9375rem', fontWeight: 700,
             cursor: 'pointer', letterSpacing: '0.01em',
-            boxShadow: '0 4px 14px rgba(47,191,113,0.35)',
+            boxShadow: '0 4px 14px rgba(15,159,143,0.35)',
             transition: 'opacity 0.15s, box-shadow 0.15s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(47,191,113,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(47,191,113,0.35)'; }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(15,159,143,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,159,143,0.35)'; }}
         >
           <Plus size={16} strokeWidth={2.5} />
           {action.label}

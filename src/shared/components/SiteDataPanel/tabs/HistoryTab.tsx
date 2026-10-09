@@ -45,18 +45,18 @@ const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Load (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Grid (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f43f5e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Inv Out (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Batt SOC (%)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Batt SOC (%)</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row['Inv Out (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
+              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Inv Out (kW)']?.toFixed(2) ?? '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -79,17 +79,17 @@ const VsActualTable = ({ data }: { data: { label: string; p50: number | null; ac
           <tr>
             <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Time</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Actual PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#00a63e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>P50 Forecast (kW)</th>
+            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>P50 Forecast (kW)</th>
             <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Δ %</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#00a63e', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
+              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -198,15 +198,15 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               key={mode}
               onClick={() => setHistoryView(mode)}
               style={{
-                border: '1px solid rgba(0, 166, 62, 0.25)',
-                background: historyView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
-                color: historyView === mode ? '#00a63e' : 'var(--text-muted)',
+                border: '1px solid rgba(15,159,143, 0.25)',
+                background: historyView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent',
+                color: historyView === mode ? '#0F9F8F' : 'var(--text-muted)',
                 borderRadius: 8,
                 padding: '6px 12px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'Rubik, sans-serif',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
               }}
@@ -221,15 +221,15 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               key={series.key}
               onClick={() => setShowHistorySeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
               style={{
-                border: '1px solid rgba(0, 166, 62, 0.25)',
-                background: showHistorySeries[series.key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
-                color: showHistorySeries[series.key] ? '#00a63e' : 'var(--text-muted)',
+                border: '1px solid rgba(15,159,143, 0.25)',
+                background: showHistorySeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent',
+                color: showHistorySeries[series.key] ? '#0F9F8F' : 'var(--text-muted)',
                 borderRadius: 8,
                 padding: '6px 10px',
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'Rubik, sans-serif',
               }}
             >
               {series.label}
@@ -255,17 +255,17 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               gap: 6,
               padding: '5px 10px',
               borderRadius: 999,
-              fontSize: '0.68rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
-              fontFamily: 'Poppins, sans-serif',
-              color: historyResolutionLabel === '5 min' ? '#00a63e' : ('var(--muted-foreground)'),
+              fontFamily: 'Rubik, sans-serif',
+              color: historyResolutionLabel === '5 min' ? '#0F9F8F' : ('var(--muted-foreground)'),
               background: historyResolutionLabel === '5 min'
-                ? (isDark ? 'rgba(0,166,62,0.14)' : 'rgba(0,166,62,0.08)')
+                ? (isDark ? 'rgba(15,159,143,0.14)' : 'rgba(15,159,143,0.08)')
                 : (isDark ? 'rgba(148,163,184,0.12)' : 'rgba(71,85,105,0.08)'),
               border: `1px solid ${historyResolutionLabel === '5 min'
-                ? 'rgba(0,166,62,0.24)'
+                ? 'rgba(15,159,143,0.24)'
                 : (isDark ? 'rgba(148,163,184,0.18)' : 'rgba(71,85,105,0.14)')}`,
             }}
             aria-label={`History chart aggregation: ${historyResolutionLabel}`}
@@ -275,7 +275,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
         }
       >
         {historyData.length === 0 ? (
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif', fontSize: '0.875rem' }}>No history points for selected range.</p>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>No history points for selected range.</p>
         ) : historyView === 'chart' ? (
           <div style={{ width: '100%', height: 360 }}>
             <CJLine
@@ -314,7 +314,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
                   showHistorySeries.SOC && {
                     label: 'SOC', yAxisID: 'soc',
                     data: historyData.map(d => d['Batt SOC (%)']),
-                    borderColor: '#00a63e', borderWidth: 2, tension: 0.3, pointRadius: 0, fill: false,
+                    borderColor: '#0F9F8F', borderWidth: 2, tension: 0.3, pointRadius: 0, fill: false,
                   },
                 ].filter(Boolean) as any[],
               }}
@@ -342,14 +342,14 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
             <span
               key={`${chip}-${idx}`}
               style={{
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'Rubik, sans-serif',
                 color: 'var(--text-muted)',
-                border: '1px solid rgba(0, 166, 62, 0.2)',
+                border: '1px solid rgba(15,159,143, 0.2)',
                 borderRadius: 999,
                 padding: '5px 10px',
-                background: isDark ? 'rgba(0, 166, 62, 0.08)' : 'rgba(0, 166, 62, 0.05)',
+                background: isDark ? 'rgba(15,159,143, 0.08)' : 'rgba(15,159,143, 0.05)',
               }}
             >
               {chip}
@@ -360,7 +360,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
 
       {/* Forecast vs Actual section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
-        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Poppins, sans-serif', color: 'var(--text-primary)' }}>
+        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-primary)' }}>
           Forecast vs Actual — {vsActual7d ? 'Last 7 Days' : 'Today'}
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -374,7 +374,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
               color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'),
               cursor: 'pointer', fontWeight: 700,
-              fontFamily: 'Poppins, sans-serif', fontSize: '0.72rem',
+              fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
               transition: 'all 0.15s ease',
             }}
           >
@@ -386,15 +386,15 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               key={mode}
               onClick={() => setVsActualView(mode)}
               style={{
-                border: '1px solid rgba(0, 166, 62, 0.25)',
-                background: vsActualView === mode ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
-                color: vsActualView === mode ? '#00a63e' : 'var(--text-muted)',
+                border: '1px solid rgba(15,159,143, 0.25)',
+                background: vsActualView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent',
+                color: vsActualView === mode ? '#0F9F8F' : 'var(--text-muted)',
                 borderRadius: 8,
                 padding: '6px 12px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'Rubik, sans-serif',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
               }}
@@ -407,15 +407,15 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
               key={series.key}
               onClick={() => setShowVsActualSeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
               style={{
-                border: '1px solid rgba(0, 166, 62, 0.25)',
-                background: showVsActualSeries[series.key] ? 'rgba(0, 166, 62, 0.14)' : 'transparent',
-                color: showVsActualSeries[series.key] ? '#00a63e' : 'var(--text-muted)',
+                border: '1px solid rgba(15,159,143, 0.25)',
+                background: showVsActualSeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent',
+                color: showVsActualSeries[series.key] ? '#0F9F8F' : 'var(--text-muted)',
                 borderRadius: 8,
                 padding: '6px 10px',
-                fontSize: '0.72rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'Rubik, sans-serif',
               }}
             >
               {series.label}
@@ -431,7 +431,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
           borderRadius: 16,
           marginTop: 4,
           background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(0, 166, 62, 0.25)'}`,
+          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
         }}
       >
         {activeVsActualData.length === 0 ? (
@@ -451,7 +451,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
                   showVsActualSeries.P50 && {
                     label: 'P50',
                     data: activeVsActualData.map(d => d.p50),
-                    borderColor: '#00a63e', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
+                    borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
                   },
                   showVsActualSeries.Delta && {
                     label: 'Δ %', yAxisID: 'pct',

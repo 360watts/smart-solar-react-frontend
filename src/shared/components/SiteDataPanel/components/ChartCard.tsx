@@ -16,7 +16,7 @@ interface ChartCardProps {
 }
 
 const ChartCard: React.FC<ChartCardProps> = ({
-  title, subtitle, isDark, isLive, isLoading, height, accentColor = '#00a63e',
+  title, subtitle, isDark, isLive, isLoading, height, accentColor = '#0F9F8F',
   delay = 0, children, headerRight,
 }) => {
   const cardBg = isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.75)';
@@ -46,7 +46,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, position: 'relative' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Poppins, sans-serif', fontWeight: 700, fontSize: '0.92rem',
+            <h3 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '0.92rem',
               color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
               {title}
             </h3>
@@ -56,25 +56,25 @@ const ChartCard: React.FC<ChartCardProps> = ({
                 transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                 style={{ display: 'flex', alignItems: 'center', gap: 5,
                   padding: '2px 8px', borderRadius: 999,
-                  background: isDark ? 'rgba(0,166,62,0.12)' : 'rgba(0,166,62,0.08)',
-                  border: '1px solid rgba(0,166,62,0.3)' }}
+                  background: isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)',
+                  border: '1px solid rgba(15,159,143,0.3)' }}
               >
                 <motion.div
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  style={{ width: 6, height: 6, borderRadius: '50%', background: '#00a63e',
-                    boxShadow: '0 0 6px #00a63e' }}
+                  style={{ width: 6, height: 6, borderRadius: '50%', background: '#0F9F8F',
+                    boxShadow: '0 0 6px #0F9F8F' }}
                 />
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.08em', color: '#00a63e', fontFamily: 'Poppins, sans-serif' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.08em', color: '#0F9F8F', fontFamily: 'Rubik, sans-serif' }}>
                   Live
                 </span>
               </motion.div>
             )}
           </div>
           {subtitle && (
-            <p style={{ margin: '2px 0 0', fontSize: '0.72rem',
-              fontFamily: 'Poppins, sans-serif', fontWeight: 600,
+            <p style={{ margin: '2px 0 0', fontSize: '0.75rem',
+              fontFamily: 'Rubik, sans-serif', fontWeight: 600,
               color: 'var(--muted-foreground)' }}>
               {subtitle}
             </p>

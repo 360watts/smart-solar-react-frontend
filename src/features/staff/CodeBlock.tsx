@@ -5,7 +5,7 @@ import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pris
 export default function CodeBlock({ code, language, isDark }: { code: string; language: string; isDark: boolean }) {
   return (
     <SyntaxHighlighter style={isDark ? oneDark : oneLight} language={language} PreTag="div" wrapLongLines
-      customStyle={{ margin: 0, borderRadius: '0 0 6px 6px', fontSize: '0.74rem' }}>
+      customStyle={{ margin: 0, borderRadius: '0 0 6px 6px', fontSize: '0.75rem' }}>
       {code}
     </SyntaxHighlighter>
   );

@@ -218,6 +218,9 @@ export default function SiteOnboarding() {
 
   return (
     <div className="mx-auto flex max-w-[1100px] flex-col gap-5 px-4 pb-12 pt-2">
+      {siteId ? (
+        <Link to="/sites" className="w-fit text-sm text-muted-foreground no-underline hover:text-foreground">← Back to sites</Link>
+      ) : (
       <div className="flex flex-wrap items-center gap-3">
         <select aria-label="Site" className={`${control} max-w-sm flex-1 border-input`} value={siteId} onChange={e => pick(e.target.value)}>
           <option value="">Select a site…</option>
@@ -226,6 +229,7 @@ export default function SiteOnboarding() {
         <input aria-label="Search sites" placeholder="Search sites" className={`${control} max-w-56 border-input`} value={query} onChange={e => setQuery(e.target.value)} />
         <Link to="/sites/commissioning" className="text-sm text-muted-foreground underline">New site</Link>
       </div>
+      )}
 
       {!siteId && <p className="text-muted-foreground">Choose a site to begin.</p>}
 
@@ -248,7 +252,7 @@ export default function SiteOnboarding() {
             </div>
             {firstGap && (
               <button type="button" onClick={() => setOpen(firstGap.key)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-done px-5 text-[15px] font-semibold text-[#06210F]">
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-done px-5 text-[15px] font-semibold text-[#06211F]">
                 Next: {firstGap.title.toLowerCase()} <ArrowRight size={16} />
               </button>
             )}
@@ -263,7 +267,7 @@ export default function SiteOnboarding() {
                 return (
                   <button key={x.key} type="button" aria-current={on} onClick={() => setOpen(x.key)}
                     className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-colors ${on ? 'bg-card shadow-[0_0_0_1.5px_var(--foreground)]' : 'hover:bg-muted'}`}>
-                    <span className={`[display:grid] h-[30px] w-[30px] shrink-0 place-items-center rounded-full text-[13px] font-bold ${done ? 'bg-done text-[#06210F]' : 'bg-needed text-[#3D2400]'}`}>
+                    <span className={`[display:grid] h-[30px] w-[30px] shrink-0 place-items-center rounded-full text-[13px] font-bold ${done ? 'bg-done text-[#06211F]' : 'bg-needed text-[#3D2400]'}`}>
                       {done ? <Check size={15} strokeWidth={3} /> : '!'}
                     </span>
                     <span className="min-w-0 flex-1">

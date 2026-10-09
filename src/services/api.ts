@@ -1,6 +1,7 @@
 import { cacheService } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../app/constants';
 import type { MeterUsage } from '../shared/components/SiteDataPanel/types';
+import type { HomeToday } from '../shared/components/EnergyFlow/flowModel';
 
 // ─── CT Energy Meter ──────────────────────────────────────────────────────────
 
@@ -1196,7 +1197,7 @@ class ApiService {
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/weather/`), 15 * 60 * 1000);
   }
 
-  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null; meter_only?: boolean; has_meter?: boolean } | null> {
+  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null; meter_only?: boolean; has_meter?: boolean; home_today?: HomeToday | null } | null> {
     // 15-second TTL: backend fragment-caches at 15s for realtime, so this passthrough is safe
     const cacheKey = `staff_overview_${siteId}`;
     try {
@@ -1512,6 +1513,14 @@ class ApiService {
   }
 
   // Equipment
+  // Viewer-readable (site_gateway_status, viewer_ro): the site's own devices with online state.
+  async getSiteGatewayStatus(siteId: string): Promise<{ devices?: {
+    device_id: number; device_type: string; serial: string; is_online: boolean; last_heartbeat: string | null;
+    firmware_version?: string | null; connectivity_type?: string | null; signal_strength_dbm?: number | null;
+  }[] }> {
+    return this.request(`/sites/${encodeURIComponent(siteId)}/gateway-status/`);
+  }
+
   async getSiteEquipment(siteId: string): Promise<{ inverters: any[]; batteries: any[]; panels: any[] }> {
     return this.request(`/sites/${siteId}/equipment/`);
   }
@@ -1728,6 +1737,13 @@ class ApiService {
     });
   }
 
+  async setDeviceAutoReboot(deviceId: number, enabled: boolean): Promise<any> {
+    return this.request(`/devices/${deviceId}/auto-reboot/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    });
+  }
+
   async deleteDevicesBulk(deviceIds: number[], options?: {
     revoke_iot?: boolean;
     delete_config?: boolean;
@@ -1858,6 +1874,13 @@ class ApiService {
         device_serial: deviceSerial,
         notes: notes || ''
       }),
+    });
+  }
+
+  async triggerSingleUpdate(deviceSerial: string, firmwareId: number, notes?: string): Promise<any> {
+    return this.request(`/ota/updates/single/`, {
+      method: 'POST',
+      body: JSON.stringify({ device_serial: deviceSerial, firmware_id: firmwareId, notes: notes || '' }),
     });
   }
 

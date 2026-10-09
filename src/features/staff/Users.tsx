@@ -16,11 +16,11 @@ import { DEFAULT_PAGE_SIZE } from '../../app/constants';
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const AVATAR_COLORS_U = [
   'linear-gradient(135deg,#6366f1,#8b5cf6)',
-  'linear-gradient(135deg,#10b981,#059669)',
+  'linear-gradient(135deg,#0F9F8F,#138881)',
   'linear-gradient(135deg,#f59e0b,#d97706)',
   'linear-gradient(135deg,#3b82f6,#1d4ed8)',
   'linear-gradient(135deg,#ec4899,#be185d)',
-  'linear-gradient(135deg,#14b8a6,#0f766e)',
+  'linear-gradient(135deg,#14b8a6,#0F9F8F)',
 ];
 const userAvatarColor = (s: string) => {
   let h = 0;
@@ -72,7 +72,7 @@ const Users: React.FC = () => {
     text:    'var(--foreground)',
     textM:   'var(--muted-foreground)',
     textD:   'var(--text-dim)',
-    accent:  '#2FBF71',
+    accent:  'var(--brand-green)',
   };
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -333,7 +333,7 @@ const Users: React.FC = () => {
                 <strong>Account Status:</strong>
                 <p style={{ margin: '5px 0' }}>
                   {selectedUser.is_active ? (
-                    <span style={{ color: '#22c55e', fontWeight: 600 }}>Active</span>
+                    <span style={{ color: '#0F9F8F', fontWeight: 600 }}>Active</span>
                   ) : (
                     <>
                       <span style={{ color: '#d97706', fontWeight: 600 }}>Inactive</span>
@@ -341,7 +341,7 @@ const Users: React.FC = () => {
                         onClick={() => handleActivate(selectedUser)}
                         style={{
                           marginLeft: 12, padding: '4px 12px', borderRadius: 6,
-                          border: 'none', background: '#22c55e', color: '#fff',
+                          border: 'none', background: '#0F9F8F', color: '#fff',
                           fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
                         }}
                       >
@@ -354,7 +354,7 @@ const Users: React.FC = () => {
               {selectedUser.customer_id && (
                 <div>
                   <strong>Customer ID:</strong>
-                  <p style={{ margin: '5px 0', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem' }}>
+                  <p style={{ margin: '5px 0', fontFamily: 'Fira Code, monospace', fontSize: '0.9rem' }}>
                     {selectedUser.customer_id}
                   </p>
                 </div>
@@ -398,8 +398,8 @@ const Users: React.FC = () => {
                     onClick={() => navigate(`/devices?deviceId=${device.id}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
-                    <td style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem' }}>{device.hw_id || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
+                    <td style={{ textAlign: 'center', fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{device.hw_id || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
                     <td style={{ textAlign: 'center' }}>{device.model || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
                     <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
                     <td style={{ textAlign: 'center' }}>
@@ -713,7 +713,7 @@ const Users: React.FC = () => {
                             display: 'inline-block', marginLeft: 8,
                             padding: '2px 8px', borderRadius: 999,
                             background: 'rgba(245,158,11,0.12)',
-                            color: '#d97706', fontSize: '0.7rem', fontWeight: 700,
+                            color: '#d97706', fontSize: '0.75rem', fontWeight: 700,
                             letterSpacing: '0.04em', textTransform: 'uppercase',
                             verticalAlign: 'middle',
                           }}>Inactive</span>
@@ -740,7 +740,7 @@ const Users: React.FC = () => {
                   {!user.is_active && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleActivate(user); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', margin: '0 6px' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0F9F8F', margin: '0 6px' }}
                       title="Activate account"
                     >
                       <CheckCircle2 size={16} strokeWidth={2} />
@@ -883,7 +883,7 @@ const Users: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                  background: editingUser ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #10b981, #059669)',
+                  background: editingUser ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #0F9F8F, #138881)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: editingUser ? '0 4px 14px rgba(99,102,241,0.4)' : '0 4px 14px rgba(16,185,129,0.4)',
                 }}>
@@ -1248,7 +1248,7 @@ const Users: React.FC = () => {
                   width: 48,
                   height: 48,
                   borderRadius: 12,
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                   boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1293,7 +1293,7 @@ const Users: React.FC = () => {
                   padding: '10px 18px',
                   borderRadius: 8,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
                   color: 'white',
                   fontSize: '0.875rem',
                   fontWeight: 600,

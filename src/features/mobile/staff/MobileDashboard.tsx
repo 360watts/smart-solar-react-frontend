@@ -266,20 +266,20 @@ const MobileDashboard: React.FC = () => {
 
 
   const sectionLabel: React.CSSProperties = {
-    fontSize: '0.6rem',
+    fontSize: '0.75rem',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     color: muted,
     opacity: 0.9,
     marginBottom: 8,
-    fontFamily: "'DM Sans', sans-serif",
+    fontFamily: "'Rubik', sans-serif",
   };
 
   if (sitesLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: bg, gap: 10, color: muted }}>
       <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
-      <span style={{ fontSize: '0.875rem', fontFamily: "'DM Sans', sans-serif" }}>Loading…</span>
+      <span style={{ fontSize: '0.875rem', fontFamily: "'Rubik', sans-serif" }}>Loading…</span>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -290,9 +290,9 @@ const MobileDashboard: React.FC = () => {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes pulse-ring {
-          0% { box-shadow: 0 0 0 0 rgba(47,191,113,0.4); }
-          70% { box-shadow: 0 0 0 6px rgba(47,191,113,0); }
-          100% { box-shadow: 0 0 0 0 rgba(47,191,113,0); }
+          0% { box-shadow: 0 0 0 0 rgba(15,159,143,0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(15,159,143,0); }
+          100% { box-shadow: 0 0 0 0 rgba(15,159,143,0); }
         }
         .online-dot { animation: pulse-ring 2s ease-out infinite; }
       `}</style>
@@ -312,13 +312,13 @@ const MobileDashboard: React.FC = () => {
             <div style={{
               width: 36, height: 36, borderRadius: 10, overflow: 'hidden',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)',
-              border: `1px solid rgba(47,191,113,0.18)`,
-              boxShadow: '0 2px 10px rgba(47,191,113,0.2)',
+              background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)',
+              border: `1px solid rgba(15,159,143,0.18)`,
+              boxShadow: '0 2px 10px rgba(15,159,143,0.2)',
             }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 44, height: 44, objectFit: 'contain' }} />
             </div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: text, lineHeight: 1.2, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.01em' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: text, lineHeight: 1.2, fontFamily: "'Rubik', sans-serif", letterSpacing: '-0.01em' }}>
               360Watts
             </div>
           </div>
@@ -327,9 +327,9 @@ const MobileDashboard: React.FC = () => {
             aria-label="Open navigation menu"
             onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))}
             style={{
-              background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)',
-              border: `1px solid rgba(47,191,113,0.22)`,
-              borderRadius: 10, cursor: 'pointer', color: '#2FBF71', padding: 0, display: 'flex',
+              background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)',
+              border: `1px solid rgba(15,159,143,0.22)`,
+              borderRadius: 10, cursor: 'pointer', color: 'var(--brand-green)', padding: 0, display: 'flex',
               width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -348,11 +348,11 @@ const MobileDashboard: React.FC = () => {
             background: isDark ? 'rgba(10,13,20,0.98)' : 'rgba(252,253,255,0.98)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            border: `1.5px solid ${isDark ? 'rgba(47,191,113,0.2)' : 'rgba(47,191,113,0.25)'}`,
+            border: `1.5px solid ${isDark ? 'rgba(15,159,143,0.2)' : 'rgba(15,159,143,0.25)'}`,
             borderRadius: 16,
             boxShadow: isDark
-              ? '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(47,191,113,0.08)'
-              : '0 12px 40px rgba(0,0,0,0.14), 0 0 0 1px rgba(47,191,113,0.06)',
+              ? '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(15,159,143,0.08)'
+              : '0 12px 40px rgba(0,0,0,0.14), 0 0 0 1px rgba(15,159,143,0.06)',
             overflow: 'hidden',
             animation: 'sitePickerIn 0.18s cubic-bezier(0.34,1.4,0.64,1)',
           }}>
@@ -367,7 +367,7 @@ const MobileDashboard: React.FC = () => {
             <div style={{
               padding: '12px 12px 10px',
               borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-              background: isDark ? 'rgba(47,191,113,0.04)' : 'rgba(47,191,113,0.03)',
+              background: isDark ? 'rgba(15,159,143,0.04)' : 'rgba(15,159,143,0.03)',
             }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -378,7 +378,7 @@ const MobileDashboard: React.FC = () => {
               }}
                 onFocus={() => {}}
               >
-                <Search size={13} color="#2FBF71" style={{ flexShrink: 0 }} />
+                <Search size={13} color="var(--brand-green)" style={{ flexShrink: 0 }} />
                 <input
                   autoFocus
                   placeholder="Search by name or ID…"
@@ -386,7 +386,7 @@ const MobileDashboard: React.FC = () => {
                   onChange={e => setSiteSearch(e.target.value)}
                   style={{
                     flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                    fontSize: '0.82rem', color: text, fontFamily: "'DM Sans', sans-serif",
+                    fontSize: '0.82rem', color: text, fontFamily: "'Rubik', sans-serif",
                   }}
                 />
                 {siteSearch && (
@@ -396,7 +396,7 @@ const MobileDashboard: React.FC = () => {
                   </button>
                 )}
               </div>
-              <div style={{ marginTop: 7, fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted, paddingLeft: 2 }}>
+              <div style={{ marginTop: 7, fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted, paddingLeft: 2 }}>
                 {sites.length} site{sites.length !== 1 ? 's' : ''} available
               </div>
             </div>
@@ -412,8 +412,8 @@ const MobileDashboard: React.FC = () => {
                 if (filtered.length === 0) return (
                   <div style={{ padding: '28px 16px', textAlign: 'center' }}>
                     <Search size={20} color={muted} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
-                    <div style={{ fontSize: '0.82rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>No sites match</div>
-                    <div style={{ fontSize: '0.7rem', color: muted, opacity: 0.6, marginTop: 3 }}>"{siteSearch}"</div>
+                    <div style={{ fontSize: '0.82rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No sites match</div>
+                    <div style={{ fontSize: '0.75rem', color: muted, opacity: 0.6, marginTop: 3 }}>"{siteSearch}"</div>
                   </div>
                 );
                 return filtered.map((s, idx) => {
@@ -433,7 +433,7 @@ const MobileDashboard: React.FC = () => {
                         cursor: 'pointer',
                         borderBottom: idx < filtered.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` : 'none',
                         background: sel
-                          ? isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)'
+                          ? isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)'
                           : 'transparent',
                         transition: 'background 0.12s',
                         position: 'relative',
@@ -442,34 +442,34 @@ const MobileDashboard: React.FC = () => {
                       onMouseLeave={e => { if (!sel) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                     >
                       {/* Selected accent bar */}
-                      {sel && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#2FBF71', borderRadius: '0 2px 2px 0' }} />}
+                      {sel && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'var(--brand-green)', borderRadius: '0 2px 2px 0' }} />}
 
                       {/* Avatar */}
                       <div style={{
                         width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                         background: sel
-                          ? 'linear-gradient(135deg,#2FBF71,#00a650)'
+                          ? 'linear-gradient(135deg,#0F9F8F,#15918A)'
                           : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: `1px solid ${sel ? 'rgba(47,191,113,0.5)' : border}`,
-                        boxShadow: sel ? '0 4px 12px rgba(47,191,113,0.25)' : 'none',
+                        border: `1px solid ${sel ? 'rgba(15,159,143,0.5)' : border}`,
+                        boxShadow: sel ? '0 4px 12px rgba(15,159,143,0.25)' : 'none',
                       }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: sel ? '#fff' : muted, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.02em' }}>{initials}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: sel ? '#fff' : muted, fontFamily: "'Rubik', sans-serif", letterSpacing: '0.02em' }}>{initials}</span>
                       </div>
 
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? ('var(--foreground)') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: sel ? ('var(--foreground)') : text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Rubik', sans-serif" }}>
                             {name}
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{s.site_id}</span>
-                          <span style={{ fontSize: '0.6rem', color: muted, opacity: 0.5 }}>·</span>
-                          <span style={{ fontSize: '0.62rem', color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{s.capacity_kw} kWp</span>
-                          <span style={{ fontSize: '0.6rem', color: muted, opacity: 0.5 }}>·</span>
-                          <span style={{ fontSize: '0.62rem', color: muted }}>{s.devices.length} dev</span>
+                          <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}>{s.site_id}</span>
+                          <span style={{ fontSize: '0.75rem', color: muted, opacity: 0.5 }}>·</span>
+                          <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace" }}>{s.capacity_kw} kWp</span>
+                          <span style={{ fontSize: '0.75rem', color: muted, opacity: 0.5 }}>·</span>
+                          <span style={{ fontSize: '0.75rem', color: muted }}>{s.devices.length} dev</span>
                         </div>
                       </div>
 
@@ -479,12 +479,12 @@ const MobileDashboard: React.FC = () => {
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '3px 8px', borderRadius: 999,
                         background: on
-                          ? isDark ? 'rgba(47,191,113,0.14)' : 'rgba(47,191,113,0.1)'
+                          ? isDark ? 'rgba(15,159,143,0.14)' : 'rgba(15,159,143,0.1)'
                           : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                        border: `1px solid ${on ? 'rgba(47,191,113,0.3)' : border}`,
+                        border: `1px solid ${on ? 'rgba(15,159,143,0.3)' : border}`,
                       }}>
-                        {on ? <Wifi size={10} color="#2FBF71" /> : <WifiOff size={10} color="var(--muted-foreground)" />}
-                        <span style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: on ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>
+                        {on ? <Wifi size={10} color="var(--brand-green)" /> : <WifiOff size={10} color="var(--muted-foreground)" />}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: on ? 'var(--brand-green)' : 'var(--muted-foreground)', fontFamily: "'Rubik', sans-serif" }}>
                           {on ? 'On' : 'Off'}
                         </span>
                       </div>
@@ -507,34 +507,34 @@ const MobileDashboard: React.FC = () => {
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               background: pickerOpen
-                ? isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)'
+                ? isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)'
                 : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-              border: `1.5px solid ${pickerOpen ? 'rgba(47,191,113,0.45)' : border}`,
+              border: `1.5px solid ${pickerOpen ? 'rgba(15,159,143,0.45)' : border}`,
               borderRadius: 12,
               padding: '10px 14px', cursor: 'pointer', color: text,
               transition: 'border-color 0.2s, background 0.2s',
-              boxShadow: pickerOpen ? '0 0 0 3px rgba(47,191,113,0.1)' : 'none',
+              boxShadow: pickerOpen ? '0 0 0 3px rgba(15,159,143,0.1)' : 'none',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                background: online ? (isDark ? 'rgba(47,191,113,0.12)' : 'rgba(47,191,113,0.1)') : (isDark ? 'rgba(100,100,100,0.1)' : 'rgba(0,0,0,0.08)'),
-                border: `1px solid ${online ? 'rgba(47,191,113,0.2)' : border}`,
+                background: online ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.1)') : (isDark ? 'rgba(100,100,100,0.1)' : 'rgba(0,0,0,0.08)'),
+                border: `1px solid ${online ? 'rgba(15,159,143,0.2)' : border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#2FBF71' : 'var(--muted-foreground)', display: 'inline-block' }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? 'var(--brand-green)' : 'var(--muted-foreground)', display: 'inline-block' }} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Rubik', sans-serif" }}>
                   {site ? siteName(site) : 'Select a site'}
                 </div>
-                <div style={{ fontSize: '0.6rem', color: online && !dataIsStale ? '#2FBF71' : muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
+                <div style={{ fontSize: '0.75rem', color: online && !dataIsStale ? 'var(--brand-green)' : muted, fontFamily: "'Fira Code', monospace", marginTop: 1 }}>
                   {online ? 'Online' : 'Offline'} · {liveStatusText}
                 </div>
               </div>
             </div>
-            <ChevronDown size={15} color={pickerOpen ? '#2FBF71' : muted}
+            <ChevronDown size={15} color={pickerOpen ? 'var(--brand-green)' : muted}
               style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.22s, color 0.2s', flexShrink: 0 }} />
           </button>
 
@@ -558,8 +558,8 @@ const MobileDashboard: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <AlertTriangle size={14} style={{ flexShrink: 0 }} />
                   <div style={{ textAlign: 'left', minWidth: 0 }}>
-                    <div style={{ fontSize: '0.74rem', fontWeight: 800, fontFamily: "'DM Sans', sans-serif" }}>{activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}</div>
-                    <div style={{ fontSize: '0.62rem', opacity: 0.85, fontFamily: "'DM Sans', sans-serif", whiteSpace: 'normal', lineHeight: 1.35 }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, fontFamily: "'Rubik', sans-serif" }}>{activeAlerts.length} active alert{activeAlerts.length !== 1 ? 's' : ''}</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.85, fontFamily: "'Rubik', sans-serif", whiteSpace: 'normal', lineHeight: 1.35 }}>
                       {activeAlerts[0]?.message}
                     </div>
                   </div>
@@ -580,14 +580,14 @@ const MobileDashboard: React.FC = () => {
                           <AlertTriangle size={12} color={palette.color} style={{ marginTop: 2, flexShrink: 0 }} />
                           <div style={{ minWidth: 0, flex: 1 }}>
                             {a.fault_code && (
-                              <div style={{ fontSize: '0.58rem', fontWeight: 800, color: palette.color, fontFamily: "'JetBrains Mono', monospace", marginBottom: 3 }}>
+                              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: palette.color, fontFamily: "'Fira Code', monospace", marginBottom: 3 }}>
                                 {a.fault_code}
                               </div>
                             )}
-                            <div style={{ fontSize: '0.69rem', fontWeight: 700, color: palette.color, fontFamily: "'DM Sans', sans-serif", lineHeight: 1.35 }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: palette.color, fontFamily: "'Rubik', sans-serif", lineHeight: 1.35 }}>
                               {a.message}
                             </div>
-                            <div style={{ fontSize: '0.58rem', color: muted, fontFamily: "'JetBrains Mono', monospace", marginTop: 3 }}>
+                            <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Fira Code', monospace", marginTop: 3 }}>
                               Device {a.device_serial ?? a.device_id}
                             </div>
                           </div>
@@ -612,7 +612,7 @@ const MobileDashboard: React.FC = () => {
                 : isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)',
               border: loggerOffline ? '1px solid rgba(239,68,68,0.30)' : '1px solid rgba(59,130,246,0.30)',
               color: loggerOffline ? '#EF4444' : '#3B82F6',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Rubik', sans-serif",
             }}>
               <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>☁️</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -627,7 +627,7 @@ const MobileDashboard: React.FC = () => {
                       gap: 4,
                       padding: '2px 8px',
                       borderRadius: 999,
-                      fontSize: '0.62rem',
+                      fontSize: '0.75rem',
                       fontWeight: 800,
                       background: off ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
                       color: off ? '#EF4444' : '#3B82F6',
@@ -638,7 +638,7 @@ const MobileDashboard: React.FC = () => {
                     </span>
                   ))}
                 </div>
-                <div style={{ fontSize: '0.72rem', lineHeight: 1.45, color: loggerOffline ? '#EF4444' : '#3B82F6' }}>
+                <div style={{ fontSize: '0.75rem', lineHeight: 1.45, color: loggerOffline ? '#EF4444' : '#3B82F6' }}>
                   {loggerOffline
                     ? <>RS-485 monitoring unavailable. Deye Cloud data is <strong>{Math.round((deyeCloudAgeMs ?? 0) / 60000)} min old</strong> — logger may be in nighttime standby.</>
                     : gatewayOffline
@@ -660,10 +660,10 @@ const MobileDashboard: React.FC = () => {
               background: 'rgba(245,158,11,0.08)',
               border: '1px solid rgba(245,158,11,0.28)',
               color: '#F59E0B',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Rubik', sans-serif",
             }}>
               <AlertTriangle size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-              <div style={{ fontSize: '0.72rem', lineHeight: 1.45 }}>
+              <div style={{ fontSize: '0.75rem', lineHeight: 1.45 }}>
                 <strong>RS-485 frozen</strong> — PV and inverter readings are stale. The Deye app may still show live data via the WiFi stick.
               </div>
             </div>
@@ -676,14 +676,14 @@ const MobileDashboard: React.FC = () => {
               background: dataIsStale ? 'rgba(245,158,11,0.08)' : isDark ? 'rgba(148,163,184,0.08)' : 'rgba(100,116,139,0.06)',
               border: `1px solid ${dataIsStale ? 'rgba(245,158,11,0.24)' : border}`,
               color: dataIsStale ? '#F59E0B' : muted,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Rubik', sans-serif",
             }}>
               <AlertTriangle size={14} style={{ flexShrink: 0 }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700 }}>
                   {dataIsStale ? 'Live data is stale' : 'Waiting for live telemetry'}
                 </div>
-                <div style={{ fontSize: '0.62rem', marginTop: 2, opacity: 0.85 }}>
+                <div style={{ fontSize: '0.75rem', marginTop: 2, opacity: 0.85 }}>
                   {dataIsStale ? `Last telemetry ${lastTelemetryLabel}. Current power is hidden after 5 minutes; today's totals and charts still show historical data.` : 'Live cards will populate after a fresh telemetry packet arrives.'}
                 </div>
               </div>
@@ -698,16 +698,16 @@ const MobileDashboard: React.FC = () => {
             {[
               { icon: <Sun size={13} color={pvW == null ? muted : '#F59E0B'} />, label: 'Solar', value: pvW != null ? `${fmtKW(pvW)} kW` : '—', color: pvW == null ? muted : '#F59E0B' },
               { icon: <Zap size={13} color={loadW == null ? muted : '#60A5FA'} />, label: 'Load', value: loadW != null ? `${fmtKW(loadW)} kW` : '—', color: loadW == null ? muted : '#60A5FA' },
-              { icon: <Battery size={13} color={soc == null ? muted : soc < 20 ? '#F87171' : '#2FBF71'} />, label: 'Battery', value: soc != null ? `${Math.round(soc)}%` : '—', color: soc == null ? muted : soc < 20 ? '#F87171' : '#2FBF71' },
-              { icon: isExporting ? <TrendingUp size={13} color="#2FBF71" /> : isImporting ? <TrendingDown size={13} color="#F59E0B" /> : <Globe size={13} color={muted} />, label: 'Grid', value: gridW != null ? `${fmtKW(gridW)} kW` : '—', color: gridW == null ? muted : isExporting ? '#2FBF71' : isImporting ? '#F59E0B' : muted },
+              { icon: <Battery size={13} color={soc == null ? muted : soc < 20 ? '#F87171' : 'var(--brand-green)'} />, label: 'Battery', value: soc != null ? `${Math.round(soc)}%` : '—', color: soc == null ? muted : soc < 20 ? '#F87171' : 'var(--brand-green)' },
+              { icon: isExporting ? <TrendingUp size={13} color="var(--brand-green)" /> : isImporting ? <TrendingDown size={13} color="#F59E0B" /> : <Globe size={13} color={muted} />, label: 'Grid', value: gridW != null ? `${fmtKW(gridW)} kW` : '—', color: gridW == null ? muted : isExporting ? 'var(--brand-green)' : isImporting ? '#F59E0B' : muted },
             ].map(({ icon, label, value, color }, idx, arr) => (
               <React.Fragment key={label}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {icon}
-                    <span style={{ fontSize: '0.7rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>
+                    <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{label}</span>
                   </div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace" }}>{value}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color, fontFamily: "'Fira Code', monospace" }}>{value}</span>
                 </div>
                 {idx < arr.length - 1 && <div style={{ width: 1, height: 32, background: border, flexShrink: 0 }} />}
               </React.Fragment>
@@ -720,35 +720,35 @@ const MobileDashboard: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <CloudSun size={28} color="#F59E0B" />
                   <div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: text, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: text, lineHeight: 1, fontFamily: "'Fira Code', monospace" }}>
                       {weather.current.temperature_c != null ? `${Math.round(weather.current.temperature_c)}°` : '—'}
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: muted, marginTop: 3, fontFamily: "'DM Sans', sans-serif" }}>{weather.current.description ?? 'Weather'}</div>
+                    <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, fontFamily: "'Rubik', sans-serif" }}>{weather.current.description ?? 'Weather'}</div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end', maxWidth: '55%' }}>
                   {weather.current.humidity_pct != null && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 999, background: isDark ? 'rgba(96,165,250,0.1)' : 'rgba(96,165,250,0.08)', border: `1px solid rgba(96,165,250,0.2)` }}>
                       <Droplets size={10} color="#60A5FA" />
-                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#60A5FA', fontFamily: "'JetBrains Mono', monospace" }}>{weather.current.humidity_pct}%</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#60A5FA', fontFamily: "'Fira Code', monospace" }}>{weather.current.humidity_pct}%</span>
                     </div>
                   )}
                   {weather.current.wind_speed_kmh != null && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}` }}>
                       <Wind size={10} color={muted} />
-                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: muted, fontFamily: "'JetBrains Mono', monospace" }}>{weather.current.wind_speed_kmh} km/h</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: muted, fontFamily: "'Fira Code', monospace" }}>{weather.current.wind_speed_kmh} km/h</span>
                     </div>
                   )}
                   {weather.current.solar_irradiance_wm2 != null && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 999, background: isDark ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.07)', border: `1px solid rgba(245,158,11,0.2)` }}>
                       <Sun size={10} color="#F59E0B" />
-                      <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace" }}>{weather.current.solar_irradiance_wm2} W/m²</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#F59E0B', fontFamily: "'Fira Code', monospace" }}>{weather.current.solar_irradiance_wm2} W/m²</span>
                     </div>
                   )}
                   {weather.current.uv_index != null && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 999, background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', border: `1px solid ${border}` }}>
-                      <span style={{ fontSize: '0.58rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>UV</span>
-                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: weather.current.uv_index > 7 ? '#F87171' : weather.current.uv_index > 4 ? '#F59E0B' : '#2FBF71', fontFamily: "'JetBrains Mono', monospace" }}>{weather.current.uv_index}</span>
+                      <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>UV</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: weather.current.uv_index > 7 ? '#F87171' : weather.current.uv_index > 4 ? '#F59E0B' : 'var(--brand-green)', fontFamily: "'Fira Code', monospace" }}>{weather.current.uv_index}</span>
                     </div>
                   )}
                 </div>
@@ -772,16 +772,16 @@ const MobileDashboard: React.FC = () => {
               { label: 'Solar Power', val: `${fmtKW(pvW)}`, unit: 'kW', sub2: `${fmtKWh(pvKWh)} kWh today`, icon: <Sun size={17} color="#F59E0B" />, color: '#F59E0B' },
               { label: 'Load', val: `${fmtKW(loadW)}`, unit: 'kW', sub2: `${fmtKWh(ldKWh)} kWh today`, icon: <Zap size={17} color="#60A5FA" />, color: '#60A5FA' },
               { label: 'Battery', val: soc != null ? `${Math.round(soc)}` : '—', unit: '%', sub2: batW != null ? `${fmtKW(batW)} kW` : '—', icon: <Battery size={17} color="#A78BFA" />, color: '#A78BFA' },
-              { label: 'Grid', val: gridW != null ? `${fmtKW(gridW)}` : '—', unit: 'kW', sub2: isExporting ? `Export ${fmtKWh(exKWh)} kWh` : isImporting ? `Import ${fmtKWh(imKWh)} kWh` : 'Balanced', icon: <Globe size={17} color="#60A5FA" />, color: isExporting ? '#2FBF71' : isImporting ? '#F59E0B' : '#60A5FA' },
+              { label: 'Grid', val: gridW != null ? `${fmtKW(gridW)}` : '—', unit: 'kW', sub2: isExporting ? `Export ${fmtKWh(exKWh)} kWh` : isImporting ? `Import ${fmtKWh(imKWh)} kWh` : 'Balanced', icon: <Globe size={17} color="#60A5FA" />, color: isExporting ? 'var(--brand-green)' : isImporting ? '#F59E0B' : '#60A5FA' },
             ].map(({ label, val, unit, sub2, icon, color }) => (
               <div key={label} style={{ ...card(), padding: '14px 12px', borderTop: `3px solid ${color}`, borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
                 <div style={{ position: 'absolute', top: 12, right: 10, opacity: 0.6 }}>{icon}</div>
-                <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: muted, marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: muted, marginBottom: 6, fontFamily: "'Rubik', sans-serif" }}>{label}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 4 }}>
-                  <span style={{ fontSize: '1.7rem', fontWeight: 700, color, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>{val}</span>
-                  <span style={{ fontSize: '0.72rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{unit}</span>
+                  <span style={{ fontSize: '1.7rem', fontWeight: 700, color, lineHeight: 1, fontFamily: "'Fira Code', monospace" }}>{val}</span>
+                  <span style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{unit}</span>
                 </div>
-                <div style={{ fontSize: '0.62rem', color: muted, fontFamily: "'DM Sans', sans-serif" }}>{sub2}</div>
+                <div style={{ fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>{sub2}</div>
               </div>
             ))}
           </div>
@@ -792,17 +792,17 @@ const MobileDashboard: React.FC = () => {
               {[
                 { label: 'Generated', val: fmtKWh(pvKWh), color: '#F59E0B', unit: 'kWh' },
                 { label: 'Consumed',  val: fmtKWh(ldKWh), color: '#60A5FA', unit: 'kWh' },
-                { label: 'Self-suf.', val: selfSuf != null ? `${selfSuf}%` : '—', color: selfSuf != null && selfSuf >= 70 ? '#2FBF71' : '#F59E0B', unit: '' },
-                { label: 'Bat. Chg',  val: fmtKWh(bcKWh), color: '#2FBF71', unit: 'kWh' },
+                { label: 'Self-suf.', val: selfSuf != null ? `${selfSuf}%` : '—', color: selfSuf != null && selfSuf >= 70 ? 'var(--brand-green)' : '#F59E0B', unit: '' },
+                { label: 'Bat. Chg',  val: fmtKWh(bcKWh), color: 'var(--brand-green)', unit: 'kWh' },
                 { label: 'Bat. Dis',  val: fmtKWh(bdKWh), color: '#A78BFA', unit: 'kWh' },
-                { label: 'Exported',  val: fmtKWh(exKWh), color: '#2FBF71', unit: 'kWh' },
+                { label: 'Exported',  val: fmtKWh(exKWh), color: 'var(--brand-green)', unit: 'kWh' },
                 { label: 'Imported',  val: fmtKWh(imKWh), color: '#F59E0B', unit: 'kWh' },
-                { label: 'Net Grid',  val: exKWh != null && imKWh != null ? fmtKWh(exKWh - imKWh) : '—', color: exKWh != null && imKWh != null && exKWh >= imKWh ? '#2FBF71' : '#F87171', unit: 'kWh' },
+                { label: 'Net Grid',  val: exKWh != null && imKWh != null ? fmtKWh(exKWh - imKWh) : '—', color: exKWh != null && imKWh != null && exKWh >= imKWh ? 'var(--brand-green)' : '#F87171', unit: 'kWh' },
               ].map(({ label, val, color, unit }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '8px 0' }}>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{val}</div>
-                  <div style={{ fontSize: '0.58rem', color: muted, marginTop: 4, fontFamily: "'DM Sans', sans-serif" }}>{label}</div>
-                  {unit && val !== '—' && <div style={{ fontSize: '0.55rem', color: muted, opacity: 0.7, fontFamily: "'DM Sans', sans-serif" }}>{unit}</div>}
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color, fontFamily: "'Fira Code', monospace", lineHeight: 1 }}>{val}</div>
+                  <div style={{ fontSize: '0.75rem', color: muted, marginTop: 4, fontFamily: "'Rubik', sans-serif" }}>{label}</div>
+                  {unit && val !== '—' && <div style={{ fontSize: '0.75rem', color: muted, opacity: 0.7, fontFamily: "'Rubik', sans-serif" }}>{unit}</div>}
                 </div>
               ))}
             </div>
@@ -811,7 +811,7 @@ const MobileDashboard: React.FC = () => {
 
           <div style={{ ...card(), padding: '14px 12px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-              <BarChart3 size={14} color="#2FBF71" />
+              <BarChart3 size={14} color="var(--brand-green)" />
               <span style={sectionLabel}>Today's Generation</span>
             </div>
             {telLoading ? (
@@ -819,7 +819,7 @@ const MobileDashboard: React.FC = () => {
                 <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
               </div>
             ) : chartData.labels.length === 0 ? (
-              <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: muted, fontFamily: "'DM Sans', sans-serif", textAlign: 'center', padding: '0 16px' }}>
+              <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: muted, fontFamily: "'Rubik', sans-serif", textAlign: 'center', padding: '0 16px' }}>
                 No data yet today
               </div>
             ) : (
@@ -837,7 +837,7 @@ const MobileDashboard: React.FC = () => {
               { icon: <Globe size={10} />, text: site.timezone },
               { icon: <Clock size={10} />, text: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: site.timezone }) },
             ].filter(Boolean).map((chip: any) => (
-              <div key={chip.text} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, fontSize: '0.62rem', color: muted, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}>
+              <div key={chip.text} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, background: surface, backdropFilter: 'blur(16px)', border: `1px solid ${border}`, fontSize: '0.75rem', color: muted, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: "'Rubik', sans-serif" }}>
                 <span style={{ opacity: 0.6 }}>{chip.icon}</span>{chip.text}
               </div>
             ))}
@@ -849,10 +849,10 @@ const MobileDashboard: React.FC = () => {
               {site.devices.map(d => (
                 <div key={d.device_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 10px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)', border: `1px solid ${border}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                    {d.is_online ? <Wifi size={13} color="#2FBF71" /> : <WifiOff size={13} color="var(--muted-foreground)" />}
-                    <span style={{ fontSize: '0.72rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: text }}>{d.device_serial}</span>
+                    {d.is_online ? <Wifi size={13} color="var(--brand-green)" /> : <WifiOff size={13} color="var(--muted-foreground)" />}
+                    <span style={{ fontSize: '0.75rem', fontFamily: "'Fira Code', monospace", fontWeight: 600, color: text }}>{d.device_serial}</span>
                   </div>
-                  <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: d.is_online ? 'rgba(47,191,113,0.1)' : 'rgba(100,116,139,0.1)', color: d.is_online ? '#2FBF71' : 'var(--muted-foreground)', fontFamily: "'DM Sans', sans-serif" }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: d.is_online ? 'rgba(15,159,143,0.1)' : 'rgba(100,116,139,0.1)', color: d.is_online ? 'var(--brand-green)' : 'var(--muted-foreground)', fontFamily: "'Rubik', sans-serif" }}>
                     {d.is_online ? 'Online' : 'Offline'}
                   </span>
                 </div>
@@ -866,7 +866,7 @@ const MobileDashboard: React.FC = () => {
       {!site && !sitesLoading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60dvh', flexDirection: 'column', gap: 8, color: muted }}>
           <MapPin size={32} color={border} />
-          <span style={{ fontSize: '0.875rem', fontFamily: "'DM Sans', sans-serif" }}>No sites found</span>
+          <span style={{ fontSize: '0.875rem', fontFamily: "'Rubik', sans-serif" }}>No sites found</span>
         </div>
       )}
     </div>

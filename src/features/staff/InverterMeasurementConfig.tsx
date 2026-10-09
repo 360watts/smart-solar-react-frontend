@@ -468,7 +468,7 @@ export default function InverterMeasurementConfig({
                           <span style={{ fontWeight: 600 }}>{s.display_name || s.site_id}</span>
                           {s.display_name && <span style={{ color: t.ink2, marginLeft: 8, fontSize: '0.8rem' }}>{s.site_id}</span>}
                           {s.site_status && (
-                            <span style={{ marginLeft: 8, fontSize: '0.7rem', padding: '1px 6px', borderRadius: 5, ...siteStatusStyle(s.site_status) }}>{s.site_status}</span>
+                            <span style={{ marginLeft: 8, fontSize: '0.75rem', padding: '1px 6px', borderRadius: 5, ...siteStatusStyle(s.site_status) }}>{s.site_status}</span>
                           )}
                         </div>
                       ))}

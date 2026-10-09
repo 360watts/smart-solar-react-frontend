@@ -106,21 +106,21 @@ function DiagnosticResultCard({ result }: { result: DiagnoseResult }) {
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: '0.85rem' }}>
       <div style={{ fontWeight: 700, marginBottom: 6 }}>{result.headline}</div>
-      <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: '0.74rem', color: 'var(--muted-foreground)' }}>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
         <span>Severity: <strong style={{ color: sevColor, textTransform: 'capitalize' }}>{result.severity}</strong></span>
         <span>Confidence: {Math.round(result.confidence * 100)}%</span>
         <span>{result.metric_summary}</span>
       </div>
       <div style={{ marginBottom: 8, lineHeight: 1.55 }}>{result.root_cause_text}</div>
       {result.citations.length > 0 && (
-        <div style={{ fontSize: '0.72rem', color: 'var(--muted-foreground)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {result.citations.map(c => (
             <span key={c.index}>[{c.index}] {c.source} · {c.ref}: {c.text}</span>
           ))}
         </div>
       )}
       <div style={{ fontSize: '0.8rem' }}><strong>Recommended:</strong> {result.recommended_action}</div>
-      <div style={{ marginTop: 8, fontSize: '0.66rem', color: 'var(--muted-foreground)', letterSpacing: '0.03em' }}>
+      <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--muted-foreground)', letterSpacing: '0.03em' }}>
         PROTOTYPE · SYNTHETIC DATA
       </div>
     </div>
@@ -476,7 +476,7 @@ const AiChat: React.FC = () => {
                                       {copiedId === cid ? <><ClipboardCheck size={11} /> copied</> : <><ClipboardCopy size={11} /> copy</>}
                                     </button>
                                   </div>
-                                  <Suspense fallback={<pre className="aif-code__fallback" style={{ margin: 0, fontSize: '0.74rem', whiteSpace: 'pre-wrap' }}>{codeStr}</pre>}>
+                                  <Suspense fallback={<pre className="aif-code__fallback" style={{ margin: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>{codeStr}</pre>}>
                                     <CodeBlock code={codeStr} language={match[1]} isDark={isDark} />
                                   </Suspense>
                                 </div>
@@ -492,7 +492,7 @@ const AiChat: React.FC = () => {
                         >
                           {normalizeAssistantContent(msg.content)}
                         </ReactMarkdown>
-                        {msg.cutOff && <div style={{ fontSize: '0.7rem', color: 'var(--muted-foreground)', marginTop: 4 }}>(response cut off)</div>}
+                        {msg.cutOff && <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: 4 }}>(response cut off)</div>}
                       </div>
                     )}
                   </div>
@@ -558,7 +558,7 @@ const AiChat: React.FC = () => {
           border-radius: 20px;
           display: flex; align-items: center; gap: 7px;
           padding: 0 16px 0 12px;
-          font-family: 'IBM Plex Mono', monospace;
+          font-family: 'Fira Code', monospace;
           font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
           transition: all 0.22s cubic-bezier(.34,1.4,.64,1);
           outline: none;
@@ -687,7 +687,7 @@ const AiChat: React.FC = () => {
           border: 1px solid rgba(56,189,248,0.2);
         }
         .aif-hdr__name {
-          font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.8rem;
+          font-family: 'Fira Code', monospace; font-weight: 600; font-size: 0.8rem;
           letter-spacing: 0.02em;
           min-width: 0;
           overflow: hidden;
@@ -699,19 +699,19 @@ const AiChat: React.FC = () => {
         .aif-hdr__divider { width: 1px; height: 14px; background: currentColor; opacity: 0.15; }
         .aif-hdr__live {
           display: flex; align-items: center; gap: 5px;
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem;
-          font-weight: 600; letter-spacing: 0.1em; color: #34d399;
+          font-family: 'Fira Code', monospace; font-size: 0.64rem;
+          font-weight: 600; letter-spacing: 0.1em; color: #0F9F8F;
         }
         .aif-live-dot {
-          width: 6px; height: 6px; border-radius: 50%; background: #34d399;
-          box-shadow: 0 0 6px #34d399; animation: aifPulse 2.5s ease-in-out infinite;
+          width: 6px; height: 6px; border-radius: 50%; background: #0F9F8F;
+          box-shadow: 0 0 6px #0F9F8F; animation: aifPulse 2.5s ease-in-out infinite;
         }
         @keyframes aifPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         .aif-hdr__right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
         .aif-hdr-btn {
           height: 26px; border: none; cursor: pointer; border-radius: 6px;
           display: flex; align-items: center; justify-content: center;
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 600;
+          font-family: 'Fira Code', monospace; font-size: 0.65rem; font-weight: 600;
           letter-spacing: 0.06em; padding: 0 8px;
           transition: background 0.15s, color 0.15s;
         }
@@ -725,7 +725,7 @@ const AiChat: React.FC = () => {
         .aif-strip {
           display: flex; align-items: center; gap: 8px;
           padding: 5px 14px; flex-shrink: 0;
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem;
+          font-family: 'Fira Code', monospace; font-size: 0.63rem;
           letter-spacing: 0.06em;
           border-bottom: 1px solid;
           flex-wrap: wrap;
@@ -754,7 +754,7 @@ const AiChat: React.FC = () => {
         /* ── Empty state ── */
         .aif-empty { display: flex; flex-direction: column; gap: 12px; animation: aifFadeIn 0.3s ease; }
         .aif-empty__prompt {
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; font-weight: 500;
+          font-family: 'Fira Code', monospace; font-size: 0.9rem; font-weight: 500;
           display: flex; align-items: center; gap: 4px; margin: 0;
         }
         .aif-panel--dark .aif-empty__prompt { color: #38bdf8; }
@@ -811,7 +811,7 @@ const AiChat: React.FC = () => {
         .aif-panel--dark  .aif-msg__user { border-color: rgba(255,255,255,0.05); }
         .aif-panel--light .aif-msg__user { border-color: rgba(0,0,0,0.06); }
         .aif-msg__prompt {
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+          font-family: 'Fira Code', monospace; font-size: 0.68rem;
           font-weight: 600; letter-spacing: 0.06em; flex-shrink: 0;
         }
         .aif-panel--dark  .aif-msg__prompt { color: #bae6fd; }
@@ -824,7 +824,7 @@ const AiChat: React.FC = () => {
         .aif-panel--dark  .aif-msg__user-text { color: #f8fafc; }
         .aif-panel--light .aif-msg__user-text { color: #334155; }
         .aif-msg__ts {
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem;
+          font-family: 'Fira Code', monospace; font-size: 0.6rem;
           flex-shrink: 0; opacity: 0.35; letter-spacing: 0.04em;
         }
         .aif-panel--dark  .aif-msg__ts { color: #e2e8f0; }
@@ -878,7 +878,7 @@ const AiChat: React.FC = () => {
         .aif-md hr { border: none; border-top: 1px solid; margin: 0.6em 0; opacity: 0.15; }
         /* Headings — scaled down to fit panel, monospace for ops feel */
         .aif-md h1,.aif-md h2,.aif-md h3 {
-          font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+          font-family: 'Fira Code', monospace; font-weight: 600;
           margin: 0.6em 0 0.3em; line-height: 1.3; letter-spacing: -0.01em;
           overflow-wrap: anywhere;
         }
@@ -888,7 +888,7 @@ const AiChat: React.FC = () => {
         .aif-panel--dark  .aif-md h1,.aif-panel--dark  .aif-md h2,.aif-panel--dark  .aif-md h3 { color: #7dd3fc; }
         .aif-panel--light .aif-md h1,.aif-panel--light .aif-md h2,.aif-panel--light .aif-md h3 { color: #0284c7; }
         .aif-inline-code {
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.78em;
+          font-family: 'Fira Code', monospace; font-size: 0.78em;
           padding: 1px 5px; border-radius: 4px;
         }
         .aif-panel--dark  .aif-inline-code { background: rgba(56,189,248,0.1); color: #7dd3fc; }
@@ -951,7 +951,7 @@ const AiChat: React.FC = () => {
         .aif-panel--light .aif-code { border: 1px solid rgba(0,0,0,0.09); }
         .aif-code__bar {
           display: flex; align-items: center; justify-content: space-between;
-          padding: 4px 10px; font-family: 'IBM Plex Mono', monospace;
+          padding: 4px 10px; font-family: 'Fira Code', monospace;
         }
         .aif-panel--dark  .aif-code__bar { background: rgba(56,189,248,0.07); }
         .aif-panel--light .aif-code__bar { background: rgba(2,132,199,0.07); }
@@ -961,7 +961,7 @@ const AiChat: React.FC = () => {
           display: flex; align-items: center; gap: 4px;
           background: none; border: 1px solid rgba(100,116,139,0.2); border-radius: 4px;
           padding: 2px 7px; cursor: pointer; font-size: 0.64rem; font-weight: 500;
-          font-family: 'IBM Plex Mono', monospace; color: var(--muted-foreground);
+          font-family: 'Fira Code', monospace; color: var(--muted-foreground);
           transition: all 0.15s;
         }
         .aif-panel--dark .aif-code__copy { color: #f8fafc; }
@@ -1039,7 +1039,7 @@ const AiChat: React.FC = () => {
         }
         .aif-composer-mode {
           display: flex; align-items: center; gap: 4px;
-          font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+          font-family: 'Fira Code', monospace; font-size: 0.68rem;
           user-select: none;
           background: rgba(56,189,248,0.1); border-radius: 5px;
           padding: 2px 7px;
@@ -1048,7 +1048,7 @@ const AiChat: React.FC = () => {
         .aif-panel--dark  .aif-composer-ctx { color: #67e8f9; }
         .aif-panel--light .aif-composer-ctx { color: #0284c7; }
         .aif-composer-keys {
-          flex: 1; font-family: 'IBM Plex Mono', monospace;
+          flex: 1; font-family: 'Fira Code', monospace;
           font-size: 0.62rem; letter-spacing: 0.02em;
           min-width: 0;
         }

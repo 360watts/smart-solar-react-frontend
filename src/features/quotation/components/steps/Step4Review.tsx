@@ -11,7 +11,7 @@ interface Props { form: UseFormReturn<QuotationData> }
 
 const CHART_STYLE = {
   background: 'transparent',
-  fontFamily: "'JetBrains Mono', monospace",
+  fontFamily: "'Fira Code', monospace",
   fontSize: 10,
 };
 
@@ -20,11 +20,11 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div style={{
       background: 'var(--card, #1A1715)',
-      border: '1px solid var(--border, rgba(0,166,62,0.2))',
+      border: '1px solid var(--border, rgba(15,159,143,0.2))',
       borderRadius: 8,
       padding: '8px 12px',
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '0.68rem',
+      fontFamily: "'Fira Code', monospace",
+      fontSize: '0.75rem',
     }}>
       <p style={{ color: 'var(--fg-muted, #7A6A58)', marginBottom: 4 }}>{label}</p>
       {payload.map((p: any) => (
@@ -117,7 +117,7 @@ export function Step4Review({ form }: Props) {
                     label={{ value: '◆', position: 'insideTopRight', fill: 'var(--amber, #fdc700)', fontSize: 10 }}
                   />
                 )}
-                <Bar dataKey="savings" name="Net savings" fill="var(--green, #00a63e)" radius={[3,3,0,0]} maxBarSize={20} />
+                <Bar dataKey="savings" name="Net savings" fill="var(--green, #0F9F8F)" radius={[3,3,0,0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -132,11 +132,11 @@ export function Step4Review({ form }: Props) {
                 <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  wrapperStyle={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: 'var(--fg-muted, #7A6A58)' }}
+                  wrapperStyle={{ fontFamily: "'Fira Code', monospace", fontSize: 9, color: 'var(--fg-muted, #7A6A58)' }}
                   iconType="circle" iconSize={7}
                 />
-                <Area type="monotone" dataKey="noSolar"   name="Without Solar" stroke="var(--fg-muted, #2a4a35)" fill="var(--border, rgba(42,74,53,0.25))"   strokeWidth={1.5} />
-                <Area type="monotone" dataKey="withSolar" name="With Solar"    stroke="var(--green, #00a63e)" fill="var(--green-soft, rgba(0,166,62,0.12))"  strokeWidth={1.5} />
+                <Area type="monotone" dataKey="noSolar"   name="Without Solar" stroke="var(--fg-muted, #2A4A48)" fill="var(--border, rgba(42,74,53,0.25))"   strokeWidth={1.5} />
+                <Area type="monotone" dataKey="withSolar" name="With Solar"    stroke="var(--green, #0F9F8F)" fill="var(--green-soft, rgba(15,159,143,0.12))"  strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -145,7 +145,7 @@ export function Step4Review({ form }: Props) {
 
       {/* Hint */}
       <div style={{ borderTop: '1px solid var(--line, rgba(0,0,0,0.08))', paddingTop: 14 }}>
-        <p style={{ fontFamily: 'var(--mono)', fontSize: '0.6rem', color: 'var(--muted-foreground)', letterSpacing: '0.04em' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: '0.75rem', color: 'var(--muted-foreground)', letterSpacing: '0.04em' }}>
           Click <span style={{ color: 'var(--amber, #f59e0b)' }}>Generate PDF</span> below to download the 10-slide proposal.
         </p>
       </div>

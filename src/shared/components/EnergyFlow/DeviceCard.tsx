@@ -44,29 +44,89 @@ export interface NodeCardProps {
   /** 0–1 fill for the icon's progress-arc ring — e.g. PV vs. inverter capacity,
    * battery SoC/100, grid vs. a reference max. Omit to render icon-only (no ring). */
   arcPct?: number;
+  /** Fill the parent's width instead of the fixed 108 px (energy-flow source row). */
+  fill?: boolean;
+  /** 'flat' = the energy-flow diagram's plain card (dot + label, big value, one muted sub-line, no glow/arc/icon). */
+  variant?: 'glow' | 'flat';
+  /** flat only: 0-1 fill for a thin bar under the sub-line (battery SoC). */
+  barPct?: number;
+}
+
+/** Big one-line value used by the flat source and load cards: Rubik, 22-28 px with the flow block's width
+ * (cqw = the .ef-block container), tabular numbers, smaller muted unit. */
+export function FlatValue({ valueStr, unit }: { valueStr: string; unit?: string }) {
+  return (
+    <div style={{ fontFamily: "'Rubik', sans-serif", fontSize: 'clamp(22px, 2.6cqw, 28px)', fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'var(--foreground)' }}>
+      {valueStr}{unit ? <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-dim)', marginLeft: 5 }}>{unit}</span> : null}
+    </div>
+  );
+}
+
+/** Flat card shell shared by the diagram's source and load cards: 1px border, 16px padding, 18px radius. */
+export function FlatCard({ label, dotColor, isDark, fill = true, children, onClick, ariaLabel }: {
+  label: string; dotColor?: string; isDark: boolean; fill?: boolean; children: React.ReactNode;
+  onClick?: () => void; ariaLabel?: string;
+}) {
+  return (
+    <div
+      data-flat-card
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? ariaLabel : undefined}
+      onKeyDown={onClick ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } } : undefined}
+      style={{
+        width: fill ? '100%' : undefined, boxSizing: 'border-box', minWidth: 0,
+        display: 'flex', flexDirection: 'column', gap: 6,
+        padding: 'clamp(12px, 1.6cqw, 16px)', borderRadius: 18, border: '1px solid var(--border)',
+        background: 'var(--card)', cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        {dotColor && <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />}
+        <span style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-foreground)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 const STATUS_BG: Record<DeviceStatus, string> = {
-  online:  '#16a34a',
+  online:  '#0F9F8F',
   offline: '#dc2626',
   unknown: 'var(--muted-foreground)',
 };
 
 export function NodeCard({
   label, icon, valueStr, unit, color, active,
-  status, isAnomalous, subLabel, onClick, isDark, arcPct,
+  status, isAnomalous, subLabel, onClick, isDark, arcPct, fill, variant = 'glow', barPct,
 }: NodeCardProps) {
+  if (variant === 'flat') {
+    const bar = barPct != null ? Math.max(0, Math.min(1, barPct)) : null;
+    return (
+      <FlatCard label={label} dotColor={active ? color : 'var(--muted-foreground)'} isDark={isDark} fill={fill} onClick={onClick}>
+        <FlatValue valueStr={valueStr} unit={unit} />
+        <div style={{ fontSize: 13, color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subLabel ?? '\u00a0'}</div>
+        {bar != null && (
+          <div role="presentation" style={{ height: 4, borderRadius: 2, background: 'var(--surface-muted)', overflow: 'hidden', marginTop: 'auto' }}>
+            <div style={{ width: `${bar * 100}%`, height: '100%', background: color }} />
+          </div>
+        )}
+      </FlatCard>
+    );
+  }
   return (
     <div
       onClick={onClick}
       style={{
-        width: 108,
+        width: fill ? '100%' : 108,
+        boxSizing: fill ? 'border-box' : undefined,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 6,
-        padding: '11px 10px 10px',
-        borderRadius: 24,
+        padding: '8px 10px 8px',
+        borderRadius: 20,
         background: isDark
           ? active
             ? `radial-gradient(ellipse at 50% 0%, ${color}1a 0%, #0d1117 70%)`
@@ -103,7 +163,7 @@ export function NodeCard({
       }}
     >
       {/* Icon circle, with a 270° progress-arc ring when arcPct is given */}
-      <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ position: 'relative', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {active && (
           <div style={{
             position: 'absolute', inset: 0,
@@ -111,9 +171,9 @@ export function NodeCard({
             filter: 'blur(12px)', borderRadius: '50%',
           }} />
         )}
-        {arcPct != null && <IconRing size={52} color={color} active={active} pct={arcPct} />}
+        {arcPct != null && <IconRing size={44} color={color} active={active} pct={arcPct} />}
         <div style={{
-          width: 42, height: 42, borderRadius: '50%',
+          width: 36, height: 36, borderRadius: '50%',
           background: active
             ? isDark ? `${color}20` : `${color}12`
             : 'var(--card)',
@@ -142,7 +202,7 @@ export function NodeCard({
       {/* Sub-label */}
       {subLabel && (
         <span style={{
-          fontSize: 10.5,
+          fontSize: 12,
           color: active ? `${color}cc` : isDark ? '#cbd5e1' : 'var(--text-dim)',
           marginTop: -2,
           whiteSpace: 'nowrap',
@@ -154,7 +214,7 @@ export function NodeCard({
 
       {/* Node label */}
       <span style={{
-        fontSize: 10, fontWeight: 800,
+        fontSize: 12, fontWeight: 800,
         textTransform: 'uppercase', letterSpacing: '0.08em',
         color: active ? color : isDark ? 'var(--text-dim)' : '#b0bcc8',
         marginTop: subLabel ? 0 : -2,

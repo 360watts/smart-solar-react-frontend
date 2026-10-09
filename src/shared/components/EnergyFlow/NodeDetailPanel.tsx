@@ -244,9 +244,9 @@ export default function NodeDetailPanel({ node, onClose, isDark }: NodeDetailPan
                   padding: '4px 10px',
                   borderRadius: 12,
                   background: node.status === 'active' || node.status === 'online'
-                    ? isDark ? '#10b98122' : '#d1fae522'
+                    ? isDark ? '#0F9F8F22' : '#d1fae522'
                     : isDark ? '#ef444422' : '#fee222',
-                  color: node.status === 'active' || node.status === 'online' ? '#10b981' : '#ef4444',
+                  color: node.status === 'active' || node.status === 'online' ? '#0F9F8F' : '#ef4444',
                   fontSize: 11,
                   fontWeight: 600,
                   textTransform: 'capitalize',
@@ -256,7 +256,7 @@ export default function NodeDetailPanel({ node, onClose, isDark }: NodeDetailPan
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    background: node.status === 'active' || node.status === 'online' ? '#10b981' : '#ef4444',
+                    background: node.status === 'active' || node.status === 'online' ? '#0F9F8F' : '#ef4444',
                     display: 'inline-block',
                   }} />
                   {node.status}
@@ -435,7 +435,7 @@ export default function NodeDetailPanel({ node, onClose, isDark }: NodeDetailPan
                 <div style={{ fontSize: 10, color: textSecondary, marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Last Update
                 </div>
-                <div style={{ fontSize: 13, color: textPrimary, fontFamily: 'JetBrains Mono, monospace' }}>
+                <div style={{ fontSize: 13, color: textPrimary, fontFamily: 'Fira Code, monospace' }}>
                   {new Date(node.timestamp).toLocaleString()}
                 </div>
                 <div style={{ fontSize: 11, color: textSecondary, marginTop: 4 }}>

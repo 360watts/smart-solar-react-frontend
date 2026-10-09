@@ -132,7 +132,7 @@ const EqFormField: React.FC<{
 }> = ({label,value,onChange,type='text',isDark,required,placeholder}) => {
   if (type==='checkbox') return (
     <div style={{display:'flex',alignItems:'center',gap:8}}>
-      <input type="checkbox" checked={value as boolean} onChange={e=>onChange(e.target.checked)} style={{width:16,height:16,accentColor:'#22c55e',cursor:'pointer'}}/>
+      <input type="checkbox" checked={value as boolean} onChange={e=>onChange(e.target.checked)} style={{width:16,height:16,accentColor:'#0F9F8F',cursor:'pointer'}}/>
       <span style={eqLabel(isDark)}>{label}</span>
     </div>
   );
@@ -147,9 +147,9 @@ const EqFormField: React.FC<{
 const EqSectionHeader: React.FC<{icon:React.ReactNode;title:string;count:number;onAdd:()=>void;isDark:boolean}> = ({icon,title,count,onAdd,isDark}) => (
   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 20px',borderBottom:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)'}}>
     <div style={{display:'flex',alignItems:'center',gap:10}}>
-      <span style={{color:'#22c55e'}}>{icon}</span>
+      <span style={{color:'#0F9F8F'}}>{icon}</span>
       <h3 style={{margin:0,fontSize:'1rem',fontWeight:700,color:'var(--foreground)'}}>{title}</h3>
-      <span style={{background:isDark?'rgba(34,197,94,0.15)':'#dcfce7',color:'#16a34a',borderRadius:12,padding:'1px 10px',fontSize:'0.75rem',fontWeight:600}}>{count}</span>
+      <span style={{background:isDark?'rgba(15,159,143,0.15)':'#DEFAF9',color:'#0F9F8F',borderRadius:12,padding:'1px 10px',fontSize:'0.75rem',fontWeight:600}}>{count}</span>
     </div>
     <button onClick={onAdd} className="btn" style={{display:'flex',alignItems:'center',gap:6,fontSize:'0.85rem'}}><Plus size={14}/> Add</button>
   </div>
@@ -197,7 +197,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
               <td>{inv.capacity_kva} kVA</td>
               <td style={{fontSize:'0.8rem'}}>{inv.mppt_voltage_min_v&&inv.mppt_voltage_max_v?`${inv.mppt_voltage_min_v}–${inv.mppt_voltage_max_v} V`:'—'}</td>
               <td>{inv.installed_at||'—'}</td><td>{inv.warranty_expires_at||'—'}</td>
-              <td><span style={{color:inv.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{inv.is_active?'Yes':'No'}</span></td>
+              <td><span style={{color:inv.is_active?'#0F9F8F':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{inv.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(inv)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
                 {canDestroy&&<button onClick={()=>setDel(inv)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
@@ -300,7 +300,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
               <td>{bat.capacity_kwh} kWh</td>
               <td>{bat.nominal_voltage_v?`${bat.nominal_voltage_v} V`:'—'}</td>
               <td>{bat.installed_at||'—'}</td>
-              <td><span style={{color:bat.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{bat.is_active?'Yes':'No'}</span></td>
+              <td><span style={{color:bat.is_active?'#0F9F8F':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{bat.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(bat)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
                 {canDestroy&&<button onClick={()=>setDel(bat)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
@@ -378,7 +378,7 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
               <td>{eqToPanelWp(p.capacity_wp).toFixed(0)}</td>
               <td>{p.technology||'—'}</td>
               <td>{p.installed_at||'—'}</td>
-              <td><span style={{color:p.is_active?'#22c55e':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{p.is_active?'Yes':'No'}</span></td>
+              <td><span style={{color:p.is_active?'#0F9F8F':'#ef4444',fontWeight:600,fontSize:'0.8rem'}}>{p.is_active?'Yes':'No'}</span></td>
               <td><div style={{display:'flex',gap:6}}>
                 <button onClick={()=>open(p)} className="btn btn-secondary" style={{padding:'4px 8px'}}><Pencil size={13}/></button>
                 {canDestroy&&<button onClick={()=>setDel(p)} className="btn btn-secondary" style={{padding:'4px 8px',color:'#ef4444'}}><Trash2 size={13}/></button>}
@@ -530,18 +530,18 @@ export default function SiteDetail() {
     </label>
   );
   const surface     = 'var(--card)';
-  const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,166,62,0.15)';
+  const border      = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(15,159,143,0.15)';
   const inputBg     = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const inputBorder = isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.1)';
   const textMain    = 'var(--foreground)';
   const textMute    = 'var(--muted-foreground)';
   const textSub     = 'var(--muted-foreground)';
-  const primary     = '#00a63e';
+  const primary     = '#0F9F8F';
   const nativeSelectBg = inputBg;
   const nativeSelectFg = textMain;
 
   const palette = {
-    ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#10b981', border: 'rgba(16,185,129,0.2)'  },
+    ok:   { bg: 'rgba(16,185,129,0.1)',  color: '#0F9F8F', border: 'rgba(16,185,129,0.2)'  },
     warn: { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b', border: 'rgba(245,158,11,0.2)'  },
     err:  { bg: 'rgba(239,68,68,0.1)',   color: '#ef4444', border: 'rgba(239,68,68,0.2)'   },
     info: { bg: 'rgba(59,130,246,0.1)',  color: '#3b82f6', border: 'rgba(59,130,246,0.2)'  },
@@ -575,7 +575,7 @@ export default function SiteDetail() {
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', 
+    fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', 
     letterSpacing: '0.05em', color: textMute, display: 'block', marginBottom: 6
   };
 
@@ -587,7 +587,7 @@ export default function SiteDetail() {
     borderStyle: 'solid', borderWidth: 1,
     borderColor: isDanger ? palette.err.border : isSecondary ? palette.mute.border : primary,
     fontSize: '0.85rem', fontWeight: 600, transition: 'all 150ms', opacity: busy ? 0.7 : 1,
-    boxShadow: isSecondary || isDanger ? 'none' : '0 4px 12px rgba(0,166,62,0.2)'
+    boxShadow: isSecondary || isDanger ? 'none' : '0 4px 12px rgba(15,159,143,0.2)'
   });
 
   // ── Data Fetching & Handlers ──
@@ -971,7 +971,7 @@ export default function SiteDetail() {
 
         {/* ── Sub-header Profile Card ── */}
         {site && (
-          <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: '18px 20px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'center', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 10px rgba(0,166,62,0.03)' }}>
+          <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: '18px 20px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'center', boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 10px rgba(15,159,143,0.03)' }}>
             <div>
               <div style={{ fontSize: '0.8rem', color: ut.ink2, marginBottom: 6 }}>Status</div>
               <StatusChip isDark={isDark} state={statusState(site.site_status)}>{statusWord(site.site_status)}</StatusChip>

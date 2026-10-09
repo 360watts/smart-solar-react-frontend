@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 interface FlowConnectorProps {
   isActive: boolean;   // if false, renders nothing
   d: string;           // SVG path data string (e.g. "M 100 200 L 300 200")
-  stroke: string;      // color string (e.g. "#20B835")
+  stroke: string;      // color string (e.g. "#20B8AF")
   duration?: number;   // animation duration in seconds, default 1.5
   uid: string;         // unique ID for the glow filter reference (e.g. "flow-abc123")
 }

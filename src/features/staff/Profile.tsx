@@ -7,12 +7,12 @@ import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/staff/MobileProfile';
 import SecurityCard from './security/SecurityCard';
 
-const GREEN='#4CAF82',GREEN_D='#3d8a68',NAVY='#2B4A6B',ORANGE='#F07522';
+const GREEN='#4CAFA9',GREEN_D='#3D8A85',NAVY='#2B4A6B',ORANGE='#F07522';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
 
 interface ProfileData{id:number;username:string;email:string;first_name:string;last_name:string;mobile_number?:string;address?:string;avatar_url?:string|null;is_staff:boolean;is_superuser:boolean;date_joined:string;role?:string;team?:any;employment_status?:string;timezone?:string;}
 
-const AV=['linear-gradient(135deg,#4CAF82 0%,#2e6b53 100%)','linear-gradient(135deg,#2B4A6B 0%,#1a2e42 100%)','linear-gradient(135deg,#3B82F6 0%,#1D4ED8 100%)','linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%)','linear-gradient(135deg,#14B8A6 0%,#0F766E 100%)'];
+const AV=['linear-gradient(135deg,#4CAFA9 0%,#2E6B67 100%)','linear-gradient(135deg,#2B4A6B 0%,#1a2e42 100%)','linear-gradient(135deg,#3B82F6 0%,#1D4ED8 100%)','linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%)','linear-gradient(135deg,#14B8A6 0%,#0F9F8F 100%)'];
 const gac=(s:string)=>{let h=0;for(let i=0;i<s.length;i++)h=s.charCodeAt(i)+((h<<5)-h);return AV[Math.abs(h)%AV.length];};
 const gin=(a:string,b:string,c:string)=>{if(a&&b)return`${a[0]}${b[0]}`.toUpperCase();if(a)return a.substring(0,2).toUpperCase();return c.substring(0,2).toUpperCase();};
 

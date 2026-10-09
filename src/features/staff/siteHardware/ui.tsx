@@ -15,8 +15,8 @@ import {
   Refrigerator, Flame, AirVent, Droplets, WashingMachine, Plug, CarFront, HelpCircle,
 } from 'lucide-react';
 
-const HEAD = "'Outfit', ui-sans-serif, system-ui, sans-serif";
-const BODY = "'DM Sans', ui-sans-serif, system-ui, sans-serif";
+const HEAD = "'Rubik', ui-sans-serif, system-ui, sans-serif";
+const BODY = "'Rubik', ui-sans-serif, system-ui, sans-serif";
 
 export function useTokens(isDark: boolean) {
   return {
@@ -27,9 +27,9 @@ export function useTokens(isDark: boolean) {
     ink2:    'var(--muted-foreground)',
     line:    isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.085)',
     line2:   isDark ? 'rgba(255,255,255,0.055)' : 'rgba(0,0,0,0.05)',
-    good:    isDark ? '#2bb673' : '#0f9d58',
+    good:    isDark ? '#2BB6AE' : '#16968F',
     goodBg:  isDark ? 'rgba(43,182,115,0.14)' : 'rgba(15,157,88,0.10)',
-    goodInk: isDark ? '#8fe3b4' : '#0b6b3d',
+    goodInk: isDark ? '#8FE3DE' : '#0F6762',
     wait:    isDark ? '#eaa53a' : '#e8930c',
     waitBg:  isDark ? 'rgba(234,165,58,0.15)' : 'rgba(232,147,12,0.12)',
     waitInk: isDark ? '#f2c583' : '#9a5c05',
@@ -453,10 +453,10 @@ export function Item({
 // ── buttons ─────────────────────────────────────────────────────────────────
 
 export function Btn({
-  isDark, onClick, disabled, children, variant = 'primary', full, size = 'md',
+  isDark, onClick, disabled, children, variant = 'primary', full, size = 'md', 'aria-label': ariaLabel,
 }: {
   isDark: boolean; onClick?: () => void; disabled?: boolean; children: React.ReactNode;
-  variant?: 'primary' | 'soft' | 'plain'; full?: boolean; size?: 'sm' | 'md';
+  variant?: 'primary' | 'soft' | 'plain'; full?: boolean; size?: 'sm' | 'md'; 'aria-label'?: string;
 }) {
   const t = useTokens(isDark);
   const base: React.CSSProperties = {
@@ -472,7 +472,7 @@ export function Btn({
     : variant === 'soft'
       ? { background: t.goodBg, color: t.goodInk }
       : { background: 'transparent', color: t.ink, borderColor: t.line };
-  return <button type="button" onClick={onClick} disabled={disabled} style={{ ...base, ...v }}>{children}</button>;
+  return <button type="button" aria-label={ariaLabel} onClick={onClick} disabled={disabled} style={{ ...base, ...v }}>{children}</button>;
 }
 
 // ── empty ───────────────────────────────────────────────────────────────────

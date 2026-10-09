@@ -80,7 +80,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, rgba(47, 191, 113, 0.1), transparent);
+  background: linear-gradient(90deg, rgba(15,159,143, 0.1), transparent);
   opacity: 0;
   transition: opacity var(--transition-normal);
   pointer-events: none;
@@ -91,8 +91,8 @@
 }
 
 .sidebar-nav li.active {
-  background: linear-gradient(135deg, rgba(47, 191, 113, 0.2), rgba(255, 192, 61, 0.1));
-  box-shadow: 0 4px 12px rgba(47, 191, 113, 0.25), inset 0 0 0 1px rgba(47, 191, 113, 0.4);
+  background: linear-gradient(135deg, rgba(15,159,143, 0.2), rgba(255, 192, 61, 0.1));
+  box-shadow: 0 4px 12px rgba(15,159,143, 0.25), inset 0 0 0 1px rgba(15,159,143, 0.4);
   position: relative;
 }
 
@@ -141,7 +141,7 @@
 }
 
 .sidebar-link:hover {
-  background: rgba(47, 191, 113, 0.12);
+  background: rgba(15,159,143, 0.12);
   color: var(--text-primary);
   transform: translateX(6px);
 }

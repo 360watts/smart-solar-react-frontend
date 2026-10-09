@@ -13,12 +13,12 @@ function StatusPill({ status }: { status: string }) {
   const palette: Record<string, { color: string; bg: string }> = {
     draft: { color: 'var(--muted-foreground)', bg: 'rgba(100,116,139,0.12)' },
     sent: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-    accepted: { color: '#16a34a', bg: 'rgba(22,163,74,0.12)' },
+    accepted: { color: '#0F9F8F', bg: 'rgba(15,159,143,0.12)' },
     rejected: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
     expired: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
   };
   const p = palette[status] ?? palette.draft;
-  return <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 700, color: p.color, background: p.bg }}>{status}</span>;
+  return <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, color: p.color, background: p.bg }}>{status}</span>;
 }
 
 export default function MobileQuotationPage() {
@@ -28,7 +28,7 @@ export default function MobileQuotationPage() {
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text = 'var(--foreground)';
   const muted = 'var(--muted-foreground)';
-  const accent = '#2FBF71';
+  const accent = 'var(--brand-green)';
 
   const [view, setView] = useState<'list' | 'wizard'>('list');
   const [editId, setEditId] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export default function MobileQuotationPage() {
             <ChevronLeft size={18} />
           </button>
           <div>
-            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: muted }}>Quotation</div>
+            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: muted }}>Quotation</div>
             <div style={{ fontSize: '1rem', fontWeight: 700, color: text }}>{editId ? 'Edit proposal' : 'New proposal'}</div>
           </div>
         </div>
@@ -122,18 +122,18 @@ export default function MobileQuotationPage() {
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '12px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)' }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)' }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
             <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, color: accent, padding: 6, display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, color: accent, padding: 6, display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Quotations</div>
+            <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Quotations</div>
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: text, marginTop: 2 }}>{total} proposals</div>
           </div>
           <button onClick={() => { setEditId(null); setView('wizard'); }} style={{ background: accent, border: 'none', borderRadius: 10, color: '#fff', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.76rem', fontWeight: 700 }}>
@@ -149,7 +149,7 @@ export default function MobileQuotationPage() {
         </div>
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
           {STATUS_OPTIONS.map(opt => (
-            <button key={opt} onClick={() => setStatus(opt)} style={{ padding: '6px 12px', borderRadius: 999, border: 'none', whiteSpace: 'nowrap', background: status === opt ? `${accent}18` : surface, color: status === opt ? accent : muted, fontSize: '0.7rem', fontWeight: 700 }}>
+            <button key={opt} onClick={() => setStatus(opt)} style={{ padding: '6px 12px', borderRadius: 999, border: 'none', whiteSpace: 'nowrap', background: status === opt ? `${accent}18` : surface, color: status === opt ? accent : muted, fontSize: '0.75rem', fontWeight: 700 }}>
               {opt === 'all' ? 'All' : opt}
             </button>
           ))}
@@ -159,7 +159,7 @@ export default function MobileQuotationPage() {
         {loading ? <div style={{ color: muted, fontSize: '0.8rem', padding: '20px 4px' }}>Loading quotations...</div> : items.map(item => (
           <div key={item.public_id} style={{ background: surface, border: `1px solid ${border}`, borderRadius: 16, padding: 14, position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(47,191,113,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(15,159,143,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <FileText size={16} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -168,25 +168,25 @@ export default function MobileQuotationPage() {
                   <StatusPill status={item.status} />
                 </div>
                 <div style={{ fontSize: '0.8rem', color: text, fontWeight: 600 }}>{item.customer_name}</div>
-                <div style={{ fontSize: '0.68rem', color: muted, marginTop: 2 }}>{item.customer_phone}</div>
+                <div style={{ fontSize: '0.75rem', color: muted, marginTop: 2 }}>{item.customer_phone}</div>
               </div>
               <button onClick={() => setOpenMenu(openMenu === item.public_id ? null : item.public_id)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <MoreVertical size={14} />
               </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, marginTop: 12 }}>
-              <div><div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase' }}>System</div><div style={{ fontSize: '0.76rem', color: text, fontWeight: 700 }}>{item.system_kw} kW</div></div>
-              <div><div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase' }}>Type</div><div style={{ fontSize: '0.76rem', color: text, fontWeight: 700 }}>{item.system_type}</div></div>
-              <div><div style={{ fontSize: '0.58rem', color: muted, textTransform: 'uppercase' }}>Amount</div><div style={{ fontSize: '0.76rem', color: accent, fontWeight: 700 }}>{INR.format(Number(item.net_investment))}</div></div>
+              <div><div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase' }}>System</div><div style={{ fontSize: '0.76rem', color: text, fontWeight: 700 }}>{item.system_kw} kW</div></div>
+              <div><div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase' }}>Type</div><div style={{ fontSize: '0.76rem', color: text, fontWeight: 700 }}>{item.system_type}</div></div>
+              <div><div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase' }}>Amount</div><div style={{ fontSize: '0.76rem', color: accent, fontWeight: 700 }}>{INR.format(Number(item.net_investment))}</div></div>
             </div>
-            <div style={{ fontSize: '0.64rem', color: muted, marginTop: 10 }}>
+            <div style={{ fontSize: '0.75rem', color: muted, marginTop: 10 }}>
               Updated {new Date(item.updated_at ?? item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
             {openMenu === item.public_id && (
               <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
                 <button onClick={() => { setEditId(item.public_id); setView('wizard'); }} style={{ padding: '10px', borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: text }}>Edit</button>
                 {item.status === 'draft' && <button onClick={() => updateStatus(item, 'sent')} style={{ padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Send size={12} />Mark Sent</button>}
-                {item.status === 'sent' && <button onClick={() => updateStatus(item, 'accepted')} style={{ padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(22,163,74,0.12)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={12} />Accept</button>}
+                {item.status === 'sent' && <button onClick={() => updateStatus(item, 'accepted')} style={{ padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(15,159,143,0.12)', color: '#0F9F8F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><CheckCircle size={12} />Accept</button>}
                 {item.status === 'sent' && <button onClick={() => updateStatus(item, 'rejected')} style={{ padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(239,68,68,0.12)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><XCircle size={12} />Reject</button>}
                 <button onClick={() => setDeleteTarget(item)} style={{ padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(239,68,68,0.12)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Trash2 size={12} />Delete</button>
               </div>

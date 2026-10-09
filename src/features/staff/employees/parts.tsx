@@ -3,7 +3,7 @@ import { RoleKey, initialsOf, Person } from './roles';
 import { useTokens } from '../siteHardware/ui';
 
 const PALETTE: [string, string][] = [
-  ['#e3e1fb', '#2b2a6b'], ['#d9efe3', '#0b4d2e'], ['#fbe8cf', '#7a4504'],
+  ['#e3e1fb', '#2b2a6b'], ['#D9EFEE', '#0B4D49'], ['#fbe8cf', '#7a4504'],
   ['#dcecf3', '#0b4a60'], ['#f5dde6', '#6e1f43'], ['#e9ecd2', '#4a5210'],
 ];
 
@@ -21,7 +21,7 @@ export function Avatar({ person, size = 44 }: { person: Pick<Person, 'first_name
       style={{
         width: size, height: size, borderRadius: 999, flexShrink: 0, display: 'inline-flex',
         alignItems: 'center', justifyContent: 'center', background: bg, color: fg,
-        fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: Math.round(size * 0.34),
+        fontFamily: "'Rubik', sans-serif", fontWeight: 600, fontSize: Math.round(size * 0.34),
       }}
     >
       {initialsOf(person)}

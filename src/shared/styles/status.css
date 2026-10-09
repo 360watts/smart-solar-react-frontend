@@ -190,16 +190,16 @@
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
   vertical-align: middle;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Rubik', sans-serif;
 }
 
-.status-pill--online   { color: #10b981; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); }
+.status-pill--online   { color: #0F9F8F; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); }
 
 .status-pill--offline  { color: var(--muted-foreground); background: rgba(100, 116, 139, 0.10); border: 1px solid rgba(100, 116, 139, 0.18); }
 

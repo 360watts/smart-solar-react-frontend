@@ -35,7 +35,7 @@ const MobileEquipment: React.FC = () => {
   const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text    = 'var(--foreground)';
   const muted   = 'var(--muted-foreground)';
-  const accent  = '#2FBF71';
+  const accent  = 'var(--brand-green)';
 
   const [category, setCategory] = useState<Category>('all');
   const [items, setItems] = useState<ProductCatalogItem[]>([]);
@@ -58,13 +58,13 @@ const MobileEquipment: React.FC = () => {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: bg, fontFamily: "'Rubik', sans-serif" }}>
       {/* Header */}
       <div style={{ background: isDark ? 'rgba(10,14,24,0.9)' : 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
         <img src={finalLogo} alt="360Watts" style={{ height: 28, width: 'auto' }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Outfit', sans-serif" }}>Product Catalog</div>
-          <div style={{ fontSize: '0.65rem', color: muted }}>Solar panels, inverters & batteries</div>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: text, fontFamily: "'Rubik', sans-serif" }}>Product Catalog</div>
+          <div style={{ fontSize: '0.75rem', color: muted }}>Solar panels, inverters & batteries</div>
         </div>
         <Package size={18} color={accent} />
       </div>
@@ -76,7 +76,7 @@ const MobileEquipment: React.FC = () => {
             key={ct.id}
             onClick={() => setCategory(ct.id)}
             style={{
-              flexShrink: 0, padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+              flexShrink: 0, padding: '6px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, fontFamily: "'Rubik', sans-serif",
               background: category === ct.id ? accent : (isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'),
               color: category === ct.id ? '#fff' : muted,
               transition: 'all 150ms',
@@ -109,7 +109,7 @@ const MobileEquipment: React.FC = () => {
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: text }}>{it.brand}</div>
                   <div style={{ fontSize: '0.75rem', color: muted }}>{it.model_name}</div>
                 </div>
-                <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0, background: isDark ? `${CATEGORY_COLORS[it.category]}18` : `${CATEGORY_COLORS[it.category]}22`, color: CATEGORY_COLORS[it.category] }}>
+                <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, flexShrink: 0, background: isDark ? `${CATEGORY_COLORS[it.category]}18` : `${CATEGORY_COLORS[it.category]}22`, color: CATEGORY_COLORS[it.category] }}>
                   {it.category}
                 </span>
               </div>
@@ -120,12 +120,12 @@ const MobileEquipment: React.FC = () => {
                 <div style={{ fontSize: '0.8rem', fontWeight: 600, color: text }}>
                   {it.price_per_unit ? `₹${Number(it.price_per_unit).toLocaleString('en-IN')} / ${it.price_unit}` : '—'}
                 </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: it.in_stock ? accent : '#ef4444' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: it.in_stock ? accent : '#ef4444' }}>
                   {it.in_stock ? '● In Stock' : '● Out of Stock'}
                 </span>
               </div>
               {it.dealer_name && (
-                <div style={{ fontSize: '0.7rem', color: muted }}>{it.dealer_name}{it.dealer_location ? ` · ${it.dealer_location}` : ''}</div>
+                <div style={{ fontSize: '0.75rem', color: muted }}>{it.dealer_name}{it.dealer_location ? ` · ${it.dealer_location}` : ''}</div>
               )}
             </div>
           ))
@@ -133,7 +133,7 @@ const MobileEquipment: React.FC = () => {
       </div>
 
       <div style={{ padding: '8px 12px 24px', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.7rem', color: muted }}>Use desktop to add or edit catalog products</div>
+        <div style={{ fontSize: '0.75rem', color: muted }}>Use desktop to add or edit catalog products</div>
       </div>
     </div>
   );

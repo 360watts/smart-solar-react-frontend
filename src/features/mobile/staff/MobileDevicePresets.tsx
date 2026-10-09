@@ -41,7 +41,7 @@ export default function MobileDevicePresets() {
   const border = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
   const text = 'var(--foreground)';
   const muted = 'var(--muted-foreground)';
-  const accent = '#2FBF71';
+  const accent = 'var(--brand-green)';
 
   const [presets, setPresets] = useState<Preset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,18 +210,18 @@ export default function MobileDevicePresets() {
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: isDark ? 'rgba(7,9,15,0.92)' : 'rgba(244,247,250,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${border}`, padding: '12px 16px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.06)', border: '1px solid rgba(47,191,113,0.18)', boxShadow: '0 2px 8px rgba(47,191,113,0.2)' }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.06)', border: '1px solid rgba(15,159,143,0.18)', boxShadow: '0 2px 8px rgba(15,159,143,0.2)' }}>
               <img src={finalLogo} alt="360Watts" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </div>
             <span style={{ fontSize: '0.88rem', fontWeight: 800, color: text }}>360Watts</span>
           </div>
-          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(47,191,113,0.1)' : 'rgba(47,191,113,0.08)', border: '1px solid rgba(47,191,113,0.22)', borderRadius: 9, color: accent, padding: 6, display: 'flex' }}>
+          <button onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-menu'))} style={{ background: isDark ? 'rgba(15,159,143,0.1)' : 'rgba(15,159,143,0.08)', border: '1px solid rgba(15,159,143,0.22)', borderRadius: 9, color: accent, padding: 6, display: 'flex' }}>
             <Menu size={16} />
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <div style={{ fontSize: '0.6rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Device Presets</div>
+            <div style={{ fontSize: '0.75rem', color: muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Device Presets</div>
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: text, marginTop: 2 }}>{presets.length} templates</div>
           </div>
           <button onClick={openCreate} style={{ background: accent, border: 'none', borderRadius: 10, color: '#fff', padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.76rem', fontWeight: 700 }}>
@@ -238,18 +238,18 @@ export default function MobileDevicePresets() {
         {loading ? <div style={{ color: muted, fontSize: '0.8rem', padding: '20px 4px' }}>Loading presets...</div> : presets.map(preset => (
           <div key={preset.id} style={{ background: surface, border: `1px solid ${border}`, borderRadius: 16, padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(47,191,113,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(15,159,143,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Layers size={16} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.88rem', fontWeight: 700, color: text }}>{preset.name}</div>
-                {preset.description && <div style={{ fontSize: '0.72rem', color: muted, marginTop: 3, lineHeight: 1.45 }}>{preset.description}</div>}
+                {preset.description && <div style={{ fontSize: '0.75rem', color: muted, marginTop: 3, lineHeight: 1.45 }}>{preset.description}</div>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.68rem', color: text }}>{preset.config_id}</span>
-              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.68rem', color: text }}>{preset.gateway_configuration?.uart_configuration?.baud_rate} baud</span>
-              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.68rem', color: text }}>{preset.slaves_count || 0} slaves</span>
+              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.75rem', color: text }}>{preset.config_id}</span>
+              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.75rem', color: text }}>{preset.gateway_configuration?.uart_configuration?.baud_rate} baud</span>
+              <span style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', fontSize: '0.75rem', color: text }}>{preset.slaves_count || 0} slaves</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8, marginTop: 12 }}>
               <button onClick={() => loadSlaves(preset)} style={{ padding: '10px 0', borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
@@ -285,7 +285,7 @@ export default function MobileDevicePresets() {
               </div>
               {creating && (
                 <div style={{ display: 'grid', gap: 10, padding: '2px 0 4px' }}>
-                  <div style={{ fontSize: '0.66rem', fontWeight: 800, color: muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Initial Slave Setup</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Initial Slave Setup</div>
                   <div style={{ display: 'grid', gap: 8 }}>
                     {[
                       {
@@ -307,8 +307,8 @@ export default function MobileDevicePresets() {
                       <label key={option.key} style={{
                         display: 'block',
                         borderRadius: 12,
-                        border: `1px solid ${createPresetSlaveMode === option.key ? 'rgba(47,191,113,0.32)' : border}`,
-                        background: createPresetSlaveMode === option.key ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.05)') : surface,
+                        border: `1px solid ${createPresetSlaveMode === option.key ? 'rgba(15,159,143,0.32)' : border}`,
+                        background: createPresetSlaveMode === option.key ? (isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.05)') : surface,
                         padding: '11px 12px',
                         cursor: 'pointer',
                       }}>
@@ -322,7 +322,7 @@ export default function MobileDevicePresets() {
                           />
                           <div>
                             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text }}>{option.title}</div>
-                            <div style={{ fontSize: '0.69rem', color: muted, lineHeight: 1.4, marginTop: 2 }}>{option.body}</div>
+                            <div style={{ fontSize: '0.75rem', color: muted, lineHeight: 1.4, marginTop: 2 }}>{option.body}</div>
                           </div>
                         </div>
                       </label>
@@ -366,8 +366,8 @@ export default function MobileDevicePresets() {
                                   gap: 10,
                                   padding: '10px 11px',
                                   borderRadius: 10,
-                                  border: `1px solid ${checked ? 'rgba(47,191,113,0.28)' : border}`,
-                                  background: checked ? (isDark ? 'rgba(47,191,113,0.08)' : 'rgba(47,191,113,0.05)') : surface,
+                                  border: `1px solid ${checked ? 'rgba(15,159,143,0.28)' : border}`,
+                                  background: checked ? (isDark ? 'rgba(15,159,143,0.08)' : 'rgba(15,159,143,0.05)') : surface,
                                   cursor: 'pointer',
                                 }}>
                                   <input
@@ -380,7 +380,7 @@ export default function MobileDevicePresets() {
                                   />
                                   <div>
                                     <div style={{ fontSize: '0.78rem', fontWeight: 700, color: text }}>{slave.deviceName}</div>
-                                    <div style={{ fontSize: '0.66rem', color: muted }}>Slave ID {slave.slaveId} · Poll {slave.pollingIntervalMs} ms</div>
+                                    <div style={{ fontSize: '0.75rem', color: muted }}>Slave ID {slave.slaveId} · Poll {slave.pollingIntervalMs} ms</div>
                                   </div>
                                 </label>
                               );
@@ -392,7 +392,7 @@ export default function MobileDevicePresets() {
                 </div>
               )}
 
-              {formError && <div style={{ fontSize: '0.72rem', color: '#ef4444', lineHeight: 1.4 }}>{formError}</div>}
+              {formError && <div style={{ fontSize: '0.75rem', color: '#ef4444', lineHeight: 1.4 }}>{formError}</div>}
               <button disabled={saving} onClick={savePreset} style={{ padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#fff', fontWeight: 700, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving…' : 'Save preset'}</button>
             </div>
           </div>
@@ -415,7 +415,7 @@ export default function MobileDevicePresets() {
               <div style={{ fontSize: '0.78rem', color: muted }}>Slaves: <span style={{ color: text }}>{selected.slaves_count || 0}</span></div>
               {selected.gateway_configuration?.general_settings?.last_updated && <div style={{ fontSize: '0.78rem', color: muted }}>Updated: <span style={{ color: text }}>{new Date(selected.gateway_configuration.general_settings.last_updated).toLocaleDateString('en-IN')}</span></div>}
               <div style={{ marginTop: 6 }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted, marginBottom: 8 }}>Slave devices</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: muted, marginBottom: 8 }}>Slave devices</div>
                 {slavesLoading === (selected.gateway_configuration?.general_settings?.config_id || selected.config_id) ? (
                   <div style={{ fontSize: '0.78rem', color: muted }}>Loading slaves...</div>
                 ) : (presetSlaves[selected.gateway_configuration?.general_settings?.config_id || selected.config_id] ?? []).length === 0 ? (
@@ -424,14 +424,14 @@ export default function MobileDevicePresets() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {(presetSlaves[selected.gateway_configuration?.general_settings?.config_id || selected.config_id] ?? []).map((slave) => (
                       <div key={slave.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 11px', borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(47,191,113,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(15,159,143,0.12)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <PlugZap size={14} />
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: text }}>{slave.deviceName}</div>
-                          <div style={{ fontSize: '0.68rem', color: muted }}>ID {slave.slaveId} · Poll {slave.pollingIntervalMs} ms · Timeout {slave.timeoutMs} ms</div>
+                          <div style={{ fontSize: '0.75rem', color: muted }}>ID {slave.slaveId} · Poll {slave.pollingIntervalMs} ms · Timeout {slave.timeoutMs} ms</div>
                         </div>
-                        <span style={{ padding: '3px 7px', borderRadius: 999, fontSize: '0.58rem', fontWeight: 700, color: slave.enabled ? accent : 'var(--muted-foreground)', background: slave.enabled ? 'rgba(47,191,113,0.12)' : 'rgba(100,116,139,0.12)' }}>
+                        <span style={{ padding: '3px 7px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, color: slave.enabled ? accent : 'var(--muted-foreground)', background: slave.enabled ? 'rgba(15,159,143,0.12)' : 'rgba(100,116,139,0.12)' }}>
                           {slave.enabled ? 'On' : 'Off'}
                         </span>
                       </div>

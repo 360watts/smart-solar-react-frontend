@@ -39,9 +39,9 @@ function StatCard({ label, value, unit, color }: { label: string; value: string;
       flex: 1, minWidth: 108, padding: '12px 14px', borderRadius: 12,
       background: tokens.surfaceMuted, border: `1px solid ${tokens.border}`,
     }}>
-      <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: tokens.textDim }}>{label}</div>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: tokens.textDim }}>{label}</div>
       <div style={{ fontSize: '1.15rem', fontWeight: 800, color, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
-        {value}<span style={{ fontSize: '0.7rem', fontWeight: 600, color: tokens.textMuted, marginLeft: 3 }}>{unit}</span>
+        {value}<span style={{ fontSize: '0.75rem', fontWeight: 600, color: tokens.textMuted, marginLeft: 3 }}>{unit}</span>
       </div>
     </div>
   );
@@ -57,7 +57,7 @@ function PhaseRow({ label, l1, l2, l3, unit, digits }: { label: string; l1: numb
         <div key={tag as string} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: color as string, flexShrink: 0 }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: tokens.text, fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(v as number | null, digits)}<span style={{ fontSize: '0.65rem', color: tokens.textDim, marginLeft: 2 }}>{unit}</span>
+            {fmt(v as number | null, digits)}<span style={{ fontSize: '0.75rem', color: tokens.textDim, marginLeft: 2 }}>{unit}</span>
           </span>
         </div>
       ))}
@@ -140,11 +140,11 @@ const EnergyMeterDashboard: React.FC<Props> = ({ siteId, autoRefresh = true }) =
           </div>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999,
-            fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
-            background: isStale ? 'rgba(245,158,11,0.12)' : 'rgba(0,166,62,0.12)',
-            color: isStale ? '#f59e0b' : '#00a63e', border: `1px solid ${isStale ? 'rgba(245,158,11,0.3)' : 'rgba(0,166,62,0.3)'}`,
+            fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+            background: isStale ? 'rgba(245,158,11,0.12)' : 'rgba(15,159,143,0.12)',
+            color: isStale ? '#f59e0b' : '#0F9F8F', border: `1px solid ${isStale ? 'rgba(245,158,11,0.3)' : 'rgba(15,159,143,0.3)'}`,
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: isStale ? '#f59e0b' : '#00a63e' }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: isStale ? '#f59e0b' : '#0F9F8F' }} />
             {loading ? 'Loading…' : isStale ? 'Not updating' : 'Live'}
           </span>
         </div>
@@ -167,7 +167,7 @@ const EnergyMeterDashboard: React.FC<Props> = ({ siteId, autoRefresh = true }) =
             <PhaseRow label="Voltage" l1={latest.voltage_l1} l2={latest.voltage_l2} l3={latest.voltage_l3} unit="V" digits={0} />
             <PhaseRow label="Current" l1={latest.current_l1} l2={latest.current_l2} l3={latest.current_l3} unit="A" digits={2} />
             <PhaseRow label="Power" l1={latest.active_power_l1} l2={latest.active_power_l2} l3={latest.active_power_l3} unit="W" digits={0} />
-            <div style={{ paddingTop: 8, display: 'flex', alignItems: 'center', gap: 6, color: tokens.textDim, fontSize: '0.72rem' }}>
+            <div style={{ paddingTop: 8, display: 'flex', alignItems: 'center', gap: 6, color: tokens.textDim, fontSize: '0.75rem' }}>
               <Gauge size={12} />
               Frequency {fmt(latest.frequency_l1, 1)} / {fmt(latest.frequency_l2, 1)} / {fmt(latest.frequency_l3, 1)} Hz
             </div>
