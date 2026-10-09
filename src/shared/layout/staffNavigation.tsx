@@ -204,7 +204,7 @@ const STAFF_ROUTE_MATCHERS: Array<{ pattern: string; meta: StaffRouteMeta }> = [
   {
     pattern: '/sites/onboarding',
     meta: {
-      title: 'Site Onboarding',
+      title: 'Site setup',
       subtitle: 'Fill in customer, system and billing details for a site',
       group: 'Monitor',
       density: 'workflow',

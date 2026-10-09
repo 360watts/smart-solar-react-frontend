@@ -1,16 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import MobileSites from '../mobile/staff/MobileSites';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  CircleCheck, Plus, Search,
-  Server, Wifi, WifiOff, X,
-  Globe, AlertTriangle, Zap, HardDrive,
-} from "lucide-react";
+import { ArrowRight, CircleCheck, HardDrive, Plus, Search, Server, Wifi, WifiOff, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { apiService } from "../../services/api";
-import { useTheme } from "../../contexts/ThemeContext";
 import PageHeader, { GradientCTAButton } from "../../shared/layout/PageHeader";
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
@@ -34,6 +28,7 @@ interface SiteRow {
   is_active?: boolean;
   updated_at?: string;
   devices?: SiteDeviceRow[];
+  setup?: { filled: number; total: number; missing: string[] } | null;
   gateway_device?: {
     is_online?: boolean;
     last_seen_at?: string | null;
@@ -55,12 +50,12 @@ interface SiteCardModel {
   lastSeenLabel: string;
   signalLabel: string;
   healthSeverity: 'ok' | 'warn' | 'critical';
+  setup: { filled: number; total: number; missing: string[] } | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_ORDER: SiteStatus[] = ["draft", "commissioning", "active", "inactive", "archived"];
-const MOTION_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 const isKnownStatus = (value: unknown): value is SiteStatus =>
   ["draft", "commissioning", "active", "inactive", "archived"].includes(value as string);
@@ -118,6 +113,7 @@ function mapRowToSite(row: SiteRow, fallbackIndex: number): SiteCardModel {
     lastSeenLabel,
     signalLabel,
     healthSeverity,
+    setup: row.setup ?? null,
   };
 }
 
@@ -125,49 +121,13 @@ function mapRowToSite(row: SiteRow, fallbackIndex: number): SiteCardModel {
 
 export default function Sites() {
   const isMobile = useIsMobile();
-  const { isDark } = useTheme();
-
-  // ── Design Tokens ──
-  // ── Design tokens — matches mobile AppTheme ───────────────────────────────
-  const bg      = 'var(--background)';
-  const surface = 'var(--card)';
-  const cardEl  = 'var(--card)';
-  const border  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(18,21,26,0.09)';
-  const borderMuted = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(18,21,26,0.05)';
-  const text    = 'var(--foreground)';
-  const textMute = 'var(--muted-foreground)';
-  const textDim  = 'var(--text-dim)';
-  const accent   = '#2FBF71';
-
-  const STATUS_CFG: Record<string, { color: string; bg: string; label: string }> = {
-    active:        { color: accent,     bg: 'rgba(47,191,113,0.10)',  label: 'Active' },
-    commissioning: { color: '#3B82F6',  bg: 'rgba(59,130,246,0.10)', label: 'Commissioning' },
-    inactive:      { color: '#EF4444',  bg: 'rgba(239,68,68,0.10)',  label: 'Inactive' },
-    draft:         { color: textDim,    bg: surface,                  label: 'Draft' },
-    archived:      { color: textDim,    bg: surface,                  label: 'Archived' },
-  };
-
-  const GW_CFG: Record<GatewayState, { color: string; icon: React.ReactNode; label: string }> = {
-    online:     { color: accent,    icon: <Wifi size={12} />,    label: 'GW Online' },
-    offline:    { color: '#EF4444', icon: <WifiOff size={12} />, label: 'GW Offline' },
-    'no-gateway': { color: textDim, icon: <HardDrive size={12}/>, label: 'No gateway' },
-  };
-
-  const statusCfg = (s: string) => STATUS_CFG[s] ?? { color: textDim, bg: surface, label: s };
-
-  // KPI palette
-  const kpiCfg = {
-    portfolio: { accent: textMute,   bg: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(18,21,26,0.05)' },
-    active:    { accent,             bg: 'rgba(47,191,113,0.10)' },
-    gateways:  { accent: '#3B82F6',  bg: 'rgba(59,130,246,0.10)' },
-    attention: { accent: '#E9B949',  bg: 'rgba(233,185,73,0.10)' },
-  };
 
   // State
   const [sites, setSites] = useState<SiteCardModel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [needsSetupOnly, setNeedsSetupOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -209,285 +169,206 @@ export default function Sites() {
     let list = sites;
     if (!includeInactive) list = list.filter(s => s.status !== "inactive" && s.status !== "archived");
     if (statusFilter !== "all") list = list.filter(s => s.status === statusFilter);
+    if (needsSetupOnly) list = list.filter(s => (s.setup?.missing.length ?? 0) > 0);
     const q = searchQuery.trim().toLowerCase();
     if (q) list = list.filter(s => s.name.toLowerCase().includes(q) || s.location.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
     return list;
-  }, [sites, includeInactive, statusFilter, searchQuery]);
+  }, [sites, includeInactive, statusFilter, needsSetupOnly, searchQuery]);
+  const needsSetupCount = useMemo(() => sites.filter(s => (s.setup?.missing.length ?? 0) > 0).length, [sites]);
 
   const totalSites = sites.length;
   const activeSites = statusCounts.active;
   const attentionSites = sites.filter(s => s.status === "inactive" || s.status === "commissioning" || s.gatewayState === "offline").length;
   const onlineRatio = totalSites === 0 ? 0 : Math.round((gatewayCounts.online / totalSites) * 100);
 
-  // ── Render Helpers ────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
-  const renderKPIs = () => {
-    const cards = [
-      { key: 'portfolio', label: 'Total Portfolio', value: String(totalSites),  sub: 'Managed site records',        icon: <Server size={15} />,        cfg: kpiCfg.portfolio },
-      { key: 'active',    label: 'Operational',     value: String(activeSites), sub: 'Active and serving load',     icon: <CircleCheck size={15} />,    cfg: kpiCfg.active },
-      { key: 'gateways',  label: 'Gateways Online', value: `${onlineRatio}%`,   sub: `${gatewayCounts.online} online`, icon: <Wifi size={15} />,       cfg: kpiCfg.gateways },
-      { key: 'attention', label: 'Need Attention',  value: String(attentionSites), sub: 'Inactive, offline, setup', icon: <AlertTriangle size={15} />, cfg: kpiCfg.attention },
-    ];
+  const STATUS_CLASS: Record<string, string> = {
+    active: 'bg-done-soft text-done-ink',
+    commissioning: 'bg-[var(--info-soft)] text-[var(--info)]',
+    inactive: 'bg-destructive/10 text-destructive',
+    draft: 'bg-muted text-muted-foreground',
+    archived: 'bg-muted text-muted-foreground',
+  };
+  const GW_CLASS: Record<GatewayState, string> = {
+    online: 'text-done-ink',
+    offline: 'text-destructive',
+    'no-gateway': 'text-muted-foreground',
+  };
+  const GW_ICON: Record<GatewayState, React.ReactNode> = {
+    online: <Wifi size={13} />, offline: <WifiOff size={13} />, 'no-gateway': <HardDrive size={13} />,
+  };
 
+  const readyCount = sites.filter(s => s.setup && s.setup.missing.length === 0).length;
+  const summary = [
+    { label: 'Needs setup', value: String(needsSetupCount), sub: 'sites with details missing', tone: 'bg-needed-soft text-needed-ink border-needed/40' },
+    { label: 'Ready', value: String(readyCount), sub: 'fully set up', tone: 'bg-card text-foreground border-border' },
+    { label: 'Operational', value: String(activeSites), sub: 'active and serving load', tone: 'bg-card text-foreground border-border' },
+    { label: 'Gateways online', value: `${onlineRatio}%`, sub: `${gatewayCounts.online} of ${totalSites}`, tone: 'bg-card text-foreground border-border' },
+  ];
+
+  const chip = (active: boolean) =>
+    `shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${active ? 'bg-foreground text-background' : 'bg-card text-muted-foreground ring-1 ring-inset ring-border hover:text-foreground'}`;
+
+  const list = needsSetupOnly
+    ? [...filteredSites].sort((a, b) => (a.setup ? a.setup.filled / a.setup.total : 1) - (b.setup ? b.setup.filled / b.setup.total : 1))
+    : filteredSites;
+
+  const renderRow = (site: SiteCardModel) => {
+    const setup = site.setup;
+    const missing = setup?.missing ?? [];
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 28 }}>
-        {cards.map(({ key, label, value, sub, icon, cfg }) => (
-          <div key={key} style={{
-            background: surface, border: `1px solid ${border}`, borderRadius: 18,
-            padding: 14, position: 'relative', overflow: 'hidden', minHeight: 100,
-            boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 1px 6px rgba(0,0,0,0.04)',
-          }}>
-            {/* Corner glow */}
-            <span style={{ position: 'absolute', top: -18, right: -18, width: 56, height: 56, borderRadius: '50%', background: `${cfg.accent}0A`, pointerEvents: 'none' }} />
-            <span style={{ position: 'absolute', top: -6, right: -6, width: 28, height: 28, borderRadius: '50%', background: `${cfg.accent}0D`, pointerEvents: 'none' }} />
-
-            {/* Icon badge + label row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 10,
-                background: cfg.bg, color: cfg.accent,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${cfg.accent}25`, flexShrink: 0,
-              }}>
-                {icon}
-              </div>
-              <span style={{ color: textMute, fontWeight: 700, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-            </div>
-
-            {/* Value */}
-            <div style={{ color: text, fontSize: '1.75rem', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-            <div style={{ color: textDim, fontSize: '0.6875rem', marginTop: 4 }}>{sub}</div>
-
-            {/* Accent baseline bar */}
-            <div style={{ position: 'absolute', bottom: 8, left: 14, width: 24, height: 2, borderRadius: 1, background: `${cfg.accent}50` }} />
+      <div key={site.id}
+        className={`[display:grid] items-center gap-x-5 gap-y-3 rounded-2xl border bg-card px-5 py-4 shadow-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,2.4fr)_auto] ${missing.length ? 'border-needed/40' : 'border-border'}`}>
+        <div className="min-w-0">
+          <Link to={`/sites/${encodeURIComponent(site.id)}`} className="block truncate text-base font-semibold text-foreground no-underline hover:underline">
+            {site.name}
+          </Link>
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{site.id}</span>
+            <span>·</span>
+            <span>{site.updatedLabel}</span>
           </div>
-        ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[site.status] ?? STATUS_CLASS.draft}`}>
+            {site.status === 'commissioning' ? 'Being set up' : site.status.charAt(0).toUpperCase() + site.status.slice(1)}
+          </span>
+          <span className={`inline-flex items-center gap-1 text-xs font-semibold ${GW_CLASS[site.gatewayState]}`}>
+            {GW_ICON[site.gatewayState]}
+            {site.gatewayState === 'online' ? 'Monitor online' : site.gatewayState === 'offline' ? 'Monitor offline' : 'No monitor'}
+          </span>
+        </div>
+
+        <div className="min-w-0">
+          {!setup ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : missing.length === 0 ? (
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-done-ink"><CircleCheck size={15} /> All set</span>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                  <span className="block h-full rounded-full bg-needed" style={{ width: `${(setup.filled / setup.total) * 100}%` }} />
+                </span>
+                <span className="w-10 text-sm font-semibold tabular-nums text-foreground">{setup.filled}/{setup.total}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {missing.slice(0, 3).map(m => (
+                  <span key={m} className="rounded-full bg-needed-soft px-2.5 py-0.5 text-xs font-medium text-needed-ink">{m}</span>
+                ))}
+                {missing.length > 3 && <span className="px-1 text-xs text-muted-foreground">+{missing.length - 3} more</span>}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          {missing.length > 0 ? (
+            <Link to={`/sites/onboarding?site=${encodeURIComponent(site.id)}`}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-foreground px-4 text-sm font-semibold text-background no-underline">
+              Finish setup <ArrowRight size={15} />
+            </Link>
+          ) : (
+            <Link to={`/sites/${encodeURIComponent(site.id)}`}
+              className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground no-underline">
+              View
+            </Link>
+          )}
+        </div>
       </div>
     );
   };
 
-  const renderSiteCard = (site: SiteCardModel) => {
-    const sc  = statusCfg(site.status);
-    const gwc = GW_CFG[site.gatewayState];
-    const accentColor = sc.color === textDim ? border : sc.color;
-
-    return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.16, ease: MOTION_EASE }}
-        key={site.id}
-      >
-        <Link to={`/sites/${encodeURIComponent(site.id)}`} style={{ textDecoration: 'none' }}>
-          <div
-            style={{
-              background: surface,
-              border: `1px solid ${border}`,
-              borderLeft: `3px solid ${accentColor}`,
-              borderRadius: 18,
-              padding: 16,
-              cursor: 'pointer',
-              transition: 'background 150ms',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = cardEl)}
-            onMouseLeave={e => (e.currentTarget.style.background = surface)}
-          >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: text, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {site.name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: textDim, fontFamily: 'monospace' }}>{site.id}</div>
-              </div>
-              {/* Status chip: dot + label */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '4px 8px', borderRadius: 999,
-                background: sc.bg,
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: 3, background: sc.color, flexShrink: 0 }} />
-                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: sc.color }}>{sc.label}</span>
-              </div>
-            </div>
-
-            {/* Footer row */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 16,
-              paddingTop: 10, borderTop: `1px solid ${borderMuted}`,
-            }}>
-              {/* Gateway */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ color: gwc.color, display: 'flex' }}>{gwc.icon}</span>
-                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: gwc.color }}>{gwc.label}</span>
-              </div>
-
-              {/* Device count */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <HardDrive size={13} color={textMute} />
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: text }}>
-                  {site.devices}
-                  <span style={{ fontWeight: 400, color: textMute }}> devices</span>
-                </span>
-              </div>
-
-              {/* Updated */}
-              <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: textDim }}>{site.updatedLabel}</div>
-            </div>
-
-            {/* Health bar */}
-            {site.devices > 0 && (
-              <div style={{ height: 3, background: borderMuted, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
-                <div style={{
-                  height: 3, borderRadius: 2,
-                  width: site.gatewayState === 'online' ? '100%' : site.gatewayState === 'offline' ? '100%' : '0%',
-                  background: site.gatewayState === 'online' ? accent : site.gatewayState === 'offline' ? '#EF4444' : textDim,
-                  transition: 'width 0.4s',
-                }} />
-              </div>
-            )}
-          </div>
-        </Link>
-      </motion.div>
-    );
-  };
-
-  // Filter chip options
   const FILTER_CHIPS: { value: StatusFilter; label: string; count: number }[] = [
-    { value: 'all',           label: 'All',           count: sites.length },
-    { value: 'active',        label: 'Active',        count: statusCounts.active },
-    { value: 'commissioning', label: 'Commissioning', count: statusCounts.commissioning },
-    { value: 'draft',         label: 'Draft',         count: statusCounts.draft },
-    { value: 'inactive',      label: 'Inactive',      count: statusCounts.inactive + statusCounts.archived },
+    { value: 'all',           label: 'All',          count: sites.length },
+    { value: 'active',        label: 'Active',       count: statusCounts.active },
+    { value: 'commissioning', label: 'Being set up', count: statusCounts.commissioning },
+    { value: 'draft',         label: 'Draft',        count: statusCounts.draft },
+    { value: 'inactive',      label: 'Inactive',     count: statusCounts.inactive + statusCounts.archived },
   ];
 
   if (isMobile) return <MobileSites />;
 
-  // ── Main Render ───────────────────────────────────────────────────────────
-
   return (
-    <div className="admin-container responsive-page" style={{ paddingBottom: 60, background: bg, minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: 'clamp(16px, 2vw, 28px) clamp(12px, 2vw, 24px) 0' }}>
+    <div className="admin-container responsive-page min-h-screen bg-background pb-16">
+      <div className="mx-auto max-w-[1400px] px-[clamp(12px,2vw,24px)] pt-[clamp(16px,2vw,28px)]">
 
         <PageHeader
-          title="Sites & Operations"
-          subtitle={`${sites.length} site${sites.length !== 1 ? 's' : ''} · manage lifecycle and ownership`}
+          title="Sites"
+          subtitle={`${sites.length} site${sites.length !== 1 ? 's' : ''} · ${needsSetupCount} still need setup`}
           rightSlot={
-            <Link to="/sites/commissioning" style={{ textDecoration: 'none' }}>
-              <GradientCTAButton>
-                <Plus size={16} /> Commission New Site
-              </GradientCTAButton>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/sites/onboarding"
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground no-underline">
+                Site setup
+                {needsSetupCount > 0 && <span className="rounded-full bg-needed-soft px-2 text-xs tabular-nums text-needed-ink">{needsSetupCount}</span>}
+              </Link>
+              <Link to="/sites/commissioning" style={{ textDecoration: 'none' }}>
+                <GradientCTAButton>
+                  <Plus size={16} /> New site
+                </GradientCTAButton>
+              </Link>
+            </div>
           }
         />
 
-        {/* KPI Cards */}
-        {renderKPIs()}
-
-        {/* Search bar — matching mobile search */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          background: surface, border: `1px solid ${border}`, borderRadius: 14,
-          padding: '0 12px', height: 44, marginBottom: 14,
-          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
-        }}>
-          <Search size={18} color={textDim} style={{ flexShrink: 0 }} />
-          <input
-            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search sites…"
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: text, fontSize: '0.9375rem',
-            }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-              <X size={17} color={textDim} />
-            </button>
-          )}
+        <div className="mb-6 [display:grid] grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          {summary.map(c => (
+            <div key={c.label} className={`rounded-2xl border p-5 ${c.tone}`}>
+              <div className="text-sm font-semibold opacity-80">{c.label}</div>
+              <div className="mt-1 text-4xl font-bold leading-tight tabular-nums" style={{ fontFamily: 'var(--font-display)' }}>{c.value}</div>
+              <div className="text-[0.8125rem] opacity-75">{c.sub}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Filter chips — horizontal scrollable row matching mobile */}
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
-          {FILTER_CHIPS.map(chip => {
-            const isActive = statusFilter === chip.value && !(chip.value === 'inactive' && includeInactive && statusFilter === 'all');
-            const active = statusFilter === chip.value;
-            return (
-              <button
-                key={chip.value}
-                onClick={() => {
-                  setStatusFilter(chip.value);
-                  if (chip.value === 'inactive') setIncludeInactive(true);
-                  else if (chip.value === 'all') setIncludeInactive(false);
-                }}
-                style={{
-                  flexShrink: 0,
-                  padding: '6px 14px', borderRadius: 999,
-                  border: `1px solid ${active ? accent : border}`,
-                  background: active ? accent : surface,
-                  color: active ? '#fff' : textMute,
-                  fontSize: '0.8125rem', fontWeight: active ? 700 : 500,
-                  cursor: 'pointer', transition: 'all 150ms', whiteSpace: 'nowrap',
-                }}
-              >
-                {chip.label} ({chip.count})
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <label className="relative min-w-[240px] max-w-md flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input aria-label="Search sites" placeholder="Search by name or site code" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className="min-h-11 w-full rounded-xl border border-input bg-card pl-10 pr-10 text-sm text-foreground outline-none focus-visible:border-done focus-visible:ring-4 focus-visible:ring-done/20" />
+            {searchQuery && (
+              <button type="button" aria-label="Clear search" onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground"><X size={15} /></button>
+            )}
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {needsSetupCount > 0 && (
+              <button type="button" aria-pressed={needsSetupOnly} onClick={() => setNeedsSetupOnly(v => !v)}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${needsSetupOnly ? 'bg-needed text-black ring-2 ring-needed' : 'bg-needed-soft text-needed-ink'}`}>
+                Needs setup <span className="tabular-nums">{needsSetupCount}</span>
               </button>
-            );
-          })}
+            )}
+            {FILTER_CHIPS.map(c => (
+              <button key={c.value} type="button" aria-pressed={statusFilter === c.value} className={chip(statusFilter === c.value)}
+                onClick={() => {
+                  setStatusFilter(c.value);
+                  if (c.value === 'inactive') setIncludeInactive(true);
+                  else if (c.value === 'all') setIncludeInactive(false);
+                }}>
+                {c.label} <span className="tabular-nums opacity-60">{c.count}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Site list */}
         {isLoading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 10, color: textMute }}>
-            <div style={{ width: 24, height: 24, border: `2px solid ${border}`, borderTopColor: accent, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: '0.8125rem' }}>Loading sites…</span>
+          <div className="flex flex-col items-center gap-2.5 py-16 text-sm text-muted-foreground">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-done" />
+            Loading sites…
           </div>
         ) : error ? (
-          <div style={{ padding: 20, borderRadius: 14, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)', color: '#EF4444', fontSize: '0.875rem' }}>
-            {error}
-          </div>
-        ) : filteredSites.length === 0 ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-            <div style={{ width: 72, height: 72, borderRadius: 36, background: surface, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <Server size={32} color={textDim} />
-            </div>
-            <div style={{ color: text, fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>
-              {searchQuery ? 'No sites match your search' : 'No sites yet'}
-            </div>
-            <div style={{ color: textMute, fontSize: '0.875rem' }}>
-              {searchQuery ? 'Try a different name or site ID' : 'Commission your first site to get started'}
-            </div>
+          <div role="alert" className="rounded-2xl bg-destructive/10 p-5 text-sm text-destructive">{error}</div>
+        ) : list.length === 0 ? (
+          <div className="py-16 text-center">
+            <Server size={32} className="mx-auto mb-3 text-muted-foreground" />
+            <div className="font-semibold text-foreground">{searchQuery ? 'No sites match your search' : needsSetupOnly ? 'Every site is set up' : 'No sites yet'}</div>
+            <div className="mt-1 text-sm text-muted-foreground">{searchQuery ? 'Try a different name or site code' : 'Nothing to show here.'}</div>
           </div>
         ) : (
-          <>
-            {/* "Recent" / "Results" section */}
-            {filteredSites.slice(0, 3).length > 0 && (
-              <div style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: textDim, marginBottom: 10 }}>
-                  {searchQuery ? 'Results' : 'Recent'}
-                </div>
-                <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredSites.slice(0, 3).map(renderSiteCard)}
-                  </AnimatePresence>
-                </motion.div>
-              </div>
-            )}
-
-            {/* "All Sites" section */}
-            {!searchQuery && filteredSites.slice(3).length > 0 && (
-              <div style={{ marginBottom: 28 }}>
-                <div style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: textDim, marginBottom: 10 }}>
-                  All Sites
-                </div>
-                <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredSites.slice(3).map(renderSiteCard)}
-                  </AnimatePresence>
-                </motion.div>
-              </div>
-            )}
-          </>
+          <div className="flex flex-col gap-2.5">{list.map(renderRow)}</div>
         )}
       </div>
     </div>

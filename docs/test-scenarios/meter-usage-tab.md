@@ -6,21 +6,27 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 
 | ID | Given | When | Then | Type | Pri | Status |
 |---|---|---|---|---|---|---|
-| TV-1 | `meter_only` true, no `visibleTabs` | Tabs are chosen | `['usage', 'phase-load']` in that order | unit | P0 | passing |
+| TV-1 | `meter_only` true, no `visibleTabs` | Tabs are chosen | `['usage']` only | unit | P0 | passing |
 | TV-2 | `meter_only` true, `visibleTabs` includes both | Tabs are chosen | Both shown | unit | P0 | passing |
-| TV-3 | `meter_only` true, `visibleTabs` lacks `usage` | Tabs are chosen | Only `phase-load` | unit | P1 | passing |
+| TV-3 | `meter_only` true, `visibleTabs` lacks `usage` | Tabs are chosen | No tabs (empty) | unit | P1 | passing |
 | TV-4 | `meter_only` true, `visibleTabs` has neither | Tabs are chosen | No tabs (nothing invented) | unit | P2 | passing |
-| TV-5 | `meter_only` false (inverter site) | Tabs are chosen | Today's behaviour, never `usage` | unit | P0 | passing |
+| TV-5 | `meter_only` false, no meter (inverter site) | Tabs are chosen | Today's behaviour, never `usage` | unit | P0 | passing |
 | TV-6 | `meter_only` false, `visibleTabs` includes `usage` | Tabs are chosen | `usage` is still dropped | unit | P0 | passing |
 | TV-7 | `meter_only` unknown (`undefined`/`null`, overview not loaded or old backend) | Tabs are chosen | Today's behaviour, no `usage` | unit | P0 | passing |
-| TV-8 | Meter-only site | Tab bar renders | The Phase load tab reads "Load by phase"; on inverter sites it still reads "Load" | unit | P1 | passing |
-| TV-9 | Meter-only site, person has not clicked a tab | Overview reports `meter_only` | Panel switches to Usage once | manual | P1 | planned |
-| TV-10 | Person already clicked a tab, then `meter_only` arrives | Overview reports `meter_only` | Their tab is kept | manual | P1 | planned |
+| TV-16 | `meter_only` false, `has_meter` true | Tabs are chosen | Today's tabs plus `usage` last; intersected with `visibleTabs` | unit | P0 | passing |
+| TV-17 | `has_meter` false/null/undefined | Tabs are chosen | No `usage`; `meter_only` true ignores `has_meter` | unit | P0 | passing |
+| TV-18 | Inverter site with a meter, not meter-only | Usage tab opens | Calm caveat line under the heading ("Measured at the meter. If the meter sits at the grid connection, ..."); absent when meter-only | unit | P1 | passing |
+| TV-19 | Inverter site with a meter, person has not clicked a tab | Overview reports `has_meter` | No auto-switch; opens on the usual tab | manual | P1 | planned |
+| TV-8 | Meter-only site | Tab bar renders | Meter-only sites show only the Usage tab; inverter sites keep their tabs | unit | P1 | passing |
+| TV-9 | Meter-only site, person has not clicked a tab | Overview reports `meter_only` | First render after the skeleton is already Usage (derived via `resolveTab`, no effect) | component | P1 | passing |
+| TV-10 | Person already clicked a tab, then `meter_only` arrives | Overview reports `meter_only` | Their tab is kept (unless the bar no longer lists it) | manual | P1 | planned |
 | TV-11 | Viewer on a meter-only site | Opens the site | Viewer tab list includes `usage` (`ViewerSite`) | unit | P0 | passing |
 | TV-13 | Active tab is not in the tab bar (meter_only flips, or `usage` hidden by `visibleTabs`) | Panel renders | Falls back to the bar's first tab (`resolveTab`); the auto-switch to Usage respects `visibleTabs` | unit | P1 | passing |
 | TV-14 | Meter-only viewer site, overview not answered yet | First load | Skeleton, not the "No data found" card; inverter sites with no data still get that card once the overview answers | manual | P1 | planned |
 | TV-15 | Viewer switches from one site to another | Route changes | Panel remounts (`key={siteId}`), nothing from the old site lingers | manual | P2 | planned |
-| TV-12 | Meter-only site with no inverter telemetry, forecast or weather | Panel renders | Tab bar and Usage still show (the "No data found" card is skipped for meter-only sites); inverter sites keep that card | manual | P0 | planned |
+| TV-12 | Meter-only site with no inverter telemetry, forecast or weather | Panel renders | Tab bar and Usage still show (the "No data found" card is skipped for meter-only sites); inverter sites keep that card | component | P0 | passing |
+| TV-20 | Any site just opened | Before the first overview answer | Skeleton only: no tab bar, no tab content, no solar telemetry calls; first overview call fires at once; inverter sites load their data right after the answer; 4 s safety timeout releases a hung overview | component | P0 | passing |
+| TV-21 | Meter-only site opened | Overview answers meter-only | Overview content never renders at any point (no flash) | component | P0 | passing |
 
 ## Usage figures
 
@@ -83,6 +89,9 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 | ST-6 | Browser tab hidden | 60 seconds pass | No request; unmount stops the timer; Try again refetches (one fake-timer test) | unit | P2 | passing |
 | ST-7 | Site changes while a request is in flight | Old response arrives | Ignored | unit | P2 | planned |
 | ST-8 | `age_seconds` 120 | Header renders | "Live" and "last reading 2 minutes ago"; older than 15 minutes switches to amber "Not reporting" wording | unit | P1 | passing |
+| ST-9 | Meter-only answer was received once for a site | Panel is unmounted and mounted again (minimise/restore, route remount) | Usage renders on the first render, no skeleton, no Overview; the overview request still fires and refreshes the value | unit | P0 | passing |
+| ST-10 | Another site was remembered | A different site id mounts | It does not inherit the answer; skeleton until its own answer | unit | P1 | passing |
+| ST-11 | Site remembered as meter-only | The next overview call fails | Remembered value kept; Usage stays, Overview never shows | unit | P0 | passing |
 
 ## Request budget (telemetry reads are 300 per hour per user)
 
@@ -103,7 +112,7 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 
 ## Live verification (after the backend ships)
 
-1. Pick a meter-only site (energy meter, no gateway, no inverter). Open it: the panel opens on Usage and shows only Usage and Load by phase. (planned)
+1. Pick a meter-only site (energy meter, no gateway, no inverter). Open it: the panel opens on Usage and shows only the Usage tab. (planned)
 2. Compare the hero kWh with the sum of the 5-minute rows from the history endpoint for the same day. (planned)
 3. Confirm an inverter site (for example coim_002) has no Usage tab and is otherwise unchanged. (planned)
 4. Sign in as a viewer assigned to the meter-only site: Usage is there; an unassigned site is refused. (planned)

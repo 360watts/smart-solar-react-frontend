@@ -170,10 +170,13 @@
   }
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* In @layer base so Tailwind utilities (p-*, m-*) can override it. Unlayered, it beat all of them. */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 body {
@@ -333,4 +336,33 @@ select option {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Setup status tokens (semantic). Components use classes like bg-needed-soft,
+   text-needed-ink, bg-done-soft: never hex. "Needed" is amber, never red.
+   ──────────────────────────────────────────────────────────────────────────── */
+:root {
+  --needed: #F59E0B;
+  --needed-soft: #FFF1CC;
+  --needed-ink: #7A4A00;
+  --done: #2FBF71;
+  --done-soft: #E3F6EB;
+  --done-ink: #14663C;
+  --forest: #0C1A14;
+}
+.dark-mode {
+  --needed-soft: rgba(245,158,11,0.16);
+  --needed-ink: #F7C873;
+  --done-soft: rgba(47,191,113,0.16);
+  --done-ink: #8FE3B4;
+}
+@theme inline {
+  --color-needed: var(--needed);
+  --color-needed-soft: var(--needed-soft);
+  --color-needed-ink: var(--needed-ink);
+  --color-done: var(--done);
+  --color-done-soft: var(--done-soft);
+  --color-done-ink: var(--done-ink);
+  --color-forest: var(--forest);
 }

@@ -21,6 +21,7 @@ function usage(over: Partial<MeterUsage> = {}): MeterUsage {
     timezone: 'Asia/Kolkata',
     generated_at: '2026-10-08T11:08:00+00:00',
     meter_only: true,
+    has_meter: true,
     meter: { device_serial: 'ME0042', last_reading_at: '2026-10-08T11:06:00+00:00', age_seconds: 120 },
     step_minutes: 15,
     today: {
@@ -61,6 +62,17 @@ beforeEach(() => {
 });
 
 describe('UsageTab', () => {
+  it('shows the grid-connection caveat only when the site also has an inverter', async () => {
+    apiService.getMeterUsage.mockResolvedValue(usage({ meter_only: false }));
+    const { unmount } = renderTab();
+    expect(await screen.findByTestId('meter-caveat')).toHaveTextContent(/Measured at the meter\. If the meter sits at the grid connection/);
+    unmount();
+    apiService.getMeterUsage.mockResolvedValue(usage());
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    expect(screen.queryByTestId('meter-caveat')).toBeNull();
+  });
+
   it('shows skeletons first, then the energy figure and the change against yesterday', async () => {
     renderTab();
     expect(screen.getByTestId('usage-skeleton')).toBeInTheDocument();

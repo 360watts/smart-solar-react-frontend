@@ -1196,7 +1196,7 @@ class ApiService {
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/weather/`), 15 * 60 * 1000);
   }
 
-  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null; meter_only?: boolean } | null> {
+  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null; meter_only?: boolean; has_meter?: boolean } | null> {
     // 15-second TTL: backend fragment-caches at 15s for realtime, so this passthrough is safe
     const cacheKey = `staff_overview_${siteId}`;
     try {

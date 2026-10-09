@@ -33,6 +33,7 @@ export interface MeterUsage {
   timezone: string;
   generated_at: string;
   meter_only: boolean;
+  has_meter: boolean;
   meter: { device_serial: string | null; last_reading_at: string | null; age_seconds: number | null };
   step_minutes: number;
   today: {

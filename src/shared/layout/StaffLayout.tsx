@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Monitor, Settings, Bell, Users, Briefcase,
   Star, Download, Building2, Server, FileText, User,
   LogOut, Sun, Moon, X, ChevronDown, ChevronsLeft,
-  Zap, CalendarCheck, MessageCircle, TrendingUp, ClipboardCheck,
+  Zap, CalendarCheck, MessageCircle, TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAccess } from '../access/useAccess';
@@ -32,7 +32,6 @@ const NAV_CONFIG: NavEntry[] = [
 
 const NAV_STAFF: NavEntry[] = [
   { path: '/sites',            label: 'Sites',            icon: Building2,      feature: 'sites'    },
-  { path: '/sites/onboarding', label: 'Site Onboarding',  icon: ClipboardCheck, feature: 'sites'    },
   { path: '/equipment',        label: 'Product Catalog',  icon: Server,         feature: 'catalog'  },
   { path: '/quotation',        label: 'Quotation',        icon: FileText,       feature: 'quotations' },
   { path: '/service-bookings', label: '360Care Bookings', icon: CalendarCheck,  feature: 'bookings' },

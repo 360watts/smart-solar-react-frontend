@@ -516,6 +516,11 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
           {statusText}
         </div>
       </div>
+      {data.meter_only === false && (
+        <p data-testid="meter-caveat" style={{ ...sub, margin: '-6px 0 0' }}>
+          Measured at the meter. If the meter sits at the grid connection, this is the energy the site draws from the grid.
+        </p>
+      )}
 
       {/* Hero + curve, side cards */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'stretch' }}>

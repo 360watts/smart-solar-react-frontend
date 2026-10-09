@@ -113,6 +113,8 @@ interface FetchState {
   smartDevices: any[];
   /** From staff_overview: true = energy meter and no inverter (Usage tab); null = not known yet. */
   meterOnly: boolean | null;
+  /** From staff_overview: true = the site has an energy meter (Usage tab); null = not known yet. */
+  hasMeter: boolean | null;
   /** True once the first overview call has finished (even if it failed), so "no data" is not shown while meterOnly is still unknown. */
   overviewDone: boolean;
   loading: boolean;
@@ -123,14 +125,24 @@ interface FetchState {
 }
 
 const FETCH_INITIAL: FetchState = {
-  telemetry: [], forecast: [], weather: null, smartDevices: [], meterOnly: null, overviewDone: false,
+  telemetry: [], forecast: [], weather: null, smartDevices: [], meterOnly: null, hasMeter: null, overviewDone: false,
   loading: true, error: null, historyError: null, lastUpdated: null, secondsSinceUpdate: 0,
 };
 
+// Last meterOnly/hasMeter answer per site, kept for the page session so a remount (minimise/restore) does not drop back to the skeleton.
+const meterMemory = new Map<string, { meterOnly: boolean; hasMeter: boolean }>();
+export const __resetMeterOnlyMemory = () => meterMemory.clear();
+
+function initialFetchState(siteId: string): FetchState {
+  const m = meterMemory.get(siteId);
+  return m ? { ...FETCH_INITIAL, ...m, overviewDone: true, loading: !m.meterOnly } : FETCH_INITIAL;
+}
+
 type FetchAction =
+  | { type: 'RESET'; siteId: string }
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; payload: Pick<FetchState, 'telemetry' | 'forecast' | 'lastUpdated'> }
-  | { type: 'OVERVIEW_SUCCESS'; payload: Pick<FetchState, 'weather' | 'smartDevices' | 'meterOnly'> }
+  | { type: 'OVERVIEW_SUCCESS'; payload: Pick<FetchState, 'weather' | 'smartDevices' | 'meterOnly' | 'hasMeter'> }
   | { type: 'FETCH_ERROR'; error: string }
   | { type: 'HISTORY_ERROR'; error: string | null }
   | { type: 'HISTORY_APPEND'; rows: any[] }
@@ -139,6 +151,8 @@ type FetchAction =
 
 function fetchReducer(state: FetchState, action: FetchAction): FetchState {
   switch (action.type) {
+    case 'RESET':
+      return initialFetchState(action.siteId);
     case 'FETCH_START':
       return { ...state, loading: true, error: null };
     case 'FETCH_SUCCESS':
@@ -149,6 +163,7 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
       // A meter-only site never runs the telemetry fetch, so the overview is what ends its first load.
       return {
         ...state, ...action.payload, overviewDone: true, meterOnly: action.payload.meterOnly ?? state.meterOnly,
+        hasMeter: action.payload.hasMeter ?? state.hasMeter,
         loading: action.payload.meterOnly === true ? false : state.loading,
       };
     case 'FETCH_ERROR':
@@ -186,8 +201,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const { isDark } = useTheme();
   const isTouch = useIsMobile();
 
-  const [fetchState, dispatchFetch] = useReducer(fetchReducer, FETCH_INITIAL);
-  const { telemetry, forecast, weather, smartDevices, meterOnly, overviewDone, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
+  const [fetchState, dispatchFetch] = useReducer(fetchReducer, siteId, initialFetchState);
+  // A new siteId (caller not keyed by it) starts from that site's remembered answer, not the old site's.
+  const seededSiteRef = useRef(siteId);
+  useEffect(() => {
+    if (seededSiteRef.current === siteId) return;
+    seededSiteRef.current = siteId;
+    dispatchFetch({ type: 'RESET', siteId });
+  }, [siteId]);
+  const { telemetry, forecast, weather, smartDevices, meterOnly, hasMeter, overviewDone, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
   const isInitialLoad = useRef(true);
   // Guards the fire-and-forget analytics Promise: set to true on unmount or
   // siteId change so callbacks don't set state on a stale/unmounted component.
@@ -195,7 +217,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   const [activeTabState, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
   // The tab bar is the source of truth: a tab it does not list (e.g. meterOnly flipped) falls back to its first entry.
-  const panelTabs = tabsFor({ meterOnly, visibleTabs });
+  const panelTabs = tabsFor({ meterOnly, hasMeter, visibleTabs });
   const activeTab = resolveTab(activeTabState, panelTabs);
   const meterOnlyOn = meterOnly === true;
   // Set once the person picks a tab (or the caller names one), so the meter-only auto-switch never overrides them.
@@ -338,19 +360,31 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       setGatewayOnline(overview?.realtime?.is_online ?? null);
       setCtLatest(overview?.energy_meter_latest ?? null);
       setSolarDayToday(overview?.energy_summary_today ?? null);
+      if (typeof overview?.meter_only === 'boolean' && typeof overview?.has_meter === 'boolean') {
+        meterMemory.set(siteId, { meterOnly: overview.meter_only, hasMeter: overview.has_meter });
+      }
       dispatchFetch({ type: 'OVERVIEW_SUCCESS', payload: {
         weather: overview?.weather ?? null,
         smartDevices: Array.isArray(overview?.smart_devices) ? overview.smart_devices : [],
         meterOnly: typeof overview?.meter_only === 'boolean' ? overview.meter_only : null,
+        hasMeter: typeof overview?.has_meter === 'boolean' ? overview.has_meter : null,
       }});
     };
-    // Stagger behind fetchAll's initial burst rather than firing in the same tick —
-    // the two together were enough concurrent requests on mount to trip the
-    // backend's throttle. 30s cadence matches the backend's realtime fragment TTL.
-    const kickoff = setTimeout(poll, 800);
+    // First call runs at once: it tells us meter-only vs inverter before anything is drawn or fetched
+    // (fetchAll waits for it, so there is no burst to stagger against). 30s cadence matches the
+    // backend's realtime fragment TTL.
+    poll();
     const iv = setInterval(poll, 30_000);
-    return () => { cancelled = true; clearTimeout(kickoff); clearInterval(iv); };
+    return () => { cancelled = true; clearInterval(iv); };
   }, [siteId]);
+
+  // A hung overview call must not hold the skeleton forever.
+  const [overviewWaitExpired, setOverviewWaitExpired] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setOverviewWaitExpired(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  const overviewReady = overviewDone || overviewWaitExpired;
 
   const refreshVsActualData = useCallback(async () => {
     if (!siteId) return;
@@ -512,7 +546,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   useEffect(() => {
     // Meter-only sites have no telemetry/forecast; skipping saves the per-user read quota (300/hour).
-    if (meterOnlyOn) return;
+    if (meterOnlyOn || !overviewReady) return;
     isInitialLoad.current = true;
     analyticsStaleRef.current = false;
     dispatchFetch({ type: 'FETCH_START' });
@@ -526,17 +560,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       analyticsStaleRef.current = true;
       clearInterval(fullId);
     };
-  }, [fetchAll, fetchHistory, autoRefresh, meterOnlyOn]);
+  }, [fetchAll, fetchHistory, autoRefresh, meterOnlyOn, overviewReady]);
 
   useEffect(() => {
-    if (!autoRefresh || meterOnlyOn) return;
+    if (!autoRefresh || meterOnlyOn || !overviewReady) return;
     // Fire immediately so latestLiveTelemetry is populated on mount instead of
     // waiting for the first 30s tick — this is now the sole source of live
     // telemetry (the old inline 20-min-window fetch in fetchAll was removed).
     fetchLatestTelemetry();
     const fastId = setInterval(fetchLatestTelemetry, 30_000);
     return () => clearInterval(fastId);
-  }, [fetchLatestTelemetry, autoRefresh, meterOnlyOn]);
+  }, [fetchLatestTelemetry, autoRefresh, meterOnlyOn, overviewReady]);
 
   useEffect(() => {
     if (!lastUpdated) return;
@@ -918,7 +952,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // A meter-only site never has inverter telemetry or a forecast; its tabs still need to show.
   // Until the first overview answers we cannot tell, so hold the skeleton rather than flash "No data found".
   const noData = meterOnly !== true && telemetry.length === 0 && forecast.length === 0 && !weather;
-  if (loading || (noData && !overviewDone)) {
+  if (!overviewReady || loading || (noData && !overviewDone)) {
     return (
       <div style={{ padding: '24px 0' }}>
         <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1198,7 +1232,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   }}
                 >
                   <span>{tab.icon}</span>
-                  {tabLabel(tab, meterOnly)}
+                  {tabLabel(tab)}
                 </motion.button>
               );
             })}
@@ -1371,7 +1405,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               />
             )}
 
-            {activeTab === 'usage' && meterOnly === true && (
+            {activeTab === 'usage' && (meterOnly === true || hasMeter === true) && (
               <UsageTab key="usage" siteId={siteId} isDark={isDark} ctLatest={ctLatest} />
             )}
 
