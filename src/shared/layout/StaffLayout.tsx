@@ -205,7 +205,8 @@ const STAFF_STYLES = `
 
   /* ── Slim icon rail (desktop default): 44px icon buttons, active = primary tint ─── */
   .staff-rail-btn {
-    width: 44px; height: 44px; flex-shrink: 0;
+    position: relative;
+    width: 40px; height: 40px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     border-radius: 12px; border: none; background: transparent;
     color: var(--muted-foreground); cursor: pointer; text-decoration: none;
@@ -213,7 +214,18 @@ const STAFF_STYLES = `
   }
   .staff-rail-btn:hover { background: var(--surface-muted); color: var(--foreground); }
   .staff-rail-btn.active { background: var(--primary-soft); color: var(--primary); }
+  .staff-rail-btn.active::before { content: ''; position: absolute; left: -18px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--primary); }
   .staff-rail-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  .staff-rail-scroll { scrollbar-width: none; }
+  .staff-rail-scroll::-webkit-scrollbar { display: none; }
+
+  .staff-rail-logo { position: relative; }
+  .staff-rail-logo .staff-rail-logo-chev { position: absolute; opacity: 0; color: var(--primary); transition: opacity 0.15s ease; }
+  .staff-rail-logo:hover, .staff-rail-logo:focus-visible { background: var(--primary-soft) !important; opacity: 1; }
+  .staff-rail-logo:hover .staff-rail-logo-img, .staff-rail-logo:focus-visible .staff-rail-logo-img { opacity: 0; }
+  .staff-rail-logo:hover .staff-rail-logo-chev, .staff-rail-logo:focus-visible .staff-rail-logo-chev { opacity: 1; }
+  .staff-rail-logo:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
   /* ── Logo toggle button ─── */
   .staff-logo-btn {
@@ -293,8 +305,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const showCollapsed = collapsed && !isDrawer;
 
   // Colours
-  const sideBg     = isDark ? 'rgba(7,11,26,0.97)' : 'rgba(250,251,253,0.97)';
-  const sideBorder  = isDark ? 'color-mix(in srgb, var(--brand-green) 15%, transparent)' : 'rgba(18,21,26,0.09)';
+  const sideBg     = 'var(--card)';
+  const sideBorder  = 'var(--border)';
   const accent      = 'var(--brand-green)';
   const avatarGrad  = isDark
     ? 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)'
@@ -336,33 +348,32 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           background: 'var(--foreground)', color: 'var(--background)', boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
         }}>{tip.label}</div>
       )}
+      <div style={{ position: 'relative', width: STAFF_SIDEBAR_COLLAPSED, height: '100%' }}>
       <div style={{
-        width: STAFF_SIDEBAR_COLLAPSED, height: '100%', boxSizing: 'border-box',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0',
-        backgroundColor: sideBg, backgroundImage: GRAIN_SVG, borderRight: `1px solid ${sideBorder}`,
-        overflowY: 'auto', overflowX: 'hidden',
+        width: '100%', height: '100%', boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 0',
+        background: sideBg, borderRight: `1px solid ${sideBorder}`,
+        overflow: 'hidden',
       }}>
         <button
-          className="staff-logo-btn"
+          className="staff-logo-btn staff-rail-logo"
           onClick={onToggleCollapse}
-          title="Expand menu"
           aria-label="Expand menu"
-          style={{ width: 40, height: 40, borderRadius: 12, justifyContent: 'center', background: 'var(--surface-muted)', marginBottom: 14 }}
+          {...tipProps('Expand menu')}
+          style={{ width: 44, height: 44, borderRadius: 14, justifyContent: 'center', background: 'var(--surface-muted)', marginBottom: 6, flexShrink: 0 }}
         >
-          <img src={finalLogo} alt="360watts" style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }} />
+          <img className="staff-rail-logo-img" src={finalLogo} alt="360watts" style={{ width: 30, height: 30, objectFit: 'contain', display: 'block' }} />
+          <ChevronsRight className="staff-rail-logo-chev" size={20} aria-hidden="true" />
         </button>
-        <button type="button" className="staff-rail-btn" onClick={onToggleCollapse} aria-label="Expand sidebar" {...tipProps('Expand sidebar')}
-          style={{ height: 32, marginTop: -8 }}>
-          <ChevronsRight size={18} />
-        </button>
-        <nav aria-label="Main" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <nav aria-label="Main" className="staff-rail-scroll" style={{ flex: 1, minHeight: 0, width: '100%', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           {groups.map((items, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <div aria-hidden="true" style={{ width: 24, height: 1, background: 'var(--border)', margin: '2px 0' }} />}
+              {i > 0 && <div aria-hidden="true" style={{ width: 28, height: 1, background: 'var(--border)', margin: '4px 0', flexShrink: 0 }} />}
               {items.map(railLink)}
             </React.Fragment>
           ))}
         </nav>
+        <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0', flexShrink: 0 }} aria-hidden="true" />
         <button type="button" className="staff-rail-btn" onClick={toggleTheme}
           aria-label={isDark ? 'Light mode' : 'Dark mode'} {...tipProps(isDark ? 'Light mode' : 'Dark mode')}>
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
@@ -370,7 +381,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <NavLink to="/profile" aria-label="My Profile" {...tipProps('My Profile')}
           className={({ isActive }) => `staff-rail-btn${isActive ? ' active' : ''}`}>
           <span style={{
-            width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-muted)', color: 'var(--foreground)',
+            width: 30, height: 30, borderRadius: '50%', background: avatarGrad, color: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: "'Rubik', sans-serif", fontSize: 12, fontWeight: 600,
           }}>{initials}</span>
@@ -378,6 +389,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <button type="button" className="staff-rail-btn" onClick={handleLogout} aria-label="Sign out" {...tipProps('Sign out')}>
           <LogOut size={20} />
         </button>
+      </div>
       </div>
       </>
     );

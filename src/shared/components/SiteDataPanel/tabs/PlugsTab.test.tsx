@@ -1,72 +1,80 @@
-import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import PlugsTab from './PlugsTab';
 import type { SmartDeviceNode } from '../../EnergyFlow/types';
 
-// Scenarios: docs/test-scenarios/smart-plugs-tab.md (PT-*).
+// Scenarios: docs/test-scenarios/smart-plugs-tab.md (R*).
 jest.mock('../../EnergyFlow/NodeDetailModal', () => ({
   __esModule: true,
   default: (p: any) => (p.node ? <div data-testid="node-modal">{p.node.title}</div> : null),
 }));
 
-const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
-const plug = (o: Partial<SmartDeviceNode>): SmartDeviceNode => ({
-  id: 1, device_type: 'tuya_plug', appliance_label: 'other', display_name: 'Plug', is_active: true, is_online: true,
-  latest: { power_w: 0, current_a: null, voltage_v: null, energy_kwh: null, switch_on: true, timestamp: minutesAgo(1) },
-  ...o,
+const NOW = Date.parse('2026-10-08T11:08:00Z');
+const fresh = new Date(NOW - 60_000).toISOString();
+const old = new Date(NOW - 3 * 3_600_000).toISOString();
+const mk = (id: number, name: string, w: number, ts: string | null, kwh: number | null, extra: Partial<SmartDeviceNode> = {}): SmartDeviceNode => ({
+  id, device_type: 'tuya_plug', appliance_label: 'fridge', display_name: name, is_active: true, is_online: true,
+  circuit: 'inverter_backup',
+  latest: ts ? { power_w: w, current_a: null, voltage_v: null, energy_kwh: null, switch_on: true, timestamp: ts } : null,
+  today: { kwh_today: kwh, curve_24h: Array(24).fill(null).map((_, i) => (i > 20 ? 1 : null)) },
+  ...extra,
 });
-
-const DEVICES: SmartDeviceNode[] = [
-  plug({ id: 1, display_name: 'Fridge 1', appliance_label: 'fridge', circuit: 'inverter_backup',
-    latest: { power_w: 120, current_a: 0.5, voltage_v: 230, energy_kwh: 4, switch_on: true, timestamp: minutesAgo(1) } }),
-  plug({ id: 2, display_name: 'AC(NEW)', appliance_label: 'ac_unit', circuit: 'grid_direct', latest: null }),
-  plug({ id: 3, display_name: 'Washer', appliance_label: 'washing_machine', circuit: 'grid_direct' }),
-  plug({ id: 4, display_name: 'EV charger', appliance_label: 'ev_charger', circuit: 'ev_line',
-    latest: { power_w: 3000, current_a: 13, voltage_v: 230, energy_kwh: 50, switch_on: true, timestamp: minutesAgo(10) } }),
-  plug({ id: 5, display_name: 'Main meter', appliance_label: 'grid' }),
+const DEVICES = [
+  mk(1, 'EV Charger', 2680, fresh, 3.2, { appliance_label: 'ev_charger', circuit: 'ev_line' }),
+  mk(2, 'Fridge 1', 82, fresh, 1.9),
+  mk(3, 'Water Pump', 0, fresh, 0.3, { circuit: 'grid_direct', appliance_label: 'water_pump' }),
+  mk(4, 'Geyser 1', 900, old, null, { circuit: 'grid_direct', appliance_label: 'geyser' }),
 ];
 
-const group = (title: string) => screen.getByRole('heading', { name: title }).closest('section') as HTMLElement;
+beforeEach(() => { jest.spyOn(Date, 'now').mockReturnValue(NOW); });
+afterEach(() => jest.restoreAllMocks());
 
-describe('PlugsTab', () => {
-  it('groups plugs by what they are wired to (PT-1)', () => {
-    render(<PlugsTab smartDevices={DEVICES} isDark={false} siteId="s1" />);
-    const titles = screen.getAllByRole('heading').map(h => h.textContent);
-    expect(titles).toEqual(['Backup (via inverter)', 'Grid direct', 'EV charging']);
-    expect(within(group('Backup (via inverter)')).getByText('Fridge 1')).not.toBeNull();
-    expect(within(group('Grid direct')).getByText('AC(NEW)')).not.toBeNull();
-    expect(within(group('Grid direct')).getByText('Washer')).not.toBeNull();
-    expect(within(group('EV charging')).getByText('EV charger')).not.toBeNull();
-    expect(screen.queryByText('Main meter')).toBeNull();
-  });
+it('ranks by live draw with offline plugs last (R1)', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  const rows = screen.getAllByTestId('plug-row').map(r => within(r).getByTestId('plug-name').textContent);
+  expect(rows).toEqual(['EV Charger', 'Fridge 1', 'Water Pump']);
+  expect(screen.getByTestId('plug-offline-Geyser 1')).not.toBeNull();
+});
 
-  it('shows Offline for stale or missing readings, Running and Idle otherwise (PT-2..4)', () => {
-    render(<PlugsTab smartDevices={DEVICES} isDark={false} siteId="s1" />);
-    const row = (name: string) => screen.getByRole('button', { name: new RegExp(name.replace(/[()]/g, '\\$&')) });
-    expect(row('AC(NEW)').textContent).toMatch(/Offline/);
-    expect(row('EV charger').textContent).toMatch(/Offline/);
-    expect(row('EV charger').textContent).not.toMatch(/3\.00|3000/);
-    expect(row('Fridge 1').textContent).toMatch(/Running/);
-    expect(row('Fridge 1').textContent).toMatch(/120/);
-    expect(row('Washer').textContent).toMatch(/Idle/);
-  });
+it('summary strip adds up fresh draw and counts states (R2)', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  expect(screen.getByTestId('sum-now').textContent).toContain('2.76');
+  expect(screen.getByTestId('sum-running').textContent).toContain('2');
+  expect(screen.getByText('Not reporting · 1')).not.toBeNull();
+});
 
-  it('shows an empty state with no plugs (PT-5)', () => {
-    render(<PlugsTab smartDevices={[DEVICES[4]]} isDark={false} siteId="s1" />);
-    expect(screen.getByText('No smart plugs at this site yet')).not.toBeNull();
-  });
+it('offline plug shows no wattage, only when it was last seen (R3)', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  const off = screen.getByTestId('plug-offline-Geyser 1');
+  expect(off.textContent).toContain('Last seen 3 h ago');
+  expect(off.textContent).not.toContain('900');
+});
 
-  it('opens the plug detail on tap (PT-6)', () => {
-    render(<PlugsTab smartDevices={DEVICES} isDark={false} siteId="s1" />);
-    expect(screen.queryByTestId('node-modal')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Fridge 1/ }));
-    expect(screen.getByTestId('node-modal').textContent).toBe('Fridge 1');
-  });
+it('missing today figure leaves the line out and the summary says partly counted (R4)', () => {
+  render(<PlugsTab smartDevices={[DEVICES[0], mk(5, 'Fridge 2', 50, fresh, null)]} isDark siteId="s1" />);
+  expect(screen.queryByTestId('plug-today-Fridge 2')).toBeNull();
+  expect(screen.getByTestId('sum-today-note').textContent).toContain('partly counted');
+});
 
-  it('has no on/off control (PT-7: no plug switch API is wired)', () => {
-    render(<PlugsTab smartDevices={DEVICES} isDark={false} siteId="s1" />);
-    expect(screen.queryByRole('switch')).toBeNull();
-    expect(screen.queryByRole('checkbox')).toBeNull();
-    expect(screen.queryByText(/turn (on|off)/i)).toBeNull();
-  });
+it('shows the circuit as a muted label (R7)', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  expect(screen.getByTestId('plug-circuit-EV Charger').textContent).toBe('EV');
+  expect(screen.getByTestId('plug-circuit-Fridge 1').textContent).toBe('Backup');
+  expect(screen.getByTestId('plug-circuit-Water Pump').textContent).toBe('Grid direct');
+});
+
+it('row click opens the detail modal (R6)', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  fireEvent.click(screen.getAllByTestId('plug-row')[0]);
+  expect(screen.getByTestId('node-modal').textContent).toContain('EV Charger');
+});
+
+it('offline chip opens the detail modal too', () => {
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  fireEvent.click(screen.getByTestId('plug-offline-Geyser 1'));
+  expect(screen.getByTestId('node-modal').textContent).toContain('Geyser 1');
+});
+
+it('empty site shows the empty state (R8)', () => {
+  render(<PlugsTab smartDevices={[]} isDark siteId="s1" />);
+  expect(screen.queryByText('No smart plugs at this site yet')).not.toBeNull();
 });

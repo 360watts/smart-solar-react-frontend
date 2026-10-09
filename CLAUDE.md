@@ -72,7 +72,7 @@ src/
     mobile/       — Mobile-specific staff/ variants (customer-facing mobile/portal/ variant removed with the portal decommission)
     quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
   shared/
-    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...); EnergyFlow/flowModel.ts holds the pure flow helpers (mix shares, line geometry); smart plugs are listed in the site panel's Smart plugs tab (`SiteDataPanel/tabs/PlugsTab.tsx`, read-only, helpers in `EnergyFlow/plugHelpers.tsx`), the flow only shows load totals + an "N smart plugs ›" link
+    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...); EnergyFlow/flowModel.ts holds the pure flow helpers (mix shares, line geometry); smart plugs are listed in the site panel's Smart plugs tab (`SiteDataPanel/tabs/PlugsTab.tsx`, read-only ranked table with today's kWh and a 24 h curve fed by `smart_devices[].today`, helpers in `EnergyFlow/plugHelpers.tsx`), the flow only shows load totals + an "N smart plugs ›" link
     guards/       — StaffRoute (AdminRoute is no longer used by any route)
     access/       — Feature keys, `useAccess()`, `RequireAccess` (see "Role-based access")
     hooks/        — Custom React hooks
@@ -104,6 +104,8 @@ All API calls go through `src/services/`. Base URL from `VITE_API_BASE_URL`. Cal
 ### Theming
 
 Light/dark theme via `ThemeContext` + Tailwind dark mode. Do not hard-code colors — use Tailwind tokens or CSS variables.
+
+**House look (2026-10-09):** accent is Lagoon Mint — `--brand-green` / `--primary` (light `#0F9F8F`, dark `#2EF0CC`, overridden under `.dark-mode`); never write `#2FBF71`, `#22C55E` or Tailwind `*-green-*`/`*-emerald-*`, use `var(--brand-green)` or `teal-*`. Fonts: **Rubik** for text, **Fira Code** for numbers and labels, nothing else is loaded (`index.html`). Shape is Playful (`--radius` 22 px). Body text is 15 px and nothing goes below 12 px. The sidebar (`shared/layout/StaffLayout.tsx`) is the only nav: a 76 px collapsed rail (logo tile expands it, hover tooltips are React state, the middle icon list scrolls with a hidden scrollbar) and a 236 px expanded sidebar, both on `var(--card)`. Work record: `360watts-data/docs/WORK_PROGRESS_REPORT.md`, task 112.
 
 ### UI Style — the friendly house style
 

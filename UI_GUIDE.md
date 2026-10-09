@@ -146,3 +146,12 @@ New staff pages use Tailwind classes and the semantic tokens in `index.css` (`bg
 Two traps from the legacy CSS (see F-013-UI):
 1. Do not use the class `grid` in new code. `App.css` defines a global `.grid` with its own columns, gap and margin that overrides Tailwind. Use `[display:grid]` plus `grid-cols-[...]`.
 2. Plain `.card`, `.btn`-style classes in `App.css` and `shared/styles/` are unlayered and beat Tailwind utilities on the same element. Do not mix them with utility classes on one element.
+
+## Colour, type and shape (2026-10-09)
+
+- Accent: Lagoon Mint, `var(--brand-green)` (light `#0F9F8F`, dark `#2EF0CC`). Status greens are the same accent, so keep "good" distinct by wording and icon, not by a second green.
+- Fonts: Rubik for text, Fira Code for numbers, codes and small labels. Do not add a family.
+- Size: body 15 px, minimum 12 px, including inline `fontSize`.
+- Shape: Playful, 22 px card corners (`--radius`).
+- Navigation: sidebar only (collapsed rail and expanded), no second navbar.
+

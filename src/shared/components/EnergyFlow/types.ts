@@ -38,6 +38,8 @@ export interface SmartDeviceNode {
    * instead (the same ground truth the backend's own health check trusts).
    */
   is_online: boolean;
+  /** Today's energy and 24 hourly averages (kW, oldest first, null = no reading); null/absent when the backend could not compute it. */
+  today?: { kwh_today: number | null; curve_24h: (number | null)[] } | null;
   /**
    * Consecutive failed local-poll attempts by the on-site Pi (`local`-mode
    * devices only; always 0 otherwise). Informational only — it resets on
@@ -78,7 +80,7 @@ export interface EnergyFlowBlockProps {
   inverterPhases?: InverterPhases;
   ctReading?: any | null;
   /** Today's totals for the left rail; missing values render as "—". */
-  today?: { solarKwh?: number | null; usedKwh?: number | null; ownPct?: number | null; solarCurve?: number[]; solarCurveLabels?: string[]; usedPartial?: string | null };
+  today?: { solarKwh?: number | null; usedKwh?: number | null; ownPct?: number | null; solarCurve?: (number | null)[]; solarCurveLabels?: string[]; usedPartial?: string | null };
   /** Opens the site panel's Smart plugs tab; without it the load cards show the plug count as plain text. */
   onOpenPlugs?: () => void;
 }

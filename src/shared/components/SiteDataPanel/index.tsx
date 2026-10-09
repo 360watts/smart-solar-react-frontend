@@ -597,6 +597,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     historyZoom.resetZoom();
   }, [dateRange]);
 
+  // Overview has no range picker and its solar curve is today-only: a range picked on History must not leak into it.
+  useEffect(() => {
+    if (activeTab === 'overview' && dateRange !== '24h') setDateRange('24h');
+  }, [activeTab, dateRange]);
+
   useEffect(() => {
     // Only needed by the Phase-Load tab — skip firing on every mount/hours-change
     // while some other tab is open, so it doesn't pile onto the initial burst.
@@ -696,19 +701,21 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     // Solar curve for the "Solar made today" tile: hourly average kW from the 5-minute rows this panel already
     // loads (24h mode = the solar day so far). Other ranges carry no "today" curve.
     if (dateRange !== '24h' || telemetry.length < 2) return base;
-    const hours = new Map<number, number[]>();
+    // The chart is the solar day, 6 AM to 6 AM IST: 24 fixed hourly slots from startOfSolarDayIST(), so the line
+    // grows left to right and the hours still to come stay empty (null = no reading, never zero-filled).
+    const dayStartMs = new Date(startOfSolarDayIST()).getTime();
+    const slotKw: number[][] = Array.from({ length: 24 }, () => []);
     let kwhSum = 0;
     for (const r of telemetry) {
       const w = Number(r.pv1_power_w ?? 0) + Number(r.pv2_power_w ?? 0) + Number(r.pv3_power_w ?? 0) + Number(r.pv4_power_w ?? 0);
       if (!Number.isFinite(w)) continue;
-      const h = Math.floor(new Date(r.timestamp).getTime() / 3_600_000);
-      hours.set(h, [...(hours.get(h) ?? []), w / 1000]);
+      const slot = Math.floor((new Date(r.timestamp).getTime() - dayStartMs) / 3_600_000);
+      if (slot >= 0 && slot < 24) slotKw[slot].push(w / 1000);
       kwhSum += (w / 1000) * (5 / 60);
     }
-    const hourly = [...hours.entries()].sort((a, b) => a[0] - b[0]);
-    const solarCurve = hourly.map(([, v]) => v.reduce((s, x) => s + x, 0) / v.length);
-    // Tooltip labels: the hour each point covers, in IST ("2 PM").
-    const solarCurveLabels = hourly.map(([h]) => new Date(h * 3_600_000).toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' }).toUpperCase());
+    const solarCurve = slotKw.map(v => (v.length ? v.reduce((s, x) => s + x, 0) / v.length : null));
+    // Tooltip labels: the hour each slot starts, in IST ("6 AM" ... "5 AM").
+    const solarCurveLabels = slotKw.map((_, i) => new Date(dayStartMs + i * 3_600_000).toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' }).toUpperCase());
     // When the energy summary has no figure, total the same rows (5-minute aggregate: kW x 5/60) rather than "—".
     const solarKwh = base.solarKwh ?? (kwhSum > 0 ? kwhSum : null);
     return { ...base, solarKwh, solarCurve, solarCurveLabels };
@@ -1049,7 +1056,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {(activeTab === 'overview' || activeTab === 'history') && (
+            {activeTab === 'history' && (
               <>
                 <select
                   value={dateRange}
@@ -1201,7 +1208,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       {noData && !devicesEscape ? noDataMsg : (
         <>
           {/* ── Tab Bar (underlined row; colours are the getDesignTokens CSS vars) ── */}
-          <div data-testid="tab-row" style={{ display: hideTabs ? 'none' : 'flex', flexWrap: 'wrap', marginBottom: 24, minWidth: 0 }}>
+          <div data-testid="tab-row" style={{ display: hideTabs ? 'none' : 'flex', flexWrap: 'wrap', columnGap: 16, marginBottom: 24, minWidth: 0 }}>
           <motion.div
             role="tablist"
             initial={{ opacity: 0 }}

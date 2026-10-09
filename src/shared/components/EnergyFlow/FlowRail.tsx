@@ -59,26 +59,38 @@ export const RailRow: React.FC<{ label: string; value: string | null; unit?: str
 
 // points: values oldest -> newest; renders nothing for fewer than 2 points.
 // `labels` (same length) name each point for the hover tooltip, e.g. "2 PM"; the tooltip reads "2 PM · 3.4 kW".
-export const Sparkline: React.FC<{ points: number[]; color: string; labels?: string[]; unit?: string }> = ({ points, color, labels, unit = 'kW' }) => {
+export const Sparkline: React.FC<{ points: (number | null)[]; color: string; labels?: string[]; unit?: string }> = ({ points, color, labels, unit = 'kW' }) => {
   const [hover, setHover] = useState<number | null>(null);
-  if (points.length < 2) return null;
-  const max = Math.max(...points, 0.001);
+  const known = points.filter((v): v is number => v != null);
+  if (points.length < 2 || known.length < 2) return null;
+  const max = Math.max(...known, 0.001);
   const w = 200, h = 36;
   const x = (i: number) => (i / (points.length - 1)) * w;
   const y = (v: number) => h - (v / max) * (h - 4) - 2;
-  const xy = points.map((v, i) => `${x(i)},${y(v)}`);
+  // Runs of consecutive known points; a null hour breaks the line (never zero-filled).
+  const runs: [number, number][][] = [];
+  points.forEach((v, i) => {
+    if (v == null) return;
+    if (i > 0 && points[i - 1] != null) runs[runs.length - 1].push([i, v]);
+    else runs.push([[i, v]]);
+  });
+  const hv = hover != null ? points[hover] : null;
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     if (r.width <= 0) return;
     const i = Math.round(((e.clientX - r.left) / r.width) * (points.length - 1));
     setHover(Math.max(0, Math.min(points.length - 1, i)));
   };
-  const tip = hover != null ? `${labels?.[hover] ? `${labels[hover]} · ` : ''}${points[hover].toFixed(points[hover] >= 10 ? 1 : 2)} ${unit}` : null;
+  const tip = hover != null
+    ? `${labels?.[hover] ? `${labels[hover]} · ` : ''}${hv == null ? 'no reading' : `${hv.toFixed(hv >= 10 ? 1 : 2)} ${unit}`}`
+    : null;
   return (
     <div data-sparkline style={{ position: 'relative', marginTop: 6 }} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
-        <polyline points={xy.join(' ')} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
-        {hover != null && <circle cx={x(hover)} cy={y(points[hover])} r={3.5} fill={color} stroke="var(--card)" strokeWidth={1.5} />}
+        {runs.map((run, k) => run.length > 1
+          ? <polyline key={k} points={run.map(([i, v]) => `${x(i)},${y(v)}`).join(' ')} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+          : <circle key={k} cx={x(run[0][0])} cy={y(run[0][1])} r={1.5} fill={color} />)}
+        {hover != null && hv != null && <circle cx={x(hover)} cy={y(hv)} r={3.5} fill={color} stroke="var(--card)" strokeWidth={1.5} />}
       </svg>
       {tip && hover != null && (
         <div role="tooltip" style={{

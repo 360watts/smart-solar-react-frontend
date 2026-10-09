@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
-import { Home, Grid, Car, Plug } from 'lucide-react';
+import { Plug } from 'lucide-react';
 import { SetupCard, Item, StatusChip, EmptyState } from '../../../../features/staff/siteHardware/ui';
 import NodeDetailModal, { type NodeData } from '../../EnergyFlow/NodeDetailModal';
 import { fmtPower } from '../../EnergyFlow/flowModel';
-import { applIcon, createDeviceNodeData, deviceLabel, freshLatest, isPlug, plugGroup, plugState } from '../../EnergyFlow/plugHelpers';
+import { Sparkline } from '../../EnergyFlow/FlowRail';
+import { applIcon, createDeviceNodeData, deviceLabel, freshLatest, hourLabels, isPlug, lastSeenText, plugGroup, plugRanking, plugState } from '../../EnergyFlow/plugHelpers';
+import './plugs.css';
 import type { SmartDeviceNode } from '../../EnergyFlow/types';
 
-// The site panel's Smart plugs tab (docs/test-scenarios/smart-plugs-tab.md). Read-only: the app has no
+// The site panel's Smart plugs tab: one table ranked by live draw (docs/test-scenarios/smart-plugs-tab.md). Read-only: the app has no
 // plug on/off or schedule API wired, so there is no control here.
 // ponytail: add the switch behind useAccess().can('device_control') once a plug control endpoint exists.
 
-const GROUPS = [
-  { id: 'backup', title: 'Backup (via inverter)', purpose: 'Runs on the inverter, so it keeps going in a power cut.', icon: <Home size={20} />, color: '#f87171' },
-  { id: 'grid', title: 'Grid direct', purpose: 'Wired straight to the grid, not backed up.', icon: <Grid size={20} />, color: '#f472b6' },
-  { id: 'ev', title: 'EV charging', purpose: 'The car charger line.', icon: <Car size={20} />, color: '#0F9F8F' },
-] as const;
+const CIRCUIT = { backup: 'Backup', grid: 'Grid direct', ev: 'EV' } as const;
+const COLOR = '#3fb98a';
 
 const CHIP = { offline: ['wait', 'Offline'], running: ['good', 'Running'], idle: ['idle', 'Idle'] } as const;
 
@@ -46,25 +45,67 @@ export const PlugRow: React.FC<{ device: SmartDeviceNode; color: string; isDark:
   );
 };
 
+const kw = (d: SmartDeviceNode) => fmtPower((freshLatest(d)?.power_w ?? 0) / 1000);
+
 const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; siteId: string }> = ({ smartDevices, isDark, siteId }) => {
   const [selected, setSelected] = useState<NodeData | null>(null);
   const plugs = smartDevices.filter(isPlug);
-
+  if (plugs.length === 0) {
+    return (
+      <SetupCard isDark={isDark} icon={<Plug size={20} />} title="Smart plugs">
+        <EmptyState isDark={isDark} headline="No smart plugs at this site yet" />
+      </SetupCard>
+    );
+  }
+  const r = plugRanking(plugs);
+  const labels = hourLabels(Date.now());
+  const now = fmtPower(r.nowKw);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {plugs.length === 0 ? (
-        <SetupCard isDark={isDark} icon={<Plug size={20} />} title="Smart plugs">
-          <EmptyState isDark={isDark} headline="No smart plugs at this site yet" />
-        </SetupCard>
-      ) : GROUPS.map((g, i) => {
-        const rows = plugs.filter(d => plugGroup(d) === g.id);
-        if (rows.length === 0) return null;
-        return (
-          <SetupCard key={g.id} index={i} isDark={isDark} icon={g.icon} title={g.title} purpose={g.purpose}>
-            {rows.map(d => <PlugRow key={d.id} device={d} color={g.color} isDark={isDark} onSelect={setSelected} />)}
-          </SetupCard>
-        );
-      })}
+    <div className="pt-block">
+      <section aria-label="Plugs summary" className="pt-summary">
+        <div className="pt-big" data-testid="sum-now">{now.valueStr}<small>{now.unit} on plugs now</small></div>
+        {r.todayKwh != null && (
+          <div className="pt-stat" data-testid="sum-today">{r.todayKwh.toFixed(1)} kWh today{r.todayPartial && <span className="pt-note" data-testid="sum-today-note"> · partly counted</span>}</div>
+        )}
+        <div className="pt-stat" data-testid="sum-running">{r.running} of {plugs.length} running</div>
+      </section>
+
+      <section aria-label="Plugs by current draw" className="pt-tiles">
+        {r.live.map(d => {
+          const f = kw(d);
+          const name = deviceLabel(d);
+          const running = plugState(d) === 'running';
+          const today = d.today?.kwh_today;
+          const curve = d.today?.curve_24h;
+          const hasCurve = !!curve && curve.filter(v => v != null).length >= 2;
+          return (
+            <button key={d.id} type="button" data-testid="plug-row" className="pt-tile" onClick={() => setSelected(createDeviceNodeData(d, COLOR))}>
+              <div className="pt-top">
+                <div><div className="pt-name" data-testid="plug-name">{name}</div>
+                  <div className="pt-sub" data-testid={`plug-circuit-${name}`}>{CIRCUIT[plugGroup(d)]}</div></div>
+                <span className={`pt-state${running ? ' on' : ''}`}><i />{running ? 'Running' : 'Idle'}</span>
+              </div>
+              <div className={`pt-watts${running ? '' : ' idle'}`}>{f.valueStr}<small>{f.unit}</small></div>
+              {hasCurve && <div role="img" aria-label="Last 24 hours of draw"><Sparkline points={curve!} labels={labels} color={COLOR} /></div>}
+              {today != null && <div className="pt-today" data-testid={`plug-today-${name}`}><span>Today</span><b>{today.toFixed(1)} kWh</b></div>}
+            </button>
+          );
+        })}
+      </section>
+
+      {r.offline.length > 0 && (
+        <section aria-label="Plugs not reporting" className="pt-offline">
+          <div className="pt-label">Not reporting · {r.offline.length}</div>
+          <div className="pt-chips">
+            {r.offline.map(d => (
+              <button key={d.id} type="button" className="pt-chip" data-testid={`plug-offline-${deviceLabel(d)}`} onClick={() => setSelected(createDeviceNodeData(d, COLOR))}>
+                <span>{deviceLabel(d)}</span><span>{lastSeenText(d)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      <div className="pt-note">Plugs measure only what is plugged into them. They are not the whole home. Tap a plug for its detail.</div>
       <NodeDetailModal node={selected} onClose={() => setSelected(null)} isDark={isDark} siteId={siteId} />
     </div>
   );

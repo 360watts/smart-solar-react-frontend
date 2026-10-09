@@ -47,3 +47,19 @@ Left out on purpose: an on/off or schedule control. The app has no plug switch o
 | LV-1 | coim_002 (plugs on all three circuits) on the staff site page | Open Overview, click "N smart plugs ›" on Grid direct | Smart plugs tab opens; AC(NEW) shows Offline, live plugs show power | live | P1 | planned |
 | LV-2 | Site with no plugs | Open site panel | No Smart plugs tab; flow cards show no plug link | live | P1 | planned |
 | LV-3 | Viewer assigned to coim_002 | Open `/my-sites/coim_002` | Smart plugs tab present, read-only | live | P2 | planned |
+
+## Ranked table (redesign)
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| R1 | EV 2.68 kW, Fridge 82 W, Pump 0 W idle, one offline | Tab renders | Rows ordered EV, Fridge, Pump; offline plug listed last | unit | P0 | written |
+| R2 | Same | Summary strip | "On plugs now" = sum of fresh plug kW; Running counts running of N; Not reporting counts offline | unit | P0 | written |
+| R3 | Offline plug | Renders | Dashed chip, no wattage; "Last seen N h ago" or "No reading yet" | unit | P0 | written |
+| R4 | A plug with `today` null | Renders | No Today line and no sparkline (left out, not a dash); summary Today says "partly counted" | unit | P0 | written |
+| R5 | Curve with null hours | Sparkline renders | Gaps drawn, never zero-filled | unit | P0 | written |
+| R6 | Any row | Clicked | Existing node detail modal opens | unit | P1 | written |
+| R7 | Plugs on three circuits | Renders | Circuit is a muted label (Backup / Grid direct / EV), no per-circuit accent colours | unit | P1 | written |
+| R8 | Site with no plugs | Renders | Existing empty state | unit | P1 | written |
+| R9 | coim_002 | View at 1440, 1024, 390 px, dark and light | Table, then stacked rows at 390 px; no overflow | live | P1 | planned |
+| R10 | Plug not reporting | Chip clicked | Detail popup opens (same as a running tile) | unit | P1 | written |
+| R11 | Overview tab | Header renders | No time-range dropdown; it shows on History only, and Overview resets the range to Today | manual | P2 | planned |

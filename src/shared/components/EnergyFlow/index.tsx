@@ -257,6 +257,15 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   // EV and grid-direct loads are on their own circuits: not part of the ledger.
   const ledgerIn = pv + flowKw.gridIn + flowKw.battIn;
   const losses = shares ? Math.max(0, ledgerIn - (load + flowKw.battOut + flowKw.gridOut)) : null;
+  // "Solar made today" chart: the solar day from 6 AM up to the latest slot that has a reading. Slots after it
+  // (hours still to come) are dropped, not drawn empty; needs two known points.
+  const solarChart = (() => {
+    const curve = today?.solarCurve ?? [];
+    let last = -1;
+    curve.forEach((v, i) => { if (v != null) last = i; });
+    if (curve.filter(v => v != null).length < 2) return null;
+    return { points: curve.slice(0, last + 1), labels: (today?.solarCurveLabels ?? []).slice(0, last + 1) };
+  })();
   const kwStr = (kw: number) => { const f = fmtPower(kw); return `${f.valueStr} ${f.unit}`; };
   const soc = battSoc != null ? Math.max(0, Math.min(100, battSoc)) : null;
   const plugsKw = (ds: SmartDeviceNode[]) => ds.reduce((s, d) => s + (freshLatest(d)?.power_w ?? 0), 0) / 1000;
@@ -319,7 +328,13 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
           <RailStack area="left">
             <RailTile isDark={isDark} title="Solar made today" color={FLOW_COLORS.solar}
               value={today?.solarKwh != null ? today.solarKwh.toFixed(1) : null} unit="kWh"
-              sub={(today?.solarCurve?.length ?? 0) >= 2 ? <Sparkline points={today!.solarCurve!} labels={today!.solarCurveLabels} color={FLOW_COLORS.solar} /> : `Now ${kwStr(pv)}`} />
+              sub={solarChart ? (
+                <div data-solar-chart>
+                  <Sparkline points={solarChart.points} labels={solarChart.labels} color={FLOW_COLORS.solar} />
+                  {/* Solar day: starts at 6 AM IST and ends at the latest reading (hours to come are not drawn) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}><span>6 AM</span><span>{solarChart.labels[solarChart.labels.length - 1]}</span></div>
+                </div>
+              ) : `Now ${kwStr(pv)}`} />
             <RailTile isDark={isDark} title="Home used"
               value={today?.usedKwh != null ? today.usedKwh.toFixed(1) : null} unit="kWh"
               sub={today?.usedPartial ? (

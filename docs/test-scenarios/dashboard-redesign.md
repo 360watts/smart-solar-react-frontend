@@ -109,3 +109,4 @@ Supersedes the one-card-per-rail layout (rows 38-49 and 70-73 where they describ
 | 92 | Rails | container < 900 px | resize | each rail becomes a row of cards at natural height under the centre panel | live | P1 | planned |
 | 93 | Rails | no today figures | render | left cards show "—" and no invented number; Home used keeps the "Partly counted" note when partial | unit | P0 | written |
 | 94 | Ring | any site | render | ring interior = HOME USES + whole-home value only; no "Backup X W / EV Y kW" lines (owner: not needed; supersedes row 50-51 parts line) | unit | P1 | written |
+| 95 | Rail chart | 24h mode, telemetry from 06:00 IST | render | "Solar made today" chart starts at 6 AM IST and ends at the latest slot with a reading; hours still to come are not drawn; the axis reads "6 AM" on the left and the last slot's hour on the right; gaps inside the day are breaks, not zeros; hover tooltip names the slot ("2 PM · 3.4 kW") | live | P1 | planned |

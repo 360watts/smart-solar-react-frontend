@@ -56,6 +56,48 @@ export const isDeviceOffline = (d: SmartDeviceNode): boolean => !isFreshReading(
 export const plugState = (d: SmartDeviceNode): 'offline' | 'running' | 'idle' =>
   isDeviceOffline(d) ? 'offline' : d.is_active && (freshLatest(d)?.power_w ?? 0) > 1 ? 'running' : 'idle';
 
+const kwOf = (d: SmartDeviceNode) => (freshLatest(d)?.power_w ?? 0) / 1000;
+
+export interface PlugRanking {
+  live: SmartDeviceNode[];      // running first by draw, then idle; never offline
+  offline: SmartDeviceNode[];
+  nowKw: number;                // fresh draw only
+  maxKw: number;                // scale for the draw bars
+  running: number;
+  todayKwh: number | null;      // sum of known per-plug figures, null when none is known
+  todayPartial: boolean;        // some plug has no figure while others do
+}
+
+export function plugRanking(plugs: SmartDeviceNode[]): PlugRanking {
+  const offline = plugs.filter(d => plugState(d) === 'offline');
+  const live = plugs.filter(d => plugState(d) !== 'offline')
+    .sort((a, b) => kwOf(b) - kwOf(a) || deviceLabel(a).localeCompare(deviceLabel(b)));
+  const known = plugs.map(d => d.today?.kwh_today).filter((v): v is number => v != null);
+  return {
+    live, offline,
+    nowKw: live.reduce((s, d) => s + kwOf(d), 0),
+    maxKw: Math.max(0, ...live.map(kwOf)),
+    running: live.filter(d => plugState(d) === 'running').length,
+    todayKwh: known.length ? known.reduce((s, v) => s + v, 0) : null,
+    todayPartial: known.length > 0 && known.length < plugs.length,
+  };
+}
+
+/** "Last seen 3 h ago" / "Last seen 20 min ago" / "No reading yet" for a plug that is not reporting. */
+export function lastSeenText(d: SmartDeviceNode): string {
+  const ts = d.latest?.timestamp;
+  if (!ts) return 'No reading yet';
+  const min = Math.max(1, Math.round((Date.now() - new Date(ts).getTime()) / 60_000));
+  return min < 60 ? `Last seen ${min} min ago` : `Last seen ${Math.round(min / 60)} h ago`;
+}
+
+/** 24 hour labels (IST, "4 PM"), oldest first, ending at the hour of `nowMs`. ponytail: IST because the fleet is IST; use the site timezone if that changes. */
+export function hourLabels(nowMs: number): string[] {
+  return Array.from({ length: 24 }, (_, i) =>
+    new Date(nowMs - (23 - i) * 3_600_000)
+      .toLocaleTimeString('en-IN', { hour: 'numeric', hour12: true, timeZone: 'Asia/Kolkata' }).toUpperCase());
+}
+
 // Devices to flag in the anomaly banner. A device that has NEVER reported
 // isn't a data anomaly (no reading was ever *wrong* — there just isn't one) —
 // it's frequently a rarely-used appliance whose supply is normally switched
