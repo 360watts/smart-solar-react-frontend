@@ -1,3 +1,4 @@
+import { DEFAULT_TIMEZONE, timezoneLabel, timezoneOptions } from './timezones';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -45,7 +46,7 @@ export default function CommissioningWizard() {
   const [inverterCapacityKw, setInverterCapacityKw] = useState('');
   const [tiltDeg, setTiltDeg] = useState('');
   const [azimuthDeg, setAzimuthDeg] = useState('');
-  const [timezoneValue, setTimezoneValue] = useState('');
+  const [timezoneValue, setTimezoneValue] = useState(DEFAULT_TIMEZONE);
   const [gridType, setGridType] = useState('hybrid');
   const [loggerSerial, setLoggerSerial] = useState('');
   // Inverter record created right after the site, so Deye Cloud can fetch full readings from day one.
@@ -546,7 +547,9 @@ export default function CommissioningWizard() {
                     </div>
                     <div style={{ marginTop: 16 }}>
                       <label style={labelStyle}>Timezone</label>
-                      <input value={timezoneValue} onChange={e => setTimezoneValue(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} placeholder="e.g., Asia/Kolkata" />
+                      <select value={timezoneValue} onChange={e => setTimezoneValue(e.target.value)} style={{ ...inputStyle, marginTop: 6 }}>
+                        {timezoneOptions(timezoneValue).map(tz => <option key={tz} value={tz}>{timezoneLabel(tz)}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>

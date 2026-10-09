@@ -461,5 +461,29 @@ Three stacked issues, found while tracing the full flow:
 | **Mitigated** | Workaround in place; root fix pending |
 | **Open** | Known issue, fix not yet implemented |
 
+
+## F-013-UI
+
+### Legacy global CSS overrode Tailwind: unlayered `* {margin:0; padding:0}` and a global `.grid` rule broke the new Sites and setup pages
+
+| Field | Detail |
+|-------|--------|
+| **Date discovered** | 2026-10-09 (user screenshot of the redesigned Sites page) |
+| **Severity** | Low/Medium: no data impact; new Tailwind-styled pages rendered without padding and with the wrong grid columns, overlapping the old design. Likely also affects older files that use Tailwind classes. |
+| **Status** | Fixed locally for the two new pages and the reset; not committed. Wider cleanup open. |
+
+#### Root Cause
+- `index.css` had `* { margin: 0; padding: 0; box-sizing: border-box }` outside any layer. In Tailwind v4 utilities live in a layer, and unlayered CSS beats layered CSS regardless of specificity, so every `p-*`/`m-*` class was ignored.
+- `App.css` defines `.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 24px 0 }` three times (lines near 280, 966, 1191). It shares a class name with Tailwind's `grid`, so any element using Tailwind's `grid` inherited those columns, gap and margin.
+
+#### Fix Applied
+- The reset now sits in `@layer base`, so utilities win.
+- `Sites.tsx` and `SiteOnboarding.tsx` use `[display:grid]` instead of `grid`.
+
+#### Residual
+- Other Tailwind users of `grid` (about 17 files use Tailwind classes) may still collide; shadcn components gain their intended padding because of the layer change, so check them visually.
+- Real fix: import `App.css` and the shared stylesheets into a lower layer (`@layer legacy`) so utilities always win; needs a visual pass over every screen.
+- Not committed.
+
 ---
-*Last updated: 2026-10-05 (F-011-UI, F-012-UI added — orphaned draft sites, Logger Serial data-loss bug)*
+*Last updated: 2026-10-09 (F-013-UI added: legacy global CSS overrides Tailwind)*

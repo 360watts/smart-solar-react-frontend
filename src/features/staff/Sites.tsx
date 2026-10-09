@@ -271,10 +271,16 @@ export default function Sites() {
               Finish setup <ArrowRight size={15} />
             </Link>
           ) : (
-            <Link to={`/sites/${encodeURIComponent(site.id)}`}
-              className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground no-underline">
-              View
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to={`/sites/onboarding?site=${encodeURIComponent(site.id)}`}
+                className="inline-flex min-h-10 items-center rounded-xl px-3 text-sm font-semibold text-muted-foreground no-underline hover:text-foreground">
+                Edit setup
+              </Link>
+              <Link to={`/sites/${encodeURIComponent(site.id)}`}
+                className="inline-flex min-h-10 items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground no-underline">
+                View
+              </Link>
+            </div>
           )}
         </div>
       </div>
@@ -300,11 +306,6 @@ export default function Sites() {
           subtitle={`${sites.length} site${sites.length !== 1 ? 's' : ''} · ${needsSetupCount} still need setup`}
           rightSlot={
             <div className="flex items-center gap-3">
-              <Link to="/sites/onboarding"
-                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground no-underline">
-                Site setup
-                {needsSetupCount > 0 && <span className="rounded-full bg-needed-soft px-2 text-xs tabular-nums text-needed-ink">{needsSetupCount}</span>}
-              </Link>
               <Link to="/sites/commissioning" style={{ textDecoration: 'none' }}>
                 <GradientCTAButton>
                   <Plus size={16} /> New site

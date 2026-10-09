@@ -135,3 +135,14 @@ Dashboards and tables are scanned, not read. The friendly voice still applies to
 labels, statuses, and empty states, but you may use tighter rows and inline
 controls. Keep semantic colour (good / wait) doing the "what needs attention"
 work at a glance.
+
+
+---
+
+## 8. New pages: tokens and classes, and two CSS traps
+
+New staff pages use Tailwind classes and the semantic tokens in `index.css` (`bg-needed-soft`, `text-done-ink`, `bg-forest`, `bg-card`, `text-muted-foreground`), not inline styles and not hex values. Reasons: classes can do hover, focus-visible, responsive and dark mode; tokens change in one place. Keep inline `style` for values computed at runtime (a progress width). Reference pages: `Sites.tsx` and `SiteOnboarding.tsx`. The `useTokens` helper in section 4 still applies to older screens that use it; migrate those when you touch them.
+
+Two traps from the legacy CSS (see F-013-UI):
+1. Do not use the class `grid` in new code. `App.css` defines a global `.grid` with its own columns, gap and margin that overrides Tailwind. Use `[display:grid]` plus `grid-cols-[...]`.
+2. Plain `.card`, `.btn`-style classes in `App.css` and `shared/styles/` are unlayered and beat Tailwind utilities on the same element. Do not mix them with utility classes on one element.

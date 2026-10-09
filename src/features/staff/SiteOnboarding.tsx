@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAccess } from '../../shared/access/useAccess';
 import SavingsBillingEditor from './SavingsBillingEditor';
 import { ConfirmDialog } from './siteHardware/ui';
+import { timezoneLabel, timezoneOptions } from './timezones';
 import { OnboardingData, SectionKey, sectionProgress } from './onboardingProgress';
 
 type FieldDef = { key: string; label: string; type?: 'text' | 'number' | 'date' | 'select'; options?: string[]; hint?: string };
@@ -32,11 +33,6 @@ const EB_FIELDS: FieldDef[] = [
   { key: 'eb_consumer_number', label: 'EB consumer number', hint: 'Printed on the meter and the bill' },
   { key: 'eb_registered_mobile', label: 'Mobile number registered with EB', hint: 'The number the electricity board sends bill SMS/OTP to' },
 ];
-const COMMON_TZ = ['Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Colombo', 'Asia/Dhaka', 'Asia/Kathmandu', 'UTC'];
-const ALL_TZ: string[] = (Intl as any).supportedValuesOf?.('timeZone') ?? COMMON_TZ;
-const timezoneOptions = (current?: string) =>
-  Array.from(new Set([...(current ? [current] : []), ...COMMON_TZ, ...ALL_TZ]));
-
 const APPLIANCE_FIELDS: FieldDef[] = [
   { key: 'num_ac_units', label: 'Air conditioners', type: 'number', hint: 'Enter 0 if none' },
   { key: 'num_geysers', label: 'Water heaters', type: 'number' },
@@ -185,7 +181,7 @@ export default function SiteOnboarding() {
             {d.type === 'select' ? (
               <select className={`${control} border-input`} value={val} onChange={e => set(e.target.value)}>
                 {(d.key === 'timezone' ? timezoneOptions(val) : d.options!).map(o => (
-                  <option key={o} value={o}>{d.key === 'grid_type' ? o.replace('_', '-') : o.replace(/_/g, ' ')}</option>
+                  <option key={o} value={o}>{d.key === 'grid_type' ? o.replace('_', '-') : timezoneLabel(o)}</option>
                 ))}
               </select>
             ) : (
