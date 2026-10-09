@@ -7,8 +7,8 @@ import type { TabId } from '../../../shared/components/SiteDataPanel/types';
 import { useTokens } from '../siteHardware/ui';
 import { openLinkStyle } from './MySites';
 
-// Read-only monitoring tabs. Details (settings) and Health are left out.
-const VIEWER_TABS: TabId[] = ['overview', 'history', 'forecast', 'weather', 'phase-load'];
+// Read-only monitoring tabs. Details (settings) and Health are left out. Usage only shows on meter-only sites (the panel decides).
+const VIEWER_TABS: TabId[] = ['overview', 'history', 'forecast', 'weather', 'phase-load', 'usage'];
 
 const ViewerSite: React.FC = () => {
   const { siteId = '' } = useParams<{ siteId: string }>();
@@ -37,7 +37,7 @@ const ViewerSite: React.FC = () => {
       <h2 style={{ fontFamily: t.head, fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.015em', margin: '0 0 14px' }}>
         {site.display_name || site.site_id}
       </h2>
-      <SiteDataPanel siteId={site.site_id} autoRefresh hideHeader visibleTabs={VIEWER_TABS} />
+      <SiteDataPanel key={site.site_id} siteId={site.site_id} autoRefresh hideHeader visibleTabs={VIEWER_TABS} />
       {/* ponytail: no reusable battery-control UI exists yet, so no Controls section (follow-up). */}
     </div>
   );

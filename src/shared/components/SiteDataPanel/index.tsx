@@ -46,6 +46,8 @@ import { TABS, type TabId, type HistorySeriesKey, type VsActualSeriesKey } from 
 import HistoryTab, { HISTORY_SERIES } from './tabs/HistoryTab';
 import ForecastTab from './tabs/ForecastTab';
 import PhaseLoadTab from './tabs/PhaseLoadTab';
+import UsageTab from './tabs/UsageTab';
+import { tabsFor, tabLabel, resolveTab } from './tabVisibility';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,10 @@ interface FetchState {
   forecast: any[];
   weather: any;
   smartDevices: any[];
+  /** From staff_overview: true = energy meter and no inverter (Usage tab); null = not known yet. */
+  meterOnly: boolean | null;
+  /** True once the first overview call has finished (even if it failed), so "no data" is not shown while meterOnly is still unknown. */
+  overviewDone: boolean;
   loading: boolean;
   error: string | null;
   historyError: string | null;
@@ -117,14 +123,14 @@ interface FetchState {
 }
 
 const FETCH_INITIAL: FetchState = {
-  telemetry: [], forecast: [], weather: null, smartDevices: [],
+  telemetry: [], forecast: [], weather: null, smartDevices: [], meterOnly: null, overviewDone: false,
   loading: true, error: null, historyError: null, lastUpdated: null, secondsSinceUpdate: 0,
 };
 
 type FetchAction =
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; payload: Pick<FetchState, 'telemetry' | 'forecast' | 'lastUpdated'> }
-  | { type: 'OVERVIEW_SUCCESS'; payload: Pick<FetchState, 'weather' | 'smartDevices'> }
+  | { type: 'OVERVIEW_SUCCESS'; payload: Pick<FetchState, 'weather' | 'smartDevices' | 'meterOnly'> }
   | { type: 'FETCH_ERROR'; error: string }
   | { type: 'HISTORY_ERROR'; error: string | null }
   | { type: 'HISTORY_APPEND'; rows: any[] }
@@ -139,7 +145,12 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
       return { ...state, ...action.payload, loading: false, error: null, secondsSinceUpdate: 0 };
     case 'OVERVIEW_SUCCESS':
       // Independent of the main telemetry/forecast fetch cycle — doesn't touch loading/error.
-      return { ...state, ...action.payload };
+      // A failed overview call (meterOnly null) must not flip a known answer back to unknown.
+      // A meter-only site never runs the telemetry fetch, so the overview is what ends its first load.
+      return {
+        ...state, ...action.payload, overviewDone: true, meterOnly: action.payload.meterOnly ?? state.meterOnly,
+        loading: action.payload.meterOnly === true ? false : state.loading,
+      };
     case 'FETCH_ERROR':
       return { ...state, loading: false, error: action.error };
     case 'HISTORY_APPEND': {
@@ -176,13 +187,19 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const isTouch = useIsMobile();
 
   const [fetchState, dispatchFetch] = useReducer(fetchReducer, FETCH_INITIAL);
-  const { telemetry, forecast, weather, smartDevices, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
+  const { telemetry, forecast, weather, smartDevices, meterOnly, overviewDone, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
   const isInitialLoad = useRef(true);
   // Guards the fire-and-forget analytics Promise: set to true on unmount or
   // siteId change so callbacks don't set state on a stale/unmounted component.
   const analyticsStaleRef = useRef(false);
 
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
+  const [activeTabState, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
+  // The tab bar is the source of truth: a tab it does not list (e.g. meterOnly flipped) falls back to its first entry.
+  const panelTabs = tabsFor({ meterOnly, visibleTabs });
+  const activeTab = resolveTab(activeTabState, panelTabs);
+  const meterOnlyOn = meterOnly === true;
+  // Set once the person picks a tab (or the caller names one), so the meter-only auto-switch never overrides them.
+  const pickedTabRef = useRef(initialTab != null);
   const analyticsLoadedRef = useRef<{ weatherForecast: boolean; phaseLoad: boolean }>({ weatherForecast: false, phaseLoad: false });
   const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
   const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
@@ -324,6 +341,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       dispatchFetch({ type: 'OVERVIEW_SUCCESS', payload: {
         weather: overview?.weather ?? null,
         smartDevices: Array.isArray(overview?.smart_devices) ? overview.smart_devices : [],
+        meterOnly: typeof overview?.meter_only === 'boolean' ? overview.meter_only : null,
       }});
     };
     // Stagger behind fetchAll's initial burst rather than firing in the same tick —
@@ -346,7 +364,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId]);
 
   const fetchLatestTelemetry = useCallback(async () => {
-    if (document.hidden) return;
+    if (document.hidden || meterOnlyOn) return;
     try {
       const now = new Date();
       const telemetryParams: any = {
@@ -364,7 +382,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } catch {
       // silent
     }
-  }, [siteId, dateRange, debouncedStart, debouncedEnd]);
+  }, [siteId, dateRange, debouncedStart, debouncedEnd, meterOnlyOn]);
 
   const fetchAll = useCallback(async (showSpinner = false) => {
     if (showSpinner) dispatchFetch({ type: 'FETCH_START' });
@@ -493,6 +511,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
   useEffect(() => {
+    // Meter-only sites have no telemetry/forecast; skipping saves the per-user read quota (300/hour).
+    if (meterOnlyOn) return;
     isInitialLoad.current = true;
     analyticsStaleRef.current = false;
     dispatchFetch({ type: 'FETCH_START' });
@@ -506,17 +526,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       analyticsStaleRef.current = true;
       clearInterval(fullId);
     };
-  }, [fetchAll, fetchHistory, autoRefresh]);
+  }, [fetchAll, fetchHistory, autoRefresh, meterOnlyOn]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || meterOnlyOn) return;
     // Fire immediately so latestLiveTelemetry is populated on mount instead of
     // waiting for the first 30s tick — this is now the sole source of live
     // telemetry (the old inline 20-min-window fetch in fetchAll was removed).
     fetchLatestTelemetry();
     const fastId = setInterval(fetchLatestTelemetry, 30_000);
     return () => clearInterval(fastId);
-  }, [fetchLatestTelemetry, autoRefresh]);
+  }, [fetchLatestTelemetry, autoRefresh, meterOnlyOn]);
 
   useEffect(() => {
     if (!lastUpdated) return;
@@ -542,6 +562,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       .then(data => setPhaseLoad(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, [siteId, phaseLoadHours, activeTab]);
+
+  // A meter-only site opens on Usage, unless the person already chose a tab.
+  useEffect(() => {
+    if (meterOnly === true && !pickedTabRef.current && tabsFor({ meterOnly, visibleTabs }).includes('usage')) setActiveTab('usage');
+  }, [meterOnly]);
 
   // Lazy-load the remaining tab-specific analytics only once their tab is opened,
   // instead of eagerly firing all of them on every mount — these fed the Weather/
@@ -890,7 +915,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, [siteId]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  if (loading) {
+  // A meter-only site never has inverter telemetry or a forecast; its tabs still need to show.
+  // Until the first overview answers we cannot tell, so hold the skeleton rather than flash "No data found".
+  const noData = meterOnly !== true && telemetry.length === 0 && forecast.length === 0 && !weather;
+  if (loading || (noData && !overviewDone)) {
     return (
       <div style={{ padding: '24px 0' }}>
         <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -928,7 +956,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     );
   }
 
-  if (error) {
+  if (error && meterOnly !== true) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -947,8 +975,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       </motion.div>
     );
   }
-
-  const noData = telemetry.length === 0 && forecast.length === 0 && !weather;
 
   return (
     <div style={{ marginTop: 24 }}>
@@ -1136,12 +1162,12 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            {TABS.filter(tab => !visibleTabs || visibleTabs.includes(tab.id)).map(tab => {
+            {panelTabs.map(id => TABS.find(tab => tab.id === id)!).map(tab => {
               const isActive = activeTab === tab.id;
               return (
                 <motion.button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => { pickedTabRef.current = true; setActiveTab(tab.id); }}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   style={{
@@ -1172,7 +1198,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   }}
                 >
                   <span>{tab.icon}</span>
-                  {tab.label}
+                  {tabLabel(tab, meterOnly)}
                 </motion.button>
               );
             })}
@@ -1343,6 +1369,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 weatherAccuracy={weatherAccuracy}
                 achievedPct={achievedPct}
               />
+            )}
+
+            {activeTab === 'usage' && meterOnly === true && (
+              <UsageTab key="usage" siteId={siteId} isDark={isDark} ctLatest={ctLatest} />
             )}
 
             {activeTab === 'phase-load' && (

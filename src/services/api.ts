@@ -1,5 +1,6 @@
 import { cacheService } from './cacheService';
 import { DEFAULT_PAGE_SIZE } from '../app/constants';
+import type { MeterUsage } from '../shared/components/SiteDataPanel/types';
 
 // ─── CT Energy Meter ──────────────────────────────────────────────────────────
 
@@ -1116,6 +1117,13 @@ class ApiService {
     }
   }
 
+  // Usage tab for meter-only sites: one call, everything computed server-side. Throws on failure so the tab can offer a retry.
+  async getMeterUsage(siteId: string, opts?: { fresh?: boolean }): Promise<MeterUsage> {
+    const key = `meter_usage_${siteId}`;
+    if (opts?.fresh) cacheService.clear(key); // the tab's own 30 s poll must not be served the 30 s cache
+    return cacheService.dedup(key, () => this.request(`/sites/${siteId}/meter-usage/`), 30 * 1000);
+  }
+
   // DynamoDB site data
   async getSiteTelemetry(siteId: string, params?: { start_date?: string; end_date?: string; days?: number; aggregate?: 'none' | '5min' | '15min' }): Promise<any[]> {
     const query = new URLSearchParams();
@@ -1188,7 +1196,7 @@ class ApiService {
     return cacheService.dedup(cacheKey, () => this.request(`/sites/${siteId}/weather/`), 15 * 60 * 1000);
   }
 
-  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null } | null> {
+  async getStaffOverview(siteId: string): Promise<{ realtime: any; alerts: any[]; weather: any; smart_devices: any[]; energy_meter_latest: CtMeterReading | null; energy_summary_today: Record<string, number> | null; meter_only?: boolean } | null> {
     // 15-second TTL: backend fragment-caches at 15s for realtime, so this passthrough is safe
     const cacheKey = `staff_overview_${siteId}`;
     try {

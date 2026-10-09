@@ -58,7 +58,7 @@ describe('ViewerSite', () => {
     render(ui('/my-sites/s1'));
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /back to your sites/i })).toHaveAttribute('href', '/my-sites');
-    expect(screen.getByTestId('panel').textContent).toBe('s1:overview,history,forecast,weather,phase-load');
+    expect(screen.getByTestId('panel').textContent).toBe('s1:overview,history,forecast,weather,phase-load,usage');
   });
 
   it('shows the not-available message for a site outside the list', () => {
