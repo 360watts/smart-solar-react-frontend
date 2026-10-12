@@ -120,7 +120,7 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           <button onClick={() => loadLogs(from || undefined, to || undefined)} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>Fetch</button>
-          <button onClick={() => apiService.bulkDownloadLogFiles(deviceId, from || undefined, to || undefined).catch(() => setError('Failed to download logs'))} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, fontSize: '0.75rem', fontWeight: 700 }}>All</button>
+          <button onClick={() => apiService.bulkDownloadLogFiles(deviceId, from || undefined, to || undefined).catch((e: Error) => setError(e?.message || 'Failed to download logs'))} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, fontSize: '0.75rem', fontWeight: 700 }}>All</button>
           <input type="date" value={scanDate} onChange={e => setScanDate(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.22)`, background: 'transparent', color: '#ef4444', fontSize: '0.75rem' }} />
         </div>
         <button onClick={async () => {
@@ -155,7 +155,7 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
                 <button onClick={() => apiService.getDeviceLogFileContent(deviceId, entry.id).then(content => setViewing({ name: entry.filename || entry.message, content })).catch(() => setError('Failed to open log file'))} style={{ border: 'none', background: 'transparent', color: muted, cursor: 'pointer', padding: 4, display: 'flex' }} title="View log">
                   <Eye size={12} />
                 </button>
-                <button onClick={() => apiService.getDeviceLogFileDownloadUrl(deviceId, entry.id).then(({ url }) => window.open(url, '_blank')).catch(() => setError('Failed to download log file'))} style={{ border: 'none', background: 'transparent', color: muted, cursor: 'pointer', padding: 4, display: 'flex' }} title="Download log">
+                <button onClick={() => apiService.downloadDeviceLogFile(deviceId, entry.id).catch(() => setError('Failed to download log file'))} style={{ border: 'none', background: 'transparent', color: muted, cursor: 'pointer', padding: 4, display: 'flex' }} title="Download log">
                   <Download size={12} />
                 </button>
               </div>

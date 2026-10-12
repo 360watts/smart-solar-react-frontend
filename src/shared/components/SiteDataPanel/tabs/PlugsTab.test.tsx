@@ -55,11 +55,13 @@ it('missing today figure leaves the line out and the summary says partly counted
   expect(screen.getByTestId('sum-today-note').textContent).toContain('partly counted');
 });
 
-it('shows the circuit as a muted label (R7)', () => {
-  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
-  expect(screen.getByTestId('plug-circuit-EV Charger').textContent).toBe('EV');
-  expect(screen.getByTestId('plug-circuit-Fridge 1').textContent).toBe('Backup');
-  expect(screen.getByTestId('plug-circuit-Water Pump').textContent).toBe('Grid direct');
+it('groups tiles into circuit rows, each ranked by draw (R7)', () => {
+  render(<PlugsTab smartDevices={[...DEVICES, mk(6, 'Fridge 2', 300, fresh, 1)]} isDark siteId="s1" />);
+  expect(screen.getByTestId('circuit-ev').textContent).toBe('EV · 1');
+  expect(screen.getByTestId('circuit-backup').textContent).toBe('Backup · 2');
+  expect(screen.getByTestId('circuit-grid').textContent).toBe('Grid direct · 1');
+  const backup = within(screen.getByRole('region', { name: 'Backup plugs' })).getAllByTestId('plug-name').map(n => n.textContent);
+  expect(backup).toEqual(['Fridge 2', 'Fridge 1']);
 });
 
 it('row click opens the detail modal (R6)', () => {

@@ -247,7 +247,13 @@ function inspectFirmwareBin(buf: ArrayBuffer, fileName: string): FirmwareInfo | 
   // The app descriptor (magic 0xABCD5432 at byte 32) holds the project version at byte 48. Scanning loose strings
   // picks up the ESP-IDF version ("v5.4.4"), so only trust the descriptor; blank means the user types it.
   const hasDesc = u8.length >= 80 && u8[32] === 0x32 && u8[33] === 0x54 && u8[34] === 0xCD && u8[35] === 0xAB;
-  const verRun = hasDesc ? text.slice(48, 80).split('\0')[0] : '';
+  let verRun = hasDesc ? text.slice(48, 80).split('\0')[0] : '';
+  // Older builds leave the descriptor as a git hash. Fall back to FIRMWARE_VERSION, which the compiler stores
+  // just before the "Firmware v%s" boot-banner format string (a few log-format runs may sit between them).
+  if (!semver.test(verRun)) {
+    const banner = runs.findIndex(r => r.includes('Firmware v%s'));
+    verRun = banner < 0 ? '' : runs.slice(Math.max(0, banner - 4), banner).reverse().find(r => semver.test(r) && !r.startsWith('v')) ?? '';
+  }
   const meterRun = runs.find(r => /energy ?meter/i.test(r) && !/[{}"<>%/]/.test(r));
   const usageType = meterRun || runs.some(r => /\bEM\d{2}\b/.test(r)) ? 'energymeter'
     : runs.some(r => /gateway/i.test(r)) ? 'gateway' : null;

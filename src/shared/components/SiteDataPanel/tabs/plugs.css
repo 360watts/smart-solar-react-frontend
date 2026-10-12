@@ -3,7 +3,9 @@
 .pt-big { font: 600 36px 'Outfit', sans-serif; font-variant-numeric: tabular-nums; }
 .pt-big small { font: 500 16px 'DM Sans', sans-serif; color: var(--text-dim); margin-left: 8px; }
 .pt-stat { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.pt-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+/* One column per circuit; columns stack on narrow widths. */
+.pt-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
+.pt-tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .pt-tile { display: flex; flex-direction: column; gap: 14px; padding: 20px; min-width: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; background: var(--card); border: 1px solid var(--border); border-radius: 18px; }
 .pt-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .pt-name { font-size: 16px; font-weight: 500; }

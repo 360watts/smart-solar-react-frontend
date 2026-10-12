@@ -360,7 +360,7 @@ const DeviceDrawer: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] |
                             {viewing?.id === f.id ? 'Hide' : 'View'}
                           </Btn>
                           <Btn isDark={isDark} size="sm" variant="plain" aria-label={`Download ${fname}`}
-                            onClick={() => apiService.getDeviceLogFileDownloadUrl(dev.device_id, f.id).then(({ url }) => window.open(url, '_blank')).catch(() => setNote({ ok: false, text: "Couldn't download that log file." }))}>
+                            onClick={() => apiService.downloadDeviceLogFile(dev.device_id, f.id).catch(() => setNote({ ok: false, text: "Couldn't download that log file." }))}>
                             Download
                           </Btn>
                         </span>

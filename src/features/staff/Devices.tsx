@@ -304,6 +304,7 @@ const Devices: React.FC = () => {
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [fileFilterFrom, setFileFilterFrom] = useState('');
   const [fileFilterTo, setFileFilterTo] = useState('');
+  const [appliedFilter, setAppliedFilter] = useState({ from: '', to: '' }); // range last fetched; Download All uses it so it matches the table
   const LOG_FILES_PAGE_SIZE = 20;
   const [scanModalOpen, setScanModalOpen] = useState(false);
   const [scanDate, setScanDate] = useState('');
@@ -517,8 +518,7 @@ const Devices: React.FC = () => {
 
   const handleDownloadLogFile = async (fileId: number) => {
     try {
-      const { url } = await apiService.getDeviceLogFileDownloadUrl(selectedDevice!.id, fileId);
-      window.open(url, '_blank');
+      await apiService.downloadDeviceLogFile(selectedDevice!.id, fileId);
       setError(null);
     } catch (err) {
       console.error('Failed to get download URL', err);
@@ -553,11 +553,11 @@ const Devices: React.FC = () => {
     setBulkDownloading(true);
     try {
       const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
-      await apiService.bulkDownloadLogFiles(selectedDevice!.id, toIST(fileFilterFrom), toIST(fileFilterTo));
+      await apiService.bulkDownloadLogFiles(selectedDevice!.id, toIST(appliedFilter.from), toIST(appliedFilter.to));
       setError(null);
     } catch (err) {
       console.error('Bulk download failed', err);
-      setError('Failed to download log files');
+      setError(err instanceof Error && err.message ? err.message : 'Failed to download log files');
     } finally {
       setBulkDownloading(false);
     }
@@ -1638,13 +1638,14 @@ const Devices: React.FC = () => {
               <button onClick={() => {
                 const toIST = (v: string) => v ? new Date(v + ':00+05:30').toISOString() : undefined;
                 setLogFilesPage(0);
+                setAppliedFilter({ from: fileFilterFrom, to: fileFilterTo });
                 fetchDeviceLogFiles(selectedDevice.id, 0, toIST(fileFilterFrom), toIST(fileFilterTo));
               }} disabled={logFilesLoading}
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: logFilesLoading ? 'not-allowed' : 'pointer', border: 'none', background: '#3b82f6', color: '#fff', opacity: logFilesLoading ? 0.6 : 1 }}>
                 Fetch
               </button>
               <button onClick={handleBulkDownload} disabled={bulkDownloading || logFilesTotal === 0}
-                title="Download all files in the selected range as a single .txt"
+                title="Download all files in the range you last fetched as a single .txt"
                 style={{ padding: '6px 14px', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: (bulkDownloading || logFilesTotal === 0) ? 'not-allowed' : 'pointer', border: `1px solid ${T.border}`, background: 'transparent', color: T.textM, opacity: (bulkDownloading || logFilesTotal === 0) ? 0.5 : 1 }}>
                 {bulkDownloading ? 'Downloading…' : 'Download All'}
               </button>

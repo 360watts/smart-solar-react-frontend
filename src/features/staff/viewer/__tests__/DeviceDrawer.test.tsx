@@ -14,6 +14,7 @@ jest.mock('../../../../services/api', () => ({
     getDeviceLogFiles: jest.fn(),
     getDeviceLogFileContent: jest.fn().mockResolvedValue('line one'),
     getDeviceLogFileDownloadUrl: jest.fn().mockResolvedValue({ url: 'https://x/log', filename: 'a.log' }),
+    downloadDeviceLogFile: jest.fn().mockResolvedValue(undefined),
     toggleDeviceLogs: jest.fn().mockResolvedValue({}),
     setDeviceAutoReboot: jest.fn(),
     getDevice: jest.fn(),
@@ -115,7 +116,6 @@ describe('DeviceDrawer', () => {
   });
 
   it('toggles logs and opens a log file (LG-1..LG-4)', async () => {
-    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     open();
     await screen.findByText('boot.log');
     fireEvent.click(screen.getByRole('switch', { name: /send logs/i }));
@@ -124,8 +124,7 @@ describe('DeviceDrawer', () => {
     expect(await screen.findByText('line one')).not.toBeNull();
     expect(apiService.getDeviceLogFileContent).toHaveBeenCalledWith(11, 3);
     fireEvent.click(screen.getByRole('button', { name: /download boot\.log/i }));
-    await waitFor(() => expect(openSpy).toHaveBeenCalledWith('https://x/log', '_blank'));
-    openSpy.mockRestore();
+    await waitFor(() => expect(apiService.downloadDeviceLogFile).toHaveBeenCalledWith(11, 3));
   });
 
   it('auto reboot switch calls the API by pk and reverts on failure (AR-1, AR-2)', async () => {

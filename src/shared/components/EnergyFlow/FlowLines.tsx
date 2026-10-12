@@ -11,13 +11,7 @@ export interface FlowKw {
 }
 type Paths = ReturnType<typeof flowPaths>;
 
-const Marker: React.FC<{ id: string; color: string }> = ({ id, color }) => (
-  <marker id={id} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-    <path d="M0 1 L9 5 L0 9Z" fill={color} />
-  </marker>
-);
-
-function Line({ flow, d, kw, color, id }: { flow: string; d: string; kw: number; color: string; id: string }) {
+function Line({ flow, d, kw, color }: { flow: string; d: string; kw: number; color: string }) {
   const on = kw > 0.001;
   const w = lineWidth(kw);
   const c = on ? color : COLORS.idle;
@@ -28,7 +22,6 @@ function Line({ flow, d, kw, color, id }: { flow: string; d: string; kw: number;
         <path data-flow={flow} data-anim="1" d={d} fill="none" stroke={c} strokeWidth={w} strokeLinecap="round"
           strokeDasharray="2 13" style={{ animation: 'efFlow 1.4s linear infinite' }} />
       )}
-      <path d={d} fill="none" stroke="none" markerEnd={`url(#${id})`} />
     </g>
   );
 }
@@ -37,17 +30,14 @@ export function LineSet({ paths, kw }: { paths: Paths; kw: FlowKw }) {
   return (
     <>
       <defs>
-        <Marker id="efa-solar" color={COLORS.solar} /><Marker id="efa-batt" color={COLORS.batt} />
-        <Marker id="efa-grid" color={COLORS.grid} /><Marker id="efa-load" color={COLORS.load} />
-        <Marker id="efa-idle" color={COLORS.idle} />
         <style>{`@keyframes efFlow{to{stroke-dashoffset:-30}} @media (prefers-reduced-motion: reduce){[data-anim]{animation:none!important}}`}</style>
       </defs>
-      <Line flow="solar" d={paths.solar} kw={kw.solar} color={COLORS.solar} id="efa-solar" />
-      <Line flow="battIn" d={paths.battIn} kw={kw.battIn} color={COLORS.batt} id="efa-batt" />
-      <Line flow="battOut" d={paths.battOut} kw={kw.battOut} color={COLORS.batt} id="efa-batt" />
-      <Line flow="gridIn" d={paths.gridIn} kw={kw.gridIn} color={COLORS.grid} id="efa-grid" />
-      <Line flow="gridOut" d={paths.gridOut} kw={kw.gridOut} color={COLORS.grid} id="efa-grid" />
-      {paths.loads.map((d, i) => <Line key={i} flow={`load${i}`} d={d} kw={kw.loads[i] ?? 0} color={COLORS.load} id="efa-load" />)}
+      <Line flow="solar" d={paths.solar} kw={kw.solar} color={COLORS.solar} />
+      <Line flow="battIn" d={paths.battIn} kw={kw.battIn} color={COLORS.batt} />
+      <Line flow="battOut" d={paths.battOut} kw={kw.battOut} color={COLORS.batt} />
+      <Line flow="gridIn" d={paths.gridIn} kw={kw.gridIn} color={COLORS.grid} />
+      <Line flow="gridOut" d={paths.gridOut} kw={kw.gridOut} color={COLORS.grid} />
+      {paths.loads.map((d, i) => <Line key={i} flow={`load${i}`} d={d} kw={kw.loads[i] ?? 0} color={COLORS.load} />)}
     </>
   );
 }

@@ -481,6 +481,17 @@ export function getCsrfToken(): string {
   return inMemoryCsrfToken;
 }
 
+/** Save a file by clicking a temporary link; the anchor is attached so Firefox and older Safari honour the click. */
+function saveFromUrl(url: string, filename?: string) {
+  const a = document.createElement('a');
+  a.href = url;
+  if (filename) a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 class ApiService {
   private refreshTokenPromise: Promise<boolean> | null = null;
 
@@ -1704,22 +1715,29 @@ class ApiService {
     const response = await fetch(url, { headers: this.getAuthHeaders(), credentials: 'include' });
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(text || `Bulk download failed: ${response.status}`);
+      // The backend answers {"error": "..."}; keep just the sentence so screens can show it (e.g. "Narrow the date range").
+      let message = text;
+      try { message = JSON.parse(text).error || text; } catch { /* not JSON */ }
+      throw new Error(message || `Bulk download failed: ${response.status}`);
     }
+    // ponytail: the whole file is buffered in the browser (up to the backend's 1 GiB cap); stream to disk if that proves too heavy.
     const blob = await response.blob();
     const disposition = response.headers.get('Content-Disposition') || '';
     const match = disposition.match(/filename="([^"]+)"/);
     const filename = match ? match[1] : `logs_${deviceId}.txt`;
     const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = objUrl;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(objUrl);
+    saveFromUrl(objUrl, filename);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 10_000);
   }
 
   async getDeviceLogFileDownloadUrl(deviceId: number, fileId: number): Promise<{ url: string; filename: string }> {
     return this.request(`/devices/${deviceId}/logs/files/${fileId}/download/`);
+  }
+
+  /** Fetch a log file's presigned URL and save it. Not window.open: that comes after an await, which popup blockers refuse. */
+  async downloadDeviceLogFile(deviceId: number, fileId: number): Promise<void> {
+    const { url, filename } = await this.getDeviceLogFileDownloadUrl(deviceId, fileId);
+    saveFromUrl(url, filename);
   }
 
   async getDeviceLogFileContent(deviceId: number, fileId: number): Promise<string> {

@@ -70,8 +70,14 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
         <div className="pt-stat" data-testid="sum-running">{r.running} of {plugs.length} running</div>
       </section>
 
-      <section aria-label="Plugs by current draw" className="pt-tiles">
-        {r.live.map(d => {
+      <div className="pt-cols">
+      {(['ev', 'backup', 'grid'] as const).map(g => {
+        const rows = r.live.filter(d => plugGroup(d) === g);
+        return rows.length === 0 ? null : (
+      <section key={g} aria-label={`${CIRCUIT[g]} plugs`}>
+        <div className="pt-label" data-testid={`circuit-${g}`}>{CIRCUIT[g]} · {rows.length}</div>
+        <div className="pt-tiles">
+        {rows.map(d => {
           const f = kw(d);
           const name = deviceLabel(d);
           const running = plugState(d) === 'running';
@@ -81,8 +87,7 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
           return (
             <button key={d.id} type="button" data-testid="plug-row" className="pt-tile" onClick={() => setSelected(createDeviceNodeData(d, COLOR))}>
               <div className="pt-top">
-                <div><div className="pt-name" data-testid="plug-name">{name}</div>
-                  <div className="pt-sub" data-testid={`plug-circuit-${name}`}>{CIRCUIT[plugGroup(d)]}</div></div>
+                <div className="pt-name" data-testid="plug-name">{name}</div>
                 <span className={`pt-state${running ? ' on' : ''}`}><i />{running ? 'Running' : 'Idle'}</span>
               </div>
               <div className={`pt-watts${running ? '' : ' idle'}`}>{f.valueStr}<small>{f.unit}</small></div>
@@ -91,7 +96,11 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
             </button>
           );
         })}
+        </div>
       </section>
+        );
+      })}
+      </div>
 
       {r.offline.length > 0 && (
         <section aria-label="Plugs not reporting" className="pt-offline">
