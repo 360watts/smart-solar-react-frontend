@@ -629,8 +629,8 @@ export function DetailsToggle({ isDark, open, onToggle, label = 'Advanced detail
   const t = useTokens(isDark);
   return (
     <button
-      type="button" onClick={onToggle}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, cursor: 'pointer', fontFamily: t.body, fontSize: '0.82rem', color: t.ink2 }}
+      type="button" onClick={onToggle} aria-expanded={open}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 0, padding: 0, minHeight: 44, cursor: 'pointer', fontFamily: t.body, fontSize: '0.82rem', color: t.ink2 }}
     >
       <ChevronRight size={13} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 120ms' }} />
       {label}

@@ -1,6 +1,6 @@
 # Viewer site page: Devices tab — test scenarios
 
-A viewer's site page (`/my-sites/:siteId`, `ViewerSite.tsx`) has a **Devices** tab in the site panel (replaced the Devices card under the panel, 2026-10-09). The tab lists the site's devices (`viewer/ViewerDevices.tsx`, from `GET /sites/<id>/gateway-status/`, scoped to assigned sites); a row opens a side drawer (`viewer/DeviceDrawer.tsx`) with the device detail and operations. Design: `smart-solar-django-backend/docs/superpowers/specs/2026-10-09-viewer-devices-tab-design.md`. Status: planned | written | passing | live-verified.
+A viewer's site page (`/my-sites/:siteId`, `ViewerSite.tsx`) has a **Devices** tab in the site panel (replaced the Devices card under the panel, 2026-10-09). The tab lists the site's devices (`viewer/ViewerDevices.tsx`, from `GET /sites/<id>/gateway-status/`, scoped to assigned sites); a tile opens the device page (`viewer/DevicePage.tsx` at `/my-sites/:siteId/devices/:deviceId`, `DeviceRoute.tsx`), replacing the side drawer on 2026-10-12: facts on the left, a sticky control panel (Safe / Asks first / Engineer only) and the Logs card (`LogsCard.tsx`: date range, 20 per page, view with errors-and-warnings filter, scan a day, download range). Reads are cached 60 s (`deviceCache.ts`). Spec: `smart-solar-django-backend/docs/superpowers/specs/2026-10-12-viewer-device-page-design.md`. In the tables below read "Drawer" as "device page"; DR-3 (close/Esc) no longer applies. Design: `smart-solar-django-backend/docs/superpowers/specs/2026-10-09-viewer-devices-tab-design.md`. Status: planned | written | passing | live-verified.
 
 Ids: the gateway-status `device_id` is the device **pk**. Device operations and logs take the pk (`/devices/<pk>/...`); OTA calls take the **serial** (`/ota/updates/single/`, `/ota/updates/rollback/`, `/ota/devices/<serial>/logs`). The auto reboot and send-logs switch states come from `GET /devices/<pk>/`. Firmware: "Update to latest" is the primary action; a "Choose a version" list shows every active build for the device type (from `GET /ota/firmware/`, viewer-readable) and installs one through the single-device route `triggerSingleUpdate(serial, firmwareId)`, never the fleet-wide update-by-version route (employee-only). Reads always show; every write (update, rollback, switches, restart, mute, hard reset) is shown only with `can('device_control')` (hidden, not disabled).
 
@@ -18,6 +18,8 @@ Fields actually returned to a viewer (checked 2026-10-09): gateway-status rows g
 | TB-6 | `visibleTabs` without `devices` (or none); fetch fails | Panel renders | Unchanged: the error message only, no tab bar | unit | P1 | written |
 
 ## Listing
+
+Layout (2026-10-12): one tile per device (`.dv-tile`, same look as the Smart plugs tiles): name and kind, Live / Not reporting dot (amber, never red), last update, firmware, "Update available" pill; one column below 520 px. Empty, loading and error states keep the Devices card.
 
 | ID | Given | When | Then | Type | Pri | Status |
 |---|---|---|---|---|---|---|
@@ -67,7 +69,7 @@ Fields actually returned to a viewer (checked 2026-10-09): gateway-status rows g
 |---|---|---|---|---|---|---|
 | LG-1 | Device has log files | Drawer renders | Newest 10 files listed by name and time | unit | P1 | passing |
 | LG-2 | A file | "View" pressed | Content shown in the drawer (`getDeviceLogFileContent(pk, id)`) | unit | P2 | passing |
-| LG-3 | A file | "Download" pressed | Opens the signed URL (`getDeviceLogFileDownloadUrl(pk, id)`) | unit | P2 | passing |
+| LG-3 | A file | "Download" pressed | Saves the file (`downloadDeviceLogFile(pk, id)`: signed URL with an attachment header, clicked as a link, not `window.open`) | unit | P2 | passing |
 | LG-4 | "Send logs" switch | Toggled | `toggleDeviceLogs(pk, enabled)` | unit | P1 | passing |
 | LG-5 | Log files listed | "Scan today's logs" pressed | `scanDeviceLogFiles(pk, today in IST as YYYY-MM-DD)`; "Checked N log files from today: E errors, W warnings." (0 files → "No log files from today to check.") | unit | P1 | written |
 | LG-6 | Log files listed | "Download all" pressed | `bulkDownloadLogFiles(pk)`; failure (e.g. 413 too large) → plain line, no raw error | unit | P2 | written |
@@ -118,3 +120,34 @@ Fields actually returned to a viewer (checked 2026-10-09): gateway-status rows g
 8. Choose a version: install an older build on a test device, confirm names the version, Update history shows it. (planned)
 9. Switch off: drawer opened by URL/state shows reads only, no write buttons. (planned)
 6. Phone width 375 px: drawer full width, dialogs fit, dark mode legible. (planned)
+
+## Device page additions (2026-10-12)
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| PG-1 | Tile | Rendered | Link to `/my-sites/<site>/devices/<pk>` | unit | P0 | passing |
+| PG-2 | Device id not in the site's list, or no device control | Route renders | "This device isn't available to you" | unit | P0 | planned |
+| PG-3 | Tab visited twice within 60 s | Second visit | One gateway-status call, one firmware call | unit | P1 | passing |
+| PG-4 | Page mounts | Renders | No register-coverage call until Readings is opened | unit | P1 | passing |
+| PG-5 | `pending_reboot` true | Renders | Restart shows "sent, waiting" and is disabled | unit | P1 | planned |
+| PG-6 | Hard reset | Page renders | Only inside the collapsed "Engineer only" box | unit | P0 | passing |
+| LG-7 | Many log files | Older / Fetch with From | 20 per request, offset and IST range sent | unit | P1 | passing |
+| LG-8 | Fast clicks | Two page requests | Only the latest answer is shown (request guard) | unit | P2 | planned |
+| LG-9 | A log with E/W/I lines | "Errors and warnings only" | Only E and W lines, epoch shown as a time | unit | P1 | passing |
+| LG-10 | Scan day picker | Scan this day | `scanDeviceLogFiles(pk, picked day)` | unit | P1 | passing |
+| LG-11 | Download all after Fetch with a range | Pressed | Uses the range last fetched, not the edited boxes | unit | P1 | planned |
+
+## Firmware updates, builds and admin access (2026-10-12)
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| OTA-1 | Anyone with device control opens a device page | Builds card | Lists this device kind's builds, newest first, Active / Inactive | unit | P1 | passing |
+| OTA-2 | A build | Activate / Deactivate | Confirm names the version; `updateFirmwareVersion(id, {is_active})` only after confirm | unit | P0 | passing |
+| OTA-3 | Upload | No file or version | Plain message; with both, sent inactive with this kind | unit | P0 | passing |
+| OTA-4 | Energy meter (`energy_meter` on the device) | Lists / uploads | Uses firmware kind `energymeter` | unit | P0 | passing |
+| OTA-5 | Backend refuses an upload | Upload | The backend's sentence is shown | unit | P1 | passing |
+| OTA-6 | Two builds | Newest block | The highest version, not the latest upload | unit | P1 | passing |
+| OTA-7 | Update failed | Card renders | Progress bar present, no "Installing" step | unit | P2 | passing |
+| OTA-8 | No device control | Device page | No Builds card and no panel | unit | P0 | planned |
+| AD-1 | Admin | Staff Devices page | "Open device page" link to the page; the route needs `device_control`, not `my_sites`; back link goes to /devices | unit | P0 | planned |
+| AD-2 | Admin opens a device of any site | Page | Full controls and raw (unmasked) logs | live | P0 | planned |

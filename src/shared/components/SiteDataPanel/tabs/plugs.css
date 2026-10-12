@@ -20,7 +20,8 @@
 .pt-today { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .pt-today b { color: var(--foreground); font-weight: 500; }
 .pt-offline { display: flex; flex-direction: column; gap: 12px; }
-.pt-label { font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: #e0a43a; }
+.pt-label { font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: #9a5c05; }
+:is(.dark-mode, .dark) .pt-label { color: #e0a43a; }
 .pt-chips { display: flex; flex-wrap: wrap; gap: 12px; }
 .pt-chip { background: transparent; color: inherit; font-family: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; justify-content: center; min-height: 44px; padding: 10px 16px; box-sizing: border-box; border: 1px dashed var(--border); border-radius: 14px; font-size: 14px; font-weight: 500; }
 .pt-chip span:last-child { font-size: 12px; font-weight: 400; color: var(--text-dim); }

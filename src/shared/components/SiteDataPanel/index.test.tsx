@@ -58,12 +58,12 @@ it('inverter site: Overview renders after the answer', async () => {
 });
 
 // docs/test-scenarios/dashboard-redesign.md row 25
-it('Today / Refresh sit in the tab row, not a separate bar; Refresh refetches', async () => {
+it('Refresh sits in the tab row, not a separate bar; Refresh refetches', async () => {
   await open({ meter_only: false, has_meter: false, weather: { temp: 30 } });
   const refresh = screen.getAllByRole('button', { name: /refresh/i });
   expect(refresh).toHaveLength(1);
   expect(screen.getByTestId('tab-row').contains(refresh[0])).toBe(true);
-  expect(screen.getByTestId('tab-row').contains(screen.getByRole('option', { name: 'Today' }))).toBe(true);
+  expect(screen.queryByRole('option', { name: 'Today' })).toBeNull(); // the range picker is History only (R11)
   const forecast = apiService.getSiteForecast as jest.Mock;
   const before = forecast.mock.calls.length;
   await act(async () => { fireEvent.click(refresh[0]); });

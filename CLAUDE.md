@@ -135,7 +135,7 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
 - `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `can('ai_chat')`, admin only)
 - `employees/` — the Employees page: `EmployeesPage.tsx`, `PeopleList.tsx`, `PersonPanel.tsx` (role, assigned sites, device-operations switch), `AddTeammateDialog.tsx`, `roles.ts` (role copy and payload rules; keep in sync with the backend tiers)
-- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` + `DeviceDrawer.tsx` are the site panel's Devices tab (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
+- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` (tiles) + `DevicePage.tsx` / `DeviceRoute.tsx` (page at `/my-sites/:siteId/devices/:deviceId`, control panel + `LogsCard.tsx`, reads via `deviceCache.ts`) are the site panel's Devices tab (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
 - `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
 
 ### Customer Portal Decommission

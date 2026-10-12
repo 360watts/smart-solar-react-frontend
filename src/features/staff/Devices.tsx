@@ -57,6 +57,7 @@ interface Device {
   } | null;
   logs_enabled?: boolean;
   auto_reboot_enabled?: boolean;
+  is_active?: boolean;
   pending_config_update?: boolean;
   config_ack_ver?: number | null;
   config_downloaded_at?: string | null;
@@ -254,6 +255,8 @@ function throttleBackoffMs(err: unknown): number | null {
   return (parseInt(match[1], 10) + 1) * 1000; // +1s buffer past the backend's own estimate
 }
 
+const deviceRank = (d: { is_active?: boolean; is_online?: boolean }) => (d.is_active === false ? 2 : d.is_online ? 0 : 1);
+
 const Devices: React.FC = () => {
   const isMobile = useIsMobile();
   const { isDark } = useTheme();
@@ -281,6 +284,7 @@ const Devices: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [presetSearch, setPresetSearch] = useState('');
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
   const [selectedDevices, setSelectedDevices] = useState<Set<number>>(new Set());
@@ -963,8 +967,14 @@ const Devices: React.FC = () => {
                 border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block' }} />
-                {selectedDevice.is_online ? 'Online' : 'Offline'}
+                {selectedDevice.is_active === false ? 'Inactive' : selectedDevice.is_online ? 'Online' : 'Offline'}
               </span>
+              {siteDetails?.site_id && (
+                <Link to={`/my-sites/${encodeURIComponent(siteDetails.site_id)}/devices/${selectedDevice.id}`}
+                  style={{ flexShrink: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--brand-green)', textDecoration: 'none' }}>
+                  Open device page ›
+                </Link>
+              )}
             </div>
           </div>
 
@@ -1302,7 +1312,7 @@ const Devices: React.FC = () => {
                     border: selectedDevice.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block' }} />
-                    {selectedDevice.is_online ? 'Online' : 'Offline'}
+                    {selectedDevice.is_active === false ? 'Inactive' : selectedDevice.is_online ? 'Online' : 'Offline'}
                   </span>
                 )},
                 { label: 'Last Heartbeat', content: <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{effectiveLastSeen ? new Date(effectiveLastSeen).toLocaleString() : 'Never'}</span> },
@@ -2629,6 +2639,12 @@ const Devices: React.FC = () => {
             <span style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, fontSize: '0.75rem', fontWeight: 700, background: T.borderM, color: T.textM }}>{filteredDevices.length}</span>
           </div>
           <div className="card-actions">
+            {/* ponytail: filters the current page only (list is server-paged); add a ?is_active param if it must span pages */}
+            <select value={activeFilter} onChange={e => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')} aria-label="Filter by active state">
+              <option value="all">All devices</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
             <input
               type="text"
               placeholder="Search devices..."
@@ -2733,12 +2749,17 @@ const Devices: React.FC = () => {
                   />
                 </td>
               </tr>
-            ) : filteredDevices.map((device) => (
+            ) : filteredDevices
+              .filter(d => activeFilter === 'all' || (activeFilter === 'inactive') === (d.is_active === false))
+              // ponytail: sorts the current page only (server-paged); online first, inactive last, stable otherwise
+              .sort((x, y) => deviceRank(x) - deviceRank(y))
+              .map((device) => (
               <tr
                 key={device.id}
                 onClick={() => handleViewDevice(device)}
                 style={{
                   background: selectedDevices.has(device.id) ? 'rgba(15,159,143,0.08)' : 'transparent',
+                  opacity: device.is_active === false ? 0.55 : 1,
                   cursor: 'pointer'
                 }}
                 className="clickable-row"
@@ -2780,10 +2801,10 @@ const Devices: React.FC = () => {
                     padding: '3px 9px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600,
                     background: device.is_online ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
                     color: device.is_online ? '#0F9F8F' : 'var(--muted-foreground)',
-                    border: device.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
+                    border: device.is_active === false ? '1px dashed rgba(148,163,184,0.6)' : device.is_online ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(148,163,184,0.25)',
                   }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: device.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block', flexShrink: 0 }} />
-                    {device.is_online ? 'Online' : 'Offline'}
+                    {device.is_active === false ? 'Inactive' : device.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
                 <td style={{ textAlign: 'center' }}>{device.user || '-'}</td>

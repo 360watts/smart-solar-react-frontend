@@ -82,6 +82,7 @@ function StaffAiChat() {
 
 const MySites = lazy(() => import('../features/staff/viewer/MySites'));
 const ViewerSite = lazy(() => import('../features/staff/viewer/ViewerSite'));
+const ViewerDevice = lazy(() => import('../features/staff/viewer/DeviceRoute'));
 
 export function RoleRedirect() {
   const { isAuthenticated, isStaff, loading } = useAuth();
@@ -152,6 +153,7 @@ function App() {
                 <Route path="/quotation" element={<RequireAccess feature="quotations"><Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense></RequireAccess>} />
                 <Route path="/my-sites" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><MySites /></Suspense></RequireAccess>} />
                 <Route path="/my-sites/:siteId" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><ViewerSite /></Suspense></RequireAccess>} />
+                <Route path="/my-sites/:siteId/devices/:deviceId" element={<RequireAccess feature="device_control"><Suspense fallback={<SkeletonDashboard />}><ViewerDevice /></Suspense></RequireAccess>} />
                 <Route path="/profile" element={<Suspense fallback={<SkeletonDashboard />}><Profile /></Suspense>} />
               </Route>
             </Routes>

@@ -1,17 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import ViewerDevices from '../ViewerDevices';
+import { clearDeviceCache } from '../deviceCache';
+
+const ViewerDevicesAt = (p: { siteId: string }) => <MemoryRouter><ViewerDevices {...p} /></MemoryRouter>;
 
 jest.mock('../../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
 jest.mock('../../../../services/api', () => ({
   apiService: { getSiteGatewayStatus: jest.fn(), getFirmwareVersions: jest.fn() },
 }));
-jest.mock('../DeviceDrawer', () => ({
-  ...jest.requireActual('../DeviceDrawer'),
-  __esModule: true,
-  default: (p: any) => <div data-testid="drawer">{p.dev.serial}</div>,
-}));
-
 const { apiService } = jest.requireMock('../../../../services/api');
 const recent = new Date(Date.now() - 4 * 60_000).toISOString();
 const DEVICES = [
@@ -20,18 +18,19 @@ const DEVICES = [
 ];
 const FIRMWARE = [
   { id: 5, version: '2.2.1', device_type: 'gateway', is_active: true, created_at: '2026-09-01T00:00:00Z' },
-  { id: 7, version: '1.1.0', device_type: 'energy_meter', is_active: true, created_at: '2026-10-01T00:00:00Z' },
+  { id: 7, version: '1.1.0', device_type: 'energymeter', is_active: true, created_at: '2026-10-01T00:00:00Z' },
 ];
 
 beforeEach(() => {
   jest.clearAllMocks();
+  clearDeviceCache();
   apiService.getSiteGatewayStatus.mockResolvedValue({ devices: DEVICES });
   apiService.getFirmwareVersions.mockResolvedValue(FIRMWARE);
 });
 
 describe('ViewerDevices', () => {
   it('lists only the given site\'s devices with calm status and firmware (LS-1, LS-2)', async () => {
-    render(<ViewerDevices siteId="s1" />);
+    render(<ViewerDevicesAt siteId="s1" />);
     expect(await screen.findByText('Monitor GW-1')).not.toBeNull();
     expect(screen.getByText('Meter EM-1')).not.toBeNull();
     expect(apiService.getSiteGatewayStatus).toHaveBeenCalledTimes(1);
@@ -42,36 +41,45 @@ describe('ViewerDevices', () => {
   });
 
   it('hints an update only where a newer version exists, ignoring v/-suffix (LS-6)', async () => {
-    render(<ViewerDevices siteId="s1" />);
+    render(<ViewerDevicesAt siteId="s1" />);
     await screen.findByText('Monitor GW-1');
     expect(await screen.findAllByText('Update available')).toHaveLength(1);
-    const meterRow = screen.getByRole('button', { name: /meter em-1/i });
+    const meterRow = screen.getByRole('link', { name: /meter em-1/i });
     expect(meterRow.textContent).toMatch(/update available/i);
   });
 
   it('keeps rows when the firmware list is refused (LS-7)', async () => {
     apiService.getFirmwareVersions.mockRejectedValueOnce(new Error('403'));
-    render(<ViewerDevices siteId="s1" />);
+    render(<ViewerDevicesAt siteId="s1" />);
     expect(await screen.findByText('Monitor GW-1')).not.toBeNull();
     expect(screen.queryByText('Update available')).toBeNull();
   });
 
-  it('opens the drawer for the clicked row (LS-8)', async () => {
-    render(<ViewerDevices siteId="s1" />);
+  it('each tile links to the device page (LS-8)', async () => {
+    render(<ViewerDevicesAt siteId="s1" />);
     await screen.findByText('Meter EM-1');
-    expect(screen.queryByTestId('drawer')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /meter em-1/i }));
-    expect(screen.getByTestId('drawer').textContent).toBe('EM-1');
+    expect(screen.getByRole('link', { name: /meter em-1/i }).getAttribute('href')).toBe('/my-sites/s1/devices/12');
+  });
+
+  it('reuses the cached list on a second visit and fetches firmware once (cache)', async () => {
+    const first = render(<ViewerDevicesAt siteId="s1" />);
+    await screen.findByText('Monitor GW-1');
+    first.unmount();
+    render(<ViewerDevicesAt siteId="s1" />);
+    await screen.findByText('Monitor GW-1');
+    expect(apiService.getSiteGatewayStatus).toHaveBeenCalledTimes(1);
+    expect(apiService.getFirmwareVersions).toHaveBeenCalledTimes(1);
   });
 
   it('shows the empty state (LS-3) and a retry on failure (LS-4)', async () => {
     apiService.getSiteGatewayStatus.mockResolvedValueOnce({ devices: [] });
-    const { unmount } = render(<ViewerDevices siteId="s1" />);
+    const { unmount } = render(<ViewerDevicesAt siteId="s1" />);
     expect(await screen.findByText(/no devices at this site yet/i)).not.toBeNull();
     unmount();
+    clearDeviceCache();
 
     apiService.getSiteGatewayStatus.mockRejectedValueOnce(new Error('500'));
-    render(<ViewerDevices siteId="s1" />);
+    render(<ViewerDevicesAt siteId="s1" />);
     expect(await screen.findByText(/couldn't load the devices/i)).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(await screen.findByText('Monitor GW-1')).not.toBeNull();

@@ -43,6 +43,7 @@ interface Device {
   memory_status?: { free_heap?: number; min_free?: number } | null;
   logs_enabled?: boolean;
   auto_reboot_enabled?: boolean;
+  is_active?: boolean;
   alerts_muted_until?: string | null;
   wifi_ssid?: string | null;
   wifi_password?: string | null;
@@ -314,6 +315,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       config_version: device.config_version || '',
       logs_enabled: device.logs_enabled ?? false,
       auto_reboot_enabled: device.auto_reboot_enabled ?? true,
+      is_active: device.is_active ?? true,
       wifi_ssid: device.wifi_ssid || '',
       wifi_password: '',
       alerts_muted_until: device.alerts_muted_until || '',
@@ -343,6 +345,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
         config_version: formData.config_version,
         logs_enabled: formData.logs_enabled,
         auto_reboot_enabled: formData.auto_reboot_enabled,
+        is_active: formData.is_active,
         alerts_muted_until: formData.alerts_muted_until || null,
       };
       // Wi-Fi is admin-only (employees get no SSID back). Send the SSID only when an admin changed it.
@@ -639,6 +642,12 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                     {/* Behaviour toggles */}
                     <div style={{ marginTop: 20, marginBottom: 20 }}>
                       <SectionLabel>Behaviour</SectionLabel>
+                      <ToggleField
+                        label="Active"
+                        sublabel="Off = retired or bench unit: no offline alerts or incidents, open ones are closed"
+                        value={formData.is_active ?? true}
+                        onChange={v => set('is_active', v)}
+                      />
                       <ToggleField
                         label="Auto Reboot"
                         sublabel="Automatically reboot when RS-485 registers freeze"
