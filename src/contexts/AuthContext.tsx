@@ -74,6 +74,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     refreshSession().finally(() => setLoading(false));
   }, [refreshSession]);
+  useEffect(() => {
+    // Permissions are decided by the server on every request; this only keeps the screen in step with them:
+    // re-read when a request says the switch is off, and when the tab regains focus after a minute away.
+    let last = Date.now();
+    const reread = () => { last = Date.now(); refreshSession(); };
+    const onVisible = () => { if (document.visibilityState === 'visible' && Date.now() - last > 60_000) reread(); };
+    window.addEventListener('360w:access-changed', reread);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { window.removeEventListener('360w:access-changed', reread); document.removeEventListener('visibilitychange', onVisible); };
+  }, [refreshSession]);
 
   const requestOtp = useCallback(async (mobileNumber: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {

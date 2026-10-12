@@ -643,6 +643,9 @@ class ApiService {
 
     if (!response.ok) {
       const message = await this.parseErrorResponse(response);
+      // The person's device-operations switch was turned off after they signed in: ask the app to re-read its access list.
+      // Matches the backend's machine-readable code, never the message text.
+      if (response.status === 403 && (await response.clone().json().catch(() => null))?.code === 'DEVICE_OPS_OFF') window.dispatchEvent(new Event('360w:access-changed'));
       if (response.status === 429) {
         const retryAfterHeader = Number(response.headers.get('Retry-After'));
         const match = message.match(/(\d+)\s*seconds?/i);
