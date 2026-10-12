@@ -29,3 +29,4 @@ export function getFirmware(): Promise<Firmware[] | null> {
 }
 
 export function clearDeviceCache() { sites.clear(); fw = null; }
+if (typeof window !== 'undefined') window.addEventListener('360w:logout', clearDeviceCache);

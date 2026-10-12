@@ -132,6 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      window.dispatchEvent(new Event('360w:logout')); // caches keyed by site (viewer device lists) must not outlive the account
     }
   }, []);
 

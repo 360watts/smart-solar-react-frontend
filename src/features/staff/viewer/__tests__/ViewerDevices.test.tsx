@@ -85,3 +85,13 @@ describe('ViewerDevices', () => {
     expect(await screen.findByText('Monitor GW-1')).not.toBeNull();
   });
 });
+
+it('forgets cached devices when the account logs out (cache)', async () => {
+  const first = render(<ViewerDevicesAt siteId="s1" />);
+  await screen.findByText('Monitor GW-1');
+  first.unmount();
+  window.dispatchEvent(new Event('360w:logout'));
+  render(<ViewerDevicesAt siteId="s1" />);
+  await screen.findByText('Monitor GW-1');
+  expect(apiService.getSiteGatewayStatus).toHaveBeenCalledTimes(2);
+});
