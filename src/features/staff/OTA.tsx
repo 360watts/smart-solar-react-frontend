@@ -244,13 +244,16 @@ function inspectFirmwareBin(buf: ArrayBuffer, fileName: string): FirmwareInfo | 
   for (let i = 0; i < u8.length; i += 32768) text += String.fromCharCode(...u8.subarray(i, i + 32768));
   const runs = text.match(/[\x20-\x7e]{4,80}/g) ?? [];
   const semver = /^v?(\d+\.\d+\.\d+)(?:-[\w.]+)?$/;
-  const verRun = runs.find(r => /^v\d/.test(r) && semver.test(r)) ?? runs.find(r => semver.test(r));
+  // The app descriptor (magic 0xABCD5432 at byte 32) holds the project version at byte 48. Scanning loose strings
+  // picks up the ESP-IDF version ("v5.4.4"), so only trust the descriptor; blank means the user types it.
+  const hasDesc = u8.length >= 80 && u8[32] === 0x32 && u8[33] === 0x54 && u8[34] === 0xCD && u8[35] === 0xAB;
+  const verRun = hasDesc ? text.slice(48, 80).split('\0')[0] : '';
   const meterRun = runs.find(r => /energy ?meter/i.test(r) && !/[{}"<>%/]/.test(r));
   const usageType = meterRun || runs.some(r => /\bEM\d{2}\b/.test(r)) ? 'energymeter'
     : runs.some(r => /gateway/i.test(r)) ? 'gateway' : null;
   return {
     chip,
-    version: verRun ? verRun.match(semver)![1] : '',
+    version: verRun.match(semver)?.[1] ?? '',
     usageType,
     name: (meterRun ?? fileName.replace(/\.bin$/i, '')).trim(),
   };
