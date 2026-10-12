@@ -548,7 +548,22 @@ class ApiService {
     console.groupEnd();
   }
 
-  private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
+  // Identical GETs that overlap in time (Dashboard + site panel both asking for /sites/, a poll tick landing
+  // on a manual refresh) share one network call, so they cost one throttle slot instead of several. Only
+  // plain GETs: writes, and callers passing their own AbortSignal, always get their own request.
+  private inflightGets = new Map<string, Promise<any>>();
+
+  private request(endpoint: string, options: RequestInit = {}): Promise<any> {
+    if ((options.method ?? 'GET') !== 'GET' || options.signal) return this._request(endpoint, options);
+    const key = endpoint + JSON.stringify(options.headers ?? {});
+    const pending = this.inflightGets.get(key);
+    if (pending) return pending;
+    const p = this._request(endpoint, options).finally(() => this.inflightGets.delete(key));
+    this.inflightGets.set(key, p);
+    return p;
+  }
+
+  private async _request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const method = options.method ?? 'GET';
     // Keyed on path only, not the full querystring — polling with a changing page/search
     // param would otherwise mint a fresh cooldown key every tick and never actually cool down.
@@ -1803,7 +1818,8 @@ class ApiService {
   async uploadFirmwareVersion(formData: FormData, onProgress?: (pct: number) => void): Promise<any> {
     const url = `${API_BASE_URL}/ota/firmware/create/`;
 
-    return new Promise((resolve, reject) => {
+    // Same 401 handling as request(): refresh the session once and resend before giving up.
+    const send = (retry: boolean) => new Promise<any>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url);
       xhr.withCredentials = true;
@@ -1815,8 +1831,9 @@ class ApiService {
         });
       }
 
-      xhr.onload = () => {
+      xhr.onload = async () => {
         if (xhr.status === 401) {
+          if (retry && await this.refreshToken()) return send(false).then(resolve, reject);
           window.location.href = '/login';
           return reject(new Error('Authentication required'));
         }
@@ -1833,6 +1850,7 @@ class ApiService {
       xhr.onerror = () => reject(new Error('Network error during upload'));
       xhr.send(formData);
     });
+    return send(true);
   }
 
   async updateFirmwareVersion(firmwareId: number, data: any): Promise<any> {

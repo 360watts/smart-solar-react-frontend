@@ -375,7 +375,7 @@ export const OTA: React.FC = () => {
   useEffect(() => {
     // Run all three independent loads in parallel — previously sequential
     Promise.all([loadFirmwareData(), loadDevices(), loadDeployments()]);
-    const interval = setInterval(() => { if (!document.hidden) loadDeployments(); }, 10000);
+    const interval = setInterval(() => { if (!document.hidden) loadDeployments(); }, 20000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
