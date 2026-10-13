@@ -80,7 +80,7 @@ export interface EnergyFlowBlockProps {
   inverterPhases?: InverterPhases;
   ctReading?: any | null;
   /** Today's totals for the left rail; missing values render as "—". */
-  today?: { solarKwh?: number | null; usedKwh?: number | null; ownPct?: number | null; solarCurve?: (number | null)[]; solarCurveLabels?: string[]; usedPartial?: string | null };
+  today?: { solarKwh?: number | null; usedKwh?: number | null; ownPct?: number | null; solarCurve?: (number | null)[]; solarCurveLabels?: string[]; usedPartial?: string | null; usedNote?: string | null };
   /** Opens the site panel's Smart plugs tab; without it the load cards show the plug count as plain text. */
   onOpenPlugs?: () => void;
 }

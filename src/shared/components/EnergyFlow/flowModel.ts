@@ -37,7 +37,7 @@ const kwh = (v: unknown): number | null => {
 /** GET /sites/<id>/staff-overview/ `home_today`: whole-home kWh for the site's local day. */
 export interface HomeToday {
   date: string;
-  backup_kwh: number | null; grid_direct_kwh: number | null; ev_kwh: number | null;
+  backup_kwh: number | null; grid_direct_kwh: number | null; grid_direct_source?: 'meter' | 'plugs' | null; ev_kwh: number | null;
   total_kwh: number | null; // sum of the known parts only
   covers: string[];         // which parts are in total_kwh: 'backup' | 'grid_direct' | 'ev'
   partial: boolean;         // an applicable part has no data
@@ -64,6 +64,8 @@ export function railToday(solarDay: Record<string, number> | null | undefined, l
       : null,
     // Shown under "Home used" when an applicable part is missing: what the figure includes.
     usedPartial: used != null && home?.partial ? coversWords(home.covers ?? []) : null,
+    // No grid-direct meter: that part is only the plugs, so the figure may read low.
+    usedNote: used != null && home?.grid_direct_source === 'plugs' ? 'Grid direct: plugs only' : null,
   };
 }
 

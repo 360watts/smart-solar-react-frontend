@@ -84,7 +84,7 @@ const MobileProfile: React.FC = () => {
     if (pwForm.new_password.length < 8) { setError('Password must be at least 8 characters'); return; }
     setSaving(true); setError(''); setSuccess('');
     try {
-      await apiService.changePassword({ current_password: pwForm.current_password, new_password: pwForm.new_password });
+      await apiService.changePassword(pwForm);
       setChangingPw(false);
       setPwForm({ current_password:'', new_password:'', confirm_password:'' });
       setSuccess('Password changed successfully');

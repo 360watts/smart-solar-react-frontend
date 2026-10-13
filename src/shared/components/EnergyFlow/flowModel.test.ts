@@ -16,9 +16,14 @@ describe('railToday', () => {
     expect(r.usedKwh).toBeNull();
     expect(r.ownPct).toBeNull();
   });
+  it('flags grid-direct counted from plugs only', () => {
+    const home = { date: 'd', backup_kwh: 1, grid_direct_kwh: 2, grid_direct_source: 'plugs' as const, ev_kwh: null, total_kwh: 3, covers: ['backup', 'grid_direct'], partial: false };
+    expect(railToday(null, {}, true, home).usedNote).toBe('Grid direct: plugs only');
+    expect(railToday(null, {}, true, { ...home, grid_direct_source: 'meter' }).usedNote).toBeNull();
+  });
   it('zero or missing load, or missing grid in: own power null, no NaN', () => {
     expect(railToday(null, { load_today_kwh: 0, grid_buy_today_kwh: 0 }, true).ownPct).toBeNull();
-    expect(railToday(null, {}, true)).toEqual({ solarKwh: null, usedKwh: null, ownPct: null, usedPartial: null });
+    expect(railToday(null, {}, true)).toEqual({ solarKwh: null, usedKwh: null, ownPct: null, usedPartial: null, usedNote: null });
     expect(railToday(null, { load_today_kwh: 2 }, true).ownPct).toBeNull();
     expect(railToday(null, null, true).usedKwh).toBeNull();
   });

@@ -148,8 +148,9 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
   const batt = battKw ?? 0;
 
   const isExporting   = grid < 0;
-  // Whole home = backup + grid-direct (CT, 0 when reversed) + EV; the ring segments stay the inverter supply mix.
-  const homeTotalKw = wholeHomeKw(load, ctGridKw, evLoadPowerKw, ctReversed);
+  // Whole home = backup + grid-direct + EV; the ring segments stay the inverter supply mix.
+  // Grid-direct is the CT when it reads sensibly, else the grid-direct plugs (never both: the CT already sees them).
+  const homeTotalKw = wholeHomeKw(load, ctReading && !ctReversed ? ctGridKw : gridLoads.reduce((t, d) => t + (freshLatest(d)?.power_w ?? 0), 0) / 1000, evLoadPowerKw);
   const isImporting   = grid > 0;
   const isCharging    = batt < 0;
   const isDischarging = batt > 0;
@@ -341,7 +342,7 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 <span title={`Partly counted: only ${today.usedPartial} so far; a circuit has no reading today`}>
                   Partly counted · {today.usedPartial}
                 </span>
-              ) : undefined} />
+              ) : today?.usedNote ?? undefined} />
             <RailTile isDark={isDark} title="From your own power" color={FLOW_COLORS.batt}
               value={today?.ownPct != null ? `${Math.round(today.ownPct)}%` : null}
               sub={today?.ownPct != null ? `${100 - Math.round(today.ownPct)}% bought from the grid` : undefined} />
