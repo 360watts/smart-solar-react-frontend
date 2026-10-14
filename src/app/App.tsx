@@ -18,7 +18,6 @@ import '../shared/styles/theme-toggle.css';
 import '../shared/styles/particles.css';
 import '../shared/styles/badges.css';
 import '../shared/styles/avatar.css';
-import '../shared/layout/sidebar.css';
 import '../shared/layout/nav.css';
 import '../shared/layout/logout.css';
 import '../features/auth/auth.css';
