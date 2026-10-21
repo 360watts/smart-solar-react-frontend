@@ -12,6 +12,7 @@ jest.mock('../../../../services/api', () => ({
     triggerRollback: jest.fn().mockResolvedValue({}),
     getDeviceUpdateLogs: jest.fn(),
     getDeviceLogFiles: jest.fn(),
+    getDeviceEvents: jest.fn(() => Promise.resolve({ results: [] })),
     getDeviceLogFileContent: jest.fn().mockResolvedValue('line one'),
     getDeviceLogFileDownloadUrl: jest.fn().mockResolvedValue({ url: 'https://x/log', filename: 'a.log' }),
     downloadDeviceLogFile: jest.fn().mockResolvedValue(undefined),

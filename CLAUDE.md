@@ -28,7 +28,7 @@ VITE_API_BASE_URL=https://smart-solar-django-backend.vercel.app/api
 
 ### Route Structure
 
-Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`, and per page by `RequireAccess` from `src/shared/access`, which hides what the signed-in role cannot use; see "Role-based access" below). This app has no customer-facing routes — the customer portal was decommissioned here and now lives solely in `smart-solar-customer-portal`. Non-staff accounts hitting `/` are redirected to `https://my.360watts.com` (`RoleRedirect` in `App.tsx`) rather than routed anywhere internally.
+Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar nav, gated by `StaffRoute`, and per page by `RequireAccess` from `src/shared/access`, which hides what the signed-in role cannot use; see "Role-based access" below). This app has no customer-facing routes — the customer portal was decommissioned here and now lives solely in `smart-solar-customer-portal`. Non-staff accounts hitting `/` are redirected to `https://www.360watts.com` (`RoleRedirect` in `App.tsx`) rather than routed anywhere internally.
 
 ```
 /login                        → Login (public)
@@ -137,10 +137,11 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `employees/` — the Employees page: `EmployeesPage.tsx`, `PeopleList.tsx`, `PersonPanel.tsx` (role, assigned sites, device-operations switch), `AddTeammateDialog.tsx`, `roles.ts` (role copy and payload rules; keep in sync with the backend tiers)
 - `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` (tiles) + `DevicePage.tsx` / `DeviceRoute.tsx` (page at `/my-sites/:siteId/devices/:deviceId`, control panel + `LogsCard.tsx`, reads via `deviceCache.ts`) are the site panel's Devices tab (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
 - `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
+- `GatewayActivity.tsx` — firmware V2 gateway card on the staff device detail and the viewer device page: Wi-Fi failure / refused-settings notes, backup battery, event history (`/devices/<id>/events/`), APN form (staff page, `device_control` only). Scenarios: `docs/test-scenarios/gateway-activity.md`
 
 ### Customer Portal Decommission
 
-This app previously shipped its own customer-facing portal at `src/features/portal/` (`/portal/*` routes, `PortalLayout`, `CustomerRoute`). It was unused and has been fully removed — the active customer-facing app is the dedicated `smart-solar-customer-portal` repo, deployed at `my.360watts.com`. `RoleRedirect` (`App.tsx`) sends any non-staff account there instead of routing internally.
+This app previously shipped its own customer-facing portal at `src/features/portal/` (`/portal/*` routes, `PortalLayout`, `CustomerRoute`). It was unused and has been fully removed — the active customer-facing app is the dedicated `smart-solar-customer-portal` repo, deployed at `www.360watts.com`. `RoleRedirect` (`App.tsx`) sends any non-staff account there instead of routing internally.
 
 ### Live Data
 

@@ -3,6 +3,7 @@ import { apiService } from '../../../services/api';
 import { useTokens, StatusChip, Btn, ConfirmDialog, DetailsToggle } from '../siteHardware/ui';
 import { useAccess } from '../../../shared/access/useAccess';
 import LogsCard from './LogsCard';
+import GatewayActivity, { GatewayFields } from '../GatewayActivity';
 import BuildsCard from './BuildsCard';
 import { firmwareKind } from '../firmwareImage';
 import { getFirmware } from './deviceCache';
@@ -21,7 +22,7 @@ type OtaLog = {
   started_at?: string | null; completed_at?: string | null; last_checked_at?: string | null;
 };
 /** The viewer-visible part of GET /devices/<pk>/ (Wi-Fi name, IP and password are stripped for viewers). */
-type Detail = {
+type Detail = GatewayFields & {
   config_version?: string | null; config_ack_ver?: number | null; pending_config_update?: boolean;
   alerts_muted_until?: string | null; logs_enabled?: boolean; auto_reboot_enabled?: boolean;
   /** Last automatic (RS-485 stall) restart; null = none recorded. */
@@ -443,6 +444,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
             </div>
           </aside>
         )}
+          {!isMeter && <div className="dp-logs"><GatewayActivity deviceId={dev.device_id} isDark={isDark} device={detail} /></div>}
           <div className="dp-logs"><LogsCard deviceId={dev.device_id} isDark={isDark} /></div>
         </div>
       </div>

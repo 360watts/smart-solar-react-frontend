@@ -5,6 +5,15 @@ import type { HomeToday } from '../shared/components/EnergyFlow/flowModel';
 
 // ─── CT Energy Meter ──────────────────────────────────────────────────────────
 
+/** One gateway event (backend DeviceEvent: data/event, data/diag, offline DIAG lines). */
+export interface DeviceEvent {
+  id: number;
+  event: string;
+  payload: Record<string, any>;
+  received_at: string;
+  device_ts: string | null;
+}
+
 export interface CtMeterReading {
   timestamp: string;
   node_id: string;
@@ -1771,6 +1780,14 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ enabled }),
     });
+  }
+
+  async getDeviceEvents(deviceId: number, limit = 100): Promise<{ results: DeviceEvent[] }> {
+    return this.request(`/devices/${deviceId}/events/?limit=${limit}`);
+  }
+
+  async setDeviceApn(deviceId: number, data: { apn: string; user?: string; password?: string }): Promise<any> {
+    return this.request(`/devices/${deviceId}/apn/`, { method: 'POST', body: JSON.stringify(data) });
   }
 
   async setDeviceAutoReboot(deviceId: number, enabled: boolean): Promise<any> {

@@ -19,6 +19,7 @@ import PageHeader from '../../shared/layout/PageHeader';
 import { useModal } from '../../shared/hooks';
 import { IST_TIMEZONE, DEFAULT_PAGE_SIZE } from '../../app/constants';
 import EditDeviceModal from './EditDeviceModal';
+import GatewayActivity, { GatewayFields } from './GatewayActivity';
 import DeleteDeviceModal, { DeleteDeviceOptions } from './DeleteDeviceModal';
 import RestoreArchivedDeviceModal from './RestoreArchivedDeviceModal';
 import ManageProvisionsModal from './ManageProvisionsModal';
@@ -33,7 +34,7 @@ interface User {
   is_superuser: boolean;
 }
 
-interface Device {
+interface Device extends GatewayFields {
   id: number;
   device_serial: string;
   device_type?: 'gateway' | 'energy_meter';
@@ -1613,6 +1614,12 @@ const Devices: React.FC = () => {
             </div>
           )}
         </div>
+
+        {selectedDevice.device_type !== 'energy_meter' && (
+          <div style={{ marginTop: '48px' }}>
+            <GatewayActivity key={selectedDevice.id} deviceId={selectedDevice.id} isDark={isDark} device={selectedDevice} allowApn={canOps} />
+          </div>
+        )}
 
         {/* ── Session Logs ── */}
         <div className="card" style={{ marginTop: '48px', marginBottom: '20px' }}>

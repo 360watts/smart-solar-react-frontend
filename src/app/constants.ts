@@ -3,7 +3,7 @@ export const IST_TIMEZONE = 'Asia/Kolkata';
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'https://api.360watts.com/api';
 
-export const CUSTOMER_PORTAL_URL = 'https://my.360watts.com';
+export const CUSTOMER_PORTAL_URL = 'https://www.360watts.com';
 
 export const CHART_COLORS = ['#0F9F8F', '#F07522', '#3b82f6', '#8b5cf6', '#0F9F8F', '#f59e0b'];
 
