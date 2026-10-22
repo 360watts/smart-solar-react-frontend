@@ -13,6 +13,7 @@ import finalLogo from '../../../assets/finalLogo.png';
 interface Device {
   id: number;
   device_serial: string;
+  device_type?: 'gateway' | 'energy_meter';
   user?: string;
   config_version?: string;
   wifi_ssid?: string;
@@ -676,7 +677,9 @@ const MobileDevices: React.FC = () => {
             </div>
             <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: muted, fontFamily: "'Rubik', sans-serif", lineHeight: 1.5 }}>
               {modal.type === 'reboot' && `Queue reboot for ${modal.device.device_serial}? The device will restart.`}
-              {modal.type === 'reset' && `Hard reset ${modal.device.device_serial}? This will erase configuration.`}
+              {modal.type === 'reset' && (modal.device.device_type === 'energy_meter'
+                ? `Hard reset ${modal.device.device_serial}? This wipes the meter's Wi-Fi: someone must be on site to set it up again.`
+                : `Hard reset ${modal.device.device_serial}? This will erase configuration.`)}
               {modal.type === 'delete' && `Permanently delete ${modal.device.device_serial}? This cannot be undone.`}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>

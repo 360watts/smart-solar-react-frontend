@@ -120,6 +120,8 @@ const CONFIRM = {
   rollback: { tone: 'danger' as const, title: 'Roll back', body: 'It goes back to the firmware it ran before and restarts. Only do this if the latest update caused trouble.', ok: 'Roll back', cancel: 'Keep it' },
   update: { tone: 'danger' as const, title: 'Update', body: "It downloads the new firmware and restarts by itself. Readings pause for a few minutes. Don't unplug it while it updates.", ok: 'Update', cancel: 'Keep it' },
 };
+// EM26 factory reset wipes its Wi-Fi too: it opens its setup hotspot and needs someone on site.
+const METER_RESET = { ...CONFIRM.reset, body: "This erases the meter's Wi-Fi and settings. It stops reporting until someone on site sets it up again from its setup hotspot. Only do this if an engineer asked you to." };
 
 function Switch({ isDark, label, hint, checked, onChange }: { isDark: boolean; label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   const t = useTokens(isDark);
@@ -211,7 +213,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
     else if (pending.kind === 'rollback') run(() => apiService.triggerRollback(dev.serial), `Roll back sent to ${name}. It switches within a few minutes.`, () => setWaiting(w => ({ ...w, rollback: true }))).then(loadProgress);
     else if (pending.kind === 'update') { const fw = pending.fw; run(() => apiService.triggerSingleUpdate(dev.serial, fw.id), `Update to ${fw.version} sent to ${name}. It starts within a few minutes.`).then(loadProgress); }
   };
-  const c = pending ? CONFIRM[pending.kind] : null;
+  const c = pending ? (isMeter && pending.kind === 'reset' ? METER_RESET : CONFIRM[pending.kind]) : null;
 
   const card: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 12, padding: 22, border: `1px solid ${t.line}`, borderRadius: 18, background: t.card };
   const inner: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, padding: '9px 11px', border: `1px solid ${t.line}`, borderRadius: 12, background: t.card2 };
@@ -418,12 +420,15 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
                 <Btn isDark={isDark} size="sm" variant="plain" disabled={busy}
                   onClick={() => run(() => apiService.unmuteDeviceAlerts(dev.device_id), `Alerts are back on for ${name}.`, () => setMutedUntil(null))}>Turn alerts back on</Btn>
               )}
+              {/* Meters have no RS-485 inverter link and no log upload (the backend refuses the logs toggle). */}
+              {!isMeter && <>
               <Switch isDark={isDark} label="Auto reboot" checked={!!autoReboot}
                 hint={autoReboot === undefined ? 'Current setting not reported.' : 'Restarts it by itself when the inverter readings stop changing.'}
                 onChange={v => toggle(setAutoReboot, autoReboot, v, () => apiService.setDeviceAutoReboot(dev.device_id, v))} />
               <Switch isDark={isDark} label="Send logs" checked={!!logsOn}
                 hint={logsOn === undefined ? 'Current setting not reported.' : logsOn ? 'It uploads its log files.' : "It doesn't upload logs."}
                 onChange={v => toggle(setLogsOn, logsOn, v, () => apiService.toggleDeviceLogs(dev.device_id, v))} />
+              </>}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -432,7 +437,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
               {firmware !== null && update && (
                 <Btn isDark={isDark} size="sm" variant="primary" disabled={busy} onClick={() => setPending({ kind: 'update', fw: update })}>Update to {update.version}</Btn>
               )}
-              {pbtn('Roll back', 'Goes back to the version it ran before.', () => setPending({ kind: 'rollback' }), waiting.rollback)}
+              {!isMeter && pbtn('Roll back', 'Goes back to the version it ran before.', () => setPending({ kind: 'rollback' }), waiting.rollback)}
             </div>
 
             <div style={{ border: `1px dashed ${t.line}`, borderRadius: 12, padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -1476,7 +1476,8 @@ const Devices: React.FC = () => {
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: T.textD, marginBottom: 4 }}>Created By</div>
                 <div style={{ fontSize: '0.9rem', color: T.text }}>{selectedDevice.created_by_username || '—'}</div>
               </div>
-              {canOps && (<>
+              {/* Gateway-only: meters have no log upload or RS-485 link (the backend refuses the logs toggle). */}
+              {canOps && selectedDevice.device_type !== 'energy_meter' && (<>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                   <input
@@ -2257,6 +2258,9 @@ const Devices: React.FC = () => {
                     <li>All configuration will be lost</li>
                     <li>Device will return to factory defaults</li>
                     <li>Re-provisioning will be required</li>
+                    {hardResetModal.device.device_type === 'energy_meter' && (
+                      <li>The meter's Wi-Fi is wiped: it opens its setup hotspot and someone must be on site to set it up again</li>
+                    )}
                   </ul>
                 </div>
               </div>

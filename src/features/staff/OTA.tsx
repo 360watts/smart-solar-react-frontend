@@ -46,6 +46,7 @@ interface DeviceStatus {
   lastError: string;
   progress?: number;
   lastCheckedAt?: string;
+  deviceType?: string;
 }
 
 interface DeploymentConfig {
@@ -397,6 +398,7 @@ export const OTA: React.FC = () => {
         lastError: d.log_error || '',
         progress: undefined,
         lastCheckedAt: d.log_last_checked_at || undefined,
+        deviceType: d.device_type || undefined,
       }));
       setDevices(transformed);
     } catch (err: any) {
@@ -627,6 +629,7 @@ export const OTA: React.FC = () => {
   // ── Rollback ──
   const getFilteredRollbackDevices = () => {
     return devices.filter(d => {
+      if (d.deviceType === 'energy_meter') return false; // EM26 meters have no rollback (backend returns 400)
       if (rollbackFilters.currentVersion !== 'all' && d.currentVersion !== rollbackFilters.currentVersion) return false;
       if (rollbackFilters.status !== 'all' && d.status !== rollbackFilters.status) return false;
       return true;

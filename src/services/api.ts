@@ -1685,6 +1685,14 @@ class ApiService {
     });
   }
 
+  /** EM26 one-shot calibration; returns the device with meter_calibration_status 'pending'. */
+  async calibrateMeter(deviceId: number, body: { mode: 'single' | 'three'; v: number[]; i: number[] }): Promise<any> {
+    return this.request(`/devices/${deviceId}/meter/calibrate/`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
   async rebootDevice(deviceId: number): Promise<any> {
     return this.request(`/devices/${deviceId}/reboot/`, {
       method: 'POST',

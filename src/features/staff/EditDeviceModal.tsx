@@ -17,9 +17,10 @@ import {
   ScrollText, ChevronDown, ChevronUp, AlertTriangle, Cpu,
 } from 'lucide-react';
 import DeviceTypeSelector from './DeviceTypeSelector';
+import MeterSettingsSection, { INTERVAL_S, MeterFields } from './MeterSettingsSection';
 import { useAccess } from '../../shared/access/useAccess';
 
-interface Device {
+interface Device extends Partial<Omit<MeterFields, 'id' | 'is_online'>> {
   id: number;
   device_serial: string;
   device_type?: 'gateway' | 'energy_meter';
@@ -300,7 +301,8 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWifi, setShowWifi] = useState(false);
-  const canWifiPassword = useAccess().can('site_credentials');
+  const { can, isViewer } = useAccess();
+  const canWifiPassword = can('site_credentials');
   const [muteMode, setMuteMode] = useState<'none' | 'hours' | 'datetime'>('none');
   const muteRef = useRef<HTMLInputElement>(null);
 
@@ -319,6 +321,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       wifi_ssid: device.wifi_ssid || '',
       wifi_password: '',
       alerts_muted_until: device.alerts_muted_until || '',
+      meter_publish_interval_ms: device.meter_publish_interval_ms ?? null,
     });
     setError(null);
     setSaved(false);
@@ -337,6 +340,12 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
   };
 
   const doSave = async () => {
+    const intervalMs = formData.meter_publish_interval_ms ?? null;
+    const intervalChanged = formData.device_type === 'energy_meter' && intervalMs !== (device?.meter_publish_interval_ms ?? null);
+    if (intervalChanged && intervalMs != null && !(intervalMs >= INTERVAL_S[0] * 1000 && intervalMs <= INTERVAL_S[1] * 1000)) {
+      setError(`Reading interval must be ${INTERVAL_S[0]}–${INTERVAL_S[1]} seconds`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -348,6 +357,8 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
         is_active: formData.is_active,
         alerts_muted_until: formData.alerts_muted_until || null,
       };
+      // Only on change: an unchanged value would be re-validated against the device type for nothing.
+      if (intervalChanged && intervalMs != null) payload.meter_publish_interval_ms = intervalMs;
       // Wi-Fi is admin-only (employees get no SSID back). Send the SSID only when an admin changed it.
       if (canWifiPassword && (formData.wifi_ssid || '') !== (device?.wifi_ssid || '')) {
         payload.wifi_ssid = formData.wifi_ssid;
@@ -373,6 +384,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
 
   if (!device) return null;
 
+  const isMeter = formData.device_type === 'energy_meter';
   const memFree = device.memory_status?.free_heap;
   const health = device.heartbeat_health;
 
@@ -590,7 +602,19 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                       />
                     </div>
 
-                    {/* Configuration */}
+                    {isMeter && (
+                      <MeterSettingsSection
+                        device={{ ...device, is_online: device.is_online }}
+                        isDark={isDark}
+                        intervalMs={formData.meter_publish_interval_ms}
+                        onIntervalChange={ms => set('meter_publish_interval_ms', ms)}
+                        // Calibration is employee tier and needs the device saved as a meter.
+                        canCalibrate={!isViewer && device.device_type === 'energy_meter'}
+                      />
+                    )}
+
+                    {/* Configuration (MODBUS preset): gateways only */}
+                    {!isMeter && (<>
                     <SectionLabel>Configuration</SectionLabel>
                     {presets.length > 0 && (
                       <div style={{ marginBottom: 10 }}>
@@ -638,6 +662,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                       placeholder="e.g. cfg-abc123"
                       isDark={isDark}
                     />
+                    </>)}
 
                     {/* Behaviour toggles */}
                     <div style={{ marginTop: 20, marginBottom: 20 }}>
@@ -648,6 +673,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         value={formData.is_active ?? true}
                         onChange={v => set('is_active', v)}
                       />
+                      {!isMeter && (<>
                       <ToggleField
                         label="Auto Reboot"
                         sublabel="Automatically reboot when RS-485 registers freeze"
@@ -660,6 +686,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         value={formData.logs_enabled ?? false}
                         onChange={v => set('logs_enabled', v)}
                       />
+                      </>)}
                     </div>
 
                     {/* Wi-Fi Credentials */}
