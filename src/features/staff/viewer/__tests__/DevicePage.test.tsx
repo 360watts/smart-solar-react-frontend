@@ -380,6 +380,25 @@ describe('DevicePage', () => {
     expect(screen.queryByRole('heading', { name: 'Diagnostics' })).toBeNull();
     expect(apiService.getRegisterCoverage).not.toHaveBeenCalled();
   });
+
+  it('meter: no roll back, auto reboot or send logs; hard reset warns about Wi-Fi (S1)', async () => {
+    const meter = { ...DEV, device_id: 12, device_type: 'energy_meter', serial: 'EM-1' };
+    const { unmount } = open(FIRMWARE, meter);
+    await waitFor(() => expect(apiService.getDevice).toHaveBeenCalledWith(12));
+    expect(screen.queryByRole('button', { name: /roll back/i })).toBeNull();
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
+    click(/engineer only/i);
+    click(/^hard reset$/i);
+    expect(dialog().textContent).toMatch(/wi-fi/i);
+    expect(dialog().textContent).toMatch(/on site/i);
+    unmount();
+
+    mockCan.mockReturnValue(false);
+    open(FIRMWARE, meter);
+    await waitFor(() => expect(apiService.getDevice).toHaveBeenCalled());
+    expect(screen.queryByText('Sending logs')).toBeNull();
+    expect(screen.queryByText('Auto reboot')).toBeNull();
+  });
 });
 
 describe('firmware updates card', () => {

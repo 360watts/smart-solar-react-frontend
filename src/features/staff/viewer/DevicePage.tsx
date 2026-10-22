@@ -297,8 +297,8 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
               {alertsTile && tile('Alerts', alertsTile[0], alertsTile[1], alertsTile[0] === 'Muted')}
               {restartTile && tile('Last auto restart', restartTile)}
               {debugTile && tile('Debug mode', debugTile[0], debugTile[1], true)}
-              {!ctl && tile('Sending logs', onOff(logsOn))}
-              {!ctl && tile('Auto reboot', onOff(autoReboot))}
+              {!ctl && !isMeter && tile('Sending logs', onOff(logsOn))}
+              {!ctl && !isMeter && tile('Auto reboot', onOff(autoReboot))}
             </div>
             {expander('adv', 'Advanced details', () => (
               <div style={inner}>

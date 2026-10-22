@@ -68,9 +68,9 @@ export default function MeterSettingsSection({ device, isDark, intervalMs, onInt
 
   const phases = mode === 'single' ? 1 : 3;
   const vNums = v.slice(0, phases).map(Number);
-  const iNums = i.slice(0, phases).map(Number);
+  const iNums = i.slice(0, phases).map(s => (s.trim() === '' ? NaN : Number(s)));  // empty must not count as 0 A
   const calError = !vNums.every(x => inRange(x, CAL_V)) ? `Voltage must be ${CAL_V[0]}–${CAL_V[1]} V`
-    : !iNums.every(x => inRange(x, CAL_I)) ? `Current must be ${CAL_I[0]}–${CAL_I[1]} A` : null;
+    : !iNums.every(x => x === 0 || inRange(x, CAL_I)) ? `Current must be 0 (no load) or ${CAL_I[0]}–${CAL_I[1]} A` : null;
 
   const sendCalibration = async () => {
     setBusy(true);

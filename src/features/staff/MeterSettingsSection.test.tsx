@@ -32,8 +32,17 @@ it('C2: out-of-range values disable Calibrate', () => {
   expect(screen.getByRole('alert').textContent).toMatch(/Voltage must be 100–300 V/);
   expect((screen.getByText('Calibrate meter') as HTMLButtonElement).disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('Voltage (V)'), { target: { value: '230' } });
-  fireEvent.change(screen.getByLabelText('Current (A)'), { target: { value: '0' } });
+  fireEvent.change(screen.getByLabelText('Current (A)'), { target: { value: '0.05' } });
   expect(screen.getByRole('alert').textContent).toMatch(/Current must be/);
+  fireEvent.change(screen.getByLabelText('Current (A)'), { target: { value: '' } });
+  expect(screen.getByRole('alert').textContent).toMatch(/Current must be/);
+});
+
+it('C2b: 0 A (no-load calibration) is accepted', () => {
+  renderSection();
+  fireEvent.change(screen.getByLabelText('Current (A)'), { target: { value: '0' } });
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect((screen.getByText('Calibrate meter') as HTMLButtonElement).disabled).toBe(false);
 });
 
 it('C3: Calibrate goes through the confirm dialog and sends once', async () => {

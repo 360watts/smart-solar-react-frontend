@@ -8,7 +8,7 @@ Gateway-only fields (preset / config version, auto reboot, log streaming) are hi
 
 Backend: `smart-solar-django-backend/docs/test-scenarios/em26-meter-control.md` (calibrate route, `meter_*` device fields, status derived on read).
 
-Tests: `src/features/staff/MeterSettingsSection.test.tsx`, `src/features/staff/EditDeviceModal.test.tsx`.
+Tests: `src/features/staff/MeterSettingsSection.test.tsx`, `src/features/staff/EditDeviceModal.test.tsx`, `src/features/staff/viewer/__tests__/DevicePage.test.tsx` (S1).
 
 ## 1. Edit Device modal
 
@@ -36,7 +36,7 @@ Tests: `src/features/staff/MeterSettingsSection.test.tsx`, `src/features/staff/E
 
 | ID | Given / when / then | Type | Pri | Status |
 |---|---|---|---|---|
-| S1 | viewer device page, meter → no Roll back, Auto reboot or Send logs; hard reset text mentions Wi-Fi and a site visit | unit | P1 | planned |
+| S1 | viewer device page, meter → no Roll back, Auto reboot or Send logs (switches or read-only tiles); hard reset text mentions Wi-Fi and a site visit | unit | P1 | passing |
 | S2 | OTA rollback picker leaves out meters (uses `device_type` now in `/ota/devices/status/`) | manual | P2 | planned |
 | S3 | staff device detail, meter → no logs / auto-reboot checkboxes; hard reset warning adds the Wi-Fi line; mobile reset text likewise | manual | P2 | planned |
 
