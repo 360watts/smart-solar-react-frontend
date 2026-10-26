@@ -1,7 +1,7 @@
 // docs/test-scenarios/gateway-activity.md (H4-H12)
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import HealthCheckResult, { healthChecks, checkSummary, rawRows } from './HealthCheckResult';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { CheckTiles, RawValues, healthChecks, checkSummary, rawRows } from './HealthCheckResult';
 
 const good = { trigger: 1, sd_status: 0, sd_size: 32000, sd_free: 31000, data_status: 0, data_devices: 1, net_active: 1, net_active_text: 'wifi',
   wifi_status: 0, wifi_rssi: -58, cell_status: 22, cell_csq: 0, mqtt_status: 0, mqtt_latency_ms: 85 };
@@ -51,9 +51,11 @@ it('H9 all 14 values are listed, missing ones read n/a', () => {
   expect(rows['Time']).toBe('not set');
 });
 
-it('H10 the result renders the checklist and the table', () => {
-  render(<HealthCheckResult isDark={false} event={{ id: 1, event: 'diag', payload: good, received_at: TS, device_ts: TS }} />);
-  expect(screen.getByText('All good')).toBeTruthy();
-  expect(screen.getByText('All 14 values')).toBeTruthy();
+it('H10 tiles show the checks; the 14-value table is closed until opened', () => {
+  const ev = { id: 1, event: 'diag', payload: good, received_at: TS, device_ts: TS };
+  render(<><CheckTiles isDark={false} checks={healthChecks(good, TS)} /><RawValues isDark={false} event={ev} /></>);
+  expect(screen.getByText('On Wi-Fi, signal good (-58 dBm)')).toBeTruthy();
+  expect(screen.queryByText('-58 dBm', { selector: 'dd' })).toBeNull();
+  fireEvent.click(screen.getByText('All 14 values'));
   expect(screen.getByText('-58 dBm', { selector: 'dd' })).toBeTruthy();
 });

@@ -37,7 +37,7 @@ it('N3 refused settings', async () => {
 it('N4 + N5 battery, and a V1 device shows nothing extra', async () => {
   events();
   const { rerender } = render(<GatewayActivity deviceId={1} isDark={false} device={{ battery_pct: 87 }} />);
-  expect(screen.getByText('Backup battery 87%')).toBeTruthy();
+  expect(screen.getByText('87% charged')).toBeTruthy();
   rerender(<GatewayActivity deviceId={1} isDark={false} device={{ battery_pct: null, config_rejected: '', wifi_failure: null }} />);
   expect(await screen.findByText(/No activity yet/)).toBeTruthy();
   expect(screen.queryByRole('status')).toBeNull();

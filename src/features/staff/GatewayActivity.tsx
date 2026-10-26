@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { apiService, DeviceEvent } from '../../services/api';
 import { useTokens, Btn, Field, controlStyle, DetailsToggle, ConfirmDialog } from './siteHardware/ui';
-import HealthCheckResult from './HealthCheckResult';
+import { CheckTiles, RawValues, healthChecks, Check } from './HealthCheckResult';
 
 // What firmware V2 gateways report: Wi-Fi join failures, refused settings, backup battery, event history, APN.
 // V1 gateways send none of it, so the card just says "No activity yet". Scenarios: docs/test-scenarios/gateway-activity.md.
@@ -66,6 +66,11 @@ export function describe(e: DeviceEvent): { text: string; problem: boolean } {
 }
 
 const at = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+const dayLabel = (iso: string) => {
+  const d = new Date(iso), now = new Date(), yest = new Date(now.getTime() - 864e5);
+  return d.toDateString() === now.toDateString() ? 'Today' : d.toDateString() === yest.toDateString() ? 'Yesterday' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
 
 const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: GatewayFields; allowApn?: boolean; allowCheck?: boolean }> = ({
   deviceId, isDark, device, allowApn = false, allowCheck = false,
@@ -102,6 +107,11 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
 
   const diags = (events ?? []).filter(e => e.event === 'diag');
   const shownCheck = diags.find(e => e.id === pickedId) ?? diags[0];
+  const checks: Check[] = [
+    ...(shownCheck ? healthChecks(shownCheck.payload || {}, shownCheck.device_ts) : []),
+    ...(device?.battery_pct != null ? [{ name: 'Backup battery', state: 'ok' as const, text: `${device.battery_pct}% charged` }] : []),
+  ];
+  const bad = checks.filter(c => c.state === 'look').length + notes.length;
   const visible = (events ?? []).filter(e => showQuiet || !QUIET.has(e.event));
   const rows = showAll ? visible : visible.slice(0, SHOWN);
   const apnError = /\^/.test(apn.apn + apn.user + apn.password) ? "The ^ character can't be used." : '';
@@ -140,72 +150,82 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
   };
 
   return (
-    <section aria-label="Gateway activity" style={{ background: t.card, border: `1px solid ${t.line}`, borderRadius: 18, padding: 22, display: 'flex', flexDirection: 'column', gap: 12, fontFamily: t.body, color: t.ink }}>
-      <h3 style={{ margin: 0, fontFamily: t.head, fontSize: '1.02rem' }}>Gateway activity</h3>
+    <section aria-label="Gateway activity" style={{ background: t.card, border: `1px solid ${t.line}`, borderRadius: 22, padding: 22, display: 'flex', flexDirection: 'column', gap: 16, fontFamily: t.body, color: t.ink }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <h3 style={{ margin: 0, fontFamily: t.head, fontSize: '1.05rem' }}>Gateway activity</h3>
+          {shownCheck && <span style={{ fontSize: '0.82rem', color: t.ink2 }}>Health check {at(shownCheck.received_at)}</span>}
+        </div>
+        {(shownCheck || bad > 0) && (
+          <span style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.82rem', fontWeight: 600, background: bad ? t.waitBg : t.goodBg, color: bad ? t.waitInk : t.goodInk }}>
+            {bad ? `${bad} need${bad === 1 ? 's' : ''} a look` : 'All good'}
+          </span>
+        )}
+      </div>
 
       {notes.map(n => (
-        <div key={n} role="status" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 12, background: t.waitBg, color: t.waitInk, fontSize: '0.88rem', lineHeight: 1.45 }}>
+        <div key={n} role="status" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 14, background: t.waitBg, color: t.waitInk, fontSize: '0.88rem', lineHeight: 1.45 }}>
           <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
           <span>{n}</span>
         </div>
       ))}
-      {device?.battery_pct != null && <span style={{ fontSize: '0.88rem' }}>Backup battery {device.battery_pct}%</span>}
 
-      {shownCheck && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${t.line2}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-            <h4 style={{ margin: 0, fontFamily: t.head, fontSize: '0.95rem' }}>Health check</h4>
-            <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: t.ink2 }}>{at(shownCheck.received_at)}</span>
-          </div>
-          <HealthCheckResult event={shownCheck} isDark={isDark} />
-        </div>
-      )}
-
-      {failed ? (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: '0.88rem', color: t.ink2 }}>
-          Couldn't load activity.
-          <Btn isDark={isDark} size="sm" variant="plain" onClick={load}>Try again</Btn>
-        </div>
-      ) : events === null ? (
-        <span style={{ fontSize: '0.88rem', color: t.ink2 }}>Loading…</span>
-      ) : visible.length === 0 ? (
-        <span style={{ fontSize: '0.88rem', color: t.ink2 }}>No activity yet. Older gateways don't report it.</span>
-      ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {rows.map(e => {
-            const d = describe(e);
-            return (
-              <li key={e.id} style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                {e.event === 'diag' ? (
-                  <button type="button" onClick={() => setPickedId(e.id)} style={{ all: 'unset', cursor: 'pointer', minWidth: 0, overflowWrap: 'anywhere', textDecoration: 'underline', color: d.problem ? t.waitInk : t.ink }}>{d.text}</button>
-                ) : (
-                  <span style={{ color: d.problem ? t.waitInk : t.ink, fontWeight: d.problem ? 600 : 400, minWidth: 0, overflowWrap: 'anywhere' }}>{d.text}</span>
-                )}
-                <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: t.ink2, whiteSpace: 'nowrap' }}>{at(e.received_at)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {events !== null && !failed && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {visible.length > SHOWN && (
-            <Btn isDark={isDark} size="sm" variant="plain" onClick={() => setShowAll(v => !v)}>{showAll ? 'Show fewer' : `Show all ${visible.length}`}</Btn>
-          )}
-          {events.some(e => QUIET.has(e.event)) && (
-            <Btn isDark={isDark} size="sm" variant="plain" onClick={() => setShowQuiet(v => !v)}>{showQuiet ? 'Hide health checks' : 'Show health checks'}</Btn>
-          )}
-        </div>
-      )}
-      <span style={{ fontSize: '0.78rem', color: t.ink2 }}>Kept for 30 days.</span>
+      {checks.length > 0 && <CheckTiles checks={checks} isDark={isDark} />}
 
       {allowCheck && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-          <Btn isDark={isDark} size="sm" variant="plain" disabled={checking} onClick={runCheck}>{checking ? 'Sending…' : shownCheck ? 'Run again' : 'Run health check'}</Btn>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Btn isDark={isDark} disabled={checking} onClick={runCheck}>{checking ? 'Sending…' : shownCheck ? 'Run again' : 'Run health check'}</Btn>
           {checkMsg && <span role="status" style={{ fontSize: '0.82rem', color: checkMsg.ok ? t.goodInk : t.waitInk }}>{checkMsg.text}</span>}
         </div>
       )}
+
+      {shownCheck && <RawValues event={shownCheck} isDark={isDark} />}
+
+      <div style={{ borderTop: `1px solid ${t.line2}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <h4 style={{ margin: 0, fontFamily: t.head, fontSize: '0.95rem' }}>History</h4>
+        {failed ? (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: '0.88rem', color: t.ink2 }}>
+            Couldn't load activity.
+            <Btn isDark={isDark} size="sm" variant="plain" onClick={load}>Try again</Btn>
+          </div>
+        ) : events === null ? (
+          <span style={{ fontSize: '0.88rem', color: t.ink2 }}>Loading…</span>
+        ) : visible.length === 0 ? (
+          <span style={{ fontSize: '0.88rem', color: t.ink2 }}>No activity yet. Older gateways don't report it.</span>
+        ) : (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rows.map((e, i) => {
+              const d = describe(e);
+              const label = dayLabel(e.received_at);
+              return (
+                <React.Fragment key={e.id}>
+                  {(i === 0 || dayLabel(rows[i - 1].received_at) !== label) && <li style={{ fontSize: '0.78rem', color: t.ink2, marginTop: i ? 4 : 0 }}>{label}</li>}
+                  <li style={{ display: 'flex', gap: 12, alignItems: 'baseline', fontSize: '0.88rem' }}>
+                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: '50%', background: d.problem ? t.wait : t.line, flexShrink: 0 }} />
+                    {e.event === 'diag' ? (
+                      <button type="button" onClick={() => setPickedId(e.id)} style={{ all: 'unset', cursor: 'pointer', flexGrow: 1, minWidth: 0, overflowWrap: 'anywhere', textDecoration: 'underline', color: d.problem ? t.waitInk : t.ink }}>{d.text}</button>
+                    ) : (
+                      <span style={{ flexGrow: 1, color: d.problem ? t.waitInk : t.ink, fontWeight: d.problem ? 600 : 400, minWidth: 0, overflowWrap: 'anywhere' }}>{d.text}</span>
+                    )}
+                    <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: t.ink2, whiteSpace: 'nowrap' }}>{clock(e.received_at)}</span>
+                  </li>
+                </React.Fragment>
+              );
+            })}
+          </ul>
+        )}
+        {events !== null && !failed && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {visible.length > SHOWN && (
+              <Btn isDark={isDark} size="sm" variant="plain" onClick={() => setShowAll(v => !v)}>{showAll ? 'Show fewer' : `Show all ${visible.length}`}</Btn>
+            )}
+            {events.some(e => QUIET.has(e.event)) && (
+              <Btn isDark={isDark} size="sm" variant="plain" onClick={() => setShowQuiet(v => !v)}>{showQuiet ? 'Hide health checks' : 'Show health checks'}</Btn>
+            )}
+          </div>
+        )}
+        <span style={{ fontSize: '0.78rem', color: t.ink2 }}>Kept for 30 days.</span>
+      </div>
 
       {allowApn && (
         <div style={{ borderTop: `1px solid ${t.line2}`, paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>

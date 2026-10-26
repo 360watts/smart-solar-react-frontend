@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DeviceEvent } from '../../services/api';
-import { useTokens } from './siteHardware/ui';
+import { useTokens, DetailsToggle } from './siteHardware/ui';
 
 // One firmware V2 health check (data/diag) as a checklist plus the raw values.
 // Codes are from MQTT_Interface_Reference.pdf section 3.6. Scenarios: docs/test-scenarios/gateway-activity.md (H4-H12).
@@ -77,40 +77,38 @@ export function rawRows(p: Record<string, any>, deviceTs: string | null): [strin
   ];
 }
 
-const HealthCheckResult: React.FC<{ event: DeviceEvent; isDark: boolean }> = ({ event, isDark }) => {
+/** One tile per check; a problem turns amber, "not used" stays quiet. */
+export const CheckTiles: React.FC<{ checks: Check[]; isDark: boolean }> = ({ checks, isDark }) => {
   const t = useTokens(isDark);
-  const p = event.payload || {};
-  const checks = healthChecks(p, event.device_ts);
-  const rows = rawRows(p, event.device_ts);
   return (
-    <div aria-label="Health check result" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <span style={{ fontSize: '0.88rem', color: t.ink2 }}>{checkSummary(checks)}</span>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {checks.map(c => (
-          <li key={c.name} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 14px', borderRadius: 14, background: c.state === 'look' ? t.waitBg : 'transparent', border: c.state === 'look' ? 'none' : `1px solid ${t.line2}` }}>
-            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{c.name}</span>
-              <span style={{ fontSize: '0.85rem', color: c.state === 'look' ? t.waitInk : t.ink2, overflowWrap: 'anywhere' }}>{c.text}</span>
-            </div>
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: c.state === 'look' ? t.waitInk : c.state === 'ok' ? t.goodInk : t.ink2 }}>
-              {c.state === 'ok' ? 'OK' : c.state === 'look' ? 'LOOK' : '—'}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div>
-        <div style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: 4 }}>All 14 values</div>
+    <ul aria-label="Health check result" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+      {checks.map(c => (
+        <li key={c.name} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '12px 14px', borderRadius: 16, background: c.state === 'look' ? t.waitBg : t.idleBg }}>
+          <span style={{ fontSize: '0.78rem', color: c.state === 'look' ? t.waitInk : t.ink2 }}>{c.name}</span>
+          <span style={{ fontSize: '0.88rem', fontWeight: 500, color: c.state === 'look' ? t.waitInk : c.state === 'na' ? t.ink2 : t.ink, overflowWrap: 'anywhere' }}>{c.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+/** The 14 values as a table, closed until asked for. */
+export const RawValues: React.FC<{ event: DeviceEvent; isDark: boolean }> = ({ event, isDark }) => {
+  const t = useTokens(isDark);
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderTop: `1px solid ${t.line2}`, paddingTop: 4 }}>
+      <DetailsToggle isDark={isDark} label="All 14 values" open={open} onToggle={() => setOpen(v => !v)} />
+      {open && (
         <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', columnGap: 20 }}>
-          {rows.map(([k, val]) => (
+          {rawRows(event.payload || {}, event.device_ts).map(([k, val]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '7px 0', borderTop: `1px solid ${t.line2}`, fontSize: '0.85rem' }}>
               <dt style={{ color: t.ink2 }}>{k}</dt>
               <dd style={{ margin: 0, fontFamily: 'Fira Code, monospace', textAlign: 'right' }}>{val}</dd>
             </div>
           ))}
         </dl>
-      </div>
+      )}
     </div>
   );
 };
-
-export default HealthCheckResult;
