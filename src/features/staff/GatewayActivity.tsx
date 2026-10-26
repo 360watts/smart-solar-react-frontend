@@ -66,8 +66,8 @@ export function describe(e: DeviceEvent): { text: string; problem: boolean } {
 
 const at = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: GatewayFields; allowApn?: boolean }> = ({
-  deviceId, isDark, device, allowApn = false,
+const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: GatewayFields; allowApn?: boolean; allowCheck?: boolean }> = ({
+  deviceId, isDark, device, allowApn = false, allowCheck = false,
 }) => {
   const t = useTokens(isDark);
   const [events, setEvents] = useState<DeviceEvent[] | null>(null);
@@ -79,6 +79,8 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [apnMsg, setApnMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkMsg, setCheckMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(() => {
     setFailed(false);
@@ -114,6 +116,22 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
     } finally {
       setBusy(false);
       setConfirming(false);
+    }
+  };
+
+  const runCheck = async () => {
+    setChecking(true);
+    setCheckMsg(null);
+    try {
+      await apiService.runDeviceDiagnostics(deviceId);
+      setShowQuiet(true); // the result is a health check, which is hidden by default
+      setCheckMsg({ ok: true, text: 'Sent. The result appears below in about half a minute (newer firmware only).' });
+      setTimeout(load, 15000);
+      setTimeout(load, 30000);
+    } catch (err) {
+      setCheckMsg({ ok: false, text: err instanceof Error ? err.message : "Couldn't send the health check." });
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -163,6 +181,13 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
         </div>
       )}
       <span style={{ fontSize: '0.78rem', color: t.ink2 }}>Kept for 30 days.</span>
+
+      {allowCheck && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+          <Btn isDark={isDark} size="sm" variant="plain" disabled={checking} onClick={runCheck}>{checking ? 'Sending…' : 'Run health check'}</Btn>
+          {checkMsg && <span role="status" style={{ fontSize: '0.82rem', color: checkMsg.ok ? t.goodInk : t.waitInk }}>{checkMsg.text}</span>}
+        </div>
+      )}
 
       {allowApn && (
         <div style={{ borderTop: `1px solid ${t.line2}`, paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>

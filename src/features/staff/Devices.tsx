@@ -1618,7 +1618,7 @@ const Devices: React.FC = () => {
 
         {selectedDevice.device_type !== 'energy_meter' && (
           <div style={{ marginTop: '48px' }}>
-            <GatewayActivity key={selectedDevice.id} deviceId={selectedDevice.id} isDark={isDark} device={selectedDevice} allowApn={canOps} />
+            <GatewayActivity key={selectedDevice.id} deviceId={selectedDevice.id} isDark={isDark} device={selectedDevice} allowApn={canOps} allowCheck={canOps} />
           </div>
         )}
 

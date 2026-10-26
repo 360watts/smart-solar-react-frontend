@@ -44,6 +44,14 @@ Decisions (my call, the user skipped the design questions):
 | A3 | APN with `^` or empty | Save | Save disabled / inline error, nothing sent | unit | P1 | passing |
 | A4 | Backend refuses | confirm | Error text from the backend shown | unit | P2 | planned |
 
+## 3b. Health check
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| H1 | `allowCheck` false | render | No "Run health check" button | unit | P0 | passing |
+| H2 | `allowCheck` | click | `runDeviceDiagnostics(id)` called; "Sent" message; card reloads after 15 s and 30 s | unit | P1 | passing |
+| H3 | Backend refuses or fails | click | Error text shown, button usable again | unit | P1 | passing |
+
 ## 4. Live verification
 
 | ID | Check | Status |
@@ -53,3 +61,4 @@ Decisions (my call, the user skipped the design questions):
 | L3 | Employee (non-admin) sees the Wi-Fi failure note without the network name | planned |
 | L4 | APN save on a cellular V2 gateway: gateway restarts, comes back on mobile data | planned |
 | L5 | Phone width (≤ 420 px): card fits, no sideways scroll | planned |
+| L6 | V2 bench gateway: Run health check adds a Health check row within ~30 s; V1 gateway adds nothing | planned |

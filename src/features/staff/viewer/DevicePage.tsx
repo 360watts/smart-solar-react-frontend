@@ -449,7 +449,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
             </div>
           </aside>
         )}
-          {!isMeter && <div className="dp-logs"><GatewayActivity deviceId={dev.device_id} isDark={isDark} device={detail} /></div>}
+          {!isMeter && <div className="dp-logs"><GatewayActivity deviceId={dev.device_id} isDark={isDark} device={detail} allowCheck={ctl} /></div>}
           <div className="dp-logs"><LogsCard deviceId={dev.device_id} isDark={isDark} /></div>
         </div>
       </div>

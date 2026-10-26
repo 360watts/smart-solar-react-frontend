@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GatewayActivity from './GatewayActivity';
 import { apiService } from '../../services/api';
 
-jest.mock('../../services/api', () => ({ apiService: { getDeviceEvents: jest.fn(), setDeviceApn: jest.fn() } }));
+jest.mock('../../services/api', () => ({ apiService: { getDeviceEvents: jest.fn(), setDeviceApn: jest.fn(), runDeviceDiagnostics: jest.fn() } }));
 const api = apiService as jest.Mocked<typeof apiService>;
 
 const ev = (id: number, event: string, payload: Record<string, unknown> = {}) =>
@@ -94,4 +94,28 @@ it('A2 + A3 APN save', async () => {
   fireEvent.click(screen.getByText('Send'));
   await waitFor(() => expect(api.setDeviceApn).toHaveBeenCalledWith(7, { apn: 'airtelgprs.com' }));
   expect(await screen.findByText(/Sent\. The gateway restarts/)).toBeTruthy();
+});
+
+it('H1 no health-check button without permission', async () => {
+  events();
+  render(<GatewayActivity deviceId={1} isDark={false} />);
+  await screen.findByText(/No activity yet/);
+  expect(screen.queryByText('Run health check')).toBeNull();
+});
+
+it('H2 health check sends, then shows the hidden health rows', async () => {
+  events();
+  api.runDeviceDiagnostics.mockResolvedValue({});
+  render(<GatewayActivity deviceId={7} isDark={false} allowCheck />);
+  fireEvent.click(await screen.findByText('Run health check'));
+  await waitFor(() => expect(api.runDeviceDiagnostics).toHaveBeenCalledWith(7));
+  expect(await screen.findByText(/Sent\. The result appears below/)).toBeTruthy();
+});
+
+it('H3 health check failure is shown', async () => {
+  events();
+  api.runDeviceDiagnostics.mockRejectedValue(new Error('MQTT publish queue unavailable'));
+  render(<GatewayActivity deviceId={7} isDark={false} allowCheck />);
+  fireEvent.click(await screen.findByText('Run health check'));
+  expect(await screen.findByText('MQTT publish queue unavailable')).toBeTruthy();
 });

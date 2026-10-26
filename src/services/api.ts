@@ -1798,6 +1798,10 @@ class ApiService {
     return this.request(`/devices/${deviceId}/apn/`, { method: 'POST', body: JSON.stringify(data) });
   }
 
+  async runDeviceDiagnostics(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/diagnostics/`, { method: 'POST' });
+  }
+
   async setDeviceAutoReboot(deviceId: number, enabled: boolean): Promise<any> {
     return this.request(`/devices/${deviceId}/auto-reboot/`, {
       method: 'PATCH',
