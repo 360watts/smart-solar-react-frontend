@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { apiService, DeviceEvent } from '../../services/api';
 import { useTokens, Btn, Field, controlStyle, DetailsToggle, ConfirmDialog } from './siteHardware/ui';
+import HealthCheckResult from './HealthCheckResult';
 
 // What firmware V2 gateways report: Wi-Fi join failures, refused settings, backup battery, event history, APN.
 // V1 gateways send none of it, so the card just says "No activity yet". Scenarios: docs/test-scenarios/gateway-activity.md.
@@ -79,6 +80,7 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [apnMsg, setApnMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pickedId, setPickedId] = useState<number | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkMsg, setCheckMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -98,6 +100,8 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
     notes.push(`The gateway refused settings ${id}${ver ? ` v${ver}` : ''}. Fix the preset and save it again; it won't be resent until then.`);
   }
 
+  const diags = (events ?? []).filter(e => e.event === 'diag');
+  const shownCheck = diags.find(e => e.id === pickedId) ?? diags[0];
   const visible = (events ?? []).filter(e => showQuiet || !QUIET.has(e.event));
   const rows = showAll ? visible : visible.slice(0, SHOWN);
   const apnError = /\^/.test(apn.apn + apn.user + apn.password) ? "The ^ character can't be used." : '';
@@ -124,7 +128,7 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
     setCheckMsg(null);
     try {
       await apiService.runDeviceDiagnostics(deviceId);
-      setShowQuiet(true); // the result is a health check, which is hidden by default
+      setPickedId(null); // show the newest result when it arrives
       setCheckMsg({ ok: true, text: 'Sent. The result appears below in about half a minute (newer firmware only).' });
       setTimeout(load, 15000);
       setTimeout(load, 30000);
@@ -147,6 +151,16 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
       ))}
       {device?.battery_pct != null && <span style={{ fontSize: '0.88rem' }}>Backup battery {device.battery_pct}%</span>}
 
+      {shownCheck && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${t.line2}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <h4 style={{ margin: 0, fontFamily: t.head, fontSize: '0.95rem' }}>Health check</h4>
+            <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: t.ink2 }}>{at(shownCheck.received_at)}</span>
+          </div>
+          <HealthCheckResult event={shownCheck} isDark={isDark} />
+        </div>
+      )}
+
       {failed ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: '0.88rem', color: t.ink2 }}>
           Couldn't load activity.
@@ -162,7 +176,11 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
             const d = describe(e);
             return (
               <li key={e.id} style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'baseline', fontSize: '0.88rem', flexWrap: 'wrap' }}>
-                <span style={{ color: d.problem ? t.waitInk : t.ink, fontWeight: d.problem ? 600 : 400, minWidth: 0, overflowWrap: 'anywhere' }}>{d.text}</span>
+                {e.event === 'diag' ? (
+                  <button type="button" onClick={() => setPickedId(e.id)} style={{ all: 'unset', cursor: 'pointer', minWidth: 0, overflowWrap: 'anywhere', textDecoration: 'underline', color: d.problem ? t.waitInk : t.ink }}>{d.text}</button>
+                ) : (
+                  <span style={{ color: d.problem ? t.waitInk : t.ink, fontWeight: d.problem ? 600 : 400, minWidth: 0, overflowWrap: 'anywhere' }}>{d.text}</span>
+                )}
                 <span style={{ fontFamily: 'Fira Code, monospace', fontSize: '0.78rem', color: t.ink2, whiteSpace: 'nowrap' }}>{at(e.received_at)}</span>
               </li>
             );
@@ -184,7 +202,7 @@ const GatewayActivity: React.FC<{ deviceId: number; isDark: boolean; device?: Ga
 
       {allowCheck && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-          <Btn isDark={isDark} size="sm" variant="plain" disabled={checking} onClick={runCheck}>{checking ? 'Sending…' : 'Run health check'}</Btn>
+          <Btn isDark={isDark} size="sm" variant="plain" disabled={checking} onClick={runCheck}>{checking ? 'Sending…' : shownCheck ? 'Run again' : 'Run health check'}</Btn>
           {checkMsg && <span role="status" style={{ fontSize: '0.82rem', color: checkMsg.ok ? t.goodInk : t.waitInk }}>{checkMsg.text}</span>}
         </div>
       )}

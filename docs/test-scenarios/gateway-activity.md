@@ -52,6 +52,15 @@ Decisions (my call, the user skipped the design questions):
 | H2 | `allowCheck` | click | `runDeviceDiagnostics(id)` called; "Sent" message; card reloads after 15 s and 30 s | unit | P1 | passing |
 | H3 | Backend refuses or fails | click | Error text shown, button usable again | unit | P1 | passing |
 
+| H4 | Healthy Wi-Fi unit, no SIM | `healthChecks` | "All good"; Mobile data is "Not used", not a problem | unit | P0 | passing |
+| H5 | No uplink, SIM not registered | `healthChecks` | Internet and Mobile data both LOOK; summary "4 of 6 fine, 2 need a look" | unit | P1 | passing |
+| H6 | Modbus 51, SD 31, MQTT 41 | `healthChecks` | Each gives its own advice | unit | P1 | passing |
+| H7 | Wi-Fi below -75 dBm; no device clock | `healthChecks` | Internet and Clock LOOK | unit | P1 | passing |
+| H8 | On cellular, CSQ 15 | `healthChecks` | -83 dBm | unit | P2 | passing |
+| H9 | Missing fields | `rawRows` | 14 rows, `n/a` for missing, "not set" time | unit | P1 | passing |
+| H10 | A diag event | render | Checklist and the 14-value table shown | unit | P1 | passing |
+| H11 | Several past checks | click a past check in "Show health checks" | That check's result is shown | unit | P2 | planned |
+
 ## 4. Live verification
 
 | ID | Check | Status |
