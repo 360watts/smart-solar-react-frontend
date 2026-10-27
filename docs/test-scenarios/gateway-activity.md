@@ -9,7 +9,7 @@ Decisions (my call, the user skipped the design questions):
 - V1 gateways send none of this: the card says "No activity yet" and shows no battery line.
 - The Wi-Fi name in a failure appears only when the backend sends it (admins).
 - The APN form is under a closed "Mobile data settings" expander, only on the staff page and only with `device_control`; saving asks for confirmation because the gateway restarts.
-- Health-check (`diag`) and cloud-connect rows are hidden by default ("Show health checks" toggle), so the list leads with what someone would act on.
+- The event history list was removed (2026-10-27): the card shows notes, health-check tiles, the Run button and the APN form only. The events are still fetched for the newest health check.
 
 **Status values:** `planned` → `written` → `passing` → `live-verified`.
 
@@ -27,13 +27,6 @@ Decisions (my call, the user skipped the design questions):
 
 | ID | Given | When | Then | Type | Pri | Status |
 |---|---|---|---|---|---|---|
-| E1 | `ota_failed` errorCode 10 | render | "Firmware update failed: file check failed" shown as a problem | unit | P0 | passing |
-| E2 | `ota_progress` percent 40 | render | "Downloading firmware: 40%" | unit | P1 | passing |
-| E3 | `command_deferred` command reboot | render | "Postponed restart (busy); it runs within 20 minutes" | unit | P1 | passing |
-| E4 | `diag` + `mqtt_connected` rows | render | Hidden until "Show health checks" is on | unit | P1 | passing |
-| E5 | Unknown event name `foo_bar` | render | Shown as "foo bar" (nothing dropped) | unit | P2 | passing |
-| E6 | Events request fails | render | "Couldn't load activity" with a retry button | unit | P1 | passing |
-| E7 | More than 15 rows | render | 15 shown, "Show all" reveals the rest | unit | P2 | planned |
 
 ## 3. APN
 
@@ -42,7 +35,7 @@ Decisions (my call, the user skipped the design questions):
 | A1 | `allowApn` false | render | No "Mobile data settings" | unit | P0 | passing |
 | A2 | `allowApn`, APN typed, Save, confirm | click | `setDeviceApn(id, {apn})` called; "Sent" message | unit | P0 | passing |
 | A3 | APN with `^` or empty | Save | Save disabled / inline error, nothing sent | unit | P1 | passing |
-| A4 | Backend refuses | confirm | Error text from the backend shown | unit | P2 | planned |
+| A4 | Backend refuses | confirm | Error text from the backend shown | unit | P2 | passing |
 
 ## 3b. Health check
 
@@ -59,7 +52,7 @@ Decisions (my call, the user skipped the design questions):
 | H8 | On cellular, CSQ 15 | `healthChecks` | -83 dBm | unit | P2 | passing |
 | H9 | Missing fields | `rawRows` | 14 rows, `n/a` for missing, "not set" time | unit | P1 | passing |
 | H10 | A diag event | render | Checklist and the 14-value table shown | unit | P1 | passing |
-| H11 | Several past checks | click a past check in "Show health checks" | That check's result is shown | unit | P2 | planned |
+| H11 | Several checks and other events | render | Newest health check shown; no History list, no other event rows | unit | P2 | passing |
 
 ## 4. Live verification
 

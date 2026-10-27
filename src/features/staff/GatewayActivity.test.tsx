@@ -17,21 +17,21 @@ it('N1 wifi failure with name', async () => {
   events();
   render(<GatewayActivity deviceId={1} isDark={false} device={{ wifi_failure: { ssid: 'Home', reason: 'auth_failed' } }} />);
   expect(screen.getByText(/Couldn't join Wi-Fi Home: wrong password/)).toBeTruthy();
-  await screen.findByText(/No activity yet/);
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
 });
 
 it('N2 wifi failure without name', async () => {
   events();
   render(<GatewayActivity deviceId={1} isDark={false} device={{ wifi_failure: { reason: 'auth_failed' } }} />);
   expect(screen.getByText(/^Couldn't join Wi-Fi: wrong password/)).toBeTruthy();
-  await screen.findByText(/No activity yet/);
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
 });
 
 it('N3 refused settings', async () => {
   events();
   render(<GatewayActivity deviceId={1} isDark={false} device={{ config_rejected: 'CFG:4' }} />);
   expect(screen.getByText(/refused settings CFG v4\. Fix the preset/)).toBeTruthy();
-  await screen.findByText(/No activity yet/);
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
 });
 
 it('N4 + N5 battery, and a V1 device shows nothing extra', async () => {
@@ -39,42 +39,15 @@ it('N4 + N5 battery, and a V1 device shows nothing extra', async () => {
   const { rerender } = render(<GatewayActivity deviceId={1} isDark={false} device={{ battery_pct: 87 }} />);
   expect(screen.getByText('87% charged')).toBeTruthy();
   rerender(<GatewayActivity deviceId={1} isDark={false} device={{ battery_pct: null, config_rejected: '', wifi_failure: null }} />);
-  expect(await screen.findByText(/No activity yet/)).toBeTruthy();
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
   expect(screen.queryByRole('status')).toBeNull();
   expect(screen.queryByText(/Backup battery/)).toBeNull();
-});
-
-it('E1-E3, E5 plain-language rows', async () => {
-  events(ev(1, 'ota_failed', { errorCode: 10 }), ev(2, 'ota_progress', { percent: 40 }), ev(3, 'command_deferred', { command: 'reboot' }), ev(4, 'foo_bar'));
-  render(<GatewayActivity deviceId={1} isDark={false} />);
-  expect(await screen.findByText('Firmware update failed: file check failed')).toBeTruthy();
-  expect(screen.getByText('Downloading firmware: 40%')).toBeTruthy();
-  expect(screen.getByText(/Postponed restart \(busy\)/)).toBeTruthy();
-  expect(screen.getByText('foo bar')).toBeTruthy();
-});
-
-it('E4 health checks hidden until asked', async () => {
-  events(ev(1, 'diag', { net_active_text: 'cellular' }), ev(2, 'mqtt_connected'));
-  render(<GatewayActivity deviceId={1} isDark={false} />);
-  expect(await screen.findByText(/No activity yet/)).toBeTruthy();
-  fireEvent.click(screen.getByText('Show health checks'));
-  expect(screen.getByText('Health check: network cellular')).toBeTruthy();
-  expect(screen.getByText('Connected to the cloud')).toBeTruthy();
-});
-
-it('E6 load failure offers a retry', async () => {
-  api.getDeviceEvents.mockRejectedValueOnce(new Error('down'));
-  render(<GatewayActivity deviceId={1} isDark={false} />);
-  expect(await screen.findByText(/Couldn't load activity/)).toBeTruthy();
-  events(ev(1, 'uplink_wifi'));
-  fireEvent.click(screen.getByText('Try again'));
-  expect(await screen.findByText('Switched to Wi-Fi')).toBeTruthy();
 });
 
 it('A1 no APN form without permission', async () => {
   events();
   render(<GatewayActivity deviceId={1} isDark={false} />);
-  await screen.findByText(/No activity yet/);
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
   expect(screen.queryByText(/Mobile data settings/)).toBeNull();
 });
 
@@ -99,7 +72,7 @@ it('A2 + A3 APN save', async () => {
 it('H1 no health-check button without permission', async () => {
   events();
   render(<GatewayActivity deviceId={1} isDark={false} />);
-  await screen.findByText(/No activity yet/);
+  await waitFor(() => expect(api.getDeviceEvents).toHaveBeenCalled());
   expect(screen.queryByText('Run health check')).toBeNull();
 });
 
@@ -118,4 +91,23 @@ it('H3 health check failure is shown', async () => {
   render(<GatewayActivity deviceId={7} isDark={false} allowCheck />);
   fireEvent.click(await screen.findByText('Run health check'));
   expect(await screen.findByText('MQTT publish queue unavailable')).toBeTruthy();
+});
+
+it('A4 APN backend refusal is shown', async () => {
+  events();
+  api.setDeviceApn.mockRejectedValue(new Error('APN too long'));
+  render(<GatewayActivity deviceId={7} isDark={false} allowApn />);
+  fireEvent.click(screen.getByText('Mobile data settings (APN)'));
+  fireEvent.change(screen.getByLabelText('APN'), { target: { value: 'x' } });
+  fireEvent.click(screen.getByText('Save APN'));
+  fireEvent.click(screen.getByText('Send'));
+  expect(await screen.findByText('APN too long')).toBeTruthy();
+});
+
+it('H11 shows the newest health check, no history list', async () => {
+  events(ev(1, 'diag', { net_active: 1, wifi_rssi: -58, mqtt_status: 0, mqtt_latency_ms: 85, net_active_text: 'wifi' }), ev(2, 'uplink_wifi'));
+  render(<GatewayActivity deviceId={1} isDark={false} />);
+  await screen.findByText('Connected, replies in 85 ms');
+  expect(screen.queryByText('History')).toBeNull();
+  expect(screen.queryByText('Switched to Wi-Fi')).toBeNull();
 });
