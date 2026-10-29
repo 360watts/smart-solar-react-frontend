@@ -170,6 +170,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
   const [ivDraft, setIvDraft] = useState<number | null | undefined>();
   const ivBad = ivDraft != null && !(ivDraft >= INTERVAL_S[0] * 1000 && ivDraft <= INTERVAL_S[1] * 1000);
   const meterDevice = useMemo(() => ({ ...detail, id: dev.device_id, is_online: dev.is_online }), [detail, dev.device_id, dev.is_online]);
+  const [typed, setTyped] = useState('');
   const [openPanel, setOpenPanel] = useState<Record<string, boolean>>({});
 
   const loadProgress = useCallback(() => {
@@ -219,6 +220,8 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
     else if (pending.kind === 'rollback') run(() => apiService.triggerRollback(dev.serial), `Roll back sent to ${name}. It switches within a few minutes.`, () => setWaiting(w => ({ ...w, rollback: true }))).then(loadProgress);
     else if (pending.kind === 'update') { const fw = pending.fw; run(() => apiService.triggerSingleUpdate(dev.serial, fw.id), `Update to ${fw.version} sent to ${name}. It starts within a few minutes.`).then(loadProgress); }
   };
+  useEffect(() => { setTyped(''); }, [pending]);
+  const resetBlocked = pending?.kind === 'reset' && typed.trim().toUpperCase() !== dev.serial.toUpperCase();
   const c = pending ? (isMeter && pending.kind === 'reset' ? METER_RESET : CONFIRM[pending.kind]) : null;
 
   const card: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 12, padding: 22, border: `1px solid ${t.line}`, borderRadius: 18, background: t.card };
@@ -481,7 +484,17 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
         open={!!c}
         tone={c?.tone}
         title={!pending ? '' : pending.kind === 'update' ? `Update ${name} to ${pending.fw.version}?` : `${c!.title} ${name}?`}
-        body={c?.body}
+        body={pending?.kind === 'reset' ? (
+          <>
+            {c?.body}
+            <label style={{ display: 'block', marginTop: 10, fontWeight: 600 }}>
+              Type the serial {dev.serial} to confirm
+              <input value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off"
+                style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 6, padding: '8px 10px', borderRadius: 10, border: `1px solid ${t.line}`, background: t.card2, color: t.ink, font: 'inherit' }} />
+            </label>
+          </>
+        ) : c?.body}
+        confirmDisabled={resetBlocked}
         confirmLabel={c?.ok}
         cancelLabel={c?.cancel}
         busy={busy}

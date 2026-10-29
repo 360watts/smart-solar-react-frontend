@@ -647,11 +647,11 @@ export function DetailsToggle({ isDark, open, onToggle, label = 'Advanced detail
 export function ConfirmDialog({
   isDark, open, title, body,
   confirmLabel = 'Remove', cancelLabel = 'Keep it', tone = 'danger',
-  busy = false, onConfirm, onCancel,
+  busy = false, confirmDisabled = false, onConfirm, onCancel,
 }: {
   isDark: boolean; open: boolean; title: string; body?: React.ReactNode;
   confirmLabel?: string; cancelLabel?: string; tone?: 'danger' | 'primary';
-  busy?: boolean; onConfirm: () => void; onCancel: () => void;
+  busy?: boolean; confirmDisabled?: boolean; onConfirm: () => void; onCancel: () => void;
 }) {
   const t = useTokens(isDark);
   const reduceMotion = usePrefersReducedMotion();
@@ -725,7 +725,7 @@ export function ConfirmDialog({
               {title}
             </div>
             {body && (
-              <p style={{ margin: '7px 0 0', fontSize: '0.86rem', lineHeight: 1.5, color: t.ink2 }}>{body}</p>
+              <div style={{ margin: '7px 0 0', fontSize: '0.86rem', lineHeight: 1.5, color: t.ink2 }}>{body}</div>
             )}
           </div>
         </div>
@@ -747,10 +747,10 @@ export function ConfirmDialog({
             ref={confirmRef}
             type="button"
             onClick={onConfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '8px 15px', borderRadius: 11, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.75 : 1,
+              padding: '8px 15px', borderRadius: 11, cursor: busy || confirmDisabled ? 'not-allowed' : 'pointer', opacity: confirmDisabled ? 0.45 : busy ? 0.75 : 1,
               fontFamily: t.body, fontSize: '0.86rem', fontWeight: 600,
               border: `1px solid ${danger ? 'rgba(229,72,77,0.45)' : t.good}`,
               background: danger ? (isDark ? 'rgba(229,72,77,0.18)' : 'rgba(229,72,77,0.12)') : t.good,

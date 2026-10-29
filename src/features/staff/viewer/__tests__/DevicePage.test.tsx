@@ -165,13 +165,19 @@ describe('DevicePage', () => {
     expect(await screen.findByText(/restart sent to monitor gw-1/i)).not.toBeNull();
   });
 
-  it('hard reset asks with a danger confirm (CF-3)', async () => {
+  it('hard reset needs the serial typed before it can be confirmed (O10b)', async () => {
     open();
     click(/engineer only/i);
     click(/^hard reset$/i);
     expect(dialog().textContent).toMatch(/erases/i);
-    expect(apiService.hardResetDevice).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog()).getByRole('button', { name: /^reset it$/i }));
+    const ok = within(dialog()).getByRole('button', { name: /^reset it$/i }) as HTMLButtonElement;
+    expect(ok.disabled).toBe(true);
+    const input = within(dialog()).getByLabelText(/type the serial GW-1/i);
+    fireEvent.change(input, { target: { value: 'GW-2' } });
+    expect(ok.disabled).toBe(true);
+    fireEvent.change(input, { target: { value: ' gw-1 ' } });
+    expect(ok.disabled).toBe(false);
+    fireEvent.click(ok);
     await waitFor(() => expect(apiService.hardResetDevice).toHaveBeenCalledWith(11));
   });
 

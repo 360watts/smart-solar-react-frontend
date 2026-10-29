@@ -42,6 +42,7 @@ Tests: src/features/staff/viewer/__tests__/deviceChart.test.ts, DeviceDashboard.
 | O7 | Operations | device offline | render | one plain offline line above the cards; admin-only note at the bottom | unit | P1 | passing |
 | O8 | Operations | meter interval draft | out of range / empty / API failure | Save disabled with hint / saves default / draft kept | unit | P1 | passing |
 | O9 | Operations | DevicePage variant ops | render | no Status, Readings, name or fleet builds; controls and Logs stay | unit | P1 | passing |
+| O10b | Operations | hard reset confirm | serial not typed / wrong / exact | confirm disabled until the serial matches (case and spaces ignored), then reset is sent | unit | P0 | passing |
 
 ## Live verification
 - [ ] Viewer opens bench gateway: Overview chart at 1 h / every reading shows the live line and the reporting lane lines up with gaps.
