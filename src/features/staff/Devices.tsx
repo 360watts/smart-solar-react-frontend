@@ -970,12 +970,10 @@ const Devices: React.FC = () => {
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: selectedDevice.is_online ? '#0F9F8F' : 'var(--muted-foreground)', display: 'inline-block' }} />
                 {selectedDevice.is_active === false ? 'Inactive' : selectedDevice.is_online ? 'Online' : 'Offline'}
               </span>
-              {siteDetails?.site_id && (
-                <Link to={`/my-sites/${encodeURIComponent(siteDetails.site_id)}/devices/${selectedDevice.id}`}
-                  style={{ flexShrink: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--brand-green)', textDecoration: 'none' }}>
-                  Open device page ›
-                </Link>
-              )}
+              <Link to={`/devices/${selectedDevice.id}/dashboard`}
+                style={{ flexShrink: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--brand-green)', textDecoration: 'none' }}>
+                Open device page ›
+              </Link>
             </div>
           </div>
 

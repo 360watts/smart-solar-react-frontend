@@ -16,6 +16,8 @@ interface User {
   role?: string | null;
   access?: Feature[];
   assigned_sites?: { site_id: string; display_name: string }[];
+  /** Viewer only: devices given on their own (no site); each opens /devices/:id/dashboard. */
+  assigned_devices?: { device_id: number; serial: string; device_type: string }[];
 }
 
 interface AuthContextType {

@@ -9,15 +9,15 @@ import { RoleCards } from './RoleCards';
 import { SitePicker } from './SitePicker';
 import { PersonForm, RoleKey, SiteOption, Team, buildPayload, formError, friendlyError } from './roles';
 
-export function AddTeammateDialog({ isDark, sites, teams, defaultRole = 'employee', onClose, onCreated, onTeamAdded }: {
-  isDark: boolean; sites: SiteOption[]; teams: Team[]; defaultRole?: RoleKey;
+export function AddTeammateDialog({ isDark, sites, devices = [], teams, defaultRole = 'employee', onClose, onCreated, onTeamAdded }: {
+  isDark: boolean; sites: SiteOption[]; devices?: SiteOption[]; teams: Team[]; defaultRole?: RoleKey;
   onClose: () => void; onCreated: (firstName: string, email: string) => void; onTeamAdded: (team: Team) => void;
 }) {
   const t = useTokens(isDark);
   const control = controlStyle(isDark);
   const ref = useDialogBehavior(onClose);
   const [form, setForm] = useState<PersonForm>({
-    first_name: '', last_name: '', email: '', mobile_number: '', role: defaultRole, assigned_sites: [], device_ops_enabled: true,
+    first_name: '', last_name: '', email: '', mobile_number: '', role: defaultRole, assigned_sites: [], assigned_devices: [], device_ops_enabled: true,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +132,9 @@ export function AddTeammateDialog({ isDark, sites, teams, defaultRole = 'employe
               <h3 style={{ margin: '0 0 4px', fontFamily: t.head, fontSize: '1rem' }}>{`Which sites can ${who === 'They' ? 'they' : who} work on?`}</h3>
               <p style={{ margin: '0 0 12px', fontSize: '0.84rem', color: t.ink2 }}>Viewers see only the sites you pick.</p>
               <SitePicker isDark={isDark} sites={sites} value={form.assigned_sites} onChange={(assigned_sites) => set({ assigned_sites })} />
+              <h3 style={{ margin: '18px 0 4px', fontFamily: t.head, fontSize: '1rem' }}>Or just these devices</h3>
+              <p style={{ margin: '0 0 12px', fontSize: '0.84rem', color: t.ink2 }}>They get the dashboard for the device's site, and can run only the devices picked here.</p>
+              <SitePicker isDark={isDark} sites={devices} noun="device" value={form.assigned_devices ?? []} onChange={(assigned_devices) => set({ assigned_devices })} />
             </section>
           )}
         </div>

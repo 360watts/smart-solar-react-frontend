@@ -46,6 +46,7 @@ Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar 
 /teams                         → Teams (RequireAccess `teams`); `/departments` redirects here
 /my-sites                      → Viewer home: the sites assigned to the signed-in viewer (RequireAccess `my_sites`)
 /my-sites/:siteId              → Viewer site view (SiteDataPanel with the read-only monitoring tabs)
+/devices/:deviceId/dashboard   → One device's readings (24 h charts) + device controls; works without a site (RequireAccess `site_monitoring`; backend scopes viewers to their devices)
 /device-presets                → MODBUS register presets
 /ota                           → Firmware OTA management (RequireAccess `ota`, admin only)
 /sites                         → Site list
@@ -93,7 +94,7 @@ JWT auth via `AuthContext`. Access token stored in memory; refresh token in loca
 
 ### Role-based access
 
-Roles are admin / employee / viewer (backend `api/staff_roles.py`). `/auth/user/` and the login responses return `role`, an `access` array of feature keys and, for viewers, `assigned_sites`. `useAccess().can('<feature>')` (in `src/shared/access/`) is the single check: the three nav lists (`staffNavigation.tsx`, `StaffLayout.tsx`; the old `Navbar.tsx` was deleted Oct 13), `RequireAccess` on every staff route, the AI chat bubble and the in-page controls (site billing, permanent deletes, Wi-Fi passwords, device-writing buttons) all use it. Hide controls, do not disable them. Feature keys live in `src/shared/access/features.ts` and must match the backend `FEATURES` table. If the backend sends no `access` list (older deploy) the hook falls back to the old behaviour, except a viewer, who gets nothing. Hiding is a convenience only; the backend enforces everything. Viewers have no list-all endpoint: their home is `/my-sites`, built from `assigned_sites`. Design: `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-staff-roles-design.md`; scenarios: `docs/test-scenarios/role-based-hiding.md`, `employees-page.md`.
+Roles are admin / employee / viewer (backend `api/staff_roles.py`). `/auth/user/` and the login responses return `role`, an `access` array of feature keys and, for viewers, `assigned_sites` and `assigned_devices`. `useAccess().can('<feature>')` (in `src/shared/access/`) is the single check: the three nav lists (`staffNavigation.tsx`, `StaffLayout.tsx`; the old `Navbar.tsx` was deleted Oct 13), `RequireAccess` on every staff route, the AI chat bubble and the in-page controls (site billing, permanent deletes, Wi-Fi passwords, device-writing buttons) all use it. Hide controls, do not disable them. Feature keys live in `src/shared/access/features.ts` and must match the backend `FEATURES` table. If the backend sends no `access` list (older deploy) the hook falls back to the old behaviour, except a viewer, who gets nothing. Hiding is a convenience only; the backend enforces everything. Viewers have no list-all endpoint: their home is `/my-sites`, built from `assigned_sites` and `assigned_devices`. Design: `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-staff-roles-design.md`; scenarios: `docs/test-scenarios/role-based-hiding.md`, `employees-page.md`.
 
 ### API Layer
 
@@ -135,7 +136,7 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `ComponentDetailModalPremium.tsx` — premium component detail modal
 - `AiChat.tsx` — staff-only AI chat assistant (rendered via `StaffAiChat` in `App.tsx`, gated on `can('ai_chat')`, admin only)
 - `employees/` — the Employees page: `EmployeesPage.tsx`, `PeopleList.tsx`, `PersonPanel.tsx` (role, assigned sites, device-operations switch), `AddTeammateDialog.tsx`, `roles.ts` (role copy and payload rules; keep in sync with the backend tiers)
-- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` (tiles) + `DevicePage.tsx` / `DeviceRoute.tsx` (page at `/my-sites/:siteId/devices/:deviceId`, control panel + `LogsCard.tsx`, reads via `deviceCache.ts`) are the site panel's Devices tab (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
+- `viewer/` — `MySites.tsx` and `ViewerSite.tsx`, the viewer's home and site view; `ViewerDevices.tsx` (tiles, the site panel's Devices tab) open `DeviceDashboard.tsx` (`/devices/:deviceId/dashboard`: charts from `GET /devices/<pk>/dashboard/` + `DevicePage.tsx` control panel and `LogsCard.tsx`; also opened from the Devices page and from My sites' "Your devices" for viewers given single devices; scenarios `smart-solar-django-backend/docs/test-scenarios/device-first-data.md`); the controls show (only with `can('device_control')`; scenarios `docs/test-scenarios/viewer-devices.md`)
 - `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
 - `GatewayActivity.tsx` — firmware V2 gateway card on the staff device detail and the viewer device page: Wi-Fi failure / refused-settings notes, backup battery, event history (`/devices/<id>/events/`), APN form (staff page, `device_control` only). Scenarios: `docs/test-scenarios/gateway-activity.md`
 

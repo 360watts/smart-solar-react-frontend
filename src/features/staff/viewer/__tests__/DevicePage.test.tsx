@@ -417,4 +417,66 @@ describe('firmware updates card', () => {
     expect(await screen.findByRole('meter', { name: /update progress/i })).not.toBeNull();
     expect(screen.queryByText('Installing')).toBeNull();
   });
+
+  it('O5 meter with device control shows calibration and saves the interval only on Save', async () => {
+    apiService.getDevice.mockResolvedValue({ id: 11, meter_publish_interval_ms: 5000, meter_interval_confirmed_at: '2026-10-01T00:00:00Z' });
+    apiService.updateDevice = jest.fn().mockResolvedValue({});
+    const onDone = jest.fn();
+    render(<DevicePage isDark={false} dev={{ ...DEV, device_type: 'energy_meter', serial: 'EM-1' }} firmware={FIRMWARE} onDone={onDone} />);
+    expect(await screen.findByText('Calibration')).not.toBeNull();
+    fireEvent.change(screen.getByLabelText(/How often the meter sends/), { target: { value: '10' } });
+    expect(apiService.updateDevice).not.toHaveBeenCalled();
+    click(/Save interval/);
+    await waitFor(() => expect(apiService.updateDevice).toHaveBeenCalledWith(11, { meter_publish_interval_ms: 10000 }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+  });
+
+  it('O6 gateway with device control shows the APN form', async () => {
+    open();
+    fireEvent.click(await screen.findByRole('button', { name: /Mobile data settings \(APN\)/ }));
+    expect(screen.getByText('APN')).not.toBeNull();
+  });
+
+  describe('meter interval and ops variant', () => {
+    const meter = () => {
+      apiService.getDevice.mockResolvedValue({ id: 11, meter_publish_interval_ms: 5000, meter_interval_confirmed_at: '2026-10-01T00:00:00Z' });
+      apiService.updateDevice = jest.fn().mockResolvedValue({});
+      render(<DevicePage isDark={false} dev={{ ...DEV, device_type: 'energy_meter', serial: 'EM-1' }} firmware={FIRMWARE} />);
+    };
+    const field = () => screen.findByLabelText(/How often the meter sends/);
+
+    it('O8 out-of-range interval disables Save with a hint', async () => {
+      meter();
+      fireEvent.change(await field(), { target: { value: '4000' } });
+      expect(screen.getByText('Enter 1 to 3600 seconds')).not.toBeNull();
+      expect((screen.getByRole('button', { name: /Save interval/ }) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it('O8 an empty field saves back to the default', async () => {
+      meter();
+      fireEvent.change(await field(), { target: { value: '' } });
+      click(/Save interval/);
+      await waitFor(() => expect(apiService.updateDevice).toHaveBeenCalledWith(11, { meter_publish_interval_ms: null }));
+      expect(await screen.findByText(/back to the meter default/)).not.toBeNull();
+    });
+
+    it('O8 an API failure keeps the draft', async () => {
+      meter();
+      apiService.updateDevice.mockRejectedValue(new Error('x'));
+      fireEvent.change(await field(), { target: { value: '10' } });
+      click(/Save interval/);
+      expect(await screen.findByText(/Couldn't send that/)).not.toBeNull();
+      expect((await field() as HTMLInputElement).value).toBe('10');
+      expect(screen.getByRole('button', { name: /Save interval/ })).not.toBeNull();
+    });
+
+    it('O9 ops variant hides Status and Readings but keeps controls and Logs', async () => {
+      render(<DevicePage isDark={false} dev={DEV} firmware={FIRMWARE} variant="ops" />);
+      expect(screen.getByRole('heading', { name: 'What you can do' })).not.toBeNull();
+      expect(screen.getByRole('heading', { name: 'Logs' })).not.toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Status' })).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Readings' })).toBeNull();
+      expect(apiService.getRegisterCoverage).not.toHaveBeenCalled();
+    });
+  });
 });

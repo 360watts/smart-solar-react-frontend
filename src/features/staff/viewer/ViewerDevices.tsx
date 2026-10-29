@@ -45,7 +45,7 @@ const ViewerDevices: React.FC<{ siteId: string }> = ({ siteId }) => {
           <div className="dv-intro">The monitors and meters at this site. Tap one for details.</div>
           <div className="dv-tiles">
             {devices.map(d => (
-              <Link key={d.device_id} to={`/my-sites/${siteId}/devices/${d.device_id}`} className="dv-tile" style={{ textDecoration: 'none' }}>
+              <Link key={d.device_id} to={`/devices/${d.device_id}/dashboard`} className="dv-tile" style={{ textDecoration: 'none' }}>
                 <div className="dv-top">
                   <div>
                     <div className="dv-name">{devName(d)}</div>

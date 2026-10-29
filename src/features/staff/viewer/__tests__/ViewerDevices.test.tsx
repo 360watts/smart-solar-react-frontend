@@ -58,7 +58,7 @@ describe('ViewerDevices', () => {
   it('each tile links to the device page (LS-8)', async () => {
     render(<ViewerDevicesAt siteId="s1" />);
     await screen.findByText('Meter EM-1');
-    expect(screen.getByRole('link', { name: /meter em-1/i }).getAttribute('href')).toBe('/my-sites/s1/devices/12');
+    expect(screen.getByRole('link', { name: /meter em-1/i }).getAttribute('href')).toBe('/devices/12/dashboard');
   });
 
   it('reuses the cached list on a second visit and fetches firmware once (cache)', async () => {

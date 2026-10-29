@@ -78,3 +78,13 @@ describe('ViewerSite', () => {
     expect(screen.getByText(/isn't available/i)).toBeInTheDocument();
   });
 });
+
+describe('MySites devices', () => {
+  it('lists devices given on their own, each opening its device dashboard', () => {
+    mockUseAuth.mockReturnValue({ user: { assigned_sites: [], assigned_devices: [{ device_id: 7, serial: 'F82C', device_type: 'energy_meter' }] } });
+    render(<MemoryRouter><MySites /></MemoryRouter>);
+    expect(screen.getByText('Meter F82C')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /open f82c/i }).getAttribute('href')).toBe('/devices/7/dashboard');
+    expect(screen.queryByText('No sites yet')).not.toBeInTheDocument();
+  });
+});

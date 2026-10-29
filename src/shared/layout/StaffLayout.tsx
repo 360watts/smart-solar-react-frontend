@@ -312,6 +312,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     ? 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)'
     : 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)';
 
+  // Viewers given single devices but no sites: their home lists devices, so the entry says so.
+  const deviceOnly = !user?.assigned_sites?.length && !!user?.assigned_devices?.length;
+  const navMain = deviceOnly ? NAV_MAIN.map(e => (e.path === '/my-sites' ? { ...e, label: 'Devices', icon: Monitor } : e)) : NAV_MAIN;
+
   const isActivePath = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -336,7 +340,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <Icon size={20} strokeWidth={2} aria-hidden="true" />
       </NavLink>
     );
-    const groups = [NAV_MAIN, NAV_CONFIG, NAV_STAFF, NAV_ADMIN]
+    const groups = [navMain, NAV_CONFIG, NAV_STAFF, NAV_ADMIN]
       .map(items => visibleNavItems(items, can))
       .filter(items => items.length > 0);
     return (
@@ -531,7 +535,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         display: 'flex', flexDirection: 'column', gap: 1,
         overflowY: 'auto', overflowX: 'hidden',
       }}>
-        {visibleNavItems(NAV_MAIN, can).map(item => navLink(item))}
+        {visibleNavItems(navMain, can).map(item => navLink(item))}
 
         {([
           ['Config', NAV_CONFIG],

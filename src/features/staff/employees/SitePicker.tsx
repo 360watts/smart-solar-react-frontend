@@ -3,8 +3,9 @@ import { Check, Search } from 'lucide-react';
 import { useTokens, controlStyle } from '../siteHardware/ui';
 import { SiteOption } from './roles';
 
-export function SitePicker({ isDark, sites, value, onChange }: {
-  isDark: boolean; sites: SiteOption[]; value: string[]; onChange: (next: string[]) => void;
+/** Also used for devices (options carry the device id as `site_id`): `noun` only changes the wording. */
+export function SitePicker({ isDark, sites, value, onChange, noun = 'site' }: {
+  isDark: boolean; sites: SiteOption[]; value: string[]; onChange: (next: string[]) => void; noun?: string;
 }) {
   const t = useTokens(isDark);
   const control = controlStyle(isDark);
@@ -24,16 +25,16 @@ export function SitePicker({ isDark, sites, value, onChange }: {
         <label style={{ position: 'relative', width: 240, maxWidth: '100%' }}>
           <Search size={15} aria-hidden="true" style={{ position: 'absolute', left: 12, top: 14, color: t.ink2 }} />
           <input
-            type="search" aria-label="Find a site" placeholder="Find a site" value={query}
+            type="search" aria-label={`Find a ${noun}`} placeholder={`Find a ${noun}`} value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{ ...control, paddingLeft: 34, minHeight: 44, boxSizing: 'border-box' }}
           />
         </label>
       </div>
       {sites.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '0.88rem', color: t.ink2 }}>No sites yet.</p>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: t.ink2 }}>{`No ${noun}s yet.`}</p>
       ) : shown.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '0.88rem', color: t.ink2 }}>No sites match that search.</p>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: t.ink2 }}>{`No ${noun}s match that search.`}</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
           {shown.map((s) => {

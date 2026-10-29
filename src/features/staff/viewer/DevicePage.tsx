@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiService } from '../../../services/api';
 import { useTokens, StatusChip, Btn, ConfirmDialog, DetailsToggle } from '../siteHardware/ui';
 import { useAccess } from '../../../shared/access/useAccess';
 import LogsCard from './LogsCard';
 import GatewayActivity, { GatewayFields } from '../GatewayActivity';
+import MeterSettingsSection, { INTERVAL_S, type MeterFields } from '../MeterSettingsSection';
 import BuildsCard from './BuildsCard';
 import { firmwareKind } from '../firmwareImage';
 import { getFirmware } from './deviceCache';
@@ -22,7 +23,7 @@ type OtaLog = {
   started_at?: string | null; completed_at?: string | null; last_checked_at?: string | null;
 };
 /** The viewer-visible part of GET /devices/<pk>/ (Wi-Fi name, IP and password are stripped for viewers). */
-type Detail = GatewayFields & {
+type Detail = GatewayFields & Partial<MeterFields> & {
   config_version?: string | null; config_ack_ver?: number | null; pending_config_update?: boolean;
   alerts_muted_until?: string | null; logs_enabled?: boolean; auto_reboot_enabled?: boolean;
   /** Last automatic (RS-485 stall) restart; null = none recorded. */
@@ -142,7 +143,8 @@ function Switch({ isDark, label, hint, checked, onChange }: { isDark: boolean; l
 
 /** One device's page: facts on the left, the control panel (sticky) and the logs on the right/left. Reads always show; every write
  *  is shown only with device control. The backend scopes and enforces every call. */
-const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | null }> = ({ isDark, dev, firmware: firmwareProp }) => {
+const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | null; onDone?: () => void; variant?: 'full' | 'ops' }> = ({ isDark, dev, firmware: firmwareProp, onDone, variant = 'full' }) => {
+  const ops = variant === 'ops';
   const [firmware, setFirmware] = useState(firmwareProp);
   const t = useTokens(isDark);
   const access = useAccess();
@@ -164,6 +166,10 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
   const [waiting, setWaiting] = useState<{ reboot: boolean; reset: boolean; rollback: boolean }>({ reboot: false, reset: false, rollback: false });
   const [cov, setCov] = useState<Coverage | null>(null);
   const [covFailed, setCovFailed] = useState(false);
+  // Meter interval: typed value waits for Save (the field fires on every keystroke); undefined = untouched.
+  const [ivDraft, setIvDraft] = useState<number | null | undefined>();
+  const ivBad = ivDraft != null && !(ivDraft >= INTERVAL_S[0] * 1000 && ivDraft <= INTERVAL_S[1] * 1000);
+  const meterDevice = useMemo(() => ({ ...detail, id: dev.device_id, is_online: dev.is_online }), [detail, dev.device_id, dev.is_online]);
   const [openPanel, setOpenPanel] = useState<Record<string, boolean>>({});
 
   const loadProgress = useCallback(() => {
@@ -181,9 +187,9 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
   }, [dev.device_id, loadProgress]);
   // The Readings summary is always on screen, so coverage loads with the page (monitors only; meters have no inverter values).
   useEffect(() => {
-    if (isMeter) return;
+    if (isMeter || ops) return;
     apiService.getRegisterCoverage(dev.device_id).then(setCov).catch(() => setCovFailed(true));
-  }, [isMeter, dev.device_id]);
+  }, [isMeter, ops, dev.device_id]);
   // No polling, except OTA progress while an update is downloading and the tab is visible.
   // Update requests that never started (still waiting after 3 days) are noise, not history.
   const stale = (l: OtaLog) => ['pending', 'available'].includes(l.status) && Date.now() - new Date(l.last_checked_at || l.started_at || 0).getTime() > 3 * 86_400_000;
@@ -197,13 +203,13 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
   const fail = () => setNote({ ok: false, text: `Couldn't send that to ${name}. Try again, or ask an admin.` });
   const run = async (call: () => Promise<any>, done: string, after?: (r: any) => void) => {
     setBusy(true); setNote(null);
-    try { const r = await call(); after?.(r); setNote({ ok: true, text: done }); }
+    try { const r = await call(); after?.(r); setNote({ ok: true, text: done }); onDone?.(); }
     catch { fail(); }
     finally { setBusy(false); setPending(null); }
   };
   const toggle = async (set: (v: boolean | undefined) => void, prev: boolean | undefined, v: boolean, call: () => Promise<unknown>) => {
     set(v); setNote(null);
-    try { await call(); } catch { set(prev); fail(); }
+    try { await call(); onDone?.(); } catch { set(prev); fail(); }
   };
 
   const confirm = () => {
@@ -284,10 +290,10 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
   return (
     <div style={{ fontFamily: t.body, color: t.ink }}>
       <style>{`.dp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}.dp-left>:last-child,.dp-right>:last-child{flex:1 1 auto}.dp-logs{display:flex}.dp-logs>*{flex:1}@media(max-width:820px){.dp-grid{grid-template-columns:minmax(0,1fr)}.dp-left,.dp-right{display:contents}.dp-status{order:1}.dp-panel{order:2}.dp-rest{order:3}.dp-logs{order:4}}`}</style>
-      <h2 style={{ margin: '0 0 14px', fontFamily: t.head, fontSize: '1.4rem', fontWeight: 700 }}>{name}</h2>
+      {!ops && <h2 style={{ margin: '0 0 14px', fontFamily: t.head, fontSize: '1.4rem', fontWeight: 700 }}>{name}</h2>}
       <div className="dp-grid">
         <div className="dp-left" style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
-          {section('Status', <>
+          {!ops && section('Status', <>
             <div style={TILES}>
               {tile('State', dev.is_online ? 'Live' : 'Not reporting', ago(dev.last_heartbeat) || 'No update yet', !dev.is_online)}
               {dev.last_heartbeat && tile('Last update', new Date(dev.last_heartbeat).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), new Date(dev.last_heartbeat).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }))}
@@ -313,7 +319,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
             ))}
           </>)}
 
-          {!isMeter && section('Readings', <>
+          {!isMeter && !ops && section('Readings', <>
             {(() => {
               if (covFailed) return line("Couldn't check which inverter values arrive yet.");
               if (!cov) return line('Checking inverter values…');
@@ -346,10 +352,10 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
           </>)}
 
           {section('Firmware updates', <>
-            <div style={TILES}>
+            {!ops && <div style={TILES}>
               {tile('Running', dev.firmware_version || 'Not reported')}
               {tile('Newest', builds[0]?.version ?? 'Not available', firmware === null ? 'Not available to you' : update ? 'Update available' : 'You have it', !!update)}
-            </div>
+            </div>}
             {stepNow >= 0 && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem', fontWeight: 600 }}><span>{status}</span>{dlPct != null && <span style={{ color: t.ink2 }}>{dlPct}%</span>}</div>
@@ -398,7 +404,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
             })}
           </>)}
 
-          {ctl && <BuildsCard isDark={isDark} deviceType={dev.device_type} kindLabel={KIND[dev.device_type] ?? 'Device'} onChanged={() => getFirmware().then(setFirmware)} />}
+          {ctl && !ops && <BuildsCard isDark={isDark} deviceType={dev.device_type} kindLabel={KIND[dev.device_type] ?? 'Device'} onChanged={() => getFirmware().then(setFirmware)} />}
 
         </div>
 
@@ -440,6 +446,22 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
               {!isMeter && pbtn('Roll back', 'Goes back to the version it ran before.', () => setPending({ kind: 'rollback' }), waiting.rollback)}
             </div>
 
+            {isMeter && detail && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <MeterSettingsSection device={meterDevice} isDark={isDark} canCalibrate
+                  intervalMs={ivDraft === undefined ? detail.meter_publish_interval_ms : ivDraft} onIntervalChange={setIvDraft} />
+                {ivDraft !== undefined && (
+                  <Btn isDark={isDark} size="sm" variant="primary" disabled={busy || ivBad}
+                    onClick={() => run(() => apiService.updateDevice(dev.device_id, { meter_publish_interval_ms: ivDraft }),
+                      ivDraft == null ? 'Interval back to the meter default.' : `Interval set to ${ivDraft / 1000} s. The meter confirms shortly.`,
+                      () => { setDetail(d => d && { ...d, meter_publish_interval_ms: ivDraft, meter_interval_confirmed_at: null }); setIvDraft(undefined); })}>
+                    Save interval
+                  </Btn>
+                )}
+                {ivBad && dim(`Enter ${INTERVAL_S[0]} to ${INTERVAL_S[1]} seconds`, true)}
+              </div>
+            )}
+
             <div style={{ border: `1px dashed ${t.line}`, borderRadius: 12, padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <DetailsToggle isDark={isDark} label="Engineer only" open={!!openPanel.eng} onToggle={() => setOpenPanel(p => ({ ...p, eng: !p.eng }))} />
               {openPanel.eng && <>
@@ -449,7 +471,7 @@ const DevicePage: React.FC<{ isDark: boolean; dev: Dev; firmware: Firmware[] | n
             </div>
           </aside>
         )}
-          {!isMeter && <div className="dp-logs"><GatewayActivity deviceId={dev.device_id} isDark={isDark} device={detail} allowCheck={ctl} /></div>}
+          {!isMeter && <div className="dp-logs"><GatewayActivity deviceId={dev.device_id} isDark={isDark} device={detail} allowCheck={ctl} allowApn={ctl} /></div>}
           <div className="dp-logs"><LogsCard deviceId={dev.device_id} isDark={isDark} /></div>
         </div>
       </div>

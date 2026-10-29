@@ -1,0 +1,46 @@
+/* Device dashboard: one device's readings. Phase colours follow Indian wiring (R / Y / B). */
+.dd { --ph1: #C8553D; --ph2: #B9870F; --ph3: #3570C8; --gap: #e8930c; container-type: inline-size; display: flex; flex-direction: column; gap: 20px; color: var(--foreground); }
+:is(.dark-mode, .dark) .dd { --ph1: #E07A62; --ph2: #E3B33E; --ph3: #6D9BE6; --gap: #e0a43a; }
+
+.dd-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.dd-name { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; }
+.dd-facts { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted-foreground); }
+.dd-facts b { font-weight: 500; color: var(--foreground); }
+.dd-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--gap); vertical-align: 1px; }
+.dd-live.on { background: var(--brand-green); }
+
+.dd-range { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); }
+.dd-range button { min-height: 40px; min-width: 52px; padding: 0 14px; border: 0; border-radius: 999px; background: none; color: var(--muted-foreground); font: 500 0.88rem/1 'Fira Code', monospace; cursor: pointer; }
+.dd-range button[aria-pressed='true'] { background: var(--brand-green); color: #fff; }
+
+/* The reporting ribbon: one cell per time slot, filled when the device sent data in it. */
+.dd-ribbon { padding: 16px 18px 14px; border-radius: 22px; background: var(--card); border: 1px solid var(--border); }
+.dd-cells { display: flex; gap: 1px; height: 34px; align-items: stretch; }
+.dd-cells i { flex: 1 1 0; min-width: 1px; border-radius: 2px; background: var(--brand-green); }
+.dd-cells i.miss { background: color-mix(in srgb, var(--gap) 28%, transparent); }
+.dd-ends { display: flex; justify-content: space-between; margin-top: 6px; font: 0.78rem 'Fira Code', monospace; color: var(--muted-foreground); }
+.dd-cover { margin: 10px 0 0; font-size: 0.92rem; }
+.dd-note { margin: 4px 0 0; font-size: 0.82rem; color: var(--muted-foreground); }
+
+.dd-banner { padding: 12px 16px; border-radius: 16px; font-size: 0.9rem; background: color-mix(in srgb, var(--gap) 14%, transparent); }
+
+.dd-find { width: 100%; max-width: 320px; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: inherit; font: inherit; }
+
+.dd-sec h3 { margin: 0 0 8px; font-size: 1.02rem; font-weight: 600; }
+.dd-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 0 28px; }
+@container (max-width: 720px) { .dd-rows { grid-template-columns: minmax(0, 1fr); } }
+
+.dd-row { border-top: 1px solid var(--border); }
+.dd-row > button { display: grid; grid-template-columns: minmax(0, 1fr) auto 96px; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 2px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.dd-row > button:disabled { cursor: default; }
+.dd-label { font-size: 0.9rem; color: var(--muted-foreground); }
+.dd-vals { display: flex; gap: 12px; font: 500 0.98rem 'Fira Code', monospace; white-space: nowrap; }
+.dd-vals small { font-size: 0.75rem; color: var(--muted-foreground); margin-left: 2px; }
+.dd-ph { display: inline-flex; align-items: baseline; gap: 4px; }
+.dd-ph::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); align-self: center; }
+.dd-spark { width: 96px; height: 28px; }
+.dd-chart { height: 200px; padding: 4px 0 14px; animation: dd-open 160ms ease-out; }
+@keyframes dd-open { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .dd-chart { animation: none; } }
+
+.dd :is(button, input):focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }

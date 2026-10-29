@@ -1,0 +1,59 @@
+/* Device page tabs (spec §5.0, §5.3). Colours validated with the dataviz palette check (light surface). */
+.dt { --dc-r: #C2412D; --dc-y: #B9870F; --dc-b: #3570C8; --dc-one: #0B7F73; --dc-miss: rgba(201,122,0,0.32); --dc-fault: #C97A00; --dc-warn-text: #8A5300; }
+.dark-mode .dt { --dc-r: #F07A63; --dc-y: #E2B54A; --dc-b: #7FA8EE; --dc-one: #2EF0CC; --dc-miss: rgba(240,170,60,0.38); --dc-fault: #F0AA3C; --dc-warn-text: #F0AA3C; }
+/* Fira Code would draw 0x0004 as 0×0004; !important beats any `font:` shorthand. */
+.dt, .dt * { font-variant-ligatures: none !important; }
+.dt-num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+.dt-unit { font-family: Rubik, sans-serif; font-size: 0.55em; font-weight: 400; color: var(--muted-foreground); margin-left: 4px; }
+
+.dt-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: none; }
+.dt-tabs button { min-height: 48px; padding: 0 18px; margin-bottom: -1px; border: 0; border-bottom: 3px solid transparent; background: none;
+  font: 500 15px Rubik, sans-serif; color: var(--muted-foreground); cursor: pointer; white-space: nowrap; }
+.dt-tabs button[aria-selected='true'] { border-bottom-color: var(--brand-green); color: var(--foreground); }
+.dt-count { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--muted); font: 500 12px 'Fira Code', monospace; }
+
+.dt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.dt-tile { display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
+.dt-tile .dt-num { font-size: 28px; font-weight: 500; }
+.dt-sub { font-size: 13px; color: var(--muted-foreground); }
+
+.dt-card { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px 18px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); min-width: 0; }
+.dt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.dt-pills { display: inline-flex; flex-wrap: wrap; padding: 3px; gap: 2px; border-radius: 999px; background: var(--muted); }
+.dt-pills button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+  font: 500 13px 'Fira Code', monospace; color: var(--foreground); }
+.dt-pills button[aria-pressed='true'] { background: var(--brand-green); color: var(--primary-foreground); }
+.dt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dt-chips button { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card);
+  font: 500 14px Rubik, sans-serif; color: var(--foreground); cursor: pointer; }
+.dt-chips button[aria-pressed='true'] { border-color: var(--brand-green); background: color-mix(in srgb, var(--brand-green) 12%, transparent); }
+.dt-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+.dt-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.dt-readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; min-height: 44px; }
+.dt-readout b { font-size: 18px; font-weight: 500; }
+.dt-key { display: inline-block; width: 14px; height: 3px; border-radius: 2px; transform: translateY(-4px); margin-right: 7px; }
+.dt-svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+.dt-svg text { font: 12px 'Fira Code', monospace; fill: var(--muted-foreground); }
+.dt-svg .dt-label { font-family: Rubik, sans-serif; }
+.dt-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 13px; color: var(--muted-foreground); }
+
+.dt-split { display: grid; gap: 16px; align-items: start; grid-template-columns: minmax(0, 1fr); }
+.dt-split.open { grid-template-columns: minmax(0, 1.45fr) minmax(340px, 1fr); }
+@media (max-width: 1100px) { .dt-split.open { grid-template-columns: minmax(0, 1fr); } }
+.dt-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
+.dt-table th { padding: 12px 10px; font-weight: 500; font-size: 13px; color: var(--muted-foreground); text-align: right; white-space: nowrap; }
+.dt-table th:first-child, .dt-table td:first-child { text-align: left; padding-left: 18px; }
+.dt-table td { padding: 10px; text-align: right; border-top: 1px solid var(--border); font-family: 'Fira Code', monospace; white-space: nowrap; }
+.dt-table tr[data-row] { cursor: pointer; }
+.dt-table tr.selected { background: color-mix(in srgb, var(--brand-green) 10%, transparent); }
+.dt-table tr.fault { background: color-mix(in srgb, var(--dc-fault) 9%, transparent); }
+.dt-table tr.gap td { font-family: Rubik, sans-serif; color: var(--dc-warn-text); text-align: left; background: color-mix(in srgb, var(--dc-fault) 7%, transparent); }
+.dt-icon { min-width: 36px; min-height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--brand-green); font: 500 13px 'Fira Code', monospace; white-space: nowrap; cursor: pointer; }
+.dt-packet { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: var(--radius); background: #12151A; color: #E6EEF0; min-width: 0; }
+.dt-packet pre { margin: 0; padding: 14px 16px; border-radius: 14px; background: #080C14; font: 13px/1.55 'Fira Code', monospace; overflow-x: auto; white-space: pre; }
+.dt-packet button { min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; }
+
+.dt-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: stretch; }
+.dt-op { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 12px 0; border-top: 1px solid var(--border); }
+.dt-state-ok { color: var(--brand-green); font-size: 13px; } .dt-state-wait { color: var(--dc-warn-text); font-size: 13px; } .dt-state-none { color: var(--muted-foreground); font-size: 13px; }
+.dt-danger { border-color: rgba(180,35,24,0.35); }

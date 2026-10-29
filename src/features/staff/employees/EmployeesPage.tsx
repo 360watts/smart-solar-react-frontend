@@ -38,6 +38,7 @@ const EmployeesPage: React.FC = () => {
   const [version, setVersion] = useState(0);
 
   const [sites, setSites] = useState<SiteOption[]>([]);
+  const [devices, setDevices] = useState<SiteOption[]>([]);  // site_id holds the device id
   const [teams, setTeams] = useState<Team[]>([]);
   const [open, setOpen] = useState<Person | null>(null);
   const [adding, setAdding] = useState<{ role: RoleKey } | null>(null);
@@ -75,6 +76,16 @@ const EmployeesPage: React.FC = () => {
     apiService.getSitesList({ includeInactive: true })
       .then((rows) => setSites((rows ?? []).map((s: any) => ({ site_id: s.site_id, display_name: s.display_name || s.site_id }))))
       .catch(() => undefined);
+    // The devices endpoint caps a page at 100; walk the pages (a fleet is a few hundred).
+    (async () => {
+      const out: SiteOption[] = [];
+      for (let page = 1; page <= 20; page++) {
+        const res = await apiService.getDevices(undefined, page, 100);
+        for (const d of res.results ?? []) out.push({ site_id: String(d.id), display_name: d.site_id ? `${d.device_serial} (${d.site_id})` : d.device_serial });
+        if (!res.has_next) break;
+      }
+      setDevices(out);
+    })().catch(() => undefined);
     apiService.getTeams()
       .then((res) => setTeams((res.results ?? []).filter((x: any) => x.is_active !== false).map((x: any) => ({ id: x.id, name: x.name }))))
       .catch(() => undefined);
@@ -139,7 +150,7 @@ const EmployeesPage: React.FC = () => {
 
       {open && (
         <PersonPanel
-          isDark={isDark} person={open} sites={sites} teams={teams} isSelf={open.id === me?.id}
+          isDark={isDark} person={open} sites={sites} devices={devices} teams={teams} isSelf={open.id === me?.id}
           onClose={() => setOpen(null)}
           onSaved={(message) => { toast('success', message); setOpen(null); reload(); }}
         />
@@ -147,7 +158,7 @@ const EmployeesPage: React.FC = () => {
 
       {adding && (
         <AddTeammateDialog
-          isDark={isDark} sites={sites} teams={teams} defaultRole={adding.role}
+          isDark={isDark} sites={sites} devices={devices} teams={teams} defaultRole={adding.role}
           onClose={() => setAdding(null)}
           onTeamAdded={(team) => setTeams((prev) => [...prev, team].sort((a, b) => a.name.localeCompare(b.name)))}
           onCreated={(_firstName, email) => { toast('success', `Invite sent to ${email}.`); setAdding(null); reload(); }}

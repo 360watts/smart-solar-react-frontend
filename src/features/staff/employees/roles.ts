@@ -81,6 +81,7 @@ export interface Person {
   is_active?: boolean;
   employment_status?: 'active' | 'on_leave' | 'terminated';
   assigned_sites?: string[];
+  assigned_devices?: number[];
   team?: Team | null;
   date_joined?: string;
   /** Missing counts as on. Always true for admins. */
@@ -114,6 +115,8 @@ export function worksOn(p: Person, siteNames: Record<string, string>): { headlin
   const watchOnly = (note: string) => (p.device_ops_enabled === false ? (note ? `${note}. Watch only` : 'Watch only') : note);
   if (role === 'employee') return { headline: 'All sites', note: watchOnly('Monitors and fixes systems') };
   const ids = p.assigned_sites ?? [];
+  const nDev = p.assigned_devices?.length ?? 0;
+  if (ids.length === 0 && nDev > 0) return { headline: nDev === 1 ? '1 device' : `${nDev} devices`, note: watchOnly('') };
   const names = ids.map((id) => siteNames[id] ?? id);
   const headline = ids.length === 0 ? 'No sites yet' : ids.length === 1 ? '1 site' : `${ids.length} sites`;
   const note = names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2} more` : '');
@@ -135,6 +138,8 @@ export interface PersonForm {
   team_id?: number;
   role: RoleKey;
   assigned_sites: string[];
+  /** Device ids as strings (the picker's value type). */
+  assigned_devices?: string[];
   device_ops_enabled: boolean;
 }
 
@@ -147,6 +152,7 @@ export function formFromPerson(p: Person): PersonForm {
     team_id: p.team?.id,
     role: roleOf(p),
     assigned_sites: [...(p.assigned_sites ?? [])],
+    assigned_devices: (p.assigned_devices ?? []).map(String),
     device_ops_enabled: p.device_ops_enabled !== false,
   };
 }
@@ -156,8 +162,8 @@ export function formError(f: PersonForm, mode: 'create' | 'edit'): string | null
   if (!f.first_name.trim() || !f.last_name.trim()) return 'Add a first and last name.';
   if (!f.email.trim()) return 'Add an email address.';
   if (mode === 'create' && !f.mobile_number.trim()) return 'Add a mobile number.';
-  if (f.role === 'viewer' && f.assigned_sites.length === 0) {
-    return `Pick at least one site, or ${f.first_name.trim() || 'they'} won't see anything.`;
+  if (f.role === 'viewer' && f.assigned_sites.length === 0 && !f.assigned_devices?.length) {
+    return `Pick at least one site or device, or ${f.first_name.trim() || 'they'} won't see anything.`;
   }
   return null;
 }
@@ -178,6 +184,7 @@ export function buildPayload(
     mobile_number: f.mobile_number.trim(),
     role: f.role,
     assigned_sites: f.role === 'viewer' ? f.assigned_sites : [],
+    assigned_devices: f.role === 'viewer' ? (f.assigned_devices ?? []).map(Number) : [],
   };
   // Admins always have device operations; the backend ignores the key for them, so don't send it.
   if (f.role !== 'admin') payload.device_ops_enabled = f.device_ops_enabled;

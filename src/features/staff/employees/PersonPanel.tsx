@@ -14,10 +14,10 @@ import {
   firstNameOf, fullName, roleInfo, roleOf, savedMessage, statusOf,
 } from './roles';
 
-const canon = (f: PersonForm) => JSON.stringify({ ...f, assigned_sites: [...f.assigned_sites].sort() });
+const canon = (f: PersonForm) => JSON.stringify({ ...f, assigned_sites: [...f.assigned_sites].sort(), assigned_devices: [...(f.assigned_devices ?? [])].sort() });
 
-export function PersonPanel({ isDark, person, sites, teams, isSelf, onClose, onSaved }: {
-  isDark: boolean; person: Person; sites: SiteOption[]; teams: Team[]; isSelf: boolean;
+export function PersonPanel({ isDark, person, sites, devices = [], teams, isSelf, onClose, onSaved }: {
+  isDark: boolean; person: Person; sites: SiteOption[]; devices?: SiteOption[]; teams: Team[]; isSelf: boolean;
   onClose: () => void; onSaved: (message: string) => void;
 }) {
   const t = useTokens(isDark);
@@ -106,6 +106,9 @@ export function PersonPanel({ isDark, person, sites, teams, isSelf, onClose, onS
               <h3 style={{ margin: '0 0 4px', fontFamily: t.head, fontSize: '1.02rem' }}>{`Which sites can ${name} work on?`}</h3>
               <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: t.ink2 }}>They see only these, and their devices.</p>
               <SitePicker isDark={isDark} sites={sites} value={form.assigned_sites} onChange={(assigned_sites) => set({ assigned_sites })} />
+              <h3 style={{ margin: '18px 0 4px', fontFamily: t.head, fontSize: '1.02rem' }}>{`Or just these devices`}</h3>
+              <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: t.ink2 }}>They get the dashboard for the device's site, and can run only the devices picked here.</p>
+              <SitePicker isDark={isDark} sites={devices} noun="device" value={form.assigned_devices ?? []} onChange={(assigned_devices) => set({ assigned_devices })} />
             </section>
           )}
 

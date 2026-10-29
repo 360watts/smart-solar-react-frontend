@@ -1790,6 +1790,32 @@ class ApiService {
     });
   }
 
+  /** One device's own readings (status, latest, 5-min history), with or without a site. */
+  async getDeviceDashboard(deviceId: number, hours = 24): Promise<any> {
+    return this.request(`/devices/${deviceId}/dashboard/?hours=${hours}`);
+  }
+
+  /** Overview mode of the device dashboard: exact series for <= 8 keys at one detail level, plus reporting stats. */
+  async getDeviceSeries(deviceId: number, hours: number, detail: string, keys: string[]): Promise<any> {
+    const q = new URLSearchParams({ hours: String(hours), detail, keys: keys.join(',') });
+    return this.request(`/devices/${deviceId}/dashboard/?${q}`);
+  }
+
+  /** Raw readings newest first; `before` pages older. */
+  async getDeviceReadings(deviceId: number, opts: { before?: string; limit?: number } = {}): Promise<any> {
+    const q = new URLSearchParams({ limit: String(opts.limit ?? 100) });
+    if (opts.before) q.set('before', opts.before);
+    return this.request(`/devices/${deviceId}/readings/?${q}`);
+  }
+
+  async getReadingPacket(deviceId: number, readingId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/readings/${readingId}/packet/`);
+  }
+
+  async getDeviceOperations(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/operations/`);
+  }
+
   async getDeviceEvents(deviceId: number, limit = 100): Promise<{ results: DeviceEvent[] }> {
     return this.request(`/devices/${deviceId}/events/?limit=${limit}`);
   }
