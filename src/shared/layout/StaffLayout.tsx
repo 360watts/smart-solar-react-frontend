@@ -19,7 +19,7 @@ type NavEntry = { path: string; label: string; icon: React.ElementType; feature:
 
 const NAV_MAIN: NavEntry[] = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, feature: 'dashboard' },
-  { path: '/my-sites',  label: 'My sites',  icon: Building2,       feature: 'my_sites'  },
+  { path: '/my-sites',  label: 'Dashboard', icon: LayoutDashboard, feature: 'my_sites'  },  // a viewer's home: the sites and devices they were given
 ];
 
 const NAV_CONFIG: NavEntry[] = [
@@ -312,9 +312,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     ? 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)'
     : 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)';
 
-  // Viewers given single devices but no sites: their home lists devices, so the entry says so.
-  const deviceOnly = !user?.assigned_sites?.length && !!user?.assigned_devices?.length;
-  const navMain = deviceOnly ? NAV_MAIN.map(e => (e.path === '/my-sites' ? { ...e, label: 'Devices', icon: Monitor } : e)) : NAV_MAIN;
+  const navMain = NAV_MAIN;
 
   const isActivePath = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');

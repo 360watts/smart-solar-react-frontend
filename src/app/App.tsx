@@ -127,6 +127,7 @@ function App() {
                     <Suspense fallback={<div className="loading">Loading…</div>}>
                       <StaffLayout />
                     </Suspense>
+                    <StaffAiChat />
                   </StaffRoute>
                 }
               >
@@ -157,7 +158,6 @@ function App() {
               </Route>
             </Routes>
             <ToastContainer />
-            <StaffAiChat />
           </div>
         </Router>
       </NavigationProvider>

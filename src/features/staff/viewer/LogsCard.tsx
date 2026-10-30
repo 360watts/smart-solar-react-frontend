@@ -1,3 +1,5 @@
+import { Clock, FileText } from 'lucide-react';
+import { EmptyState, Notice } from '../../../shared/components/Feedback';
 import React, { memo, useCallback, useRef, useState } from 'react';
 import { apiService } from '../../../services/api';
 import { useTokens, Btn } from '../siteHardware/ui';
@@ -17,15 +19,17 @@ const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kol
 
 // Firmware lines look like "<epoch><sep>E (<ms>) tag: text". Level letter after the separator; time shown for reading only.
 const LINE = /^(\d{9,})[^A-Za-z0-9]?([EWI]) \(/;
-export function viewLines(text: string, problemsOnly: boolean): string[] {
-  const out: string[] = [];
+export type LogRow = { text: string; lvl?: 'E' | 'W' | 'I' };
+export function viewRows(text: string, problemsOnly: boolean): LogRow[] {
+  const out: LogRow[] = [];
   for (const raw of text.split('\n')) {
     const m = LINE.exec(raw);
     if (problemsOnly && !(m && m[2] !== 'I')) continue;
-    out.push(m ? `${new Date(Number(m[1]) * 1000).toLocaleTimeString('en-IN')}  ${raw.slice(m[0].length - 3)}` : raw);
+    out.push(m ? { text: `${new Date(Number(m[1]) * 1000).toLocaleTimeString('en-IN')}  ${raw.slice(m[0].length - 3)}`, lvl: m[2] as LogRow['lvl'] } : { text: raw });
   }
   return out;
 }
+export const viewLines = (text: string, problemsOnly: boolean): string[] => viewRows(text, problemsOnly).map(r => r.text);
 
 const Row = memo(function Row({ f, isDark, open, onView, onDownload }: {
   f: LogFile; isDark: boolean; open: boolean; onView: (f: LogFile) => void; onDownload: (f: LogFile) => void;
@@ -111,7 +115,7 @@ const LogsCard: React.FC<{ deviceId: number; isDark: boolean }> = ({ deviceId, i
   return (
     <section aria-label="Log files" style={{ background: t.card, border: `1px solid ${t.line}`, borderRadius: 18, padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', minHeight: 40, fontFamily: t.head, fontSize: '1.02rem' }}>Logs</h3>
-      <span style={{ fontSize: '0.78rem', color: t.ink2 }}>Log files are kept for 90 days. Times are India time.</span>
+      <Notice icon={Clock} more="All times are India time.">Log files are kept for 90 days.</Notice>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="datetime-local" aria-label="From" value={from} onChange={e => setFrom(e.target.value)} style={input} />
         <input type="datetime-local" aria-label="To" value={to} onChange={e => setTo(e.target.value)} style={input} />
@@ -127,14 +131,12 @@ const LogsCard: React.FC<{ deviceId: number; isDark: boolean }> = ({ deviceId, i
       </div>
       {scan && <p style={{ margin: 0, fontSize: '0.88rem', color: t.ink2 }}>{scan.files_scanned === 0 ? 'No log files from that day to check.'
         : `Checked ${plural(scan.files_scanned, 'log file')}: ${plural(scan.total_errors, 'error')}, ${plural(scan.total_warnings, 'warning')}.`}</p>}
-      {msg && <p role="status" style={{ margin: 0, fontSize: '0.86rem', color: t.waitInk }}>{msg}</p>}
+      {msg && <Notice role="status">{msg}</Notice>}
 
       {failed ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.88rem', color: t.ink2 }}>
-          Couldn't load the log files. <Btn isDark={isDark} size="sm" variant="soft" onClick={() => load(page, applied)}>Try again</Btn>
-        </div>
+        <EmptyState title="Couldn't load the log files" description="The server didn't answer. The device is not affected." onRetry={() => load(page, applied)} />
       ) : files === null ? <span style={{ fontSize: '0.88rem', color: t.ink2 }}>Loading log files…</span>
-        : files.length === 0 ? <span style={{ fontSize: '0.88rem', color: t.ink2 }}>No log files in this range.</span>
+        : files.length === 0 ? <EmptyState icon={FileText} title="No log files in this range" description="Pick a wider range, or check the gateway uploads its logs." />
         : <>
           <span style={{ fontSize: '0.8rem', color: t.ink2 }}>{plural(total, 'file')}</span>
           {files.map(f => <Row key={f.id} f={f} isDark={isDark} open={viewing?.id === f.id} onView={view} onDownload={download} />)}

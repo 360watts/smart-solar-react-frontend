@@ -1,0 +1,62 @@
+/* Every reading tab. Colours come from the app tokens so dark mode follows; numbers are Fira Code with no ligatures. */
+.rt { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; width: 100%; margin: 0 auto; min-width: 0; }
+.rt, .rt * { font-variant-ligatures: none !important; }
+.rt-num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+.rt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.rt-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card);
+  font: 500 14px Rubik, sans-serif; color: var(--foreground); cursor: pointer; list-style: none; }
+.rt-pill::-webkit-details-marker { display: none; }
+.rt-pill:disabled { opacity: 0.45; cursor: default; }
+.rt-pill[aria-pressed='true'], .rt-pill.on { border-color: var(--brand-green); background: color-mix(in srgb, var(--brand-green) 12%, var(--card)); }
+.rt-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--muted); }
+.rt-seg .rt-pill { border: 0; background: transparent; }
+.rt-seg .rt-pill[aria-pressed='true'] { background: var(--brand-green); color: var(--primary-foreground); }
+.rt-cnt { padding: 2px 9px; border-radius: 999px; background: var(--muted); font: 500 12px 'Fira Code', monospace; }
+.rt-jump { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted-foreground); }
+.rt-jump input { min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: 400 14px 'Fira Code', monospace; }
+.rt-cols { position: relative; }
+.rt-cols > div { position: absolute; z-index: 5; top: 46px; left: 0; width: min(560px, 90vw); display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px;
+  max-height: 260px; overflow: auto; padding: 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.rt-cols label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.rt-range { margin-left: auto; font-size: 13px; color: var(--muted-foreground); }
+
+.rt-split { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.rt-card { flex: 999 1 620px; min-width: 0; border-radius: 16px; border: 1px solid var(--border); background: var(--card); overflow: hidden; }
+.rt-scroll { overflow: auto; max-height: 70vh; }
+.rt-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.rt-table th { position: sticky; top: 0; z-index: 2; height: 42px; padding: 0 14px; text-align: right; white-space: nowrap; font-weight: 500; font-size: 12.5px;
+  color: var(--muted-foreground); background: color-mix(in srgb, var(--muted) 55%, var(--card)); border-bottom: 1px solid var(--border); }
+.rt-table td { height: 44px; padding: 0 14px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); font-family: 'Fira Code', monospace; background: var(--rb, var(--card)); }
+.rt-table th:first-child, .rt-table td:first-child { position: sticky; left: 0; text-align: left; z-index: 1; }
+.rt-table th:first-child { z-index: 3; }
+.rt-table tr { --rb: var(--card); }
+.rt-table tr[data-row] { cursor: pointer; }
+.rt-table tr[data-row]:hover { --rb: color-mix(in srgb, var(--brand-green) 6%, var(--card)); }
+.rt-table tr.fault { --rb: color-mix(in srgb, var(--dc-fault) 9%, var(--card)); }
+.rt-table tr.selected { --rb: color-mix(in srgb, var(--brand-green) 14%, var(--card)); }
+.rt-table tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--brand-green); }
+.rt-table tr.gap { --rb: color-mix(in srgb, var(--dc-fault) 10%, var(--card)); }
+.rt-table tr.gap td { height: 36px; text-align: left; font: 13px Rubik, sans-serif; color: var(--dc-warn-text); }
+.rt-table tr.gap td > span { position: sticky; left: 14px; display: inline-flex; align-items: center; gap: 8px; }
+.rt-table tr:focus-visible, .rt .rt-pill:focus-visible, .rt-jump input:focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }
+.rt-open { min-width: 32px; min-height: 36px; border: 0; background: transparent; color: var(--brand-green); font: 500 16px 'Fira Code', monospace; cursor: pointer; }
+.rt-msg { margin: 0; padding: 18px; font-size: 14px; color: var(--muted-foreground); }
+.rt-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--muted) 55%, var(--card)); font-size: 13px; color: var(--muted-foreground); }
+
+.rt-pk { flex: 1 1 380px; min-width: 0; border-radius: 16px; border: 1px solid var(--border); background: var(--card); overflow: hidden; }
+.rt-pk > header { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.rt-pk h4 { margin: 0; font-size: 16px; font-weight: 600; }
+.rt-pk-sub { font-size: 13px; color: var(--muted-foreground); }
+.rt-views { display: flex; gap: 4px; padding: 10px 14px 0; }
+.rt-body { padding: 14px 18px 6px; }
+.rt-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-bottom: 12px; font-size: 13px; color: var(--muted-foreground); }
+.rt-sum b { font-weight: 400; color: var(--foreground); }
+.rt-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  background: color-mix(in srgb, var(--dc-fault) 16%, var(--card)); color: var(--dc-warn-text); }
+.rt-json { margin: 0; font: 400 12.5px/1.75 'Fira Code', monospace; color: var(--foreground); white-space: pre-wrap; overflow-wrap: anywhere; }
+.rt-k { color: var(--dc-one); }
+.rt-s { color: var(--dc-b); }
+.rt-hl { background: color-mix(in srgb, var(--dc-fault) 18%, transparent); border-radius: 4px; padding: 0 3px; }
+.rt-more { color: var(--muted-foreground); }
+.rt-acts { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 18px; border-top: 1px solid var(--border); }
+.rt-acts .rt-link { border: 0; background: none; min-height: 40px; padding: 0 6px; font: 500 13px Rubik, sans-serif; color: var(--brand-green); cursor: pointer; }

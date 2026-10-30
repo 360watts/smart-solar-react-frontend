@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 /**
  * SlaveConfigModal — shared slave create/edit modal used by
  * Configuration.tsx and DevicePresets.tsx.
@@ -1886,19 +1887,7 @@ const SlaveConfigModal: React.FC<SlaveConfigModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div style={{
-                  padding: '40px 20px',
-                  textAlign: 'center',
-                  color: 'var(--muted-foreground)',
-                  background: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
-                  borderRadius: 10,
-                  border: isDark ? '1px dashed rgba(255, 255, 255, 0.1)' : '1px dashed rgba(0, 0, 0, 0.1)',
-                }}>
-                  <Settings size={32} color={'var(--muted-foreground)'} style={{ margin: '0 auto 12px' }} />
-                  <div style={{ fontSize: '0.875rem' }}>
-                    No registers configured yet. Add registers above to define what data to read from this slave device.
-                  </div>
-                </div>
+                <EmptyState icon={Settings} title="No registers yet" description="Add registers above to choose what to read from this slave device." />
               )}
             </div>
           </form>

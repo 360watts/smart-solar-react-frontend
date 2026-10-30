@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 import { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
@@ -484,12 +485,7 @@ export default function QuotationPage() {
                           </button>
                         </>
                       ) : (
-                        <>
-                          <p>No quotations yet.</p>
-                          <button type="button" className="sq-btn sq-btn-primary" onClick={openNew} style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <Plus style={{ width: 14, height: 14 }} /> New Quotation
-                          </button>
-                        </>
+                        <EmptyState icon={FileText} title="No quotations yet" description="Start one for a customer; drafts are saved as you go." action={{ label: 'New quotation', icon: Plus, onClick: openNew }} />
                       )}
                     </div>
                   </td>

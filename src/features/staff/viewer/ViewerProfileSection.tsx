@@ -4,11 +4,12 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { apiService, type MyOperation } from '../../../services/api';
 import { useAccess } from '../../../shared/access/useAccess';
 import { VIEWER_ALWAYS, VIEWER_NEVER, VIEWER_OPERATIONS } from '../employees/viewerAccessCopy';
+import { Wrench } from 'lucide-react';
+import { ActivityList, EmptyState } from '../../../shared/components/Feedback';
+import { ListSkeleton } from './Skeleton';
 import './viewerHome.css';
 
 const typeName = (t: string) => (t === 'energy_meter' ? 'Meter' : 'Monitor');
-const when = (iso: string) =>
-  new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const words = (r: MyOperation) => {
   const s = r.action && r.action !== r.op ? `${r.op} ${r.action}` : r.op;
   return s.replace(/[_-]+/g, ' ').replace(/^./, c => c.toUpperCase());
@@ -67,30 +68,17 @@ const ViewerProfileSection: React.FC = () => {
           <ul className="vh-list">{ask.map(t => <li key={t}>{t}</li>)}</ul>
         </div>
       </div>
-      <p className="vh-muted">Need more? Ask your admin.</p>
 
       <h2>Operations you ran, last 30 days</h2>
-      {failed ? (
-        <div className="vh-empty" role="alert">
-          Couldn't load your operations.
-          <div style={{ marginTop: 12 }}><button onClick={load}>Try again</button></div>
-        </div>
-      ) : rows === null ? <span className="vh-muted">Loading…</span>
-        : rows.length === 0 ? <div className="vh-empty">You haven't run any operations in the last 30 days</div>
+      {failed ? <EmptyState title="Couldn't load your operations" description="The server didn't answer. Your devices are not affected." onRetry={load} />
+        : rows === null ? <ListSkeleton rows={3} />
+        : rows.length === 0 ? <EmptyState icon={Wrench} title="No operations in the last 30 days" description="Restarts, updates and setting changes you run show up here." />
         : (
-          <div className="vh-box">
-            <table className="vh-table" style={{ minWidth: 0 }}>
-              <thead><tr><th>Time</th><th>Operation</th><th>Device</th></tr></thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={`${r.at}-${i}`}>
-                    <td className="vh-num">{when(r.at)}</td>
-                    <td>{words(r)}</td>
-                    <td>{r.serial ? <Link to={`/devices/${r.device_id}/dashboard`}>{r.serial}</Link> : '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="vh-box" style={{ padding: '8px 20px 12px' }}>
+            <ActivityList label="Operations you ran" items={rows.map(r => ({
+              at: r.at, title: words(r), icon: Wrench,
+              detail: r.serial ? <Link to={`/devices/${r.device_id}/dashboard`} className="vh-num">{r.serial}</Link> : undefined,
+            }))} />
           </div>
         )}
     </div>

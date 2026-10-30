@@ -1,3 +1,5 @@
+import { Lock } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -8,13 +10,9 @@ import { useTokens } from '../siteHardware/ui';
 import { apiService, type AccessDevice } from '../../../services/api';
 import DeviceStrip from './DeviceStrip';
 import './viewerHome.css';
+import BackButton from './BackButton';
 import { useAccess } from '../../../shared/access/useAccess';
 
-const openLinkStyle = (t: ReturnType<typeof useTokens>): React.CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44,
-  padding: '0 20px', borderRadius: 12, background: t.good, color: '#fff',
-  fontFamily: t.body, fontSize: '0.92rem', fontWeight: 600, textDecoration: 'none',
-});
 
 // Read-only monitoring tabs (Forecast and Weather are staff-only; Events lists incidents and operations). Details (settings) and Health are left out. Usage and Smart plugs only show when the site has a meter / a plug (the panel decides).
 // Devices (list + device drawer) is added only with device control.
@@ -37,21 +35,16 @@ const ViewerSite: React.FC = () => {
 
   if (!site) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 16px', fontFamily: t.body, color: t.ink }}>
-        <div style={{ maxWidth: 420, textAlign: 'center' }}>
-          <h1 style={{ fontFamily: t.head, fontSize: 18, margin: '0 0 8px' }}>This site isn't available to you</h1>
-          <p style={{ margin: '0 0 20px', color: t.ink2 }}>Ask an admin if you need access.</p>
-          <Link to="/my-sites" style={openLinkStyle(t)}>Back to your sites</Link>
-        </div>
+      <div style={{ maxWidth: 480, margin: '64px auto', padding: '0 16px' }}>
+        <EmptyState icon={Lock} title="This site isn't available to you" description="Ask an admin if you need access."
+          action={{ label: 'Back to dashboard', to: '/my-sites' }} />
       </div>
     );
   }
 
   return (
     <div style={{ fontFamily: t.body, color: t.ink }}>
-      <Link to="/my-sites" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, color: t.ink2, textDecoration: 'none', fontSize: '0.9rem' }}>
-        Back to your sites
-      </Link>
+      <BackButton to="/my-sites">Back to dashboard</BackButton>
       <h2 style={{ fontFamily: t.head, fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.015em', margin: '0 0 14px' }}>
         {site.display_name || site.site_id}
       </h2>

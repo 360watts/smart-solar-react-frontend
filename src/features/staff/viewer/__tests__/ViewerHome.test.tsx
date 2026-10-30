@@ -40,7 +40,7 @@ it('H2 wording adapts', async () => {
 it('H3 empty state', async () => {
   get.mockResolvedValue({ devices: [], sites: [] });
   show();
-  expect(await screen.findByText('Nothing has been given to you yet. An admin assigns devices and sites.')).toBeInTheDocument();
+  expect(await screen.findByText('Nothing has been given to you yet')).toBeInTheDocument();
 });
 
 it('H4/H5 table rows in API order with serial, firmware, status; site-less says bench', async () => {

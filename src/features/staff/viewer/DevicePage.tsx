@@ -57,13 +57,13 @@ export function ago(iso: string | null): string {
 }
 
 // Same rule as the backend's _normalize_fw_version: "v2.2.1-3P" and "2.2.1" are the same build.
-const normVersion = (v?: string | null) => (v ?? '').trim().replace(/^v/i, '').split('-')[0];
+export const normVersion = (v?: string | null) => (v ?? '').trim().replace(/^v/i, '').split('-')[0];
 
 /** Register labels like "serial_no_1" read as "Serial no 1"; labels already written for people stay as they are. */
 const niceLabel = (l: string) => (/^[a-z0-9_]+$/.test(l) ? l.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()) : l);
 
 /** True when version `a` is higher than `b` ("1.0.10" > "1.0.9"); a device running a newer build than the list's latest is not offered a downgrade as an update. */
-const isNewer = (a: string, b?: string | null) => {
+export const isNewer = (a: string, b?: string | null) => {
   const pa = normVersion(a).split('.').map(Number), pb = normVersion(b).split('.').map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const d = (pa[i] || 0) - (pb[i] || 0);

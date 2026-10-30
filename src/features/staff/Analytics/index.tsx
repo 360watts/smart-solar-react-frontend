@@ -1,3 +1,5 @@
+import { MapPin } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import PageHeader from '../../../shared/layout/PageHeader';
@@ -70,7 +72,7 @@ export default function Analytics() {
       {sitesLoading ? (
         <div style={{ padding: 40, textAlign: 'center', color: tokens.textMuted }}>Loading sites…</div>
       ) : sites.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: tokens.textMuted }}>No sites found.</div>
+        <EmptyState icon={MapPin} title="No sites found" description="Analytics appear once a site is set up and reporting." />
       ) : mode === 'fleet' ? (
         <FleetOverview sites={sites} onSelectSite={goToSite} />
       ) : (

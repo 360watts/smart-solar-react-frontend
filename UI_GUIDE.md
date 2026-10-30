@@ -82,6 +82,16 @@ All from `useTokens(isDark)` in `ui.tsx`. Never hard-code a hex in a screen.
 
 ## 5. Patterns to use
 
+- **No plain grey sentences.** Use the shared pieces in
+  `src/shared/components/Feedback.tsx` (scenarios: `docs/test-scenarios/feedback-patterns.md`):
+  `Notice` for one short in-page message (`info` good to know, `warn` blocking
+  you now, `lock` another role does this, `ok`/`bad` for results; second
+  sentence goes in `more`), `EmptyState` when a list or chart has nothing (pass
+  `onRetry` for a load error, `action` with `onClick` or `to`), and
+  `ActivityList` for who-did-what-when history (grouped by day, initials, an
+  optional `origin` note where the record starts). Short form hints stay small
+  text.
+
 - **`SetupShell`** — page wrapper. Friendly heading ("Let's get GRG-04
   monitored"), one-line sub, optional `progress={{done, total}}` → "3 of 4 done".
 - **`SetupCard`** — one concern per card: icon, plain title, one-line *purpose*,

@@ -62,9 +62,9 @@ describe('ViewerProfileSection', () => {
     expect(list('Ask an admin for').getByText('Reboot a device')).toBeInTheDocument();
   });
 
-  it('P4: plain line, no email button', () => {
+  it('P4: no extra ask-your-admin line (the Ask an admin card says it), no email button', () => {
     ui();
-    expect(screen.getByText('Need more? Ask your admin.')).toBeInTheDocument();
+    expect(screen.queryByText('Need more? Ask your admin.')).toBeNull();
     expect(screen.queryByText(/email an admin/i)).toBeNull();
   });
 
@@ -72,7 +72,7 @@ describe('ViewerProfileSection', () => {
     apiService.getMyOperations.mockResolvedValue({ days: 30, rows: [row('2026-10-29T10:00:00Z', 'reboot', 'F82CE8D1CCB6'), row('2026-10-28T10:00:00Z', 'mute_buzzer', 'F82CE8D1CCB6')] });
     ui();
     await screen.findByText('Reboot');
-    const body = screen.getAllByRole('row').slice(1);
+    const body = screen.getAllByRole('listitem').filter(li => li.closest('.fb-act'));
     expect(body[0]).toHaveTextContent('Reboot');
     expect(body[1]).toHaveTextContent('Mute buzzer');
     expect(within(body[0]).getByRole('link', { name: 'F82CE8D1CCB6' })).toHaveAttribute('href', '/devices/7/dashboard');
@@ -80,14 +80,14 @@ describe('ViewerProfileSection', () => {
 
   it('P6: empty state', async () => {
     ui();
-    expect(await screen.findByText("You haven't run any operations in the last 30 days")).toBeInTheDocument();
+    expect(await screen.findByText('No operations in the last 30 days')).toBeInTheDocument();
   });
 
   it('P6: a load error offers Try again', async () => {
     apiService.getMyOperations.mockRejectedValueOnce(new Error('x'));
     ui();
     fireEvent.click(await screen.findByText('Try again'));
-    expect(await screen.findByText("You haven't run any operations in the last 30 days")).toBeInTheDocument();
+    expect(await screen.findByText('No operations in the last 30 days')).toBeInTheDocument();
   });
 
   it('P7: Profile shows the section for a viewer, not for admin or employee', async () => {

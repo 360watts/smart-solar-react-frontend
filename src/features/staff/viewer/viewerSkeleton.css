@@ -1,0 +1,15 @@
+/* Loading placeholders for the viewer pages. Colours come from the theme tokens, so dark mode needs no copy. */
+.sk { display: flex; flex-direction: column; gap: 12px; }
+.sk-page { gap: 20px; max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+.sk-bone { display: block; max-width: 100%; background: linear-gradient(100deg, var(--muted, rgba(0,0,0,.06)) 30%, rgba(255,255,255,.35) 50%, var(--muted, rgba(0,0,0,.06)) 70%); background-size: 220% 100%; animation: sk-shimmer 1.4s ease-in-out infinite; }
+.dark-mode .sk-bone { background: linear-gradient(100deg, rgba(255,255,255,.06) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.06) 70%); background-size: 220% 100%; }
+@keyframes sk-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.sk-head { display: flex; align-items: center; gap: 12px; }
+.sk-tabs, .sk-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.sk-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.sk-tile, .sk-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius, 12px); background: var(--card); border: 1px solid var(--border); }
+.sk-plot { height: 240px; }
+.sk-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.sk-trow { display: grid; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.sk-table { gap: 0; }
+@media (prefers-reduced-motion: reduce) { .sk-bone { animation: none; } }

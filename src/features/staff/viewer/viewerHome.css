@@ -26,6 +26,5 @@
 .vh-card b { font-size: 16px; font-weight: 600; }
 .vh-fault { color: var(--vh-warn); font-size: 13px; }
 .vh-link { color: var(--brand-green); font-weight: 500; }
-.vh-empty { padding: 28px 20px; text-align: center; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
 .vh button { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: inherit; font: 500 14px Rubik, sans-serif; cursor: pointer; }
 .vh-list { margin: 0; padding-left: 18px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }

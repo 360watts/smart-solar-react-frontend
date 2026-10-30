@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plug } from 'lucide-react';
-import { SetupCard, Item, StatusChip, EmptyState } from '../../../../features/staff/siteHardware/ui';
+import { SetupCard, Item, StatusChip } from '../../../../features/staff/siteHardware/ui';
+import { EmptyState, Notice } from '../../Feedback';
 import NodeDetailModal, { type NodeData } from '../../EnergyFlow/NodeDetailModal';
 import { fmtPower } from '../../EnergyFlow/flowModel';
 import { Sparkline } from '../../EnergyFlow/FlowRail';
@@ -53,7 +54,7 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
   if (plugs.length === 0) {
     return (
       <SetupCard isDark={isDark} icon={<Plug size={20} />} title="Smart plugs">
-        <EmptyState isDark={isDark} headline="No smart plugs at this site yet" />
+        <EmptyState icon={Plug} title="No smart plugs at this site yet" />
       </SetupCard>
     );
   }
@@ -114,7 +115,7 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
           </div>
         </section>
       )}
-      <div className="pt-note">Plugs measure only what is plugged into them. They are not the whole home. Tap a plug for its detail.</div>
+      <Notice more="Tap a plug for its detail.">Plugs measure only what is plugged into them, not the whole home.</Notice>
       <NodeDetailModal node={selected} onClose={() => setSelected(null)} isDark={isDark} siteId={siteId} />
     </div>
   );

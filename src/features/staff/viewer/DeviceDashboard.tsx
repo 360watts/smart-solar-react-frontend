@@ -1,16 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { apiService } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAccess } from '../../../shared/access/useAccess';
-import { EmptyState, useTokens } from '../siteHardware/ui';
+import { Activity, Lock } from 'lucide-react';
+import { useTokens } from '../siteHardware/ui';
+import { EmptyState, Notice } from '../../../shared/components/Feedback';
 import { at, devName, type Dev, type Firmware } from './DevicePage';
 import OverviewChart from './OverviewChart';
 import ReadingsTab from './ReadingsTab';
 import OperationsTab from './OperationsTab';
+import AllValuesTab from './AllValuesTab';
+import BackButton from './BackButton';
 import { ALLOWED, DETAIL_LABEL, GATEWAY_READINGS, METER_READINGS, RANGES, fitDetail, type Detail, type Series } from './deviceChart';
 import { getFirmware } from './deviceCache';
+import { ChartSkeleton, DeviceSkeleton } from './Skeleton';
 import './deviceDashboard.css';
 import './deviceTabs.css';
 
@@ -20,8 +24,6 @@ type Dash = Dev & {
   bucket_minutes: number; sampled_every: number; latest: Record<string, number | string | boolean> | null; history: Point[];
 };
 
-const VALUE_RANGES: [string, number][] = [['6h', 6], ['24h', 24], ['48h', 48], ['7d', 168]];
-const PHASE_COLOR = ['var(--ph1)', 'var(--ph2)', 'var(--ph3)'];
 
 // ── Naming: backend key -> plain label, unit, section ────────────────────────
 const UNITS: [string, string][] = [['_kwh', 'kWh'], ['_va', 'VA'], ['_hz', 'Hz'], ['_c', '°C'], ['_ah', 'Ah'], ['_percent', '%'], ['_w', 'W'], ['_v', 'V'], ['_a', 'A']];
@@ -82,57 +84,7 @@ function groupReadings(keys: string[], meter: boolean): [string, Reading[]][] {
   return order.filter(n => sections.has(n)).map(n => [n, sections.get(n)!.sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))]);
 }
 
-const fmt = (v: unknown) => (typeof v === 'number' ? (Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-IN') : String(Math.round(v * 100) / 100)) : String(v));
 const clock = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-
-function Spark({ history, keys }: { history: Point[]; keys: string[] }) {
-  const vals = history.flatMap(p => keys.map(k => p[k])).filter(v => typeof v === 'number');
-  if (vals.length < 2) return <span className="dd-spark" />;
-  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1, n = history.length - 1 || 1;
-  return (
-    <svg className="dd-spark" viewBox="0 0 96 28" preserveAspectRatio="none" aria-hidden="true">
-      {keys.map((k, i) => (
-        <polyline key={k} fill="none" strokeWidth="1.6" vectorEffect="non-scaling-stroke"
-          stroke={keys.length > 1 ? PHASE_COLOR[i] : 'var(--brand-green)'}
-          points={history.flatMap((p, j) => (typeof p[k] === 'number' ? [`${(j / n) * 96},${26 - ((p[k] - lo) / span) * 24}`] : [])).join(' ')} />
-      ))}
-    </svg>
-  );
-}
-
-function Row({ r, dash, open, onToggle }: { r: Reading; dash: Dash; open: boolean; onToggle: () => void }) {
-  const numeric = dash.history.some(p => r.keys.some(k => typeof p[k] === 'number'));
-  return (
-    <div className="dd-row">
-      <button type="button" onClick={onToggle} disabled={!numeric} aria-expanded={numeric ? open : undefined}>
-        <span className="dd-label">{r.label}</span>
-        <span className="dd-vals">
-          {r.keys.map((k, i) => {
-            const v = dash.latest?.[k];
-            const text = v == null ? '–' : fmt(v);
-            return r.keys.length > 1
-              ? <span key={k} className="dd-ph" style={{ ['--c' as string]: PHASE_COLOR[i] }} title={`L${i + 1}`}>{text}</span>
-              : <span key={k}>{text}{r.unit && v != null && <small>{r.unit}</small>}</span>;
-          })}
-          {r.keys.length > 1 && r.unit && <small>{r.unit}</small>}
-        </span>
-        <Spark history={dash.history} keys={r.keys} />
-      </button>
-      {open && numeric && (
-        <div className="dd-chart">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dash.history} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-              <XAxis dataKey="t" tickFormatter={clock} minTickGap={60} fontSize={12} stroke="var(--muted-foreground)" />
-              <YAxis width={52} fontSize={12} stroke="var(--muted-foreground)" domain={['auto', 'auto']} />
-              <Tooltip labelFormatter={l => clock(String(l))} formatter={(v, name) => [`${fmt(v)} ${r.unit}`, r.keys.length > 1 ? `L${r.keys.indexOf(String(name)) + 1}` : r.label]} />
-              {r.keys.map((k, i) => <Line key={k} dataKey={k} type="monotone" dot={false} strokeWidth={2} connectNulls={false} isAnimationActive={false} stroke={r.keys.length > 1 ? PHASE_COLOR[i] : 'var(--brand-green)'} />)}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const TABS = [['overview', 'Overview'], ['values', 'All values'], ['readings', 'Every reading'], ['ops', 'Operations']] as const;
 type Tab = typeof TABS[number][0];
@@ -212,7 +164,7 @@ function Overview({ deviceId, meter, latest, sel, setSel }: { deviceId: number; 
         <div className="dt-chips" role="group" aria-label="Reading to chart">
           {readings.map(r => <button key={r.id} type="button" aria-pressed={r.id === reading.id} onClick={() => setSel({ ...sel, readingId: r.id })}>{r.label}</button>)}
         </div>
-        {data ? <div style={{ opacity: fresh ? 1 : 0.6 }}><OverviewChart data={data} reading={reading} /></div> : <p className="dt-sub">{failed ? "Couldn't load the chart. Trying again…" : 'Loading…'}</p>}
+        {data ? <div style={{ opacity: fresh ? 1 : 0.6 }}><OverviewChart data={data} reading={reading} /></div> : failed ? <Notice tone="bad" more="Trying again…">Couldn't load the chart.</Notice> : <ChartSkeleton />}
       </section>
     </>
   );
@@ -234,20 +186,17 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
     document.getElementById(`dt-tab-${TABS[j][0]}`)?.focus();
   };
   const [sel, setSel] = useState<Sel>({ hours: 1, detail: 'every', readingId: '' });
-  const [valueHours, setValueHours] = useState(24);
   const [dash, setDash] = useState<Dash | null | 'failed'>(null);
   const [firmware, setFirmware] = useState<Firmware[] | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
-  const [find, setFind] = useState('');
 
   useEffect(() => {
     let live = true;
-    const load = () => apiService.getDeviceDashboard(Number(deviceId), valueHours)
+    const load = () => apiService.getDeviceDashboard(Number(deviceId), 1)
       .then((d: Dash) => { if (live) setDash(d); }).catch(() => { if (live) setDash(p => (p && p !== 'failed' ? p : 'failed')); });
     load();
     const id = setInterval(load, 60_000);
     return () => { live = false; clearInterval(id); };
-  }, [deviceId, valueHours]);
+  }, [deviceId]);
   useEffect(() => { getFirmware().then(setFirmware); }, []);
 
   const d = typeof dash === 'object' ? dash : null;
@@ -257,23 +206,10 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
     keys.delete('t');
     return groupReadings([...keys], d.device_type === 'energy_meter');
   }, [d]);
-  const ribbon = useMemo(() => {
-    if (!d) return { cells: [] as boolean[], sent: 0 };
-    const step = d.bucket_minutes * 60_000;
-    const first = Math.floor(new Date(d.range_start).getTime() / step) * step;
-    const have = new Set(d.history.map(p => new Date(p.t).getTime()));
-    const cells: boolean[] = [];
-    for (let s = first; s <= new Date(d.range_end).getTime(); s += step) cells.push(have.has(s));
-    return { cells, sent: cells.filter(Boolean).length };
-  }, [d]);
+  const back = <BackButton to={access.can('my_sites') ? '/my-sites' : '/devices'}>Back</BackButton>;
+  if (dash === 'failed') return <div>{back}<EmptyState icon={Lock} title="This device isn't available to you" description="Ask an admin if you need access." /></div>;
+  if (!d) return <div>{back}<DeviceSkeleton /></div>;
 
-  const back = <Link to={access.can('my_sites') ? '/my-sites' : '/devices'} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, color: t.ink2, textDecoration: 'none', fontSize: '0.9rem' }}>‹ Back</Link>;
-  if (dash === 'failed') return <div>{back}<EmptyState isDark={isDark} headline="This device isn't available to you" detail="Ask an admin if you need access." /></div>;
-  if (!d) return <div>{back}<p style={{ color: t.ink2 }}>Loading…</p></div>;
-
-  const q = find.trim().toLowerCase();
-  const shown = sections.map(([n, rows]) => [n, q ? rows.filter(r => r.label.toLowerCase().includes(q) || n.toLowerCase().includes(q)) : rows] as const).filter(([, rows]) => rows.length);
-  const slot = d.bucket_minutes === 5 ? 'five-minute' : 'half-hour';
   const stale = d.last_reading_at && Date.now() - new Date(d.last_reading_at).getTime() > 15 * 60_000;
 
   return (
@@ -292,44 +228,20 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
         </div>
       </header>
 
-      {!d.last_reading_at && <EmptyState isDark={isDark} headline="No readings yet" detail="Readings show here within a minute of the device connecting." />}
+      {!d.last_reading_at && <EmptyState icon={Activity} title="No readings yet" description="Readings show here within a minute of the device connecting." />}
       {stale && d.last_reading_at && <div className="dd-banner">This device stopped sending at {at(d.last_reading_at)}. The charts show the time before that.</div>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         <div className="dt-tabs" role="tablist" aria-label="Device sections" onKeyDown={onTabKey}>
           {TABS.map(([k, label]) => (
             <button key={k} id={`dt-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="dt-panel" tabIndex={tab === k ? 0 : -1} onClick={() => pick(k)}>
-              {label}{k === 'values' && <span className="dt-count">{sections.reduce((n, [, rows]) => n + rows.length, 0)}</span>}
+              {label}{k === 'values' && <span className="dt-count">{sections.reduce((n, [, rows]) => n + rows.reduce((m, r) => m + r.keys.length, 0), 0)}</span>}
             </button>
           ))}
         </div>
         <div id="dt-panel" role="tabpanel" aria-labelledby={`dt-tab-${tab}`} style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         {tab === 'overview' && <Overview deviceId={Number(deviceId)} meter={d.device_type === 'energy_meter'} latest={d.latest} sel={sel} setSel={setSel} />}
-        {tab === 'values' && d.last_reading_at && (
-          <>
-            <div className="dd-range" role="group" aria-label="Time range">
-              {VALUE_RANGES.map(([label, h]) => <button key={h} type="button" aria-pressed={valueHours === h} onClick={() => setValueHours(h)}>{label}</button>)}
-            </div>
-            <section className="dd-ribbon" aria-label="When the device sent data">
-              <div className="dd-cells" role="img" aria-label={`Sent data in ${ribbon.sent} of ${ribbon.cells.length} ${slot} slots`}>
-                {ribbon.cells.map((on, i) => <i key={i} className={on ? '' : 'miss'} />)}
-              </div>
-              <div className="dd-ends"><span>{clock(d.range_start)}</span><span>{clock(d.range_end)}</span></div>
-              <p className="dd-cover">Sent data in {ribbon.sent} of {ribbon.cells.length} {slot} slots.</p>
-              {d.sampled_every > 1 && <p className="dd-note">For this range the charts use every {d.sampled_every}th reading.</p>}
-            </section>
-            <input className="dd-find" type="search" aria-label="Find a reading" placeholder="Find a reading" value={find} onChange={e => setFind(e.target.value)} />
-            {shown.length === 0 && <p style={{ margin: 0, color: t.ink2 }}>No reading matches that search.</p>}
-            {shown.map(([name, rows]) => (
-              <section key={name} className="dd-sec">
-                <h3>{name}</h3>
-                <div className="dd-rows">
-                  {rows.map(r => <Row key={r.id} r={r} dash={d} open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)} />)}
-                </div>
-              </section>
-            ))}
-          </>
-        )}
+        {tab === 'values' && d.last_reading_at && <AllValuesTab sections={sections} latest={d.latest} history={d.history} lastReadingAt={d.last_reading_at} />}
         {tab === 'readings' && <ReadingsTab deviceId={Number(deviceId)} meter={d.device_type === 'energy_meter'} />}
         {tab === 'ops' && <OperationsTab dev={d} firmware={firmware} isDark={isDark} />}
         </div>

@@ -1,3 +1,4 @@
+import { FileText } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import MobileDevices from '../mobile/staff/MobileDevices';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
@@ -12,7 +13,7 @@ import { useAccess } from '../../shared/access/useAccess';
 import AuditTrail from './AuditTrail';
 import SiteDataPanel from '../../shared/components/SiteDataPanel';
 import EnergyMeterDashboard from '../../shared/components/EnergyMeterDashboard';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState, Notice } from '../../shared/components/Feedback';
 import { SkeletonDeviceList } from '../../shared/components/SkeletonLoader';
 import { AccessibleModal } from '../../shared/components/AccessibleModal';
 import PageHeader from '../../shared/layout/PageHeader';
@@ -1573,9 +1574,7 @@ const Devices: React.FC = () => {
                   ))}
                 </div>
               ) : !regCoverage ? (
-                <div style={{ padding: '24px 20px', textAlign: 'center', color: T.textD, fontSize: '0.85rem' }}>
-                  No telemetry data available yet.
-                </div>
+                <EmptyState icon={Activity} title="No telemetry yet" description="Readings show here within a minute of the device connecting." />
               ) : (
                 <>
                   {/* Summary bar */}
@@ -1677,7 +1676,7 @@ const Devices: React.FC = () => {
 
             {logFilesLoading && <p style={{ color: T.textD, fontSize: '0.875rem', margin: 0 }}>Loading…</p>}
             {!logFilesLoading && deviceLogFiles.length === 0 && (
-              <p style={{ color: T.textD, fontSize: '0.875rem', margin: 0 }}>No log files found.</p>
+              <EmptyState icon={FileText} title="No log files found" description="Turn on logs for this device so it uploads its files after each restart." />
             )}
 
             {deviceLogFiles.length > 0 && (
@@ -2401,7 +2400,7 @@ const Devices: React.FC = () => {
                   <p style={{ color: 'var(--muted-foreground)', padding: '20px 16px', margin: 0 }}>Loading…</p>
                 )}
                 {!viewingFileLoading && viewingFileContent === null && (
-                  <p style={{ color: '#ef4444', padding: '20px 16px', margin: 0 }}>Failed to load file.</p>
+                  <div style={{ padding: 16 }}><Notice tone="bad" more="Close it and open the file again.">Couldn't load this file.</Notice></div>
                 )}
                 {viewingFileContent !== null && viewingFileContent.split('\n').filter(Boolean).map((line, i) => {
                   const isError = /error|exception|fail/i.test(line);

@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Edit2, Menu, Plus, Search, Trash2 } from 'lucide-react';
 import finalLogo from '../../../assets/finalLogo.png';
@@ -317,18 +318,7 @@ const MobileTeams: React.FC = () => {
         {loading ? (
           <div style={{ color: tokens.textMuted, textAlign: 'center', padding: '28px 10px' }}>Loading teams…</div>
         ) : filtered.length === 0 ? (
-          <div style={{
-            background: tokens.surface,
-            border: `1px solid ${tokens.border}`,
-            borderRadius: 18,
-            padding: '28px 18px',
-            textAlign: 'center',
-            color: tokens.textMuted,
-          }}>
-            <Building2 size={20} style={{ marginBottom: 8 }} />
-            <div style={{ color: tokens.text, fontWeight: 700, marginBottom: 4 }}>No teams found</div>
-            <div style={{ fontSize: '0.8rem' }}>Create a team or refine the search.</div>
-          </div>
+          <EmptyState icon={Building2} title="No teams found" description="Create a team or change the search." />
         ) : (
           filtered.map((team) => (
             <div key={team.id} style={{

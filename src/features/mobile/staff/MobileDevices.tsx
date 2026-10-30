@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiService } from '../../../services/api';
 import {
@@ -110,7 +111,7 @@ const LogPanel: React.FC<{ deviceId: number; isDark: boolean; border: string; mu
     </div>
   );
   if (error) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.75rem', color: '#F87171', fontFamily: "'Rubik', sans-serif" }}>{error}</div>;
-  if (logs.length === 0) return <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '0.75rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No log entries found</div>;
+  if (logs.length === 0) return <EmptyState icon={FileText} title="No log entries found" />;
 
   return (
     <div style={{ marginTop: 8, borderRadius: 10, border: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC', overflow: 'hidden' }}>

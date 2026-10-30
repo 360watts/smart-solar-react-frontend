@@ -1,5 +1,7 @@
 import React from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
+import { EmptyState } from '../components/Feedback';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAccess } from './useAccess';
 import type { Feature } from './features';
@@ -17,12 +19,9 @@ const RequireAccess: React.FC<RequireAccessProps> = ({ feature, children }) => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!can(feature)) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 16px' }}>
-        <div className="card" style={{ maxWidth: 420, padding: 28, textAlign: 'center' }}>
-          <h1 style={{ fontSize: 18, margin: '0 0 8px' }}>This page isn't available for your role</h1>
-          <p style={{ margin: '0 0 20px', opacity: 0.75 }}>Ask an admin if you need access.</p>
-          <Link to={home} className="btn btn-primary">Go to your home</Link>
-        </div>
+      <div style={{ maxWidth: 480, margin: '64px auto', padding: '0 16px' }}>
+        <EmptyState icon={Lock} title="This page isn't available for your role" description="Ask an admin if you need access."
+          action={{ label: 'Go to your home', to: home }} />
       </div>
     );
   }

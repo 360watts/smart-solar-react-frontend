@@ -475,24 +475,6 @@ export function Btn({
   return <button type="button" aria-label={ariaLabel} onClick={onClick} disabled={disabled} style={{ ...base, ...v }}>{children}</button>;
 }
 
-// ── empty ───────────────────────────────────────────────────────────────────
-
-export function EmptyState({
-  isDark, headline, detail, action,
-}: { isDark: boolean; headline: string; detail?: string; action?: React.ReactNode }) {
-  const t = useTokens(isDark);
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10,
-      padding: '24px 18px', border: `1.5px dashed ${t.line}`, borderRadius: 14,
-    }}>
-      <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{headline}</span>
-      {detail && <span style={{ fontSize: '0.85rem', color: t.ink2, maxWidth: '36ch', lineHeight: 1.45 }}>{detail}</span>}
-      {action}
-    </div>
-  );
-}
-
 // ── guided flow (composer) ──────────────────────────────────────────────────
 
 export function Flow({

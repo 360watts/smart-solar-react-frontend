@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
-import { useTokens, StatusChip, EmptyState, Btn, OverflowMenu, ItemAction } from '../siteHardware/ui';
+import { useTokens, StatusChip, Btn, OverflowMenu, ItemAction } from '../siteHardware/ui';
+import { EmptyState } from '../../../shared/components/Feedback';
 import { useIsMobile } from '../../../shared/hooks/useIsMobile';
 import { Avatar, RolePill } from './parts';
 import { Person, RoleKey, roleOf, roleInfo, worksOn, statusOf, fullName } from './roles';
@@ -103,12 +104,7 @@ export function PeopleList(props: Props) {
       </div>
 
       {error ? (
-        <EmptyState
-          isDark={isDark}
-          headline="Couldn't load your team"
-          detail="Check your connection, then try again."
-          action={<Btn isDark={isDark} variant="soft" onClick={onRetry}>Try again</Btn>}
-        />
+        <EmptyState title="Couldn't load your team" description="Check your connection, then try again." onRetry={onRetry} />
       ) : loading && people.length === 0 ? (
         <div aria-busy="true" aria-label="Loading people" style={{ display: 'grid', gap: 10 }}>
           {[0, 1, 2, 3, 4].map((i) => (
@@ -117,14 +113,12 @@ export function PeopleList(props: Props) {
         </div>
       ) : people.length === 0 ? (
         search.trim() ? (
-          <EmptyState isDark={isDark} headline={`No one matches “${search.trim()}”`} detail="Try a different name or email." />
+          <EmptyState title={`No one matches “${search.trim()}”`} description="Try a different name or email." />
         ) : tab === 'all' ? (
-          <EmptyState isDark={isDark} headline="No one on the team yet" detail="Add your first teammate to get started." action={<Btn isDark={isDark} onClick={() => onAdd()}>Add a teammate</Btn>} />
+          <EmptyState title="No one on the team yet" description="Add your first teammate to get started." action={{ label: 'Add a teammate', onClick: () => onAdd() }} />
         ) : (
-          <EmptyState
-            isDark={isDark} headline={EMPTY_COPY[tab].headline} detail={EMPTY_COPY[tab].detail}
-            action={<Btn isDark={isDark} variant="soft" onClick={() => onAdd(tab)}>{`Add ${tab === 'admin' ? 'an' : 'a'} ${tab}`}</Btn>}
-          />
+          <EmptyState title={EMPTY_COPY[tab].headline} description={EMPTY_COPY[tab].detail}
+            action={{ label: `Add ${tab === 'admin' ? 'an' : 'a'} ${tab}`, onClick: () => onAdd(tab) }} />
         )
       ) : (
         <div style={{ background: t.card, borderRadius: 18, border: `1px solid ${t.line}`, overflow: 'hidden' }}>

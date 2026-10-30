@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -333,9 +334,7 @@ const MobileOTA: React.FC = () => {
             <input value={fwSearch} onChange={e => setFwSearch(e.target.value)} placeholder="Search version or name…" style={{ ...inputStyle, marginBottom: 8 }} />
 
             {filteredFW.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '28px', color: muted, fontSize: '0.78rem', fontFamily: "'Rubik', sans-serif" }}>
-                {fwSearch ? 'No versions match.' : 'No firmware uploaded yet.'}
-              </div>
+              <EmptyState icon={Package} title={fwSearch ? 'No versions match' : 'No firmware uploaded yet'} description={fwSearch ? 'Try a different version number.' : undefined} />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {filteredFW.map(fw => {

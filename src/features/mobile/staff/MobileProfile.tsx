@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -107,9 +108,7 @@ const MobileProfile: React.FC = () => {
   );
 
   if (!profile) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100dvh', background:bg, color:muted, fontSize:'0.85rem', fontFamily:"'Rubik', sans-serif" }}>
-      Failed to load profile
-    </div>
+    <div style={{ padding: 16, minHeight: '100dvh', background: bg }}><EmptyState title="Couldn't load your profile" description="Check your connection, then reload the page." /></div>
   );
 
   const av = avatarBg(profile.username);

@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import {
@@ -904,10 +905,7 @@ export const OTA: React.FC = () => {
                 <Loader2 size={18} className="ota-spinner" /> Loading firmware…
               </div>
             ) : firmwares.length === 0 ? (
-              <div style={{ padding: '3rem', textAlign: 'center', color: sub }}>
-                <Package size={36} style={{ marginBottom: 10, opacity: 0.3 }} />
-                <div style={{ fontWeight: 600 }}>No firmware uploaded yet</div>
-              </div>
+              <EmptyState icon={Package} title="No firmware uploaded yet" description="Upload a build to update devices." />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxHeight: 480, overflowY: 'auto', paddingRight: 4 }}>
                 {Object.entries(
@@ -1247,10 +1245,7 @@ export const OTA: React.FC = () => {
               <div>Loading devices from backend…</div>
             </div>
           ) : devices.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: sub }}>
-              <Cpu size={40} style={{ marginBottom: 10, opacity: 0.3 }} />
-              <div style={{ fontWeight: 600 }}>No devices registered yet</div>
-            </div>
+            <EmptyState icon={Cpu} title="No devices registered yet" description="Devices register themselves the first time they connect." />
           ) : (
             <div style={{ overflowX: 'auto', maxHeight: 500, overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>

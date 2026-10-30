@@ -1,3 +1,5 @@
+import { Target } from 'lucide-react';
+import { EmptyState } from '../../Feedback';
 /**
  * HistoryTab — extracted from SiteDataPanel.tsx
  * Contains: HistoryTable, VsActualTable, HistoryTab (default export)
@@ -435,7 +437,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({
         }}
       >
         {activeVsActualData.length === 0 ? (
-          <p style={{ margin: 0, color: 'var(--text-muted)' }}>{vsActual7d ? 'No scored forecast slots for the last 7 days yet.' : 'No overlap points yet between forecast and telemetry for today.'}</p>
+          <EmptyState icon={Target} title={vsActual7d ? 'No scored forecast slots in the last 7 days' : 'Nothing to compare yet today'}
+            description={vsActual7d ? 'Slots are scored once real readings arrive for them.' : 'The chart fills in once readings overlap the forecast.'} />
         ) : vsActualView === 'chart' ? (
           <div style={{ width: '100%', height: 320 }}>
             <CJLine

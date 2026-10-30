@@ -1,3 +1,5 @@
+import { Activity } from 'lucide-react';
+import { EmptyState } from '../Feedback';
 // src/shared/components/EnergyMeterDashboard/index.tsx
 // Dashboard for a standalone CT energy-meter gateway device — distinct from
 // SiteDataPanel (inverter/PV/battery). Meters have no PV, no battery, no
@@ -150,9 +152,7 @@ const EnergyMeterDashboard: React.FC<Props> = ({ siteId, autoRefresh = true }) =
         </div>
 
         {!loading && !latest && (
-          <div style={{ padding: '24px 0', textAlign: 'center', color: tokens.textMuted, fontSize: '0.875rem' }}>
-            No readings yet for this meter.
-          </div>
+          <EmptyState icon={Activity} title="No readings yet for this meter" description="Readings show here within a minute of the meter connecting." />
         )}
 
         {latest && (

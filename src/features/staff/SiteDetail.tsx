@@ -14,9 +14,10 @@ import SavingsBillingEditor from './SavingsBillingEditor';
 import InverterMeasurementConfig from './InverterMeasurementConfig';
 import {
   SetupCard, StatusChip, Field, controlStyle, Btn,
-  EmptyState as FriendlyEmptyState, useTokens as useUiTokens,
+  useTokens as useUiTokens,
 } from './siteHardware/ui';
 import { apiService } from '../../services/api';
+import { EmptyState } from '../../shared/components/Feedback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAccess } from '../../shared/access/useAccess';
@@ -187,7 +188,7 @@ const EqInverterSection: React.FC<{siteId:string;isDark:boolean;items:EqInverter
     <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Zap size={17}/>} title="Inverters" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No inverters added yet" detail="Add the inverter listed on the customer’s contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><EmptyState title="No inverters added yet" description="Add the inverter listed on the customer’s contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>MPPT Range</th><th>Installed</th><th>Warranty</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(inv=>(
@@ -290,7 +291,7 @@ const EqBatterySection: React.FC<{siteId:string;isDark:boolean;items:EqBattery[]
     <div style={{background:'var(--card)',borderRadius:10,border:isDark?'1px solid rgba(255,255,255,0.08)':'1px solid var(--border-strong)',marginBottom:20,overflow:'hidden'}}>
       <EqSectionHeader icon={<Battery size={17}/>} title="Batteries" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No batteries added yet" detail="Add the battery listed on the customer’s contract."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><EmptyState title="No batteries added yet" description="Add the battery listed on the customer’s contract."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity</th><th>Nominal Voltage</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(bat=>(
@@ -368,7 +369,7 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
       <EqSectionHeader icon={<Sun size={17}/>} title="Solar Panels" count={items.length} onAdd={()=>open()} isDark={isDark}/>
       {activeWp>0&&<div style={{padding:'8px 20px',fontSize:'0.8rem',color:'var(--muted-foreground)',borderBottom:isDark?'1px solid rgba(255,255,255,0.06)':'1px solid #f1f5f9'}}>{items.filter(p=>p.is_active).length} active · <strong>{(activeWp/1000).toFixed(2)} kWp</strong> DC</div>}
       {err&&<div style={{padding:'10px 20px',color:'#ef4444',fontSize:'0.875rem'}}>{err}</div>}
-      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><FriendlyEmptyState isDark={isDark} headline="No panels added yet" detail="Add panels from the contract — one row per physical panel."/></div>:(
+      {loading?<div style={{padding:24,textAlign:'center',color:'var(--muted-foreground)',fontSize:'0.875rem'}}>Loading…</div>:items.length===0?<div style={{padding:20}}><EmptyState title="No panels added yet" description="Add panels from the contract — one row per physical panel."/></div>:(
         <div className="table-responsive"><table className="table" style={{fontSize:'0.875rem'}}>
           <thead><tr><th>Make / Model</th><th>Serial</th><th>Capacity (Wp)</th><th>Technology</th><th>Installed</th><th>Active</th><th>Actions</th></tr></thead>
           <tbody>{items.map(p=>(

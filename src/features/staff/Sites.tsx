@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 import React, { useEffect, useMemo, useState } from "react";
 import MobileSites from '../mobile/staff/MobileSites';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
@@ -363,11 +364,7 @@ export default function Sites() {
         ) : error ? (
           <div role="alert" className="rounded-2xl bg-destructive/10 p-5 text-sm text-destructive">{error}</div>
         ) : list.length === 0 ? (
-          <div className="py-16 text-center">
-            <Server size={32} className="mx-auto mb-3 text-muted-foreground" />
-            <div className="font-semibold text-foreground">{searchQuery ? 'No sites match your search' : needsSetupOnly ? 'Every site is set up' : 'No sites yet'}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{searchQuery ? 'Try a different name or site code' : 'Nothing to show here.'}</div>
-          </div>
+          <EmptyState icon={Server} title={searchQuery ? 'No sites match your search' : needsSetupOnly ? 'Every site is set up' : 'No sites yet'} description={searchQuery ? 'Try a different name or site code.' : undefined} />
         ) : (
           <div className="flex flex-col gap-2.5">{list.map(renderRow)}</div>
         )}

@@ -1,3 +1,4 @@
+import { EmptyState, Notice } from '../../shared/components/Feedback';
 import React, { useState, useEffect } from 'react';
 import MobileAlerts from '../mobile/staff/MobileAlerts';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
@@ -12,7 +13,6 @@ import { apiService, AlertAnalyticsFaultSummary, AlertAnalyticsResponse, Inciden
 import type { DiagnoseBatchResponse, AlertDiagnosticResult } from '../../services/api';
 import AuditTrail from './AuditTrail';
 import { useTheme } from '../../contexts/ThemeContext';
-import { EmptyState } from '../../shared/components/EmptyState';
 import { SkeletonLoader } from '../../shared/components/SkeletonLoader';
 import PageHeader from '../../shared/layout/PageHeader';
 import {
@@ -974,10 +974,7 @@ const Alerts: React.FC = () => {
 
                   {/* Empty state */}
                   {!diagRunning && diagResults && diagResults.results.length === 0 && (
-                    <div style={{ padding: '18px 16px', color: sub, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <CheckCircle2 size={16} style={{ color: '#0F9F8F' }} />
-                      No active alerts with devices found — nothing to diagnose.
-                    </div>
+                    <Notice tone="ok" icon={CheckCircle2}>No active alerts with devices, so there is nothing to diagnose.</Notice>
                   )}
 
                   {/* Per-alert diagnostic cards */}
@@ -2142,9 +2139,7 @@ const Alerts: React.FC = () => {
                   </div>
 
                   {siteMetrics.length === 0 ? (
-                    <div style={{ ...cardStyle(isDark), padding: '2rem', textAlign: 'center', color: sub, fontSize: '0.875rem' }}>
-                      No devices found in this report.
-                    </div>
+                    <EmptyState title="No devices in this report" description="Devices show up once they have reported during the report period." />
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       {siteMetrics.map(site => {

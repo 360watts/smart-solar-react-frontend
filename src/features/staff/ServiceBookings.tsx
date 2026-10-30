@@ -3,7 +3,7 @@ import { CalendarCheck, Check, MapPin, Phone, Plus, RefreshCw, Search, User, X }
 import { apiService, BookingStatus, ServiceBooking, ServiceVendor, Technician } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getDesignTokens } from '../../shared/theme';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState } from '../../shared/components/Feedback';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
 import { StatusPill as StatusPillBase } from '../../shared/components/StatusPill';
 import PageHeader from '../../shared/layout/PageHeader';
@@ -923,7 +923,7 @@ export default function ServiceBookings() {
           </tbody>
         </table>
         {!loading && bookings.length === 0 && (
-          <EmptyState icon={<CalendarCheck size={32} />} title="No bookings" description="No service bookings match this filter." />
+          <EmptyState icon={CalendarCheck} title="No bookings" description="No service bookings match this filter." />
         )}
       </div>
 

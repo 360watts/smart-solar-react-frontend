@@ -1,3 +1,5 @@
+import { FileText, Plus } from 'lucide-react';
+import { EmptyState } from '../../shared/components/Feedback';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
@@ -204,12 +206,7 @@ export default function QuotationHistoryPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="sq-history-empty">
-                    <div>
-                      <p>No quotations found.</p>
-                      <Link to="/quotation" className="sq-btn sq-btn-primary" style={{ marginTop: 12, display: 'inline-block' }}>
-                        + New Quotation
-                      </Link>
-                    </div>
+                    <EmptyState icon={FileText} title="No quotations found" description="Quotations you create show up here." action={{ label: 'New quotation', icon: Plus, to: '/quotation' }} />
                   </td>
                 </tr>
               ) : (

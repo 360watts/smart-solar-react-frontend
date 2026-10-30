@@ -1,3 +1,5 @@
+import { LineChart } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { apiService, AlertItem } from '../../../services/api';
 import {
@@ -819,9 +821,7 @@ const MobileDashboard: React.FC = () => {
                 <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
               </div>
             ) : chartData.labels.length === 0 ? (
-              <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', color: muted, fontFamily: "'Rubik', sans-serif", textAlign: 'center', padding: '0 16px' }}>
-                No data yet today
-              </div>
+              <EmptyState icon={LineChart} title="No data yet today" description="The chart fills in as readings arrive." />
             ) : (
               <div style={{ height: 160 }}><Line data={chartData} options={chartOpts} /></div>
             )}
@@ -864,10 +864,7 @@ const MobileDashboard: React.FC = () => {
       )}
 
       {!site && !sitesLoading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60dvh', flexDirection: 'column', gap: 8, color: muted }}>
-          <MapPin size={32} color={border} />
-          <span style={{ fontSize: '0.875rem', fontFamily: "'Rubik', sans-serif" }}>No sites found</span>
-        </div>
+        <div style={{ padding: 16 }}><EmptyState icon={MapPin} title="No sites found" description="Sites you can see show up here." /></div>
       )}
     </div>
   );

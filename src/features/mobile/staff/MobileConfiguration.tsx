@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiService } from '../../../services/api';
 import {
@@ -201,10 +202,7 @@ const MobileConfiguration: React.FC = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.length === 0 ? (
-            <div style={{ ...card(), padding: '48px 20px', textAlign: 'center' }}>
-              <Settings size={28} color={border} style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontSize: '0.875rem', color: muted, fontFamily: "'Rubik', sans-serif" }}>No slave devices found</div>
-            </div>
+            <EmptyState icon={Settings} title="No slave devices found" description="Add one from a device preset, or change the filter." />
           ) : paginated.map(slave => {
             const enabled   = slave.enabled !== false;
             const name      = slave.deviceName ?? slave.name ?? `Slave ${slave.slaveId ?? slave.slave_id}`;

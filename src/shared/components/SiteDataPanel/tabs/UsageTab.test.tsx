@@ -256,7 +256,7 @@ describe('UsageTab', () => {
   it('shows the empty state when the meter has not reported today, with the supply and raw readings still there', async () => {
     apiService.getMeterUsage.mockResolvedValue(emptyToday({ age_seconds: 3 * 3600 }));
     renderTab();
-    expect(await screen.findByText("No readings yet. The meter hasn't reported today.")).toBeInTheDocument();
+    expect(await screen.findByText("The meter hasn't reported today")).toBeInTheDocument();
     expect(screen.queryByTestId('hero-kwh')).toBeNull();
     expect(screen.getByTestId('health-voltage')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Raw readings' })).toBeInTheDocument();
@@ -265,7 +265,7 @@ describe('UsageTab', () => {
   it('says there are no figures yet (not that the meter is silent) when the meter is live after midnight', async () => {
     apiService.getMeterUsage.mockResolvedValue(emptyToday({ age_seconds: 120 }));
     renderTab();
-    expect(await screen.findByText('No usage figures yet today.')).toBeInTheDocument();
+    expect(await screen.findByText('No usage figures yet today')).toBeInTheDocument();
     expect(screen.queryByText(/hasn't reported/)).toBeNull();
     expect(screen.getByTestId('health-balance')).toBeInTheDocument();
   });
@@ -273,7 +273,7 @@ describe('UsageTab', () => {
   it('shows a friendly error and retries', async () => {
     apiService.getMeterUsage.mockRejectedValueOnce(new Error('HTTP 500 boom')).mockResolvedValue(usage());
     renderTab();
-    expect(await screen.findByText("Couldn't load the usage figures. Try again.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load the usage figures")).toBeInTheDocument();
     expect(screen.queryByText(/boom|Nothing is wrong/)).toBeNull();
     expect(screen.getByTestId('health-voltage')).toBeInTheDocument(); // the meter reading still shows
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));

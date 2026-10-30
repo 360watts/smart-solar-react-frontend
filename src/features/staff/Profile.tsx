@@ -139,11 +139,12 @@ const Profile:React.FC=()=>{
   const dn=`${profile.first_name} ${profile.last_name}`.trim()||profile.username;
   const ini=gin(profile.first_name,profile.last_name,profile.username);
   const ag=gac(ini);
-  const rl=profile.is_superuser?'Administrator':profile.is_staff?'Staff Member':'Employee';
+  // Employees and viewers both have is_staff, so the role field decides the label.
+  const rl=profile.is_superuser?'Administrator':({admin:'Administrator',employee:'Employee',viewer:'Viewer'} as Record<string,string>)[String(profile.role||'').toLowerCase()]||(profile.is_staff?'Staff Member':'Employee');
   const dept=profile.team?(typeof profile.team==='object'?profile.team.name:profile.team):null;
   const jd=profile.date_joined?new Date(profile.date_joined).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
 
-  const statItems=[{l:'Member Since',v:jd},{l:'Role',v:profile.role||rl},{l:'Timezone',v:profile.timezone||'Asia/Kolkata'},{l:'Status',v:profile.employment_status||'Active'}];
+  const statItems=[{l:'Member Since',v:jd},{l:'Role',v:rl},{l:'Timezone',v:profile.timezone||'Asia/Kolkata'},{l:'Status',v:profile.employment_status||'Active'}];
   const contactItems=[{I:Mail,l:'Email',v:profile.email},{I:Phone,l:'Phone',v:profile.mobile_number||'Not provided'},{I:MapPin,l:'Address',v:profile.address||'Not provided'}];
   const card={background:tok.surface,border:`1px solid ${tok.border}`,borderRadius:14,boxShadow:isDark?'none':'0 1px 4px rgba(0,0,0,0.05)'};
 

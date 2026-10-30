@@ -1843,6 +1843,15 @@ class ApiService {
     return this.request(`/devices/${deviceId}/diagnostics/`, { method: 'POST' });
   }
 
+  /** Raw-storage-only debug mode: the device's data is kept raw and the dashboard stops updating until it ends. */
+  async setDeviceTelemetryDebug(deviceId: number, body: { hours?: number; indefinite?: boolean }): Promise<any> {
+    return this.request(`/devices/${deviceId}/telemetry-debug/`, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async clearDeviceTelemetryDebug(deviceId: number): Promise<any> {
+    return this.request(`/devices/${deviceId}/telemetry-debug/clear/`, { method: 'POST' });
+  }
+
   async setDeviceAutoReboot(deviceId: number, enabled: boolean): Promise<any> {
     return this.request(`/devices/${deviceId}/auto-reboot/`, {
       method: 'PATCH',

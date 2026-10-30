@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/components/Feedback';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Check, ArrowRight } from 'lucide-react';
@@ -204,9 +205,9 @@ export default function SiteOnboarding() {
   );
 
   const body: Record<SectionKey, React.ReactNode> = {
-    customer: !canUsers ? <p className="text-muted-foreground">Customer details are managed by an admin.</p>
+    customer: !canUsers ? <Notice tone="lock" more="Ask an admin to change them.">Customer details are managed by an admin.</Notice>
       : owner ? <>{renderFields('customer', CUSTOMER_FIELDS)}<div className="mt-7">{saveBtn('customer')}</div></>
-      : <p className="text-muted-foreground">No customer is linked to this site yet. Link one from <Link className="underline" to={`/sites/${siteId}`}>the site page</Link>.</p>,
+      : <Notice tone="warn" more={<>Link one from <Link to={`/sites/${siteId}`}>the site page</Link>.</>}>No customer is linked to this site yet.</Notice>,
     site: <>{renderFields('site', SITE_FIELDS)}<div className="mt-7">{saveBtn('site')}</div></>,
     appliances: <>{renderFields('appliances', APPLIANCE_FIELDS)}<div className="mt-7">{saveBtn('appliances')}</div></>,
     billing: <>

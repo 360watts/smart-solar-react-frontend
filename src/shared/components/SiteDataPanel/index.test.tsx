@@ -111,7 +111,7 @@ describe('fetch failed (viewer-devices TB-5 / TB-6)', () => {
     forecast().mockRejectedValue(new Error('boom'));
   });
   afterEach(() => { forecast().mockResolvedValue(null); });
-  const failed = () => waitFor(() => expect(screen.queryByText(/Failed to load data/)).not.toBeNull());
+  const failed = () => waitFor(() => expect(screen.queryByText(/Couldn't load data/)).not.toBeNull());
   const devicesTab = () => screen.queryAllByRole('tab').find(t => t.textContent === 'Devices');
 
   it("visibleTabs ['devices']: Devices tab and its content still show", async () => {
@@ -126,7 +126,7 @@ describe('fetch failed (viewer-devices TB-5 / TB-6)', () => {
     expect(screen.queryByText('OVERVIEW-CONTENT')).toBeNull();
     fireEvent.click(devicesTab()!);
     expect(screen.queryByText('DEVICES-CONTENT')).not.toBeNull();
-    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    expect(screen.queryByText(/Couldn't load data/)).toBeNull();
   });
 
   it('without devices in visibleTabs: error only, no tab bar (unchanged)', async () => {

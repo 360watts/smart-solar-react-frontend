@@ -4,10 +4,11 @@ import {
   Pencil, Trash2, Check,
 } from 'lucide-react';
 import { apiService } from '../../services/api';
+import { EmptyState } from '../../shared/components/Feedback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAccess } from '../../shared/access/useAccess';
 import {
-  SetupShell, SetupCard, StatusChip, Item, Flow, Field, controlStyle, Btn, EmptyState,
+  SetupShell, SetupCard, StatusChip, Item, Flow, Field, controlStyle, Btn,
   ConfirmDialog, useTokens, applianceIcon, applianceName, smartDeviceKindLabel,
 } from './siteHardware/ui';
 import SmartDeviceComposer from './siteHardware/SmartDeviceComposer';
@@ -404,12 +405,9 @@ export default function InverterMeasurementConfig({
         ) : (
           !gatewayComposerOpen && (
             <EmptyState
-              isDark={isDark}
-              headline="No monitor connected"
-              detail={availableGatewayDevices.length ? 'Connect the on-site box so we can read the inverter.' : 'No spare monitor is available to connect right now.'}
-              action={canOps && availableGatewayDevices.length > 0 && (
-                <Btn isDark={isDark} variant="soft" onClick={() => setGatewayComposerOpen(true)}><Plus size={15} /> Connect the monitor</Btn>
-              )}
+              title="No monitor connected"
+              description={availableGatewayDevices.length ? 'Connect the on-site box so we can read the inverter.' : 'No spare monitor is available to connect right now.'}
+              action={canOps && availableGatewayDevices.length > 0 ? { label: 'Connect the monitor', icon: Plus, onClick: () => setGatewayComposerOpen(true) } : undefined}
             />
           )
         )}
@@ -530,10 +528,9 @@ export default function InverterMeasurementConfig({
         ) : (
           !meterComposerOpen && (
             <EmptyState
-              isDark={isDark}
-              headline="No meter connected"
-              detail="Add a whole-home meter here to track total usage and what's sent to the grid."
-              action={canOps ? <Btn isDark={isDark} variant="soft" onClick={() => setMeterComposerOpen(true)}><Plus size={15} /> Add a meter</Btn> : undefined}
+              title="No meter connected"
+              description="Add a whole-home meter here to track total usage and what's sent to the grid."
+              action={canOps ? { label: 'Add a meter', icon: Plus, onClick: () => setMeterComposerOpen(true) } : undefined}
             />
           )
         )}
@@ -689,10 +686,9 @@ export default function InverterMeasurementConfig({
         ) : smartDevices.length === 0 ? (
           !smartComposerOpen && (
             <EmptyState
-              isDark={isDark}
-              headline="No smart plugs yet"
-              detail="Add one to start tracking an appliance on its own."
-              action={canOps ? <Btn isDark={isDark} variant="soft" onClick={beginAddSmartDevice}><Plus size={15} /> Add the first plug</Btn> : undefined}
+              title="No smart plugs yet"
+              description="Add one to start tracking an appliance on its own."
+              action={canOps ? { label: 'Add the first plug', icon: Plus, onClick: beginAddSmartDevice } : undefined}
             />
           )
         ) : (

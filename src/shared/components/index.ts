@@ -1,5 +1,5 @@
 export { default as AccessibleModal } from './AccessibleModal';
-export { default as EmptyState } from './EmptyState';
+export { EmptyState, Notice, ActivityList } from './Feedback';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as PhoneInput } from './PhoneInput';
 export { default as SiteDataPanel } from './SiteDataPanel';

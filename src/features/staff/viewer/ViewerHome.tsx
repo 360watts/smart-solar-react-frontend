@@ -1,8 +1,11 @@
+import { Lock } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiService, type AccessDevice, type AccessSummary } from '../../../services/api';
 import DeviceStrip from './DeviceStrip';
 import { ago } from './DevicePage';
+import { HomeSkeleton } from './Skeleton';
 import './viewerHome.css';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -34,11 +37,8 @@ const ViewerHome: React.FC = () => {
     return (
       <div className="vh">
         {failed ? (
-          <div className="vh-empty" role="alert">
-            Couldn't load your devices and sites.
-            <div style={{ marginTop: 12 }}><button onClick={load}>Try again</button></div>
-          </div>
-        ) : <span className="vh-muted">Loading…</span>}
+          <EmptyState title="Couldn't load your devices and sites" description="The server didn't answer. Your devices are not affected." onRetry={load} />
+        ) : <HomeSkeleton />}
       </div>
     );
   }
@@ -47,7 +47,7 @@ const ViewerHome: React.FC = () => {
   if (devices.length === 0 && sites.length === 0) {
     return (
       <div className="vh">
-        <div className="vh-empty">Nothing has been given to you yet. An admin assigns devices and sites.</div>
+        <EmptyState icon={Lock} title="Nothing has been given to you yet" description="An admin assigns devices and sites." />
       </div>
     );
   }

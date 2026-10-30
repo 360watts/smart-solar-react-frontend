@@ -1,3 +1,4 @@
+import { EmptyState } from '../../Feedback';
 /**
  * ForecastTab — extracted from SiteDataPanel.tsx
  * Contains: ForecastTable, SatelliteKt*, EnhancedKPICard, PerformanceGauge,
@@ -1229,7 +1230,8 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
 
         <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}` }}>
           {activeVsActualData.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)' }}>{vsActual7d ? 'No scored forecast slots for the last 7 days yet.' : 'No overlap points yet between forecast and telemetry for today.'}</p>
+            <EmptyState icon={Target} title={vsActual7d ? 'No scored forecast slots in the last 7 days' : 'Nothing to compare yet today'}
+            description={vsActual7d ? 'Slots are scored once real readings arrive for them.' : 'The chart fills in once readings overlap the forecast.'} />
           ) : vsActualView === 'chart' ? (
             <div style={{ width: '100%', height: 320 }}>
               <CJLine

@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiService, ProductCatalogItem } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -100,7 +101,7 @@ const MobileEquipment: React.FC = () => {
         {loading ? (
           <div style={{ textAlign: 'center', color: muted, fontSize: '0.85rem', padding: 32 }}>Loading catalog…</div>
         ) : items.length === 0 ? (
-          <div style={{ textAlign: 'center', color: muted, fontSize: '0.85rem', padding: 32 }}>No products found.</div>
+          <EmptyState icon={Package} title="No products found" description="Try a different search, or add a product on the desktop catalog." />
         ) : (
           items.map(it => (
             <div key={it.id} style={{ background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>

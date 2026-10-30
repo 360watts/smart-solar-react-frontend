@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { SetupCard, EmptyState, Btn, useTokens } from '../siteHardware/ui';
+import { SetupCard, Btn, useTokens } from '../siteHardware/ui';
+import { EmptyState } from '../../../shared/components/Feedback';
 import './viewerDevices.css';
 import { ago, devName, updateFor, type Dev, type Firmware } from './DevicePage';
 import { getFirmware, getSiteDevices, peekSiteDevices } from './deviceCache';
@@ -32,12 +33,11 @@ const ViewerDevices: React.FC<{ siteId: string }> = ({ siteId }) => {
     <div>
       {devices !== null && !loadFailed && devices.length > 0 ? null : <SetupCard isDark={isDark} icon={<Server size={20} />} title="Devices" purpose="The monitors and meters at this site. Tap one for details.">
         {loadFailed ? (
-          <EmptyState isDark={isDark} headline="Couldn't load the devices. Try again."
-            action={<Btn isDark={isDark} variant="soft" size="sm" onClick={() => load(true)}>Try again</Btn>} />
+          <EmptyState title="Couldn't load the devices" description="The server didn't answer. Your devices are not affected." onRetry={() => load(true)} />
         ) : devices === null ? (
           <span style={{ color: t.ink2, fontSize: '0.88rem' }}>Loading devices…</span>
         ) : devices.length === 0 ? (
-          <EmptyState isDark={isDark} headline="No devices at this site yet" />
+          <EmptyState icon={Server} title="No devices at this site yet" />
         ) : null}
       </SetupCard>}
       {devices !== null && !loadFailed && devices.length > 0 && (

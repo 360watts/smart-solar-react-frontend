@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 import React, { useCallback, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { QrCode, X, Copy, Check, ShieldAlert, Plus, Ban, Cpu, Clock } from 'lucide-react';
@@ -273,10 +274,7 @@ export const ManageProvisionsModal: React.FC<ManageProvisionsModalProps> = ({ op
               Loading claims…
             </div>
           ) : claims.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-              <QrCode size={24} color="var(--border)" style={{ marginBottom: 8 }} />
-              <div style={{ fontSize: '0.825rem', color: 'var(--muted-foreground)' }}>No claim tokens yet</div>
-            </div>
+            <EmptyState icon={QrCode} title="No claim tokens yet" description="Create one to let an installer claim a device." />
           ) : claims.map(claim => {
             const s = STATUS_STYLE[claim.status];
             return (

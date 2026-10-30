@@ -34,33 +34,22 @@ const dash = (over = {}) => ({
 });
 
 describe('DeviceDashboard', () => {
-  it('shows every reading grouped, phases merged, gaps on the ribbon, and a stale banner', async () => {
+  it('V12 shows the All values cards from the last hour, with the tab count and a stale banner', async () => {
     apiService.getDeviceDashboard.mockResolvedValue(dash());
     ui('/devices/47/dashboard?tab=values');
     expect(await screen.findByText('Monitor 00A1')).toBeInTheDocument();
-    expect(apiService.getDeviceDashboard).toHaveBeenCalledWith(47, 24);
+    expect(apiService.getDeviceDashboard).toHaveBeenCalledWith(47, 1);
     expect(screen.getByText(/not at a site/)).toBeInTheDocument();
-    ['Solar', 'Grid', 'Status and codes'].forEach(h => expect(screen.getByRole('heading', { name: h })).toBeInTheDocument());
-    expect(screen.getByText('PV1 power')).toBeInTheDocument();
-    expect(screen.getAllByText((_, el) => el?.textContent === '512W').length).toBeGreaterThan(0); // 512.4 rounded, unit W
-    expect(screen.getByText('Grid voltage per phase')).toBeInTheDocument();
-    expect(screen.getByText('Data source')).toBeInTheDocument();
-    // slots 10:00, 10:05, 10:10 (09:55 bucket too): data in 10:00 and 10:10 only
-    expect(screen.getByText(/Sent data in 2 of 4 five-minute slots/)).toBeInTheDocument();
+    ['Solar', 'Grid', 'Faults and warnings'].forEach(h => expect(screen.getByRole('heading', { name: h })).toBeInTheDocument());
+    expect(screen.getByRole('tab', { name: /All values/ })).toHaveTextContent('All values6');
     expect(screen.getByText(/stopped sending/)).toBeInTheDocument();
   });
 
-  it('switches range, filters readings, and says when nothing has arrived', async () => {
-    apiService.getDeviceDashboard.mockResolvedValue(dash());
-    ui('/devices/47/dashboard?tab=values');
-    await screen.findByText('PV1 power');
-    fireEvent.change(screen.getByRole('searchbox', { name: 'Find a reading' }), { target: { value: 'voltage' } });
-    expect(screen.queryByText('PV1 power')).not.toBeInTheDocument();
-    expect(screen.getByText('Grid voltage per phase')).toBeInTheDocument();
+  it('V13 says when nothing has arrived and shows no cards', async () => {
     apiService.getDeviceDashboard.mockResolvedValue(dash({ last_reading_at: null, latest: null, history: [] }));
-    fireEvent.click(screen.getByRole('button', { name: '7d' }));
-    expect(apiService.getDeviceDashboard).toHaveBeenLastCalledWith(47, 168);
+    ui('/devices/47/dashboard?tab=values');
     expect(await screen.findByText('No readings yet')).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).toBeNull();
   });
 
   const SER = () => ({ ...dash(), detail: 'every', keys: [], series: [], coverage: [], code_changes: [], median_gap_s: null, longest_gap_s: null, longest_gap_at: null });
@@ -116,7 +105,7 @@ describe('DeviceDashboard', () => {
     apiService.getDeviceDashboard.mockResolvedValue(dash());
     apiService.getDeviceSeries.mockRejectedValue(new Error('500'));
     ui();
-    expect(await screen.findByText("Couldn't load the chart. Trying again…")).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn't load the chart/)).toBeInTheDocument();
   });
 
   it('says the device is not available when the call is refused', async () => {

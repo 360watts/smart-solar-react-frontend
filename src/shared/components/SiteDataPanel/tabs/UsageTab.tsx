@@ -1,3 +1,5 @@
+import { Gauge } from 'lucide-react';
+import { EmptyState } from '../../Feedback';
 /**
  * UsageTab: how a meter-only site (energy meter, no inverter) uses power.
  * Fed by GET /sites/<id>/meter-usage/ plus the latest meter reading the site panel already holds.
@@ -406,16 +408,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   if (status === 'error' && !data) {
     return (
       <div style={{ ...wrap, alignItems: 'flex-start' }}>
-        <div style={{ ...card, width: '100%', boxSizing: 'border-box' }} role="alert">
-          <h2 style={{ ...h2, marginBottom: 14 }}>Couldn't load the usage figures. Try again.</h2>
-          <button
-            type="button"
-            onClick={() => setAttempt(a => a + 1)}
-            style={{ minHeight: 44, padding: '0 20px', borderRadius: 12, border: `1px solid ${t.line}`, background: t.idleBg, color: t.ink, fontFamily: t.body, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            Try again
-          </button>
-        </div>
+        <EmptyState title="Couldn't load the usage figures" description="The server didn't answer. Your meter is not affected." onRetry={() => setAttempt(a => a + 1)} />
         {supplyAndRaw}
       </div>
     );
@@ -431,10 +424,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
     const meterLive = data.meter.age_seconds != null && data.meter.age_seconds < LIVE_WITHIN_S;
     return (
       <div style={wrap}>
-        <div style={{ ...card, textAlign: 'center', borderStyle: 'dashed', padding: '48px 28px' }}>
-          <div style={{ fontFamily: t.head, fontWeight: 600, fontSize: 18 }}>{meterLive ? 'No usage figures yet today.' : "No readings yet. The meter hasn't reported today."}</div>
-          <div style={{ ...sub, marginTop: 6 }}>Usage will appear here as soon as it does.</div>
-        </div>
+        <EmptyState icon={Gauge} title={meterLive ? 'No usage figures yet today' : "The meter hasn't reported today"} description="Usage shows up here as soon as it does." />
         {supplyAndRaw}
       </div>
     );

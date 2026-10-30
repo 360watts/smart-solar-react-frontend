@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/components/Feedback';
 import { DEFAULT_TIMEZONE, timezoneLabel, timezoneOptions } from './timezones';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -450,9 +451,7 @@ export default function CommissioningWizard() {
                   <div>
                     <label style={labelStyle}>Owner User (required)</label>
                     {!canUsers ? (
-                      <div style={{ marginTop: 6, fontSize: '0.8rem', color: textSub }}>
-                        Customer details are managed by an admin. Ask an admin to link the owner.
-                      </div>
+                      <div style={{ marginTop: 6 }}><Notice tone="lock" more="Ask an admin to link the owner.">Customer details are managed by an admin.</Notice></div>
                     ) : (<>
                     <input
                       value={ownerSearch}

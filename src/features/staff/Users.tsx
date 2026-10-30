@@ -1,3 +1,4 @@
+import { Cpu } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import PhoneInput from '../../shared/components/PhoneInput';
@@ -7,7 +8,7 @@ import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileUsers from '../mobile/staff/MobileUsers';
 import { useTheme } from '../../contexts/ThemeContext';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState } from '../../shared/components/Feedback';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
 import PageHeader from '../../shared/layout/PageHeader';
 import { Loader } from '../../shared/ui/Loader';
@@ -412,9 +413,7 @@ const Users: React.FC = () => {
               </tbody>
             </table></div>
           ) : (
-            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.9375rem' }}>
-              No devices assigned to this user yet.
-            </div>
+            <EmptyState icon={Cpu} title="No devices assigned yet" />
           )}
         </div>
 

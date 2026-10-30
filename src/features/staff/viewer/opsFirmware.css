@@ -1,0 +1,36 @@
+/* Firmware library sub-tab (mockup OpsFirmware.dc.html). Uses the --o-* tokens from operationsTab.css; dark overrides come from `.dark-mode .ops` there. */
+.ofw-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.ofw-gt { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 600 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; }
+.ofw-gt[aria-selected='true'] { border-color: #0B7F73; background: var(--o-ok-bg); }
+.ofw-card { background: var(--o-surf); border: 1px solid var(--o-line); border-radius: 16px; min-width: 0; overflow: hidden; }
+.ofw-top { display: flex; justify-content: flex-end; padding: 4px 16px; border-bottom: 1px solid var(--o-line); }
+.ofw-scroll { overflow-x: auto; }
+.ofw-card table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.ofw-card th { text-align: left; font-weight: 500; color: var(--o-ink2); font-size: 12.5px; padding: 0 16px; height: 42px; background: var(--o-soft); border-bottom: 1px solid var(--o-line); white-space: nowrap; }
+.ofw-card td { padding: 10px 16px; border-bottom: 1px solid var(--o-line); vertical-align: middle; }
+.ofw-num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; font-weight: 500; }
+.ofw-act { text-align: right; white-space: nowrap; }
+.ofw-act .ops-btn + .ops-btn { margin-left: 8px; }
+.ops-btn.sm { min-height: 40px; padding: 0 14px; font-size: 13px; }
+.ofw-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; background: var(--o-soft); border-top: 1px solid var(--o-line); }
+
+.ofw-form { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; overflow: visible; }
+.ofw-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 150px; border: 2px dashed #9CB5B3; border-radius: 16px; background: var(--o-soft); text-align: center; padding: 16px; color: #0B7F73; }
+.ofw-drop > div { color: var(--o-ink); }
+.ofw-drop > .ops-meta { color: var(--o-ink2); }
+.ofw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.ofw-lbl { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--o-ink2); }
+.ofw-in { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 400 15px Rubik, sans-serif; color: var(--o-ink); }
+textarea.ofw-in { padding: 12px 14px; min-height: 88px; }
+.ofw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.ofw-tg { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; border: 0; background: none; font: 400 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; }
+.ofw-sw { width: 46px; height: 26px; border-radius: 13px; background: #C9D4D4; position: relative; flex: none; }
+.ofw-sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.ofw-tg[aria-checked='true'] .ofw-sw { background: #0B7F73; }
+.ofw-tg[aria-checked='true'] .ofw-sw::after { left: 23px; }
+.dark-mode .ops .ofw-sw { background: rgba(255, 255, 255, .25); }
+.dark-mode .ops .ofw-tg[aria-checked='true'] .ofw-sw { background: #0B7F73; }
+.dark-mode .ops .ofw-drop { border-color: rgba(46, 240, 204, .4); color: #2EF0CC; }
+.ofw-bar { height: 8px; border-radius: 4px; background: var(--o-none-bg); overflow: hidden; }
+.ofw-bar span { display: block; height: 100%; background: #0B7F73; transition: width .2s; }
+.ops :is(select, textarea, [role='switch'], [role='tab']):focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }

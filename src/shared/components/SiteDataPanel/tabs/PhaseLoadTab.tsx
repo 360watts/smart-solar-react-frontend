@@ -1,3 +1,4 @@
+import { EmptyState } from '../../Feedback';
 /**
  * PhaseLoadTab — extracted from SiteDataPanel.tsx
  * Contains: LOAD_SOURCE_META, PHASE_COLORS, PhaseKpiCard, LoadForecastAccuracySubTab, PhaseLoadTab
@@ -322,20 +323,7 @@ export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boole
 
   if (!hourly.length) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
-          borderRadius: 16, fontSize: '0.875rem',
-          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
-          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,159,143,0.15)'}`,
-        }}
-      >
-        <BarChart2 size={28} style={{ marginBottom: 10, opacity: 0.4 }} />
-        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, marginBottom: 6 }}>No load accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Load forecast accuracy data will appear once historical forecasts become verifiable.</div>
-      </motion.div>
+      <EmptyState icon={BarChart2} title="No load accuracy data yet" description="Accuracy shows up once past load forecasts can be checked against real readings." />
     );
   }
 
@@ -1521,13 +1509,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 />
               </div>
             ) : (
-              <div style={{ height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '0 20px' }}>
-                <div>
-                  <Activity size={32} style={{ opacity: 0.25, marginBottom: 10 }} />
-                  <div>No forecast accuracy data yet.</div>
-                  <div style={{ fontSize: '0.76rem', opacity: 0.6, marginTop: 4 }}>Accuracy scores are computed daily after actuals are available (historical only).</div>
-                </div>
-              </div>
+              <EmptyState icon={Activity} title="No forecast accuracy yet" description="Scores are worked out each day once real readings are in." />
             )
           ) : (
             loadForecast.length > 0 ? (
@@ -1546,9 +1528,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 />
               </div>
             ) : (
-              <div style={{ height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.85rem', padding: '0 20px' }}>
-                No load forecast data yet. Forecasts generated every 30 minutes by the backend.
-              </div>
+              <EmptyState icon={BarChart2} title="No load forecast yet" description="A new forecast is made every 30 minutes." />
             )
           )}
         </ChartCard>

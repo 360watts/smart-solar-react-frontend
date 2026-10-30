@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/components/Feedback';
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Eye, Settings, Pencil, Trash2, X, AlertTriangle, CheckCircle2, Layers } from 'lucide-react';
@@ -568,13 +569,7 @@ const DevicePresets: React.FC = () => {
         </div>
 
         {filteredPresets.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-            <Layers size={40} strokeWidth={1.25} style={{ color: 'var(--text-muted)', marginBottom: 12 }} />
-            <p style={{ fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No presets found</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
-              {searchTerm ? 'Try a different search term.' : 'Create a preset to get started.'}
-            </p>
-          </div>
+          <EmptyState icon={Layers} title="No presets found" description={searchTerm ? 'Try a different search term.' : 'Create a preset to get started.'} />
         ) : (
           <div className="preset-grid">
             {filteredPresets.map((preset) => {
@@ -1243,10 +1238,7 @@ const DevicePresets: React.FC = () => {
                 </div>
 
                 {slaves.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted-foreground)' }}>
-                    <p style={{ margin: '0 0 8px 0', fontSize: '0.875rem' }}>No slave devices configured yet.</p>
-                    <p style={{ margin: 0, fontSize: '0.875rem' }}>Click "Add Slave" to configure your first slave device.</p>
-                  </div>
+                  <EmptyState icon={Settings} title="No slave devices yet" description="Use Add Slave to set up the first one." />
                 ) : (
                   <div className="table-responsive"><table className="table">
                     <thead>

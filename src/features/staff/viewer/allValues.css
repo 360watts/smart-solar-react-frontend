@@ -1,0 +1,34 @@
+/* All values tab: cards per group. Tokens (--dc-*) come from deviceTabs.css on .dt. */
+.av-num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+.av-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.av-find { position: relative; flex: 1 1 320px; max-width: 460px; display: block; color: var(--muted-foreground); }
+.av-find svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); }
+.av-find input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 14px 0 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: 400 15px Rubik, sans-serif; }
+.av-pill { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: 500 14px Rubik, sans-serif; cursor: pointer; }
+.av-pill[aria-pressed='true'] { border-color: var(--brand-green); background: color-mix(in srgb, var(--brand-green) 12%, transparent); }
+.av-hint { margin-left: auto; font-size: 13px; color: var(--muted-foreground); }
+.av-cnt { padding: 2px 9px; border-radius: 999px; background: var(--muted); font: 500 12px 'Fira Code', monospace; }
+.av-pill .av-cnt { margin-left: 8px; }
+.av-cnt.warn { background: color-mix(in srgb, var(--dc-fault) 18%, transparent); color: var(--dc-warn-text); }
+.av-empty { margin: 0; color: var(--muted-foreground); }
+
+.av-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px; align-items: start; }
+.av-card { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 18px 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); }
+.av-card.fault { border-color: color-mix(in srgb, var(--dc-fault) 55%, transparent); background: color-mix(in srgb, var(--dc-fault) 6%, var(--card)); }
+.av-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.av-head h3 { margin: 0; flex: 1; font-size: 16px; font-weight: 600; }
+.av-tile { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.av-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; align-items: center; gap: 12px; min-height: 44px; border-top: 1px solid var(--border); }
+.av-l { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.av-l b { font-weight: 600; }
+.av-key { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: var(--muted-foreground); font: 400 12px 'Fira Code', monospace; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-v { font-size: 15px; font-weight: 500; text-align: right; white-space: nowrap; }
+.av-v.warn { color: var(--dc-warn-text); }
+.av-unit { font-family: Rubik, sans-serif; font-size: 12px; font-weight: 400; color: var(--muted-foreground); margin-left: 4px; }
+.av-spark { width: 64px; height: 22px; }
+.av-more, .av-link { align-self: flex-start; min-height: 40px; padding: 0; border: 0; background: none; color: var(--brand-green); font: 500 13px Rubik, sans-serif; cursor: pointer; }
+.av-link { min-height: 0; }
+.av-note { margin: 6px 0 0; font-size: 13px; color: var(--muted-foreground); }
+.av-foot { display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 13px; color: var(--muted-foreground); }
+.av-card :is(button, input):focus-visible, .av-bar :is(button, input):focus-visible, .av-link:focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }
+.dd { max-width: 1180px; margin-inline: auto; }

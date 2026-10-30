@@ -1,3 +1,4 @@
+import { EmptyState } from '../../Feedback';
 /**
  * WeatherTab — extracted from SiteDataPanel.tsx
  * Contains: WeatherAccuracySubTab, WeatherTab (default export)
@@ -24,20 +25,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
 
   if (!records.length) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          padding: 40, textAlign: 'center', color: 'var(--muted-foreground)',
-          borderRadius: 16, fontSize: '0.875rem',
-          background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(249,250,251,0.8)',
-          border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,159,143,0.15)'}`,
-        }}
-      >
-        <BarChart2 size={28} style={{ marginBottom: 10 }} />
-        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 600, marginBottom: 6 }}>No weather accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Needs overlapping weather forecast and observation records for past hours. Data appears as recent forecasts become verifiable.</div>
-      </motion.div>
+      <EmptyState icon={BarChart2} title="No weather accuracy data yet" description="Shows up once past weather forecasts can be checked against what was observed." />
     );
   }
 
@@ -106,15 +94,7 @@ const WeatherAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ a
 
   if (!accuracy || !accuracy.records?.length) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ ...panelBg, padding: 48, textAlign: 'center', color: 'var(--muted-foreground)' }}
-      >
-        <Target size={36} style={{ marginBottom: 12, opacity: 0.3, display: 'block', margin: '0 auto 12px' }} />
-        <div style={{ fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No accuracy data yet</div>
-        <div style={{ fontSize: '0.8rem', opacity: 0.65, maxWidth: 340, margin: '0 auto' }}>Accuracy scores are computed nightly. Data will appear tomorrow after the first overnight run.</div>
-      </motion.div>
+      <EmptyState icon={Target} title="No accuracy data yet" description="Scores are worked out overnight, so they show up tomorrow." />
     );
   }
 

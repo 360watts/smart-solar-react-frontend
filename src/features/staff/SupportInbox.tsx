@@ -5,7 +5,7 @@ import {
 } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getDesignTokens } from '../../shared/theme';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState } from '../../shared/components/Feedback';
 import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
 import { StatusPill as StatusPillBase } from '../../shared/components/StatusPill';
 import PageHeader from '../../shared/layout/PageHeader';
@@ -372,7 +372,7 @@ export default function SupportInbox() {
           </tbody>
         </table>
         {!loading && inquiries.length === 0 && (
-          <EmptyState icon={<MessageCircle size={32} strokeWidth={1.5} />} title="No support inquiries" description="Customer Help & Support messages will show up here." />
+          <EmptyState icon={MessageCircle} title="No support inquiries" description="Customer Help & Support messages will show up here." />
         )}
       </div>
 

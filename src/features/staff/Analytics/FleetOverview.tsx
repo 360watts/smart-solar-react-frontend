@@ -1,3 +1,5 @@
+import { MapPin } from 'lucide-react';
+import { EmptyState } from '../../../shared/components/Feedback';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getDesignTokens } from '../../../shared/theme';
@@ -122,7 +124,7 @@ export default function FleetOverview({ sites, onSelectSite }: Props) {
         {state.loading ? (
           <div style={{ padding: 24, color: tokens.textMuted, fontSize: '0.85rem' }}>Loading fleet analytics…</div>
         ) : sortedRows.length === 0 ? (
-          <div style={{ padding: 24, color: tokens.textMuted, fontSize: '0.85rem' }}>No sites found.</div>
+          <div style={{ padding: 16 }}><EmptyState icon={MapPin} title="No sites found" /></div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

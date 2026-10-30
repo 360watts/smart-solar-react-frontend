@@ -9,7 +9,7 @@ import { apiService, ProductCatalogItem, ProductCatalogCategory } from '../../se
 import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileEquipment from '../mobile/staff/MobileEquipment';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { EmptyState } from '../../shared/components/Feedback';
 import PageHeader from '../../shared/layout/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
 

@@ -28,20 +28,21 @@ const EMPLOYEE: Feature[] = [
 const labels = (can: (f: Feature) => boolean) => visibleNavItems(STAFF_NAV_ITEMS, can).map((i) => i.label);
 
 describe('visibleNavItems', () => {
-  it('admin sees everything except My sites', () => {
+  it('admin sees everything, with one Dashboard entry', () => {
     const l = labels((f) => ALL.includes(f));
     expect(l).toEqual(expect.arrayContaining(['Dashboard', 'Employees', 'Teams', 'OTA', 'Quotation', 'Profile']));
-    expect(l).not.toContain('My sites');
+    expect(l.filter((x) => x === 'Dashboard')).toHaveLength(1);
   });
 
   it('employee does not see Employees, Teams, OTA or Quotation', () => {
     const l = labels((f) => EMPLOYEE.includes(f));
-    ['Employees', 'Teams', 'OTA', 'Quotation', 'My sites'].forEach((x) => expect(l).not.toContain(x));
+    ['Employees', 'Teams', 'OTA', 'Quotation'].forEach((x) => expect(l).not.toContain(x));
+    expect(l.filter((x) => x === 'Dashboard')).toHaveLength(1);
     expect(l).toEqual(expect.arrayContaining(['Dashboard', 'Sites', 'Devices', 'Profile']));
   });
 
-  it('viewer sees only My sites (and Profile, which has no feature)', () => {
-    expect(labels((f) => f === 'my_sites')).toEqual(['My sites', 'Profile']);
+  it('viewer sees only Dashboard (their sites and devices) and Profile, which has no feature', () => {
+    expect(labels((f) => f === 'my_sites')).toEqual(['Dashboard', 'Profile']);
   });
 });
 

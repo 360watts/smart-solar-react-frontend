@@ -37,7 +37,7 @@ describe('ViewerSite', () => {
     sites([{ site_id: 's1', display_name: 'Home' }]);
     render(ui('/my-sites/s1'));
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to your sites/i })).toHaveAttribute('href', '/my-sites');
+    expect(screen.getByRole('link', { name: /back to dashboard/i })).toHaveAttribute('href', '/my-sites');
     expect(screen.getByTestId('panel').textContent).toBe('s1:overview,history,phase-load,plugs,usage,events');
   });
 
@@ -83,9 +83,9 @@ describe('ViewerEvents', () => {
     apiService.getSiteEvents.mockResolvedValue({ days: 7, events: [ev('2026-10-29T10:00:00Z', 'Restart', 'operation'), ev('2026-10-28T10:00:00Z', 'Grid down')] });
     render(<ViewerEvents siteId="s1" />);
     await screen.findByText('Restart');
-    const rows = screen.getAllByRole('row').slice(1);
-    expect(rows[0]).toHaveTextContent(/Operation.*Restart.*Asha.*SN5/);
-    expect(rows[1]).toHaveTextContent(/Incident.*Grid down/);
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent(/Restart.*Operation.*SN5.*Asha/);
+    expect(rows[1]).toHaveTextContent(/Grid down.*Incident/);
     expect(apiService.getSiteEvents).toHaveBeenCalledWith('s1', 7);
   });
 

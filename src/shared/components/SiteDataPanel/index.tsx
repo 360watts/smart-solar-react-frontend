@@ -1,3 +1,5 @@
+import { Activity } from 'lucide-react';
+import { EmptyState } from '../Feedback';
 /**
  * SiteDataPanel — solar site intelligence panel with modern 3D animations & UX
  *
@@ -1013,41 +1015,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // stopped reporting can still be restarted or updated; the other tabs show the message instead.
   const devicesEscape = visibleTabs?.includes('devices') === true || visibleTabs?.includes('events') === true;
   const errorMsg = (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{
-          padding: 24,
-          color: '#ef4444',
-          fontSize: '0.875rem',
-          background: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.06)',
-          borderRadius: 16,
-          marginTop: 16,
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-        }}
-      >
-        Failed to load data for <strong>{siteId}</strong>: {error}
-      </motion.div>
+      <div style={{ marginTop: 16 }}><EmptyState title={`Couldn't load data for ${siteId}`} description={error ?? undefined} /></div>
   );
   const noDataMsg = (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{
-            padding: 32,
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '0.875rem',
-            background: isDark ? 'rgba(15,159,143, 0.05)' : 'rgba(15,159,143, 0.03)',
-            borderRadius: 16,
-            border: '1px dashed rgba(15,159,143, 0.2)',
-          }}
-        >
-          No data found for site <strong style={{ color: '#0F9F8F' }}>{siteId}</strong> for{' '}
-          {dateRange === '24h' ? 'today' : dateRange === '7d' ? 'the last 7 days' : dateRange === '30d' ? 'the last 30 days' : 'the selected date range'}
-          .<br />
-          <span style={{ fontSize: '0.8rem' }}>Telemetry is posted by the gateway device. Forecast and weather data load once telemetry is available.</span>
-        </motion.div>
+      <div style={{ marginTop: 16 }}><EmptyState icon={Activity} title={`No data for ${siteId} ${dateRange === '24h' ? 'today' : dateRange === '7d' ? 'in the last 7 days' : dateRange === '30d' ? 'in the last 30 days' : 'in this date range'}`}
+        description="The gateway posts readings. Forecast and weather load once readings arrive." /></div>
   );
   if (failed && !devicesEscape) return errorMsg;
 

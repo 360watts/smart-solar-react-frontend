@@ -172,9 +172,9 @@ export const STAFF_NAV_ITEMS: StaffNavItem[] = [
   },
   {
     path: '/my-sites',
-    label: 'My sites',
-    title: 'My sites',
-    subtitle: 'The sites you have been given access to',
+    label: 'Dashboard',
+    title: 'Dashboard',
+    subtitle: 'The sites and devices you have been given access to',
     group: 'Monitor',
     density: 'workflow',
     icon: Building2,

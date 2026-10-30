@@ -1,0 +1,46 @@
+/* Operations tab (mockups Operations.dc.html, OpsSettings.dc.html, OpsFirmware.dc.html). */
+.ops { --o-ink: var(--foreground); --o-ink2: var(--muted-foreground); --o-line: var(--border); --o-surf: var(--card); --o-soft: var(--muted);
+  --o-ok-bg: #E4F4F1; --o-ok: #075E55; --o-wait-bg: #E3EDFB; --o-wait: #2B5AA3; --o-nc-bg: #FBEFD9; --o-nc: #8A5300; --o-bad-bg: #FBE4DF; --o-bad: #9B2C1C; --o-none-bg: #EEF2F2; --o-none: #33504F;
+  --o-red: #B3341F; display: flex; flex-direction: column; gap: 20px; }
+.dark-mode .ops { --o-ok-bg: rgba(46,240,204,.14); --o-ok: #2EF0CC; --o-wait-bg: rgba(127,168,238,.16); --o-wait: #7FA8EE; --o-nc-bg: rgba(240,170,60,.16); --o-nc: #F0AA3C;
+  --o-bad-bg: rgba(240,122,99,.16); --o-bad: #F07A63; --o-none-bg: rgba(255,255,255,.08); --o-none: var(--muted-foreground); --o-red: #D6513B; }
+.ops :is(a, button, input):focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }
+.ops-meta { font-size: 13px; color: var(--o-ink2); }
+.ops-cnt { font: 500 12px 'Fira Code', monospace; background: var(--o-none-bg); border-radius: 999px; padding: 2px 9px; color: var(--o-none); }
+
+.ops-sub { display: inline-flex; padding: 3px; gap: 2px; border-radius: 14px; background: var(--o-soft); }
+.ops-sub a { display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border-radius: 11px; font-weight: 600; font-size: 14px; color: var(--o-none); text-decoration: none; }
+.ops-sub a[aria-current='page'] { background: #0B7F73; color: #fff; }
+
+.ops-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 500 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; }
+.ops-pill[aria-pressed='true'] { border-color: #0B7F73; background: var(--o-ok-bg); }
+
+/* One card per action: name and description, status (chip then who/when), then the buttons. */
+.ops-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.ops-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--o-surf); border: 1px solid var(--o-line); border-radius: 16px; }
+.ops-row.danger { grid-column: 1 / -1; border-color: color-mix(in srgb, var(--o-red) 35%, var(--o-line)); background: color-mix(in srgb, var(--o-red) 6%, var(--card)); }
+.ops-row.danger h3 { color: var(--o-bad); }
+.ops-txt h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.ops-hint { display: block; font-size: 12.5px; color: var(--o-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ops-txt .ops-hint { margin-top: 2px; font-size: 13px; white-space: normal; overflow: visible; }
+.ops-stat { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: auto; }
+.ops-row .ops-btns { justify-content: flex-start; }
+.ops-row .ops-btn { min-height: 40px; padding: 0 14px; }
+
+.ops-st { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.ops-st.ok { background: var(--o-ok-bg); color: var(--o-ok); } .ops-st.wait { background: var(--o-wait-bg); color: var(--o-wait); }
+.ops-st.nc { background: var(--o-nc-bg); color: var(--o-nc); } .ops-st.bad { background: var(--o-bad-bg); color: var(--o-bad); } .ops-st.none { background: var(--o-none-bg); color: var(--o-none); }
+.ops-pill .ops-st { min-height: 22px; }
+
+.ops-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ops-row .ops-btns { flex-wrap: nowrap; justify-content: flex-end; }
+.ops-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 600 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; }
+.ops-btn.pri { background: #0B7F73; border-color: #0B7F73; color: #fff; }
+.ops-btn.red { background: var(--o-red); border-color: var(--o-red); color: #fff; }
+.ops-btn[disabled] { opacity: .5; cursor: not-allowed; }
+.ops-sel { min-height: 40px; max-width: 190px; padding: 0 10px; }
+.ops-unlock { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--o-ink2); }
+.ops-unlock input { width: 170px; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 400 15px 'Fira Code', monospace; color: var(--o-ink); }
+
+.ops-side { flex: 1 1 320px; min-width: 0; background: var(--o-surf); border: 1px solid var(--o-line); border-radius: 16px; padding: 18px 20px; }
+.ops-side h3 { margin: 0; font-size: 16px; font-weight: 600; flex: 1; }

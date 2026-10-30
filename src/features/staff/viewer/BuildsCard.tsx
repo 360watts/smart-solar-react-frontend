@@ -1,3 +1,5 @@
+import { Download } from 'lucide-react';
+import { EmptyState, Notice } from '../../../shared/components/Feedback';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiService } from '../../../services/api';
 import { useTokens, Btn, ConfirmDialog } from '../siteHardware/ui';
@@ -103,9 +105,9 @@ const BuildsCard: React.FC<{ isDark: boolean; deviceType: string; kindLabel: str
           <div><Btn isDark={isDark} size="sm" variant="soft" disabled={busy || wrongKind} onClick={upload}>{pct != null ? `Uploading ${pct}%` : 'Upload'}</Btn></div>
         </div>
       )}
-      {failed ? <span style={{ fontSize: '0.88rem', color: t.ink2 }}>Couldn't load the builds. <Btn isDark={isDark} size="sm" variant="soft" onClick={load}>Try again</Btn></span>
+      {failed ? <EmptyState title="Couldn't load the builds" description="The server didn't answer. The device is not affected." onRetry={load} />
         : builds === null ? <span style={{ fontSize: '0.88rem', color: t.ink2 }}>Loading builds…</span>
-        : builds.length === 0 ? <span style={{ fontSize: '0.88rem', color: t.ink2 }}>No builds uploaded for this device type yet.</span>
+        : builds.length === 0 ? <EmptyState icon={Download} title="No builds yet" description="Builds uploaded for this device type show up here." />
         : builds.map(b => (
           <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, minHeight: 56, borderTop: `1px solid ${t.line2}` }}>
             <span style={{ fontSize: '0.92rem' }}>
@@ -122,7 +124,7 @@ const BuildsCard: React.FC<{ isDark: boolean; deviceType: string; kindLabel: str
             </span>
           </div>
         ))}
-      <span style={{ fontSize: '0.78rem', color: t.ink2 }}>Activating a build lets any device of this type receive it. Updating many devices at once stays on the OTA page.</span>
+      <Notice more="Updating many devices at once is on the OTA page, for admins.">Activating a build lets any device of this type receive it.</Notice>
       <ConfirmDialog
         isDark={isDark}
         open={!!ask}

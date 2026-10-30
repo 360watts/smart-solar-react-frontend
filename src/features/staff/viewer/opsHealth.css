@@ -1,0 +1,38 @@
+/* Operations > Logs > Gateway health. Uses the --o-* tokens from operationsTab.css (declared on .ops, dark overrides on .dark-mode .ops). */
+.ohl { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.ohl-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.ohl-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; }
+.ohl-h { margin: 0; font-size: 16px; font-weight: 600; }
+.ohl-h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.ohl-wait { display: flex; flex-direction: column; gap: 6px; max-width: 460px; }
+.ohl-bar { display: block; height: 6px; border-radius: 3px; background: var(--o-soft); overflow: hidden; }
+.ohl-bar i { display: block; height: 100%; width: 0; background: #0B7F73; animation: ohl-fill 30s linear forwards; }
+@keyframes ohl-fill { to { width: 95%; } }
+.ohl-notes { display: flex; flex-direction: column; gap: 8px; }
+.ohl-alert { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; padding: 12px 14px; border-radius: 14px; background: var(--o-nc-bg); color: var(--o-nc); font-size: 14px; line-height: 1.45; }
+.ohl-alert svg { flex: none; margin-top: 3px; }
+.ohl-alert span { flex: 1 1 240px; min-width: 0; }
+.ohl-link { font-weight: 600; font-size: 14px; color: inherit; text-decoration: underline; min-height: 24px; }
+.ohl-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ohl-tile { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--o-line); background: var(--o-surf); min-width: 0; }
+.ohl-tile.look { border-color: var(--o-nc); background: var(--o-nc-bg); }
+.ohl-tn { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 14px; }
+.ohl-tt { font-size: 14px; color: var(--o-ink2); overflow-wrap: anywhere; }
+.ohl-tile.look .ohl-tt { color: var(--o-nc); }
+.ohl-hist .ops-list { max-width: 460px; }
+.ohl-hist li + li { border-top: 1px solid var(--o-line); }
+.ohl-hrow { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 16px; border: 0; background: none; font: 14px Rubik, sans-serif; color: var(--o-ink); text-align: left; cursor: pointer; }
+.ohl-hrow[aria-pressed='true'] { background: var(--o-ok-bg); box-shadow: inset 3px 0 0 #0B7F73; }
+.ohl-hrow .ops-meta { margin-left: auto; }
+.ohl-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.ohl-dot.ok { background: var(--o-ok); } .ohl-dot.nc { background: var(--o-nc); }
+.ohl-toggle { min-height: 44px; padding: 0; border: 0; background: none; font: 600 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; text-decoration: underline; }
+.ohl-toggle::before { content: '\25B8  '; text-decoration: none; display: inline-block; }
+.ohl-toggle[aria-expanded='true']::before { content: '\25BE  '; }
+.ohl-dl { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); column-gap: 20px; }
+.ohl-dl > div { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--o-line); font-size: 13px; }
+.ohl-dl dt { color: var(--o-ink2); } .ohl-dl dd { margin: 0; font-family: 'Fira Code', monospace; text-align: right; }
+.ohl :is(.ohl-hrow, .ohl-toggle, .ohl-link):focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }
+@media (max-width: 899px) { .ohl-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 559px) { .ohl-tiles { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .ohl-bar i { animation: none; width: 50%; } }
