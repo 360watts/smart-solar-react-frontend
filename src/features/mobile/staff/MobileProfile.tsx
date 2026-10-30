@@ -4,6 +4,7 @@ import { apiService } from '../../../services/api';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme } from '../../../contexts/ThemeContext';
 import finalLogo from '../../../assets/finalLogo.png';
+import { roleLabel } from '../../../shared/access/roleLabel';
 import {
   User, Mail, Phone, MapPin, Calendar, Shield, Lock,
   Edit2, Save, X, Check, Eye, EyeOff, RefreshCw,
@@ -136,7 +137,7 @@ const MobileProfile: React.FC = () => {
         {(profile.is_superuser || profile.is_staff) && (
           <div style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 11px', borderRadius:999, fontSize:'0.75rem', fontWeight:700, background: profile.is_superuser ? 'rgba(245,158,11,0.15)' : 'rgba(96,165,250,0.15)', color: profile.is_superuser ? '#F59E0B' : '#60A5FA', border:`1px solid ${profile.is_superuser ? 'rgba(245,158,11,0.3)' : 'rgba(96,165,250,0.3)'}`, fontFamily:"'Rubik', sans-serif" }}>
             {profile.is_superuser ? <Crown size={11} /> : <Shield size={11} />}
-            {profile.is_superuser ? 'Admin' : 'Staff'}
+            {roleLabel(authUser?.role, profile.is_superuser, profile.is_staff)}
           </div>
         )}
         </div>
@@ -297,7 +298,7 @@ const MobileProfile: React.FC = () => {
           <div style={{ fontSize:'0.75rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', opacity:0.45, color:text, fontFamily:"'Rubik', sans-serif", marginBottom:12 }}>Account</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             {[
-              ...(authUser?.is_staff ? [{ label:'Role', value:profile.is_superuser ? 'Administrator' : profile.is_staff ? 'Staff' : 'User' }] : []),
+              ...(authUser?.is_staff ? [{ label:'Role', value:roleLabel(authUser?.role, profile.is_superuser, profile.is_staff) }] : []),
               { label:'User ID',  value:`#${profile.id}` },
               { label:'Username', value:profile.username },
               { label:'Status',   value:'Active' },

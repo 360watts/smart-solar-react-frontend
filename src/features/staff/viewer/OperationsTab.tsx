@@ -163,8 +163,8 @@ export default function OperationsTab({ dev, firmware, isDark }: { dev: Dev; fir
       {sub === 'actions' && (ctl ? <Notice more="Each run is recorded with your name.">You can run every operation on this device.</Notice>
         : <Notice tone="lock" more="Running operations needs device control.">You can see what ran on this device.</Notice>)}
       {!dev.is_online && sub === 'actions' && <Notice tone="warn" more="Restart and diagnostics come back when it reconnects.">This device is offline.</Notice>}
-      {sub === 'settings' && <OpsSettings dev={dev} firmware={firmware} isDark={isDark} onDone={load} data={data} />}
-      {sub === 'firmware' && <OpsFirmware dev={dev} firmware={firmware} isDark={isDark} />}
+      {sub === 'settings' && <OpsSettings dev={dev} isDark={isDark} onDone={load} data={data} />}
+      {sub === 'firmware' && <OpsFirmware dev={dev} isDark={isDark} />}
       {sub === 'logs' && <OpsLogs dev={dev} isDark={isDark} />}
       {sub === 'actions' && (<>
         {data === 'failed' && <EmptyState title="Couldn't load the operation history" description="The server didn't answer. The device is not affected." onRetry={load} />}

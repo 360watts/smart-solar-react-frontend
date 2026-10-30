@@ -8,6 +8,7 @@ import MobileProfile from '../mobile/staff/MobileProfile';
 import SecurityCard from './security/SecurityCard';
 import ViewerProfileSection from './viewer/ViewerProfileSection';
 import { useAccess } from '../../shared/access/useAccess';
+import { roleLabel } from '../../shared/access/roleLabel';
 
 const GREEN='#4CAFA9',GREEN_D='#3D8A85',NAVY='#2B4A6B',ORANGE='#F07522';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
@@ -139,8 +140,7 @@ const Profile:React.FC=()=>{
   const dn=`${profile.first_name} ${profile.last_name}`.trim()||profile.username;
   const ini=gin(profile.first_name,profile.last_name,profile.username);
   const ag=gac(ini);
-  // Employees and viewers both have is_staff, so the role field decides the label.
-  const rl=profile.is_superuser?'Administrator':({admin:'Administrator',employee:'Employee',viewer:'Viewer'} as Record<string,string>)[String(profile.role||'').toLowerCase()]||(profile.is_staff?'Staff Member':'Employee');
+  const rl=roleLabel(profile.role,profile.is_superuser,profile.is_staff);
   const dept=profile.team?(typeof profile.team==='object'?profile.team.name:profile.team):null;
   const jd=profile.date_joined?new Date(profile.date_joined).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
 

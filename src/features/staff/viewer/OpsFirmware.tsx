@@ -17,6 +17,7 @@ import './opsFirmware.css';
 const MAX = 8 * 1048576;
 const KINDS: [string, string][] = [['gateway', 'Gateway'], ['energymeter', 'Meter']];
 const kindName = (k?: string | null) => KINDS.find(([v]) => v === k)?.[1] ?? k ?? 'Any';
+const VERB = { on: 'Activate', off: 'Deactivate', del: 'Delete' } as const;
 type Ask = { b: Firmware; kind: 'on' | 'off' | 'del' } | null;
 type Msg = { ok: boolean; text: string } | null;
 
@@ -27,7 +28,11 @@ function uploadError(e: unknown) {
   try { return JSON.parse(raw.slice(raw.indexOf('{'))).error as string; } catch { return "Couldn't upload that build. Check the file and build number, then try again."; }
 }
 
-export default function OpsFirmware({ dev, isDark }: { dev: Dev; firmware?: Firmware[] | null; isDark: boolean }) {
+// Declared outside the page component so it is not remounted on every render.
+const Switch = ({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: string }) =>
+    <button type="button" role="switch" aria-checked={on} className="ofw-tg" onClick={() => set(!on)}><span className="ofw-sw" aria-hidden="true" />{label}</button>;
+
+export default function OpsFirmware({ dev, isDark }: { dev: Dev; isDark: boolean }) {
   const ctl = useAccess().can('device_control');
   const { isAdmin } = useAuth();
   const mine = firmwareKind(dev.device_type);
@@ -72,7 +77,7 @@ export default function OpsFirmware({ dev, isDark }: { dev: Dev; firmware?: Firm
     try {
       if (k === 'del') await apiService.deleteFirmwareVersion(b.id);
       else await apiService.updateFirmwareVersion(b.id, { is_active: k === 'on' });
-      setMsg({ ok: true, text: `${b.version} ${k === 'del' ? 'deleted' : k === 'on' ? 'activated' : 'deactivated'}.` });
+      setMsg({ ok: true, text: `${b.version} ${{ on: 'activated', off: 'deactivated', del: 'deleted' }[k]}.` });
       await changed();
     } catch {
       setMsg({ ok: false, text: k === 'del' ? `${b.version} can't be deleted. Devices may be running it, or you may not be allowed. Deactivate it instead.` : "Couldn't change that build. Try again, or ask an admin." });
@@ -94,8 +99,6 @@ export default function OpsFirmware({ dev, isDark }: { dev: Dev; firmware?: Firm
     finally { setBusy(false); setPct(null); }
   };
 
-  const Switch = ({ on, set, label }: { on: boolean; set: (v: boolean) => void; label: string }) =>
-    <button type="button" role="switch" aria-checked={on} className="ofw-tg" onClick={() => set(!on)}><span className="ofw-sw" aria-hidden="true" />{label}</button>;
   const goUp = () => { setMsg(null); setTab('up'); };
 
   return (
@@ -162,9 +165,9 @@ export default function OpsFirmware({ dev, isDark }: { dev: Dev; firmware?: Firm
       )}
 
       <ConfirmDialog isDark={isDark} open={!!ask} tone={ask?.kind === 'on' ? 'primary' : 'danger'}
-        title={ask ? `${ask.kind === 'del' ? 'Delete' : ask.kind === 'on' ? 'Activate' : 'Deactivate'} ${ask.b.version}?` : ''}
+        title={ask ? `${VERB[ask.kind]} ${ask.b.version}?` : ''}
         body={ask?.kind === 'del' ? 'The build is removed for everyone. This cannot be undone.' : ask?.kind === 'on' ? `Everyone testing ${kindName(ask.b.device_type).toLowerCase()}s will be able to pick this build.` : `No one will be able to pick this build until it is activated again.`}
-        confirmLabel={ask?.kind === 'del' ? 'Delete' : ask?.kind === 'on' ? 'Activate' : 'Deactivate'} cancelLabel="Keep it"
+        confirmLabel={ask ? VERB[ask.kind] : undefined} cancelLabel="Keep it"
         busy={busy} onConfirm={confirm} onCancel={() => setAsk(null)} />
     </>
   );

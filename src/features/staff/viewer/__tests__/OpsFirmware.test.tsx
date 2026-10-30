@@ -19,7 +19,7 @@ const BUILDS = [
 ];
 const gw = { device_id: 1, device_type: 'gateway', serial: 'S1' } as any;
 const em = { device_id: 2, device_type: 'energy_meter', serial: 'S2' } as any;
-const view = (dev = gw) => render(<OpsFirmware dev={dev} firmware={[]} isDark={false} />);
+const view = (dev = gw) => render(<OpsFirmware dev={dev} isDark={false} />);
 const file = (name = 'fw.bin', size = 10) => { const f = new File(['x'], name); Object.defineProperty(f, 'size', { value: size }); return f; };
 const fill = (f = file(), v = '2.2.6') => {
   fireEvent.click(screen.getByRole('tab', { name: /upload a build/i }));

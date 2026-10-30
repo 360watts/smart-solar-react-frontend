@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAccess } from '../access/useAccess';
+import { roleLabel } from '../access/roleLabel';
 import type { Feature } from '../access/features';
 import { visibleNavItems } from './staffNavigation';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -299,7 +300,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const displayName = user
     ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user?.username
     : '';
-  const roleName = user?.is_superuser ? 'Admin' : user?.is_staff ? 'Staff' : 'User';
+  const roleName = roleLabel(user?.role, user?.is_superuser, user?.is_staff);
 
   const isDrawer = !!onClose;
   const showCollapsed = collapsed && !isDrawer;
@@ -312,10 +313,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
     ? 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)'
     : 'linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-dark) 100%)';
 
-  const navMain = NAV_MAIN;
-
+  // A viewer has no Devices page: the device pages they open (/devices/<id>/dashboard) belong to their Dashboard entry.
   const isActivePath = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(path + '/');
+    location.pathname === path || location.pathname.startsWith(path + '/')
+    || (path === '/my-sites' && location.pathname.startsWith('/devices/') && !can('devices'));
 
   // ── Slim icon rail (desktop default, dashboard mockup): logo tile, 44px icon buttons grouped as in the
   // full sidebar with the same can() gating; labels are aria-label + title tooltip. The logo tile expands it.
@@ -338,7 +339,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         <Icon size={20} strokeWidth={2} aria-hidden="true" />
       </NavLink>
     );
-    const groups = [navMain, NAV_CONFIG, NAV_STAFF, NAV_ADMIN]
+    const groups = [NAV_MAIN, NAV_CONFIG, NAV_STAFF, NAV_ADMIN]
       .map(items => visibleNavItems(items, can))
       .filter(items => items.length > 0);
     return (
@@ -533,7 +534,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         display: 'flex', flexDirection: 'column', gap: 1,
         overflowY: 'auto', overflowX: 'hidden',
       }}>
-        {visibleNavItems(navMain, can).map(item => navLink(item))}
+        {visibleNavItems(NAV_MAIN, can).map(item => navLink(item))}
 
         {([
           ['Config', NAV_CONFIG],

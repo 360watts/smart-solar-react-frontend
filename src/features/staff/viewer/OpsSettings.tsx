@@ -46,7 +46,7 @@ const Row = ({ label, help, st, wide, children }: { label: string; help?: string
   </div>
 );
 
-export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; firmware?: unknown; isDark: boolean; onDone: () => void; data?: OpsData }) {
+export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; isDark: boolean; onDone: () => void; data?: OpsData }) {
   const can = useAccess().can('device_control');
   const { user } = useAuth();
   const isMeter = dev.device_type === 'energy_meter';
@@ -56,16 +56,13 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
   const [draft, setDraft] = useState<Draft>({});
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState<'apn' | 'wifi' | 'dbg' | 'cal' | null>(null);  // which confirm dialog is open
   const [notice, setNotice] = useState<string | null>(null);
   const [results, setResults] = useState<{ ok: boolean; text: string }[]>([]);
   const [apn, setApn] = useState({ apn: '', user: '', password: '' });
-  const [apnAsk, setApnAsk] = useState(false);
   const [wifi, setWifi] = useState({ ssid: '', password: '' });
   const [wifiShow, setWifiShow] = useState(false);
-  const [wifiAsk, setWifiAsk] = useState(false);
   const [cal, setCal] = useState({ mode: 'single' as 'single' | 'three', v: ['230', '230', '230'], i: ['5', '5', '5'] });
-  const [calAsk, setCalAsk] = useState(false);
-  const [dbgAsk, setDbgAsk] = useState(false);
   const [dbgHours, setDbgHours] = useState(1);
 
   const load = useCallback(() => apiService.getDevice(dev.device_id).then(setCur).catch(() => setCur('failed')), [dev.device_id]);
@@ -121,24 +118,22 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
   const discard = () => { setDraft({}); setNotice(null); };
 
   const apnError = /\^/.test(apn.apn + apn.user + apn.password) ? "The ^ character can't be used." : '';
-  const sendApn = async () => {
+  // One shape for every immediate send: call, show the result line, close the dialog, refresh.
+  const send = async (call: () => Promise<unknown>, ok: string, fail: string) => {
     setBusy(true);
-    try {
-      await apiService.setDeviceApn(dev.device_id, { apn: apn.apn.trim(), ...(apn.user.trim() && { user: apn.user.trim() }), ...(apn.password && { password: apn.password }) });
-      setResults([{ ok: true, text: 'Mobile data name: sent. The gateway restarts to use it.' }]); setApn({ apn: '', user: '', password: '' });
-    } catch { setResults([{ ok: false, text: "Mobile data name: couldn't send." }]); }
-    setBusy(false); setApnAsk(false); onDone();
+    try { await call(); setResults([{ ok: true, text: ok }]); } catch { setResults([{ ok: false, text: fail }]); }
+    setBusy(false); setAsk(null); await load(); onDone();
   };
+  const sendApn = () => send(async () => {
+    await apiService.setDeviceApn(dev.device_id, { apn: apn.apn.trim(), ...(apn.user.trim() && { user: apn.user.trim() }), ...(apn.password && { password: apn.password }) });
+    setApn({ apn: '', user: '', password: '' });
+  }, 'Mobile data name: sent. The gateway restarts to use it.', "Mobile data name: couldn't send.");
 
   // Wi-Fi is write-only: only the fields typed are sent, and nothing is ever read back.
-  const sendWifi = async () => {
-    setBusy(true);
-    try {
-      await apiService.updateDevice(dev.device_id, { ...(wifi.ssid.trim() && { wifi_ssid: wifi.ssid.trim() }), ...(wifi.password && { wifi_password: wifi.password }) });
-      setResults([{ ok: true, text: 'Wi-Fi: sent. The device reconnects to use it.' }]); setWifi({ ssid: '', password: '' });
-    } catch { setResults([{ ok: false, text: "Wi-Fi: couldn't send." }]); }
-    setBusy(false); setWifiAsk(false); await load(); onDone();
-  };
+  const sendWifi = () => send(async () => {
+    await apiService.updateDevice(dev.device_id, { ...(wifi.ssid.trim() && { wifi_ssid: wifi.ssid.trim() }), ...(wifi.password && { wifi_password: wifi.password }) });
+    setWifi({ ssid: '', password: '' });
+  }, 'Wi-Fi: sent. The device reconnects to use it.', "Wi-Fi: couldn't send.");
 
   const ph = cal.mode === 'single' ? 1 : 3;
   const rng = (x: number, [lo, hi]: readonly [number, number]) => Number.isFinite(x) && x >= lo && x <= hi;
@@ -147,20 +142,10 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
   // Detailed readings: acts at once (own confirm to turn on, none to turn off). Treated as on while telemetry_debug_until is in the future; year 9999 = until turned off.
   const dbgUntil: string | null = cur.telemetry_debug_until && new Date(cur.telemetry_debug_until).getTime() > Date.now() ? cur.telemetry_debug_until : null;
   const dbgForever = !!dbgUntil && new Date(dbgUntil).getUTCFullYear() >= 9999;
-  const setDbg = async (on: boolean) => {
-    setBusy(true);
-    try {
-      await (on ? apiService.setDeviceTelemetryDebug(dev.device_id, { hours: dbgHours }) : apiService.clearDeviceTelemetryDebug(dev.device_id));
-      setResults([{ ok: true, text: `Detailed readings: ${on ? `on for ${dbgHours} h` : 'off'}.` }]);
-    } catch { setResults([{ ok: false, text: "Detailed readings: couldn't send." }]); }
-    setBusy(false); setDbgAsk(false); await load(); onDone();
-  };
-  const sendCal = async () => {
-    setBusy(true);
-    try { await apiService.calibrateMeter(dev.device_id, { mode: cal.mode, v: vN, i: iN }); setResults([{ ok: true, text: 'Calibration: sent. The meter confirms shortly.' }]); }
-    catch { setResults([{ ok: false, text: "Calibration: couldn't send." }]); }
-    setBusy(false); setCalAsk(false); await load(); onDone();
-  };
+  const setDbg = (on: boolean) => send(
+    () => (on ? apiService.setDeviceTelemetryDebug(dev.device_id, { hours: dbgHours }) : apiService.clearDeviceTelemetryDebug(dev.device_id)),
+    `Detailed readings: ${on ? `on for ${dbgHours} h` : 'off'}.`, "Detailed readings: couldn't send.");
+  const sendCal = () => send(() => apiService.calibrateMeter(dev.device_id, { mode: cal.mode, v: vN, i: iN }), 'Calibration: sent. The meter confirms shortly.', "Calibration: couldn't send.");
 
   const settingRecent = (data && data !== 'failed' ? data.recent : []).filter(r => NAMES[r.op]);
   const sec = (title: string, meta: string, id: string, rows: React.ReactNode) => (
@@ -187,7 +172,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
           </Row>
           <Row label="Detailed readings" help="Pauses this page's data. Keeps the raw messages only, for debugging."
             st={dbgUntil ? ['nc', dbgForever ? 'On until turned off' : `On until ${when(dbgUntil)}`] : chip('telemetry_debug', undefined, true)}>
-            <Sw on={!!dbgUntil} label="Detailed readings" chg={false} onChange={v => (v ? setDbgAsk(true) : setDbg(false))} />
+            <Sw on={!!dbgUntil} label="Detailed readings" chg={false} onChange={v => (v ? setAsk('dbg') : setDbg(false))} />
           </Row>
           <Row label="Send logs" help="The gateway uploads its log files after each restart." st={logsChip()}>
             <Sw on={val('logs')} label="Send logs" chg={staged('logs')} onChange={v => stage('logs', v)} />
@@ -207,7 +192,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
           </Row>
           <div className="os-set wide">
             <div className="os-actions">
-              <button type="button" className="ops-btn pri" disabled={!apn.apn.trim() || !!apnError || busy} onClick={() => setApnAsk(true)}>Send mobile data settings</button>
+              <button type="button" className="ops-btn pri" disabled={!apn.apn.trim() || !!apnError || busy} onClick={() => setAsk('apn')}>Send mobile data settings</button>
               {apnError && <span role="alert" className="ops-meta">{apnError}</span>}
             </div>
           </div>
@@ -223,7 +208,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
           </Row>
           <div className="os-set wide">
             <div className="os-actions">
-              <button type="button" className="ops-btn pri" disabled={(!wifi.ssid.trim() && !wifi.password) || busy} onClick={() => setWifiAsk(true)}>Send Wi-Fi settings</button>
+              <button type="button" className="ops-btn pri" disabled={(!wifi.ssid.trim() && !wifi.password) || busy} onClick={() => setAsk('wifi')}>Send Wi-Fi settings</button>
             </div>
           </div>
         </>)}
@@ -239,7 +224,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
           </Row>
           <Row label="Calibration" help="Put a known reference load on first. The meter recalibrates as soon as it receives this." st={chip('meter_calibrate')}>
             {dev.is_online
-              ? <button type="button" className="ops-btn pri" disabled={!!calError || busy} onClick={() => setCalAsk(true)}>Calibrate meter</button>
+              ? <button type="button" className="ops-btn pri" disabled={!!calError || busy} onClick={() => setAsk('cal')}>Calibrate meter</button>
               : <Notice tone="warn" more="Calibration needs it online.">The meter is offline.</Notice>}
           </Row>
           <div className="os-set wide">
@@ -288,19 +273,19 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; f
       <ConfirmDialog isDark={isDark} open={review} tone="primary" title="Apply these changes?" busy={busy} confirmLabel="Apply" cancelLabel="Not yet"
         body={<><ul>{keys.map(k => <li key={k}>{ch[k].label}: {ch[k].show(base[k])} to {ch[k].show(draft[k])}</li>)}</ul>{!dev.is_online && <p>This gateway is offline. The change is delivered when it reconnects.</p>}</>}
         onConfirm={apply} onCancel={() => setReview(false)} />
-      <ConfirmDialog isDark={isDark} open={apnAsk} tone="primary" title="Send the new APN?" busy={busy} confirmLabel="Send" cancelLabel="Cancel"
+      <ConfirmDialog isDark={isDark} open={ask === 'apn'} tone="primary" title="Send the new APN?" busy={busy} confirmLabel="Send" cancelLabel="Cancel"
         body="The gateway restarts to use it and is offline for about a minute. If the APN is wrong it can't reach the cloud over mobile data until Wi-Fi is back."
-        onConfirm={sendApn} onCancel={() => setApnAsk(false)} />
-      <ConfirmDialog isDark={isDark} open={wifiAsk} tone="primary" title="Send the new Wi-Fi settings?" busy={busy} confirmLabel="Send" cancelLabel="Cancel"
+        onConfirm={sendApn} onCancel={() => setAsk(null)} />
+      <ConfirmDialog isDark={isDark} open={ask === 'wifi'} tone="primary" title="Send the new Wi-Fi settings?" busy={busy} confirmLabel="Send" cancelLabel="Cancel"
         body="The device will reconnect to use them and may go offline for about a minute. If the name or password is wrong it stays offline until someone corrects them."
-        onConfirm={sendWifi} onCancel={() => setWifiAsk(false)} />
-      <ConfirmDialog isDark={isDark} open={dbgAsk} tone="primary" title="Turn on detailed readings?" busy={busy} confirmLabel="Turn on" cancelLabel="Not now"
+        onConfirm={sendWifi} onCancel={() => setAsk(null)} />
+      <ConfirmDialog isDark={isDark} open={ask === 'dbg'} tone="primary" title="Turn on detailed readings?" busy={busy} confirmLabel="Turn on" cancelLabel="Not now"
         body={<>While this is on, this page's data stops updating, and the device's readings are only stored raw: no checks, no alerts. It turns off by itself after the time you pick.
           <label style={{ display: 'block', marginTop: 10 }}>Keep it on for <select value={dbgHours} onChange={e => setDbgHours(Number(e.target.value))}>{[1, 6, 24].map(h => <option key={h} value={h}>{h} h</option>)}</select></label></>}
-        onConfirm={() => setDbg(true)} onCancel={() => setDbgAsk(false)} />
-      <ConfirmDialog isDark={isDark} open={calAsk} tone="primary" title="Calibrate this meter?" busy={busy} confirmLabel="Calibrate" cancelLabel="Not yet"
+        onConfirm={() => setDbg(true)} onCancel={() => setAsk(null)} />
+      <ConfirmDialog isDark={isDark} open={ask === 'cal'} tone="primary" title="Calibrate this meter?" busy={busy} confirmLabel="Calibrate" cancelLabel="Not yet"
         body={`The meter will recalibrate straight away against ${ph === 1 ? 'one phase' : 'all three phases'}. Make sure the reference load is on now.`}
-        onConfirm={sendCal} onCancel={() => setCalAsk(false)} />
+        onConfirm={sendCal} onCancel={() => setAsk(null)} />
     </div>
   );
 }
