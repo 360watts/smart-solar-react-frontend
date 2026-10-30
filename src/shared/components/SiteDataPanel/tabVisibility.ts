@@ -11,9 +11,11 @@ export function tabsFor({ meterOnly, hasMeter, hasPlugs, visibleTabs }: { meterO
   const allowed = (id: TabId) => !visibleTabs || visibleTabs.includes(id);
   // Devices is opt-in (last, on every site kind): only a caller that checked can('device_control') lists it.
   const devices: TabId[] = visibleTabs?.includes('devices') ? ['devices'] : [];
-  if (meterOnly === true) return [...(['usage', ...(hasPlugs === true ? ['plugs'] : [])] as TabId[]).filter(allowed), ...devices];
-  const tabs = TABS.map(t => t.id as TabId).filter(id => id !== 'usage' && id !== 'devices' && (id !== 'plugs' || hasPlugs === true));
-  return [...(hasMeter === true ? [...tabs, 'usage' as TabId] : tabs).filter(allowed), ...devices];
+  // Events is opt-in too (viewer site page), just before Devices.
+  const events: TabId[] = visibleTabs?.includes('events') ? ['events'] : [];
+  if (meterOnly === true) return [...(['usage', ...(hasPlugs === true ? ['plugs'] : [])] as TabId[]).filter(allowed), ...events, ...devices];
+  const tabs = TABS.map(t => t.id as TabId).filter(id => id !== 'usage' && id !== 'devices' && id !== 'events' && (id !== 'plugs' || hasPlugs === true));
+  return [...(hasMeter === true ? [...tabs, 'usage' as TabId] : tabs).filter(allowed), ...events, ...devices];
 }
 
 /** The tab to show: the active one if the bar lists it, else the bar's first entry. */

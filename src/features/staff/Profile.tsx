@@ -6,6 +6,8 @@ import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileProfile from '../mobile/staff/MobileProfile';
 import SecurityCard from './security/SecurityCard';
+import ViewerProfileSection from './viewer/ViewerProfileSection';
+import { useAccess } from '../../shared/access/useAccess';
 
 const GREEN='#4CAFA9',GREEN_D='#3D8A85',NAVY='#2B4A6B',ORANGE='#F07522';
 const tokens=(dark:boolean)=>({bg:dark?'#0D1117':'#F6F8FA',surface:dark?'#161B22':'#FFFFFF',border:dark?'#30363D':'#D0D7DE',text:dark?'#E6EDF3':'#1F2328',muted:dark?'#8B949E':'#57606A',inputBg:dark?'#0D1117':'#FFFFFF'});
@@ -112,7 +114,7 @@ const EditModal:React.FC<EMProps>=({profile,dark,accent,onSave,onClose})=>{
 };
 
 const Profile:React.FC=()=>{
-  const isMobile=useIsMobile();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=GREEN;
+  const isMobile=useIsMobile();const {isViewer}=useAccess();const {isDark}=useTheme();const tok=tokens(isDark);const ACCENT=GREEN;
   const [profile,setProfile]=useState<ProfileData|null>(null);const [loading,setLoading]=useState(true);
   const [error,setError]=useState<string|null>(null);const [success,setSuccess]=useState<string|null>(null);
   const [showEdit,setShowEdit]=useState(false);const [avPrev,setAvPrev]=useState<string|null>(null);
@@ -130,7 +132,7 @@ const Profile:React.FC=()=>{
     setUpAv(true);try{const res=await apiService.uploadProfilePicture(f);if(res.avatar_url)setAvUrl(res.avatar_url);setSuccess('Photo updated');setTimeout(()=>setAvPrev(null),2000);}catch{setError('Upload failed');setAvPrev(null);}finally{setUpAv(false);if(fileRef.current)fileRef.current.value='';}
   };
 
-  if(isMobile)return<MobileProfile/>;
+  if(isMobile)return<><MobileProfile/>{isViewer&&<div style={{paddingBottom:80}}><ViewerProfileSection/></div>}</>;
   if(loading)return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:tok.bg}}><div style={{textAlign:'center'}}><div style={{width:44,height:44,borderRadius:'50%',border:`3px solid ${ACCENT}20`,borderTop:`3px solid ${ACCENT}`,animation:'pspin 1s linear infinite',margin:'0 auto 14px'}}/><p style={{color:tok.muted,fontSize:13}}>Loading…</p></div><style>{`@keyframes pspin{to{transform:rotate(360deg);}}`}</style></div>);
   if(!profile)return(<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:tok.bg}}><div style={{textAlign:'center'}}><AlertCircle size={40} color="#F85149" style={{margin:'0 auto 12px',display:'block'}}/><p style={{color:tok.text,fontWeight:600,marginBottom:8}}>Unable to load profile</p><p style={{color:tok.muted,fontSize:13,marginBottom:20}}>{error}</p><button onClick={()=>window.location.reload()} style={{padding:'10px 24px',background:ACCENT,color:'#fff',border:'none',borderRadius:8,fontSize:14,fontWeight:600,cursor:'pointer'}}>Retry</button></div></div>);
 
@@ -211,6 +213,7 @@ const Profile:React.FC=()=>{
         </div>
       </div>
     </div>
+    {isViewer&&<ViewerProfileSection/>}
     {showEdit&&profile&&<EditModal profile={profile} dark={isDark} accent={ACCENT} onSave={handleSave} onClose={()=>setShowEdit(false)}/>}
   </div>);
 };

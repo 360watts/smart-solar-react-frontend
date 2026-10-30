@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiService, type AccessDevice, type AccessSummary } from '../../../services/api';
+import DeviceStrip from './DeviceStrip';
 import { ago } from './DevicePage';
 import './viewerHome.css';
 
@@ -71,9 +72,7 @@ const ViewerHome: React.FC = () => {
                     <td><Link to={`/devices/${d.device_id}/dashboard`} onClick={e => e.stopPropagation()}>{d.serial}</Link></td>
                     <td className="vh-num">{d.firmware_version ?? '-'}</td>
                     <td>
-                      <div className="vh-strip" role="img" aria-label={`${d.serial}, last 24 hours, one cell per half hour`}>
-                        {d.coverage.map((c, i) => <i key={i} className={c} />)}
-                      </div>
+                      <DeviceStrip d={d} />
                     </td>
                     <td><span className={`vh-state${d.is_online ? ' on' : ''}`}>{d.is_online ? 'Sending' : 'Silent'}</span></td>
                     <td className="vh-muted">{d.last_reading_at ? ago(d.last_reading_at) : 'no data yet'}</td>

@@ -51,6 +51,7 @@ import PlugsTab from './tabs/PlugsTab';
 import { isPlug } from '../EnergyFlow/plugHelpers';
 import { railToday, type HomeToday } from '../EnergyFlow/flowModel';
 import ViewerDevices from '../../../features/staff/viewer/ViewerDevices';
+import ViewerEvents from '../../../features/staff/viewer/ViewerEvents';
 import { tabsFor, tabLabel, resolveTab } from './tabVisibility';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1010,7 +1011,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const failed = !!error && meterOnly !== true;
   // With the Devices tab (viewer, device_control) the tab bar stays up on error / no data, so devices that
   // stopped reporting can still be restarted or updated; the other tabs show the message instead.
-  const devicesEscape = visibleTabs?.includes('devices') === true;
+  const devicesEscape = visibleTabs?.includes('devices') === true || visibleTabs?.includes('events') === true;
   const errorMsg = (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -1268,7 +1269,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
           </div>
 
           {/* ── Tab Content ── */}
-          {(failed || noData) && activeTab !== 'devices' ? (failed ? errorMsg : noDataMsg) : (
+          {(failed || noData) && activeTab !== 'devices' && activeTab !== 'events' ? (failed ? errorMsg : noDataMsg) : (
           <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
               <OverviewTab
@@ -1437,6 +1438,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
               <UsageTab key="usage" siteId={siteId} isDark={isDark} ctLatest={ctLatest} />
             )}
 
+            {activeTab === 'events' && <ViewerEvents key="events" siteId={siteId} />}
             {activeTab === 'devices' && <ViewerDevices key="devices" siteId={siteId} />}
 
             {activeTab === 'plugs' && <PlugsTab key="plugs" smartDevices={smartDevices} isDark={isDark} siteId={siteId} />}

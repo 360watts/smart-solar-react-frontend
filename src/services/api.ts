@@ -1161,6 +1161,16 @@ class ApiService {
     return this.request('/me/access-summary/');
   }
 
+  // Viewer site page, Events tab: incidents + operations at one site, newest first. Throws so the tab can offer a retry.
+  async getSiteEvents(siteId: string, days = 7): Promise<SiteEvents> {
+    return this.request(`/sites/${encodeURIComponent(siteId)}/events/?days=${days}`);
+  }
+
+  // Viewer Profile: operations the signed-in person ran, newest first (max 200). Throws so the page can offer a retry.
+  async getMyOperations(days = 30): Promise<MyOperations> {
+    return this.request(`/me/operations/?days=${days}`);
+  }
+
   // Usage tab for meter-only sites: one call, everything computed server-side. Throws on failure so the tab can offer a retry.
   async getMeterUsage(siteId: string, opts?: { fresh?: boolean }): Promise<MeterUsage> {
     const key = `meter_usage_${siteId}`;
@@ -2422,6 +2432,31 @@ export interface AccessSite {
   devices_sending: number;
   latest_incident: { title: string; severity: string; opened_at: string } | null;
 }
+
+export interface SiteEvent {
+  at: string;
+  kind: 'incident' | 'operation';
+  title: string;
+  severity: string | null;
+  status: string | null;
+  actor: { id: number; name: string } | null;
+  device_id: number | null;
+  serial: string | null;
+}
+
+export interface SiteEvents { days: number; events: SiteEvent[] }
+
+export interface MyOperation {
+  at: string;
+  op: string;
+  action: string;
+  device_id: number;
+  serial: string | null;
+  site_id: string | null;
+  values: Record<string, unknown>;
+}
+
+export interface MyOperations { days: number; rows: MyOperation[] }
 
 export interface AccessSummary {
   devices: AccessDevice[];

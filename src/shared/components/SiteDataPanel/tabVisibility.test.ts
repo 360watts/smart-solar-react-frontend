@@ -1,7 +1,7 @@
 import { tabsFor, tabLabel, resolveTab } from './tabVisibility';
 import { TABS, type TabId } from './types';
 
-const inverterTabs = TABS.map(t => t.id).filter(id => id !== 'usage' && id !== 'devices' && id !== 'plugs');
+const inverterTabs = TABS.map(t => t.id).filter(id => id !== 'usage' && id !== 'devices' && id !== 'events' && id !== 'plugs');
 
 describe('tabsFor', () => {
   it('meter-only gives usage only', () => {
