@@ -79,7 +79,7 @@ function StaffAiChat() {
   return <Suspense fallback={null}><AiChat /></Suspense>;
 }
 
-const MySites = lazy(() => import('../features/staff/viewer/MySites'));
+const ViewerHome = lazy(() => import('../features/staff/viewer/ViewerHome'));
 const ViewerSite = lazy(() => import('../features/staff/viewer/ViewerSite'));
 const DeviceDashboard = lazy(() => import('../features/staff/viewer/DeviceDashboard'));
 
@@ -150,7 +150,7 @@ function App() {
                 <Route path="/sites" element={<RequireAccess feature="sites"><Suspense fallback={<SkeletonDashboard />}><Sites /></Suspense></RequireAccess>} />
                 <Route path="/equipment" element={<RequireAccess feature="catalog"><Suspense fallback={<SkeletonDashboard />}><Equipment /></Suspense></RequireAccess>} />
                 <Route path="/quotation" element={<RequireAccess feature="quotations"><Suspense fallback={<SkeletonDashboard />}><QuotationPage /></Suspense></RequireAccess>} />
-                <Route path="/my-sites" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><MySites /></Suspense></RequireAccess>} />
+                <Route path="/my-sites" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><ViewerHome /></Suspense></RequireAccess>} />
                 <Route path="/my-sites/:siteId" element={<RequireAccess feature="my_sites"><Suspense fallback={<SkeletonDashboard />}><ViewerSite /></Suspense></RequireAccess>} />
                 <Route path="/devices/:deviceId/dashboard" element={<RequireAccess feature="site_monitoring"><Suspense fallback={<SkeletonDashboard />}><DeviceDashboard /></Suspense></RequireAccess>} />
                 <Route path="/profile" element={<Suspense fallback={<SkeletonDashboard />}><Profile /></Suspense>} />

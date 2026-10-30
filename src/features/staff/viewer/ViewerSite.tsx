@@ -5,8 +5,13 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import SiteDataPanel from '../../../shared/components/SiteDataPanel';
 import type { TabId } from '../../../shared/components/SiteDataPanel/types';
 import { useTokens } from '../siteHardware/ui';
-import { openLinkStyle } from './MySites';
 import { useAccess } from '../../../shared/access/useAccess';
+
+const openLinkStyle = (t: ReturnType<typeof useTokens>): React.CSSProperties => ({
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44,
+  padding: '0 20px', borderRadius: 12, background: t.good, color: '#fff',
+  fontFamily: t.body, fontSize: '0.92rem', fontWeight: 600, textDecoration: 'none',
+});
 
 // Read-only monitoring tabs. Details (settings) and Health are left out. Usage and Smart plugs only show when the site has a meter / a plug (the panel decides).
 // Devices (list + device drawer) is added only with device control.

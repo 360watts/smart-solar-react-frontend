@@ -1,0 +1,30 @@
+/* Viewer home "Your access" (spec 5.1). Same tokens as deviceTabs.css. */
+.vh { --vh-ok: #0B7F73; --vh-part: #C9A24A; --vh-gap: rgba(201,122,0,0.32); --vh-warn: #8A5300; max-width: 1180px; margin: 0 auto; padding: 0 16px; font-family: Rubik, sans-serif; color: var(--foreground); display: flex; flex-direction: column; gap: 20px; }
+.dark-mode .vh { --vh-ok: #2EF0CC; --vh-part: #B79540; --vh-gap: rgba(240,170,60,0.38); --vh-warn: #F0AA3C; }
+.vh, .vh * { font-variant-ligatures: none !important; }
+.vh h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; }
+.vh h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.vh-num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+.vh-muted { color: var(--muted-foreground); font-size: 13px; }
+.vh-box { overflow-x: auto; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
+.vh-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px; }
+.vh-table th { padding: 12px 10px; font-weight: 500; font-size: 13px; color: var(--muted-foreground); text-align: left; white-space: nowrap; }
+.vh-table td { padding: 10px; border-top: 1px solid var(--border); white-space: nowrap; }
+.vh-table th:first-child, .vh-table td:first-child { padding-left: 18px; }
+.vh-table tr[data-row] { cursor: pointer; }
+.vh-table tr[data-row]:hover { background: color-mix(in srgb, var(--brand-green) 8%, transparent); }
+.vh-table tr.silent { background: color-mix(in srgb, var(--vh-warn) 8%, transparent); }
+.vh-table a { color: inherit; font-family: 'Fira Code', monospace; text-decoration: none; }
+.vh-strip { display: flex; gap: 1px; min-width: 190px; }
+.vh-strip i { flex: 1; height: 18px; min-width: 3px; border-radius: 1px; background: var(--vh-gap); }
+.vh-strip i.full { background: var(--vh-ok); }
+.vh-strip i.partial { background: var(--vh-part); }
+.vh-state { color: var(--vh-warn); font-size: 13px; }
+.vh-state.on { color: var(--vh-ok); }
+.vh-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.vh-card { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); color: inherit; text-decoration: none; min-width: 0; }
+.vh-card b { font-size: 16px; font-weight: 600; }
+.vh-fault { color: var(--vh-warn); font-size: 13px; }
+.vh-link { color: var(--brand-green); font-weight: 500; }
+.vh-empty { padding: 28px 20px; text-align: center; border-radius: var(--radius); background: var(--card); border: 1px solid var(--border); }
+.vh button { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: inherit; font: 500 14px Rubik, sans-serif; cursor: pointer; }

@@ -2,7 +2,6 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import MySites from '../MySites';
 import ViewerSite from '../ViewerSite';
 
 const mockUseAuth = jest.fn();
@@ -21,32 +20,6 @@ jest.mock('../../../../shared/components/SiteDataPanel', () => ({
 const { apiService } = jest.requireMock('../../../../services/api');
 const sites = (list: { site_id: string; display_name: string }[]) =>
   mockUseAuth.mockReturnValue({ user: { assigned_sites: list } });
-
-describe('MySites', () => {
-  const ui = () => (
-    <MemoryRouter initialEntries={['/my-sites']}>
-      <Routes><Route path="/my-sites" element={<MySites />} /></Routes>
-    </MemoryRouter>
-  );
-
-  it('shows a card with an Open link per assigned site, without listing all sites', () => {
-    sites([{ site_id: 's1', display_name: 'Home' }, { site_id: 's2', display_name: 'Farm' }]);
-    render(ui());
-    expect(screen.getByText('Your sites')).toBeInTheDocument();
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Farm')).toBeInTheDocument();
-    const links = screen.getAllByRole('link', { name: /open/i });
-    expect(links.map(l => l.getAttribute('href'))).toEqual(['/my-sites/s1', '/my-sites/s2']);
-    Object.values(apiService).forEach((fn: any) => expect(fn).not.toHaveBeenCalled());
-  });
-
-  it('shows the empty state when nothing is assigned', () => {
-    sites([]);
-    render(ui());
-    expect(screen.getByText('No sites yet')).toBeInTheDocument();
-    expect(screen.getByText(/ask an admin/i)).toBeInTheDocument();
-  });
-});
 
 describe('ViewerSite', () => {
   const ui = (path: string) => (
@@ -76,15 +49,5 @@ describe('ViewerSite', () => {
     render(ui('/my-sites/other'));
     expect(screen.queryByTestId('panel')).toBeNull();
     expect(screen.getByText(/isn't available/i)).toBeInTheDocument();
-  });
-});
-
-describe('MySites devices', () => {
-  it('lists devices given on their own, each opening its device dashboard', () => {
-    mockUseAuth.mockReturnValue({ user: { assigned_sites: [], assigned_devices: [{ device_id: 7, serial: 'F82C', device_type: 'energy_meter' }] } });
-    render(<MemoryRouter><MySites /></MemoryRouter>);
-    expect(screen.getByText('Meter F82C')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open f82c/i }).getAttribute('href')).toBe('/devices/7/dashboard');
-    expect(screen.queryByText('No sites yet')).not.toBeInTheDocument();
   });
 });

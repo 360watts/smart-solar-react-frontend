@@ -1156,6 +1156,11 @@ class ApiService {
     }
   }
 
+  // Viewer home: everything the signed-in viewer was given, one call. Throws so the page can offer a retry.
+  async getAccessSummary(): Promise<AccessSummary> {
+    return this.request('/me/access-summary/');
+  }
+
   // Usage tab for meter-only sites: one call, everything computed server-side. Throws on failure so the tab can offer a retry.
   async getMeterUsage(siteId: string, opts?: { fresh?: boolean }): Promise<MeterUsage> {
     const key = `meter_usage_${siteId}`;
@@ -2394,4 +2399,31 @@ export interface HardwareHealthData {
   };
   maintenance_tips: Array<{ icon: string; description: string; frequency: string }>;
   last_updated: string;
+}
+
+// ─── Viewer home (/me/access-summary/) ────────────────────────────────────────
+
+export interface AccessDevice {
+  device_id: number;
+  device_type: 'gateway' | 'energy_meter';
+  serial: string;
+  firmware_version: string | null;
+  site_id: string | null;
+  is_online: boolean;
+  last_reading_at: string | null;
+  /** 48 half-hour cells, oldest first. */
+  coverage: Array<'full' | 'partial' | 'empty'>;
+}
+
+export interface AccessSite {
+  site_id: string;
+  display_name: string;
+  devices_total: number;
+  devices_sending: number;
+  latest_incident: { title: string; severity: string; opened_at: string } | null;
+}
+
+export interface AccessSummary {
+  devices: AccessDevice[];
+  sites: AccessSite[];
 }
