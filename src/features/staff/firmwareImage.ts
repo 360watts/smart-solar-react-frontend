@@ -25,9 +25,11 @@ export function inspectFirmwareBin(buf: ArrayBuffer, fileName: string): Firmware
   let verRun = hasDesc ? text.slice(48, 80).split('\0')[0] : '';
   // Older builds leave the descriptor as a git hash. Fall back to FIRMWARE_VERSION, which the compiler stores
   // just before the "Firmware v%s" boot-banner format string (a few log-format runs may sit between them).
+  // EM26 Arduino builds use "Firmware: %s | Hardware: %s" and keep the leading v ("v2.3.5").
   if (!semver.test(verRun)) {
-    const banner = runs.findIndex(r => r.includes('Firmware v%s'));
-    verRun = banner < 0 ? '' : runs.slice(Math.max(0, banner - 4), banner).reverse().find(r => semver.test(r) && !r.startsWith('v')) ?? '';
+    const banner = runs.findIndex(r => r.includes('Firmware v%s') || r.includes('Firmware: %s'));
+    const keepsV = banner >= 0 && runs[banner].includes('Firmware: %s');
+    verRun = banner < 0 ? '' : runs.slice(Math.max(0, banner - 4), banner).reverse().find(r => semver.test(r) && (keepsV || !r.startsWith('v'))) ?? '';
   }
   const meterRun = runs.find(r => /energy ?meter/i.test(r) && !/[{}"<>%/]/.test(r));
   const usageType = meterRun || runs.some(r => /\bEM\d{2}\b/.test(r)) ? 'energymeter'
