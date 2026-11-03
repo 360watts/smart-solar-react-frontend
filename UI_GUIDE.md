@@ -165,3 +165,18 @@ Two traps from the legacy CSS (see F-013-UI):
 - Shape: Playful, 22 px card corners (`--radius`).
 - Navigation: sidebar only (collapsed rail and expanded), no second navbar.
 
+
+## Buttons and words (2026-11-03)
+
+Classes live in `src/index.css` ("Button looks"). Old `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-sm` map onto them.
+
+| Class | Use |
+|---|---|
+| `ui-btn ui-btn--main` | The one action you want taken. One per screen or card. |
+| `ui-btn ui-btn--support` | Safe extras (Edit, Reboot, Cancel-like). |
+| `ui-btn ui-btn--link` | Leaves the screen or backs out ("Keep it"). |
+| `ui-btn ui-btn--danger` | Destructive, red outline. Becomes `--danger-fill` only inside its confirm dialog. |
+
+Add `ui-btn--sm` inside dense rows. Never put two main buttons side by side. Navigation is a link, not a button.
+
+Words: keep a sentence only if it warns, reports a problem, or says what the screen can't show. Explanations of what an action does go in its confirm dialog, not on the card. Labels start with a verb. Research and mockups: https://claude.ai/artifact/9Xa55JK7DPJ3DWaT6XdZSq

@@ -74,7 +74,7 @@ interface EditDeviceModalProps {
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 const P = {
-  bg:           '#080C14',
+  bg:           '#06070B',
   surface:      '#0D1420',
   panel:        '#111827',
   border:       'rgba(255,255,255,0.06)',
@@ -315,8 +315,6 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
     setFormData({
       device_type: type,
       config_version: device.config_version || '',
-      logs_enabled: device.logs_enabled ?? false,
-      auto_reboot_enabled: device.auto_reboot_enabled ?? true,
       is_active: device.is_active ?? true,
       wifi_ssid: device.wifi_ssid || '',
       wifi_password: '',
@@ -357,8 +355,6 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       const payload: Partial<Device> = {
         device_type: formData.device_type,
         config_version: formData.config_version,
-        logs_enabled: formData.logs_enabled,
-        auto_reboot_enabled: formData.auto_reboot_enabled,
         is_active: formData.is_active,
         alerts_muted_until: formData.alerts_muted_until || null,
       };
@@ -681,20 +677,6 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         value={formData.is_active ?? true}
                         onChange={v => set('is_active', v)}
                       />
-                      {!isMeter && (<>
-                      <ToggleField
-                        label="Auto Reboot"
-                        sublabel="Automatically reboot when RS-485 registers freeze"
-                        value={formData.auto_reboot_enabled ?? true}
-                        onChange={v => set('auto_reboot_enabled', v)}
-                      />
-                      <ToggleField
-                        label="Log Streaming"
-                        sublabel="Device uploads logs to S3 on each heartbeat"
-                        value={formData.logs_enabled ?? false}
-                        onChange={v => set('logs_enabled', v)}
-                      />
-                      </>)}
                     </div>
 
                     {/* Wi-Fi Credentials */}

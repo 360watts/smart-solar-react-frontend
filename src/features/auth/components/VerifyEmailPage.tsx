@@ -36,7 +36,7 @@ const VerifyEmailPage: React.FC = () => {
     <div style={{
       flex: 1, minHeight: '100vh', width: '100%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#080C14', padding: 20, fontFamily: "'Rubik', sans-serif",
+      background: '#06070B', padding: 20, fontFamily: "'Rubik', sans-serif",
     }}>
       <div style={{
         width: '100%', maxWidth: 400, textAlign: 'center',

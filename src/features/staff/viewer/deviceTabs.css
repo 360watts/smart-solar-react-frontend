@@ -50,7 +50,7 @@
 .dt-table tr.gap td { font-family: Rubik, sans-serif; color: var(--dc-warn-text); text-align: left; background: color-mix(in srgb, var(--dc-fault) 7%, transparent); }
 .dt-icon { min-width: 36px; min-height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--brand-green); font: 500 13px 'Fira Code', monospace; white-space: nowrap; cursor: pointer; }
 .dt-packet { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: var(--radius); background: #12151A; color: #E6EEF0; min-width: 0; }
-.dt-packet pre { margin: 0; padding: 14px 16px; border-radius: 14px; background: #080C14; font: 13px/1.55 'Fira Code', monospace; overflow-x: auto; white-space: pre; }
+.dt-packet pre { margin: 0; padding: 14px 16px; border-radius: 14px; background: #06070B; font: 13px/1.55 'Fira Code', monospace; overflow-x: auto; white-space: pre; }
 .dt-packet button { min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; }
 
 .dt-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: stretch; }

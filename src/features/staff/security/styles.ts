@@ -1,7 +1,7 @@
 export const getSecurityCardStyles = (isDark: boolean, customerMode = false) => {
   const cardBg     = customerMode
     ? (isDark ? 'rgba(10,20,14,0.96)' : 'rgba(252,255,253,0.97)')
-    : (isDark ? 'linear-gradient(145deg, #0F1623 0%, #0D1320 100%)' : '#FFFFFF');
+    : (isDark ? 'linear-gradient(145deg, #0D0F15 0%, #0A0C12 100%)' : '#FFFFFF');
   const cardBorder = customerMode
     ? (isDark ? 'rgba(15,159,143,0.13)' : 'rgba(15,159,143,0.18)')
     : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)');

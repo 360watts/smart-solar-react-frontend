@@ -483,7 +483,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
         // Fetch all day-windows in parallel — cacheService.dedup ensures repeated
         // calls for the same window (e.g. from concurrent renders) share one request.
         const results = await Promise.allSettled(
-          windows.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date, aggregate }))
+          // '5min' even when the range has no preset: a short last window (< 6 h) would otherwise get raw 2-second rows.
+          windows.map(w => apiService.getSiteTelemetry(siteId, { start_date: w.start_date, end_date: w.end_date, aggregate: aggregate ?? '5min' }))
         );
         for (const r of results) {
           if (r.status === 'fulfilled' && Array.isArray(r.value)) telemetryRows.push(...r.value);

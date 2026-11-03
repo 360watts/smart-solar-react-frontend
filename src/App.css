@@ -2718,7 +2718,7 @@ body.dark-mode {
 }
 
 body.dark-mode .card {
-  background: #0F1623 !important;
+  background: #0D0F15 !important;
   border: 1px solid rgba(255,255,255,0.07) !important;
   box-shadow: 0 2px 12px rgba(0,0,0,0.2) !important;
   color: #F0F4FF !important;
@@ -2785,7 +2785,7 @@ body.dark-mode .table tbody td { color: var(--muted-foreground) !important; }
 /* Modal */
 
 body.dark-mode .modal-content {
-  background: linear-gradient(145deg, #0F1623, #0D1320) !important;
+  background: linear-gradient(145deg, #0D0F15, #0A0C12) !important;
   border: 1px solid rgba(255,255,255,0.07) !important;
   color: #F0F4FF !important;
 }
@@ -2900,7 +2900,7 @@ body.dark-mode .search-input::placeholder { color: var(--muted-foreground) !impo
 
 /* Auth */
 
-body.dark-mode .auth-container { background: linear-gradient(180deg, #080C14 0%, #0F1623 100%) !important; }
+body.dark-mode .auth-container { background: linear-gradient(180deg, #06070B 0%, #0D0F15 100%) !important; }
 
 body.dark-mode .auth-card {
   background: linear-gradient(145deg, rgba(15,22,35,0.97), rgba(8,12,20,0.99)) !important;
@@ -3053,14 +3053,14 @@ body.dark-mode .form-group select:focus {
 }
 
 body.dark-mode .form-group select option {
-  background: #0F1623 !important;
+  background: #0D0F15 !important;
   color: #F0F4FF !important;
 }
 
 /* ── Custom dropdown list/items in dark mode ── */
 
 body.dark-mode .dropdown-list {
-  background: #0F1623 !important;
+  background: #0D0F15 !important;
   border-color: rgba(15,159,143, 0.2) !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
 }
@@ -3731,7 +3731,7 @@ body.dark-mode .portal-modal-backdrop {
 }
 
 body.dark-mode .portal-modal-container {
-  background: #0F1623;
+  background: #0D0F15;
   box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07);
 }
 
@@ -3998,14 +3998,14 @@ html.dark-mode .quotation-step-body [data-orientation="horizontal"] {
 /* ── Mobile AppTheme Dark Mode Alignment ──────────────────────────────────────
    Override hardcoded slate (#0f172a, #1e293b, #1a1a1a) values throughout
    Devices, Users, and other staff pages to match mobile AppTheme dark palette:
-   bg=#080C14, card=#0F1623, text=#F0F4FF, muted=rgba(240,244,255,0.52)
+   bg=#06070B, card=#0D0F15, text=#F0F4FF, muted=rgba(240,244,255,0.52)
    ────────────────────────────────────────────────────────────────────────── */
 
 /* Page/section backgrounds that used slate-900/slate-800 */
 
 body.dark-mode .admin-container,
 body.dark-mode .responsive-page {
-  background: #080C14;
+  background: #06070B;
   color: #F0F4FF;
 }
 
@@ -4014,7 +4014,7 @@ body.dark-mode .responsive-page {
 body.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 body.dark-mode select,
 body.dark-mode textarea {
-  background: #0F1623 !important;
+  background: #0D0F15 !important;
   color: #F0F4FF !important;
   border-color: rgba(255,255,255,0.09) !important;
 }

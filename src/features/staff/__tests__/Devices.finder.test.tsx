@@ -76,3 +76,13 @@ it('N2 an old ?deviceId link goes to the device page', async () => {
   withRoutes('/devices?deviceId=2');
   await waitFor(() => expect(screen.getByTestId('here')).toHaveTextContent('/devices/2/dashboard'));
 });
+
+it('B2 side panel: one main button, supporting buttons, red Delete', async () => {
+  render(<MemoryRouter><Devices /></MemoryRouter>);
+  const open = await screen.findByRole('button', { name: 'Open device' });
+  expect(open.className).toContain('ui-btn--main');
+  expect(screen.getByRole('button', { name: 'Edit' }).className).toContain('ui-btn--support');
+  expect(screen.getByRole('button', { name: 'Reboot' }).className).toContain('ui-btn--support');
+  expect(screen.getByRole('button', { name: 'Delete' }).className).toContain('ui-btn--danger');
+  expect(screen.getByLabelText('Selected device').querySelectorAll('.ui-btn--main').length).toBe(1);
+});

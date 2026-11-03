@@ -34,9 +34,9 @@
 
 .ops-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .ops-row .ops-btns { flex-wrap: nowrap; justify-content: flex-end; }
-.ops-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--o-line); background: var(--o-surf); font: 600 14px Rubik, sans-serif; color: var(--o-ink); cursor: pointer; }
-.ops-btn.pri { background: #0B7F73; border-color: #0B7F73; color: #fff; }
-.ops-btn.red { background: var(--o-red); border-color: var(--o-red); color: #fff; }
+.ops-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1.5px solid var(--btn-support-line); background: var(--btn-support-bg); font: 600 14px Rubik, sans-serif; color: var(--btn-support-ink); cursor: pointer; }
+.ops-btn.pri { background: var(--btn-main); border-color: var(--btn-main); color: var(--btn-main-ink); }
+.ops-btn.red { background: transparent; border-color: color-mix(in srgb, var(--btn-danger) 50%, transparent); color: var(--btn-danger); }
 .ops-btn[disabled] { opacity: .5; cursor: not-allowed; }
 .ops-sel { min-height: 40px; max-width: 190px; padding: 0 10px; }
 .ops-unlock { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--o-ink2); }

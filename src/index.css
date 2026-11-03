@@ -106,14 +106,14 @@
 
 .dark-mode {
   /* Dark mode — 360watts Design System */
-  --background: #080C14;
-  --foreground: #F0F4FF;
-  --card: #0F1623;
-  --card-foreground: #F0F4FF;
+  --background: #06070B;
+  --foreground: #EEF1F8;
+  --card: #0D0F15;
+  --card-foreground: #EEF1F8;
   /* Deliberately distinct from --card — tooltips/popovers float over cards of the
      same navy, and an identical background made them read as invisible. */
-  --popover: #1B2536;
-  --popover-foreground: #F0F4FF;
+  --popover: #181C26;
+  --popover-foreground: #EEF1F8;
   --primary: #2EF0CC;
   --primary-foreground: #0A0E1A;
   --text-inverse: #0A0E1A;
@@ -122,7 +122,7 @@
   --cta: #F27521;
   --cta-soft: rgba(242,117,33,0.18);
   --muted: rgba(255,255,255,0.08);
-  --muted-foreground: #A9C4C2;
+  --muted-foreground: #A3ADBF;
   --accent: #E9B949;
   --accent-foreground: #0A0E1A;
   --destructive: #DC2626;
@@ -143,9 +143,9 @@
   --danger-soft: rgba(220,38,38,0.16);
   --info: #60A5FA;
   --info-soft: rgba(96,165,250,0.16);
-  --surface-raised: #111927;
-  --surface-muted: #131B2E;
-  --text-dim: #7FA6A4;
+  --surface-raised: #10131A;
+  --surface-muted: #141821;
+  --text-dim: #7C879A;
   --border-strong: rgba(255,255,255,0.14);
   --shadow-card: 0 2px 12px rgba(0,0,0,0.22), 0 18px 42px rgba(0,0,0,0.32);
   --shadow-tooltip: 0 2px 8px rgba(0,0,0,0.35), 0 16px 36px rgba(0,0,0,0.5);
@@ -366,3 +366,32 @@ select option {
   --color-done-ink: var(--done-ink);
   --color-forest: var(--forest);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Button looks (one shared set; see docs/UI_GUIDE.md "Buttons").
+   main = the one action you want taken, support = safe extras, link = leaves the
+   screen, danger = outline until its confirm step fills it. One main per screen.
+   Legacy .btn / .btn-primary / .btn-secondary / .btn-sm map onto these.
+   ──────────────────────────────────────────────────────────────────────────── */
+:root {
+  --btn-main: #0B7F73; --btn-main-ink: #fff;
+  --btn-support-bg: #DDF1EE; --btn-support-ink: #075E55; --btn-support-line: rgba(11,127,115,.35);
+  --btn-danger: #B3341F;
+}
+.dark-mode {
+  --btn-main: #2EF0CC; --btn-main-ink: #04211C;
+  --btn-support-bg: rgba(46,240,204,.14); --btn-support-ink: #2EF0CC; --btn-support-line: rgba(46,240,204,.35);
+  --btn-danger: #F07A63;
+}
+.ui-btn, .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px;
+  border-radius: 12px; border: 1.5px solid var(--btn-support-line); background: var(--btn-support-bg); color: var(--btn-support-ink);
+  font: 600 0.9rem/1 Rubik, sans-serif; cursor: pointer; white-space: nowrap; text-decoration: none;
+}
+.ui-btn--main, .btn-primary { background: var(--btn-main); border-color: var(--btn-main); color: var(--btn-main-ink); }
+.ui-btn--link { background: transparent; border-color: transparent; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
+.ui-btn--danger { background: transparent; border-color: color-mix(in srgb, var(--btn-danger) 50%, transparent); color: var(--btn-danger); }
+.ui-btn--danger-fill { background: var(--btn-danger); border-color: var(--btn-danger); color: #fff; }
+.ui-btn--sm, .btn-sm { min-height: 34px; padding: 0 13px; font-size: 0.85rem; }
+.ui-btn:disabled, .btn:disabled { opacity: .5; cursor: not-allowed; }
+.ui-btn:focus-visible, .btn:focus-visible { outline: 3px solid var(--brand-green); outline-offset: 2px; }

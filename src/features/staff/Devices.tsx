@@ -513,9 +513,9 @@ const Devices: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-2.5">
           <button type="button" onClick={() => setShowRestoreModal(true)}
-            className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Restore archived device</button>
+            className="ui-btn ui-btn--support">Restore archived device</button>
           <button type="button" onClick={() => setShowManageProvisionsModal(true)}
-            className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Manage provisions</button>
+            className="ui-btn ui-btn--support">Manage provisions</button>
         </div>
       </div>
 
@@ -759,12 +759,12 @@ const Devices: React.FC = () => {
           )}
           <div className="flex flex-col gap-2.5">
             <button type="button" onClick={() => handleViewDevice(peek)}
-              className="rounded-2xl border-0 bg-[var(--brand-green)] px-4 py-3 text-sm font-semibold text-black">Open device</button>
+              className="ui-btn ui-btn--main">Open device</button>
             {(canOps || canDestroy) && (
               <div className="flex gap-2.5">
-                {canOps && <button type="button" onClick={() => handleEdit(peek)} className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Edit</button>}
-                {canOps && <button type="button" onClick={() => handleReboot(peek)} className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Reboot</button>}
-                {canDestroy && <button type="button" onClick={() => handleDelete(peek)} className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-muted">Delete</button>}
+                {canOps && <button type="button" onClick={() => handleEdit(peek)} className="ui-btn ui-btn--support flex-1">Edit</button>}
+                {canOps && <button type="button" onClick={() => handleReboot(peek)} className="ui-btn ui-btn--support flex-1">Reboot</button>}
+                {canDestroy && <button type="button" onClick={() => handleDelete(peek)} className="ui-btn ui-btn--danger">Delete</button>}
               </div>
             )}
           </div>

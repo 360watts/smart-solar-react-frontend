@@ -712,38 +712,16 @@ export function ConfirmDialog({
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-          <button
-            ref={cancelRef}
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            style={{
-              padding: '8px 14px', borderRadius: 11, border: `1px solid ${t.line}`,
-              background: 'transparent', color: t.ink, fontFamily: t.body, fontSize: '0.86rem', fontWeight: 600,
-              cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1,
-            }}
-          >
+          <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy} className="ui-btn ui-btn--link">
             {cancelLabel}
           </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            onClick={onConfirm}
-            disabled={busy || confirmDisabled}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '8px 15px', borderRadius: 11, cursor: busy || confirmDisabled ? 'not-allowed' : 'pointer', opacity: confirmDisabled ? 0.45 : busy ? 0.75 : 1,
-              fontFamily: t.body, fontSize: '0.86rem', fontWeight: 600,
-              border: `1px solid ${danger ? 'rgba(229,72,77,0.45)' : t.good}`,
-              background: danger ? (isDark ? 'rgba(229,72,77,0.18)' : 'rgba(229,72,77,0.12)') : t.good,
-              color: danger ? DANGER : '#fff',
-            }}
-          >
+          <button ref={confirmRef} type="button" onClick={onConfirm} disabled={busy || confirmDisabled}
+            className={`ui-btn ${danger ? 'ui-btn--danger-fill' : 'ui-btn--main'}`}>
             {busy && (
               <span style={{
                 width: 13, height: 13, borderRadius: '50%', display: 'inline-block',
-                border: `2px solid ${danger ? 'rgba(229,72,77,0.35)' : 'rgba(255,255,255,0.45)'}`,
-                borderTopColor: danger ? DANGER : '#fff', animation: 'fs-spin 700ms linear infinite',
+                border: '2px solid rgba(255,255,255,0.45)',
+                borderTopColor: '#fff', animation: 'fs-spin 700ms linear infinite',
               }} />
             )}
             {busy ? 'Working…' : confirmLabel}

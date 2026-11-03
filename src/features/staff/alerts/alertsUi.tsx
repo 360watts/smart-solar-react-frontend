@@ -26,6 +26,7 @@ export const fmtSeconds = (sec?: number | null) => {
   return `${Math.floor(m / 1440)} d ${Math.floor((m % 1440) / 60)} h`;
 };
 
-export const btn = 'rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60';
-export const btnPrimary = 'rounded-2xl border-0 bg-[var(--brand-green)] px-4 py-3 text-sm font-semibold text-black disabled:opacity-60';
+export const btn = 'ui-btn ui-btn--support';
+export const btnPrimary = 'ui-btn ui-btn--main';
+export const btnDanger = 'ui-btn ui-btn--danger';
 export const panel = 'rounded-[22px] border border-border bg-card';

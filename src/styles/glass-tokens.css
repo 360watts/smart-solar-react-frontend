@@ -41,7 +41,7 @@
 
 .dark-mode {
   --bg: var(--background);
-  --bg-2: #0F1623;
+  --bg-2: #0D0F15;
   --card-2: var(--surface-muted);
   --line: var(--border);
   --line-2: var(--border-strong);

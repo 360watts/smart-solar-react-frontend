@@ -118,17 +118,17 @@ export default function OperationsTab({ dev, firmware, isDark }: { dev: Dev; fir
   const buttons = (o: Op) => {
     if (!ctl) return null;
     switch (o.op) {
-      case 'reboot': return <Btn disabled={off(o)} onClick={() => setPending({ kind: 'reboot' })}>Restart</Btn>;
-      case 'diagnostics': return <Btn disabled={off(o)} onClick={() => run(() => apiService.runDeviceDiagnostics(dev.device_id), `Diagnostics requested from ${name}.`)}>Run diagnostics</Btn>;
+      case 'reboot': return <Btn cls="pri" disabled={off(o)} onClick={() => setPending({ kind: 'reboot' })}>Restart</Btn>;
+      case 'diagnostics': return <Btn cls="pri" disabled={off(o)} onClick={() => run(() => apiService.runDeviceDiagnostics(dev.device_id), `Diagnostics requested from ${name}.`)}>Run diagnostics</Btn>;
       case 'mute': return <>
-        <Btn disabled={busy} onClick={() => run(() => apiService.muteDeviceAlerts(dev.device_id, 4), `Alerts muted for ${name} for 4 hours.`)}>Mute</Btn>
-        <Btn disabled={busy} onClick={() => run(() => apiService.unmuteDeviceAlerts(dev.device_id), `Alerts are back on for ${name}.`)}>Unmute</Btn></>;
+        <Btn cls="pri" disabled={busy} onClick={() => run(() => apiService.muteDeviceAlerts(dev.device_id, 4), `Alerts muted for ${name} for 4 hours.`)}>Mute</Btn>
+        <Btn cls="pri" disabled={busy} onClick={() => run(() => apiService.unmuteDeviceAlerts(dev.device_id), `Alerts are back on for ${name}.`)}>Unmute</Btn></>;
       case 'ota_update': return !sel ? <span className="ops-hint">No builds for this device yet.</span> : <>
         <select className="ofw-in ops-sel" aria-label="Firmware build" title="Only active builds are listed. Activate others in the Firmware library." value={sel.id} onChange={e => setPickId(Number(e.target.value))}>
           {builds.map((b, i) => <option key={b.id} value={b.id}>{b.version}{normVersion(b.version) === normVersion(dev.firmware_version) ? ' (installed)' : i === 0 ? ' (latest)' : ''}</option>)}</select>
         <Btn cls="pri" disabled={off(o) || installed} onClick={() => setPending({ kind: 'update', fw: sel })}>{installed ? 'Already installed' : older ? `Install ${sel.version}` : `Update to ${sel.version}`}</Btn></>;
-      case 'fetch_logs': return <Btn disabled={busy || logsOn === null} onClick={() => run(async () => { await apiService.toggleDeviceLogs(dev.device_id, !logsOn); setLogsOn(!logsOn); }, `Send logs turned ${logsOn ? 'off' : 'on'} for ${name}.`)}>{logsOn ? 'Turn off' : 'Turn on'}</Btn>;
-      case 'rollback': return <Btn disabled={off(o)} onClick={() => setPending({ kind: 'rollback' })}>Roll back</Btn>;
+      case 'fetch_logs': return <Btn cls="pri" disabled={busy || logsOn === null} onClick={() => run(async () => { await apiService.toggleDeviceLogs(dev.device_id, !logsOn); setLogsOn(!logsOn); }, `Send logs turned ${logsOn ? 'off' : 'on'} for ${name}.`)}>{logsOn ? 'Turn off' : 'Turn on'}</Btn>;
+      case 'rollback': return <Btn cls="red" disabled={off(o)} onClick={() => setPending({ kind: 'rollback' })}>Roll back</Btn>;
       case 'hard_reset': return <>
         <label className="ops-unlock"><span>Type <span className="dt-num" style={{ color: 'var(--foreground)' }}>{dev.serial}</span> to unlock</span>
           <input type="text" value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off" aria-label="Type the serial to unlock hard reset" /></label>
@@ -143,11 +143,11 @@ export default function OperationsTab({ dev, firmware, isDark }: { dev: Dev; fir
     return o.state === 'confirmed' ? `Confirmed ${t}${by}` : o.state === 'sent' ? `Sent ${t}${by}` : `${CHIP[o.state][1]}${by}`;
   };
   const row = (id: string) => {
-    const o = byOp[OPKEY[id] ?? id], [title, desc] = INFO[id], btns = buttons(o);
+    const o = byOp[OPKEY[id] ?? id], [title] = INFO[id], btns = buttons(o);
     const [cls, label] = id === 'send_logs' && logsOn !== null ? [logsOn ? 'ok' : 'none', logsOn ? 'On' : 'Off'] : CHIP[o.state];
     return (
       <section key={id} className={`ops-row${id === 'hard_reset' ? ' danger' : ''}`} aria-labelledby={`ops-${id}`}>
-        <div className="ops-txt"><h3 id={`ops-${id}`}>{title}</h3><small className="ops-hint">{desc}</small></div>
+        <div className="ops-txt"><h3 id={`ops-${id}`}>{title}</h3></div>
         <div className="ops-stat"><span className="ops-meta">{status(o)}</span><span className={`ops-st ${cls}`}>{label}</span></div>
         {btns && <div className={`ops-btns${id === 'hard_reset' ? ' full' : ''}`}>{btns}</div>}
       </section>
@@ -161,9 +161,8 @@ export default function OperationsTab({ dev, firmware, isDark }: { dev: Dev; fir
           {SUBS.map(([k, label]) => <Link key={k} to={href(k)} replace aria-current={sub === k ? 'page' : undefined}>{label}</Link>)}
         </nav>
       </div>
-      {sub === 'actions' && (ctl ? <Notice more="Each run is recorded with your name.">You can run every operation on this device.</Notice>
-        : <Notice tone="lock" more="Running operations needs device control.">You can see what ran on this device.</Notice>)}
-      {!dev.is_online && sub === 'actions' && <Notice tone="warn" more="Restart and diagnostics come back when it reconnects.">This device is offline.</Notice>}
+      {sub === 'actions' && !ctl && <Notice tone="lock">View only.</Notice>}
+      {!dev.is_online && sub === 'actions' && <Notice tone="warn">Offline. Restart and diagnostics wait for it to reconnect.</Notice>}
       {sub === 'settings' && <OpsSettings dev={dev} isDark={isDark} onDone={load} data={data} />}
       {sub === 'firmware' && <OpsFirmware dev={dev} isDark={isDark} />}
       {sub === 'logs' && <OpsLogs dev={dev} isDark={isDark} />}
@@ -182,7 +181,6 @@ export default function OperationsTab({ dev, firmware, isDark }: { dev: Dev; fir
           </div>
         </>)}
       </>)}
-      <Notice tone="lock" more="Ask an admin if a group of devices needs the same update.">Updating many devices at once is for admins.</Notice>
       <ConfirmDialog isDark={isDark} open={!!c} tone={c?.tone}
         title={!pending ? '' : pending.kind === 'update' ? `${downgrade ? 'Install' : 'Update'} ${name} ${downgrade ? '' : 'to '}${pending.fw.version}?` : `${c!.title} ${name}?`}
         body={c?.body} confirmDisabled={pending?.kind === 'reset' && !unlocked} confirmLabel={c?.ok} cancelLabel={c?.cancel} busy={busy} onConfirm={confirm} onCancel={() => setPending(null)} />

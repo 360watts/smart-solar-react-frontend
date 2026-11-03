@@ -217,12 +217,11 @@ describe('OperationsTab', () => {
     set.mockRestore();
   });
 
-  it('O1 offline notice, disabled online-only buttons, admin note', async () => {
+  it('O1 offline notice, disabled online-only buttons', async () => {
     view({ ...dev, is_online: false });
     await screen.findByText('Restart', { selector: 'h3' });
-    expect(screen.getByText(/This device is offline/)).toBeInTheDocument();
+    expect(screen.getByText(/^Offline./)).toBeInTheDocument();
     for (const n of ['Restart', 'Run diagnostics']) expect(screen.getByRole('button', { name: n })).toBeDisabled();
-    expect(screen.getByText('Updating many devices at once is for admins.')).toBeInTheDocument();
   });
 
   it('O2 without device control: statuses show, no run controls', async () => {

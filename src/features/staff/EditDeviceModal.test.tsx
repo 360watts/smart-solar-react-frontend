@@ -64,7 +64,8 @@ it('M2: gateway has no meter section and keeps its fields', async () => {
   mockCan.mockReturnValue(true);
   await save('HomeNet');
   expect(screen.queryByRole('region', { name: 'Meter settings' })).toBeNull();
-  for (const kept of ['Config Version ID', 'Auto Reboot', 'Log Streaming']) expect(screen.getByText(kept)).not.toBeNull();
+  expect(screen.getByText('Config Version ID')).not.toBeNull();
+  for (const moved of ['Auto Reboot', 'Log Streaming']) expect(screen.queryByText(moved)).toBeNull();  // these live in Operations
 });
 
 it('M3: a changed interval is sent with Save', async () => {
