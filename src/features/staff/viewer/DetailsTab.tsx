@@ -14,10 +14,11 @@ const dash = (v: unknown) => (v == null || v === '' ? '–' : String(v));
 
 type Coverage = { coverage_pct: number; total_received: number; total_configured: number; last_telemetry_at: string; slaves: Slave[] };
 
-function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
+/** A row whose value is null is left out: showing a dash for something the device never reports only looks broken. */
+function Facts({ rows }: { rows: ([string, React.ReactNode] | null)[] }) {
   return (
-    <dl className="m-0 [display:grid] grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-x-8 gap-y-3.5 text-sm">
-      {rows.map(([k, v]) => (
+    <dl className="m-0 [display:grid] grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] gap-x-8 gap-y-3.5 text-sm">
+      {rows.filter((r): r is [string, React.ReactNode] => r !== null).map(([k, v]) => (
         <div key={k} className="min-w-0"><dt className="text-muted-foreground">{k}</dt><dd className="m-0 mt-0.5 break-words font-medium text-foreground">{v}</dd></div>
       ))}
     </dl>
@@ -44,7 +45,7 @@ function Alerts({ deviceId, serial }: { deviceId: number; serial: string }) {
         : list.length === 0 ? <p className="m-0 text-sm text-muted-foreground">No active alerts for this device.</p>
         : <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
           {list.slice(0, 5).map(a => (
-            <li key={a.id} className="flex flex-col gap-1 rounded-2xl bg-muted/50 px-4 py-3 text-sm">
+            <li key={a.id} className="flex min-w-0 flex-col gap-1 break-words rounded-2xl bg-muted/50 px-4 py-3 text-sm">
               <span className="flex flex-wrap items-center gap-2">
                 <b style={{ color: SEV[a.severity] ?? SEV.info }}>{a.severity === 'critical' ? 'Critical' : a.severity === 'warning' ? 'Warning' : 'Info'}</b>
                 {a.fault_code && <span className="text-xs text-muted-foreground" style={mono}>{a.fault_code}</span>}
@@ -64,7 +65,7 @@ function Config({ d, preset }: { d: any; preset: any }) {
   const latest = preset?.version;
   return (
     <section className={card} aria-label="Settings sent to the device">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="m-0 text-lg font-semibold">Settings sent to the device</h3>
         <span className="text-sm font-medium" style={{ color: d.pending_config_update || !d.config_version ? 'var(--gap, #e8930c)' : 'var(--brand-green)' }}>{state}</span>
       </div>
@@ -73,7 +74,7 @@ function Config({ d, preset }: { d: any; preset: any }) {
         ['Preset ID', <span style={mono}>{d.config_version}</span>],
         ...(preset?.slaves_count != null ? [['Connected meters and inverters', preset.slaves_count] as [string, React.ReactNode]] : []),
         ['Version on the device', d.config_ack_ver != null ? <span style={mono}>v{d.config_ack_ver}{latest != null && latest !== d.config_ack_ver ? `, latest is v${latest}` : ''}</span> : '–'],
-        ['Last confirmed by the device', d.config_acked_at ? at(d.config_acked_at) : '–'],
+        ...(d.config_acked_at ? [['Last confirmed by the device', at(d.config_acked_at)] as [string, React.ReactNode]] : []),
         ...(d.config_downloaded_at && d.config_acked_at ? [['Time to apply', `${Math.round((Date.parse(d.config_acked_at) - Date.parse(d.config_downloaded_at)) / 1000)} s`] as [string, React.ReactNode]] : []),
       ]} /> : <p className="m-0 text-sm text-muted-foreground">Pick a preset when you edit the device.</p>}
     </section>
@@ -90,7 +91,7 @@ function Coverage({ deviceId }: { deviceId: number }) {
   const c = cov && cov !== 'failed' ? cov : null;
   return (
     <section className="overflow-hidden rounded-[22px] border border-border bg-card" aria-label="Register coverage">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="flex w-full items-center justify-between gap-3 border-0 bg-transparent px-5 py-4 text-left text-foreground">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 border-0 bg-transparent px-5 py-4 text-left text-foreground">
         <span className="text-lg font-semibold">Register coverage</span>
         <span className="text-sm text-muted-foreground">{c ? `${c.coverage_pct}%, ${c.total_received} / ${c.total_configured} registers` : open ? '' : 'Show'}</span>
       </button>
@@ -136,12 +137,12 @@ export default function DetailsTab({ deviceId, serial, meter, siteId }: { device
           ['Site', siteId ? <Link to={`/sites/${encodeURIComponent(siteId)}`} className="text-[var(--brand-green)]">{siteId}</Link> : 'Not at a site'],
           ['Hardware ID', <span style={mono}>{dash(d.hw_id)}</span>],
           ['Model', dash(d.model)],
-          ['Assigned to', dash(d.user)],
           ['Connection', dash(d.connectivity_type)],
           ['Network address', <span style={mono}>{dash(d.network_ip)}</span>],
-          ['Signal', d.signal_strength_dbm != null ? `${d.signal_strength_dbm} dBm` : '–'],
-          ['Temperature', d.device_temp_c != null ? `${Number(d.device_temp_c).toFixed(1)} °C` : '–'],
-          ['Free memory', d.memory_status?.free_heap != null ? `${d.memory_status.free_heap} bytes` : '–'],
+          // The gateway sends Wi-Fi strength as 0-100 (not dBm). It has no temperature sensor and sends 0.0.
+          d.signal_strength_dbm != null ? ['Wi-Fi strength', `${d.signal_strength_dbm}%`] : null,
+          d.device_temp_c ? ['Temperature', `${Number(d.device_temp_c).toFixed(1)} °C`] : null,
+          d.memory_status?.free_heap != null ? ['Free memory', `${d.memory_status.free_heap} bytes`] : null,
           ['Connection health', `${health === 'ok' ? 'Good' : health === 'warn' ? 'Needs a look' : 'Poor'}${d.heartbeat_health?.issues?.length ? `: ${d.heartbeat_health.issues.join(', ')}` : ''}`],
           ['Set up on', d.provisioned_at ? at(d.provisioned_at) : '–'],
           ['Added by', dash(d.created_by_username)],

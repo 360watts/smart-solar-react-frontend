@@ -11,13 +11,13 @@ const SlaveRegisterSection: React.FC<{ slave: Slave }> = ({ slave }) => {
   return (
     <div className="border-b border-border">
       <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)}
-        className="flex w-full items-center justify-between border-0 bg-transparent px-5 py-3 text-left text-foreground hover:bg-muted/50">
-        <span className="flex items-center gap-2 text-sm font-medium">
+        className="flex w-full items-center justify-between gap-3 border-0 bg-transparent px-5 py-3 text-left text-foreground hover:bg-muted/50">
+        <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-medium">
           {open ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
           Slave {slave.slave_id}, {slave.device_name}
           {!slave.enabled && <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">disabled</span>}
         </span>
-        <span className="text-[13px]" style={{ ...mono, color: slave.received === slave.configured ? 'var(--brand-green)' : 'var(--gap, #e8930c)' }}>{slave.received}/{slave.configured}</span>
+        <span className="shrink-0 text-[13px]" style={{ ...mono, color: slave.received === slave.configured ? 'var(--brand-green)' : 'var(--gap, #e8930c)' }}>{slave.received}/{slave.configured}</span>
       </button>
       {open && (
         <div className="overflow-x-auto px-5 pb-3">

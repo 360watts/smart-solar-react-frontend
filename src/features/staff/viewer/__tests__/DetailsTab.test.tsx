@@ -22,7 +22,7 @@ jest.mock('../../DeleteDeviceModal', () => ({ __esModule: true, default: (p: any
 
 const dev = (o = {}) => ({
   id: 47, is_online: true, is_active: true, last_heartbeat: '2026-10-29T10:00:00Z', hw_id: 'AA:BB', model: 'GW-1', user: 'Lakshmi',
-  connectivity_type: 'wifi', network_ip: '10.0.0.5', signal_strength_dbm: -61, device_temp_c: 41.26, memory_status: { free_heap: 120000 },
+  connectivity_type: 'wifi', network_ip: '10.0.0.5', signal_strength_dbm: 61, device_temp_c: 41.26, memory_status: { free_heap: 120000 },
   heartbeat_health: { severity: 'ok', issues: [] }, config_version: 'cfg-1', pending_config_update: true, config_ack_ver: 2,
   provisioned_at: '2026-09-01T00:00:00Z', created_by_username: 'admin', ...o,
 });
@@ -62,13 +62,20 @@ describe('DetailsTab', () => {
     expect(screen.getByText('10.0.0.5')).toBeInTheDocument();
   });
 
-  it('D6 shows each fact and a dash for what is missing', async () => {
-    mockApi.getDevice.mockResolvedValue(dev({ network_ip: null, device_temp_c: null }));
+  it('D6 shows each fact the device reports and leaves out the ones it never sends', async () => {
     tab();
-    expect(await screen.findByText('-61 dBm')).toBeInTheDocument();
+    expect(await screen.findByText('61%')).toBeInTheDocument();
+    expect(screen.getByText('Wi-Fi strength')).toBeInTheDocument();
     expect(screen.getByText('120000 bytes')).toBeInTheDocument();
-    expect(screen.getByText('Lakshmi')).toBeInTheDocument();
-    expect(screen.getAllByText('–').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('41.3 °C')).toBeInTheDocument();
+    expect(screen.queryByText('Assigned to')).toBeNull();
+  });
+
+  it('D6b leaves out temperature 0.0, memory and last confirmed when not reported', async () => {
+    mockApi.getDevice.mockResolvedValue(dev({ device_temp_c: 0, memory_status: null, config_acked_at: null, signal_strength_dbm: -61 }));
+    tab();
+    await screen.findByText('About this device');
+    ['Temperature', 'Free memory', 'Last confirmed by the device'].forEach(l => expect(screen.queryByText(l)).toBeNull());
   });
 
   it('D7 links the site, or says there is none', async () => {

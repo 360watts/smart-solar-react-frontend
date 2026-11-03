@@ -16,7 +16,7 @@
 .ops-pill[aria-pressed='true'] { border-color: #0B7F73; background: var(--o-ok-bg); }
 
 /* One card per action: name and description, status (chip then who/when), then the buttons. */
-.ops-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.ops-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 16px; }
 .ops-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; background: var(--o-surf); border: 1px solid var(--o-line); border-radius: 16px; }
 .ops-row.danger { grid-column: 1 / -1; border-color: color-mix(in srgb, var(--o-red) 35%, var(--o-line)); background: color-mix(in srgb, var(--o-red) 6%, var(--card)); }
 .ops-row.danger h3 { color: var(--o-bad); }

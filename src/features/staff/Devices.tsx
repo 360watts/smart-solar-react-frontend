@@ -742,7 +742,7 @@ const Devices: React.FC = () => {
               ['Site', peek.site_name || 'No site yet'],
               ['Customer', peek.customer_name || 'No customer'],
               ['Last heard from', agoText(peek.last_seen_at || peek.last_heartbeat)],
-              ['Signal', peek.signal_strength_dbm != null ? `${peek.signal_strength_dbm} dBm` : '—'],
+              ['Wi-Fi strength', peek.signal_strength_dbm != null ? `${peek.signal_strength_dbm}%` : '—'],
               ['Address', peek.network_ip || '—'],
               ['Settings', peek.pending_config_update ? 'Waiting for device' : 'Up to date'],
             ] as const).map(([k, v]) => (

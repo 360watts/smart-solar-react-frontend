@@ -234,6 +234,7 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
   const stale = d.last_reading_at && Date.now() - new Date(d.last_reading_at).getTime() > 15 * 60_000;
 
   return (
+    <>
     <div className="dd dt" style={{ fontFamily: t.body }}>
       <div>{back}</div>
       <header className="dd-head">
@@ -248,7 +249,7 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
           </p>
         </div>
         {staff && (access.can('device_control') || access.can('destructive')) && (
-          <div className="flex gap-2.5">
+          <div className="flex flex-wrap gap-2.5">
             {access.can('device_control') && <button type="button" onClick={openEdit} className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Edit</button>}
             {access.can('destructive') && <button type="button" onClick={() => setDelOpen(true)} className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-muted">Delete</button>}
           </div>
@@ -275,10 +276,12 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
         {tab === 'details' && <DetailsTab deviceId={Number(deviceId)} serial={d.serial} meter={d.device_type === 'energy_meter'} siteId={d.site_id} />}
         </div>
       </div>
-      <EditDeviceModal isOpen={!!edit} device={edit?.device ?? null} isDark={isDark} presets={edit?.presets ?? []} onClose={() => setEdit(null)}
-        onSave={async data => { await apiService.updateDevice(Number(deviceId), data); setEdit(null); setReload(n => n + 1); }} />
-      <DeleteDeviceModal open={delOpen} device={{ id: Number(deviceId), device_serial: d.serial }} onClose={() => setDelOpen(false)} onConfirm={confirmDelete} />
     </div>
+    {/* Outside .dd: its container-type makes position:fixed relative to the page body instead of the screen. */}
+    <EditDeviceModal isOpen={!!edit} device={edit?.device ?? null} isDark={isDark} presets={edit?.presets ?? []} onClose={() => setEdit(null)}
+      onSave={async data => { await apiService.updateDevice(Number(deviceId), data); setEdit(null); setReload(n => n + 1); }} />
+    <DeleteDeviceModal open={delOpen} device={{ id: Number(deviceId), device_serial: d.serial }} onClose={() => setDelOpen(false)} onConfirm={confirmDelete} />
+    </>
   );
 };
 

@@ -10,7 +10,7 @@ Tests: src/features/staff/viewer/__tests__/DetailsTab.test.tsx, DeviceDashboard.
 | D3 | Alerts | two open incidents for this device, one for another | open Details | only this device's two are listed with severity and message | unit | P0 | passing |
 | D4 | Alerts | none open | open Details | "No active alerts for this device." | unit | P1 | passing |
 | D5 | Alerts | alerts call fails | open Details | the rest of the tab still renders; alerts say they could not load | unit | P1 | passing |
-| D6 | About | device record with IP, signal, temp, heap, health | open Details | each is shown; missing values show a dash | unit | P0 | passing |
+| D6 | About | device record with IP, Wi-Fi strength %, temp, heap, health | open Details | each is shown; Assigned to is gone (a device has no user); a row the device never reports is left out (D6b: temp 0.0, no memory, no last-confirmed) | unit | P0 | passing |
 | D7 | About | device with a site | open Details | Site is a link to /sites/<id>; without one it reads "Not at a site" | unit | P1 | passing |
 | D8 | Config | preset assigned, pending update | open Details | "Waiting for device" and the preset id | unit | P1 | passing |
 | D9 | Config | no preset | open Details | "No preset assigned" | unit | P2 | passing |
