@@ -3,7 +3,7 @@ import { apiService } from '../../../services/api';
 import { useAccess } from '../../../shared/access/useAccess';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ConfirmDialog } from '../siteHardware/ui';
-import { CAL_I, CAL_V, INTERVAL_S } from '../MeterSettingsSection';
+import { CAL_I, CAL_V, DEFAULT_OFFLINE_S, DEFAULT_ONLINE_S, INTERVAL_S } from '../MeterSettingsSection';
 import type { Dev } from './DevicePage';
 import { ListSkeleton } from './Skeleton';
 import { ActivityList, EmptyState, Notice } from '../../../shared/components/Feedback';
@@ -14,7 +14,7 @@ import './opsSettings.css';
 type Op = { op: string; state: string; confirmed_at: string | null; last: { at: string; actor: { id: number; name: string } | null; values: Record<string, unknown> } | null };
 type Recent = { at: string; op: string; actor: { id: number; name: string } | null };
 type OpsData = { ops: Op[]; recent: Recent[] } | null | 'failed';
-type Draft = { auto?: boolean; logs?: boolean; iv?: number | null };
+type Draft = { auto?: boolean; logs?: boolean; iv?: number | null; ov?: number | null };
 
 const NAMES: Record<string, string> = { auto_reboot: 'Restart if stalled', fetch_logs: 'Send logs', telemetry_debug: 'Detailed readings', apn: 'Mobile data name', wifi: 'Wi-Fi', meter_interval: 'Publish interval', meter_calibrate: 'Calibration' };
 const onOff = (v: unknown) => (v ? 'on' : 'off');
@@ -23,6 +23,7 @@ const CH = (id: number) => ({
   auto: { label: 'Restart if the inverter stops answering', show: onOff, call: (v: boolean) => apiService.setDeviceAutoReboot(id, v) },
   logs: { label: 'Send logs', show: onOff, call: (v: boolean) => apiService.toggleDeviceLogs(id, v) },
   iv: { label: 'Publish interval', show: (v: number | null) => (v == null ? 'meter default' : `${v / 1000} s`), call: (v: number | null) => apiService.updateDevice(id, { meter_publish_interval_ms: v }) },
+  ov: { label: 'Offline storage interval', show: (v: number | null) => (v == null ? 'meter default' : `${v / 1000} s`), call: (v: number | null) => apiService.updateDevice(id, { meter_offline_interval_ms: v }) },
 }) as Record<keyof Draft, { label: string; show: (v: any) => string; call: (v: any) => Promise<unknown> }>;
 
 const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -50,7 +51,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; i
   const can = useAccess().can('device_control');
   const { user } = useAuth();
   const isMeter = dev.device_type === 'energy_meter';
-  const groups = isMeter ? [['meter', 'Meter', 2], ['connection', 'Connection', 1]] as const : [['behaviour', 'Device behaviour', 3], ['connection', 'Connection', 3]] as const;
+  const groups = isMeter ? [['meter', 'Meter', 3], ['connection', 'Connection', 1]] as const : [['behaviour', 'Device behaviour', 3], ['connection', 'Connection', 3]] as const;
   const [cur, setCur] = useState<any>(null);
   const [grp, setGrp] = useState<string>(groups[0][0]);
   const [draft, setDraft] = useState<Draft>({});
@@ -73,11 +74,12 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; i
   if (cur === null || data === null) return <ListSkeleton rows={6} />;
 
   const ch = CH(dev.device_id);
-  const base: Required<Draft> = { auto: !!cur.auto_reboot_enabled, logs: !!cur.logs_enabled, iv: cur.meter_publish_interval_ms ?? null };
+  const base: Required<Draft> = { auto: !!cur.auto_reboot_enabled, logs: !!cur.logs_enabled, iv: cur.meter_publish_interval_ms ?? null, ov: cur.meter_offline_interval_ms ?? null };
   const val = <K extends keyof Draft>(k: K) => (k in draft ? draft[k] : base[k]) as Required<Draft>[K];
   const stage = (k: keyof Draft, v: any) => setDraft(d => { const n = { ...d, [k]: v }; if (v === base[k]) delete n[k]; return n; });
   const keys = Object.keys(draft) as (keyof Draft)[];
-  const ivBad = 'iv' in draft && draft.iv != null && !(draft.iv >= INTERVAL_S[0] * 1000 && draft.iv <= INTERVAL_S[1] * 1000);
+  const badMs = (k: 'iv' | 'ov') => k in draft && draft[k] != null && !(draft[k]! >= INTERVAL_S[0] * 1000 && draft[k]! <= INTERVAL_S[1] * 1000);
+  const ivBad = badMs('iv'), ovBad = badMs('ov');
   const staged = (k: keyof Draft) => k in draft;
   const ops = data && data !== 'failed' ? data.ops : [];
   const byOp = Object.fromEntries(ops.map(o => [o.op, o]));
@@ -213,14 +215,22 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; i
           </div>
         </>)}
 
-        {grp === 'meter' && sec('Meter', '2 settings', 'os-h3', <>
+        {grp === 'meter' && sec('Meter', '3 settings', 'os-h3', <>
           <Row label="Publish interval" help={`How often the meter sends readings. ${INTERVAL_S[0]} to ${INTERVAL_S[1]} seconds, empty for the meter default.`} st={chip('meter_interval', 'iv')}>
             <div className="os-unit">
-              <input className={`os-in${staged('iv') ? ' chg' : ''}`} type="number" aria-label="Publish interval (seconds)" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder="5 (default)"
+              <input className={`os-in${staged('iv') ? ' chg' : ''}`} type="number" aria-label="Publish interval (seconds)" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder={`${DEFAULT_ONLINE_S} (default)`}
                 value={val('iv') == null ? '' : String(val('iv')! / 1000)} onChange={e => stage('iv', e.target.value === '' ? null : Math.round(Number(e.target.value) * 1000))} />
               <span className="ops-meta">seconds</span>
             </div>
             {ivBad && <span role="alert" className="ops-meta os-bad">Enter {INTERVAL_S[0]} to {INTERVAL_S[1]} seconds</span>}
+          </Row>
+          <Row label="Offline storage interval" help={`While it has no connection, the meter stores a reading this often and sends them when it is back. ${INTERVAL_S[0]} to ${INTERVAL_S[1]} seconds, empty for the meter default.`} st={chip('meter_interval', 'ov')}>
+            <div className="os-unit">
+              <input className={`os-in${staged('ov') ? ' chg' : ''}`} type="number" aria-label="Offline storage interval (seconds)" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder={`${DEFAULT_OFFLINE_S} (default)`}
+                value={val('ov') == null ? '' : String(val('ov')! / 1000)} onChange={e => stage('ov', e.target.value === '' ? null : Math.round(Number(e.target.value) * 1000))} />
+              <span className="ops-meta">seconds</span>
+            </div>
+            {ovBad && <span role="alert" className="ops-meta os-bad">Enter {INTERVAL_S[0]} to {INTERVAL_S[1]} seconds</span>}
           </Row>
           <Row label="Calibration" help="Put a known reference load on first. The meter recalibrates as soon as it receives this." st={chip('meter_calibrate')}>
             {dev.is_online
@@ -254,7 +264,7 @@ export default function OpsSettings({ dev, isDark, onDone, data }: { dev: Dev; i
             <span className="os-bar-t">{keys.map(k => `${ch[k].label}: ${ch[k].show(base[k])} to ${ch[k].show(draft[k])}`).join('. ')}.</span>
             <span style={{ flex: 1 }} />
             <button type="button" className="os-bar-b" onClick={discard}>Discard</button>
-            <button type="button" className="os-bar-b pri" disabled={ivBad || busy} onClick={startReview}>Review and apply</button>
+            <button type="button" className="os-bar-b pri" disabled={ivBad || ovBad || busy} onClick={startReview}>Review and apply</button>
           </div>
         )}
       </div>

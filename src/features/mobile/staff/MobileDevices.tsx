@@ -679,7 +679,7 @@ const MobileDevices: React.FC = () => {
             <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: muted, fontFamily: "'Rubik', sans-serif", lineHeight: 1.5 }}>
               {modal.type === 'reboot' && `Queue reboot for ${modal.device.device_serial}? The device will restart.`}
               {modal.type === 'reset' && (modal.device.device_type === 'energy_meter'
-                ? `Hard reset ${modal.device.device_serial}? This wipes the meter's Wi-Fi: someone must be on site to set it up again.`
+                ? `Hard reset ${modal.device.device_serial}? This erases the meter's Wi-Fi, calibration, energy totals and offline readings, but keeps its cloud certificate. If it can't rejoin Wi-Fi, someone on site has to set it up again.`
                 : `Hard reset ${modal.device.device_serial}? This will erase configuration.`)}
               {modal.type === 'delete' && `Permanently delete ${modal.device.device_serial}? This cannot be undone.`}
             </p>

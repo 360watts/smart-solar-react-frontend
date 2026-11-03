@@ -21,6 +21,11 @@ describe('sectionProgress', () => {
     expect(p.appliances.filled).toBe(2);
   });
 
+  it('reaches 5 of 5 when every field on the Appliances form is answered', () => {
+    const profile = { num_ac_units: 0, num_geysers: 0, num_ev_chargers: 0, ac_units_on_inverter: 0, appliance_notes: 'NA' };
+    expect(sectionProgress({ ...empty, profile }).appliances).toEqual({ filled: 5, total: 5 });
+  });
+
   it('counts billing anchor and wallet balance (0 wallet counts only when set)', () => {
     const p = sectionProgress({ ...empty, billingAnchor: '2026-07-17', savings: { energyWallet: { balanceKwh: 1237.5 } } });
     expect(p.billing.filled).toBe(2);

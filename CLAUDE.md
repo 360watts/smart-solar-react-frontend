@@ -46,7 +46,7 @@ Defined in `src/app/App.tsx`. Single layout tree: staff (`StaffLayout`, sidebar 
 /teams                         → Teams (RequireAccess `teams`); `/departments` redirects here
 /my-sites                      → Viewer home: the signed-in viewer's devices and sites (RequireAccess `my_sites`)
 /my-sites/:siteId              → Viewer site view (SiteDataPanel with the read-only monitoring tabs)
-/devices/:deviceId/dashboard   → One device, four tabs kept in `?tab=`: Overview (tiles + chart with detail levels), All values, Every reading (raw rows + packet), Operations (status + controls); works without a site (RequireAccess `site_monitoring`; backend scopes viewers to their devices)
+/devices/:deviceId/dashboard   → One device, four tabs kept in `?tab=`: Overview (tiles + chart with detail levels), All values, Every reading (raw rows + packet), Operations (status + controls), Details (staff only: active alerts, device facts, settings sync, register coverage; Edit and Delete in the header); works without a site; the Devices list opens this page and no longer has its own detail view (RequireAccess `site_monitoring`; backend scopes viewers to their devices)
 /device-presets                → MODBUS register presets
 /ota                           → Firmware OTA management (RequireAccess `ota`, admin only)
 /sites                         → Site list

@@ -322,6 +322,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       wifi_password: '',
       alerts_muted_until: device.alerts_muted_until || '',
       meter_publish_interval_ms: device.meter_publish_interval_ms ?? null,
+      meter_offline_interval_ms: device.meter_offline_interval_ms ?? null,
     });
     setError(null);
     setSaved(false);
@@ -340,9 +341,13 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
   };
 
   const doSave = async () => {
+    const isMeterForm = formData.device_type === 'energy_meter';
     const intervalMs = formData.meter_publish_interval_ms ?? null;
-    const intervalChanged = formData.device_type === 'energy_meter' && intervalMs !== (device?.meter_publish_interval_ms ?? null);
-    if (intervalChanged && intervalMs != null && !(intervalMs >= INTERVAL_S[0] * 1000 && intervalMs <= INTERVAL_S[1] * 1000)) {
+    const offlineMs = formData.meter_offline_interval_ms ?? null;
+    const intervalChanged = isMeterForm && intervalMs !== (device?.meter_publish_interval_ms ?? null);
+    const offlineChanged = isMeterForm && offlineMs !== (device?.meter_offline_interval_ms ?? null);
+    const badMs = (ms: number | null) => ms != null && !(ms >= INTERVAL_S[0] * 1000 && ms <= INTERVAL_S[1] * 1000);
+    if ((intervalChanged && badMs(intervalMs)) || (offlineChanged && badMs(offlineMs))) {
       setError(`Reading interval must be ${INTERVAL_S[0]}–${INTERVAL_S[1]} seconds`);
       return;
     }
@@ -359,6 +364,7 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
       };
       // Only on change: an unchanged value would be re-validated against the device type for nothing.
       if (intervalChanged && intervalMs != null) payload.meter_publish_interval_ms = intervalMs;
+      if (offlineChanged && offlineMs != null) payload.meter_offline_interval_ms = offlineMs;
       // Wi-Fi is admin-only (employees get no SSID back). Send the SSID only when an admin changed it.
       if (canWifiPassword && (formData.wifi_ssid || '') !== (device?.wifi_ssid || '')) {
         payload.wifi_ssid = formData.wifi_ssid;
@@ -608,6 +614,8 @@ const EditDeviceModal: React.FC<EditDeviceModalProps> = ({
                         isDark={isDark}
                         intervalMs={formData.meter_publish_interval_ms}
                         onIntervalChange={ms => set('meter_publish_interval_ms', ms)}
+                        offlineMs={formData.meter_offline_interval_ms}
+                        onOfflineChange={ms => set('meter_offline_interval_ms', ms)}
                         // Calibration is employee tier and needs the device saved as a meter.
                         canCalibrate={!isViewer && device.device_type === 'energy_meter'}
                       />

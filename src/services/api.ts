@@ -156,6 +156,10 @@ export interface IncidentItem {
   summary: string;
   detectedBy: string;
   evidenceCount: number;
+  siteId?: string | null;
+  siteName?: string | null;
+  /** Latest AI diagnosis, when one has been run. */
+  diagnostic?: { root_cause?: string; recommendation?: string } | null;
 }
 
 export interface SiteIncidentsResponse {
@@ -182,6 +186,9 @@ function _mapIncidentDict(raw: any): IncidentItem {
     summary: raw.summary ?? '',
     detectedBy: raw.detected_by,
     evidenceCount: raw.evidence_count ?? 0,
+    siteId: raw.site_id ?? null,
+    siteName: raw.site_name ?? null,
+    diagnostic: raw.diagnostic ?? null,
   };
 }
 
@@ -1608,9 +1615,12 @@ class ApiService {
     return this.request(`/sites/${siteId}/panels/${pk}/`, { method: 'DELETE' });
   }
 
-  async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE): Promise<any> {
+  async getDevices(search?: string, page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE,
+    filters: { state?: string; deviceType?: string } = {}): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
+    if (filters.state) params.append('state', filters.state);
+    if (filters.deviceType) params.append('device_type', filters.deviceType);
     params.append('page', page.toString());
     params.append('page_size', pageSize.toString());
     

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiService } from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAccess } from '../../../shared/access/useAccess';
@@ -11,6 +11,9 @@ import OverviewChart from './OverviewChart';
 import ReadingsTab from './ReadingsTab';
 import OperationsTab from './OperationsTab';
 import AllValuesTab from './AllValuesTab';
+import DetailsTab from './DetailsTab';
+import EditDeviceModal from '../EditDeviceModal';
+import DeleteDeviceModal, { type DeleteDeviceOptions } from '../DeleteDeviceModal';
 import BackButton from './BackButton';
 import { ALLOWED, DETAIL_LABEL, GATEWAY_READINGS, METER_READINGS, RANGES, fitDetail, type Detail, type Series } from './deviceChart';
 import { getFirmware } from './deviceCache';
@@ -86,7 +89,7 @@ function groupReadings(keys: string[], meter: boolean): [string, Reading[]][] {
 
 const clock = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-const TABS = [['overview', 'Overview'], ['values', 'All values'], ['readings', 'Every reading'], ['ops', 'Operations']] as const;
+const TABS = [['overview', 'Overview'], ['values', 'All values'], ['readings', 'Every reading'], ['ops', 'Operations'], ['details', 'Details']] as const;
 type Tab = typeof TABS[number][0];
 
 function Tiles({ latest, meter }: { latest: Record<string, unknown> | null; meter: boolean }) {
@@ -176,18 +179,36 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
   const t = useTokens(isDark);
   const access = useAccess();
   const [params, setParams] = useSearchParams();
-  const tab: Tab = (TABS.find(([k]) => k === params.get('tab'))?.[0]) ?? 'overview';
+  const staff = access.can('devices');  // Details, Edit and Delete are for staff pages; viewers keep the four read/operate tabs
+  const tabs = TABS.filter(([k]) => k !== 'details' || staff);
+  const tab: Tab = (tabs.find(([k]) => k === params.get('tab'))?.[0]) ?? 'overview';
   const pick = (k: Tab) => setParams(p => { const n = new URLSearchParams(p); if (k === 'overview') n.delete('tab'); else n.set('tab', k); return n; }, { replace: true });
   const onTabKey = (e: React.KeyboardEvent) => {
-    const i = TABS.findIndex(([k]) => k === tab);
-    const j = e.key === 'ArrowRight' ? (i + 1) % TABS.length : e.key === 'ArrowLeft' ? (i + TABS.length - 1) % TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : -1;
+    const i = tabs.findIndex(([k]) => k === tab);
+    const j = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i + tabs.length - 1) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
     if (j < 0) return;
-    e.preventDefault(); pick(TABS[j][0]);
-    document.getElementById(`dt-tab-${TABS[j][0]}`)?.focus();
+    e.preventDefault(); pick(tabs[j][0]);
+    document.getElementById(`dt-tab-${tabs[j][0]}`)?.focus();
   };
   const [sel, setSel] = useState<Sel>({ hours: 1, detail: 'every', readingId: '' });
   const [dash, setDash] = useState<Dash | null | 'failed'>(null);
   const [firmware, setFirmware] = useState<Firmware[] | null>(null);
+  const navigate = useNavigate();
+  const [reload, setReload] = useState(0);
+  const [edit, setEdit] = useState<{ device: any; presets: any[] } | null>(null);
+  const [delOpen, setDelOpen] = useState(false);
+  const [actionErr, setActionErr] = useState<string | null>(null);
+  const openEdit = async () => {
+    setActionErr(null);
+    try {
+      const [device, presets] = await Promise.all([apiService.getDevice(Number(deviceId)), apiService.getPresets().catch(() => [])]);
+      setEdit({ device, presets: Array.isArray(presets) ? presets : [] });
+    } catch { setActionErr("Couldn't open the editor. Try again."); }
+  };
+  const confirmDelete = async (options: DeleteDeviceOptions) => {
+    try { await apiService.deleteDevice(Number(deviceId), options); navigate('/devices'); }
+    catch (e) { setDelOpen(false); setActionErr(e instanceof Error ? e.message : "Couldn't delete the device."); }
+  };
 
   useEffect(() => {
     let live = true;
@@ -196,7 +217,7 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
     load();
     const id = setInterval(load, 60_000);
     return () => { live = false; clearInterval(id); };
-  }, [deviceId]);
+  }, [deviceId, reload]);
   useEffect(() => { getFirmware().then(setFirmware); }, []);
 
   const d = typeof dash === 'object' ? dash : null;
@@ -226,14 +247,21 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
             {d.firmware_version && <>, firmware {d.firmware_version}</>}
           </p>
         </div>
+        {staff && (access.can('device_control') || access.can('destructive')) && (
+          <div className="flex gap-2.5">
+            {access.can('device_control') && <button type="button" onClick={openEdit} className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted">Edit</button>}
+            {access.can('destructive') && <button type="button" onClick={() => setDelOpen(true)} className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-muted">Delete</button>}
+          </div>
+        )}
       </header>
+      {actionErr && <Notice tone="bad">{actionErr}</Notice>}
 
       {!d.last_reading_at && <EmptyState icon={Activity} title="No readings yet" description="Readings show here within a minute of the device connecting." />}
       {stale && d.last_reading_at && <div className="dd-banner">This device stopped sending at {at(d.last_reading_at)}. The charts show the time before that.</div>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
         <div className="dt-tabs" role="tablist" aria-label="Device sections" onKeyDown={onTabKey}>
-          {TABS.map(([k, label]) => (
+          {tabs.map(([k, label]) => (
             <button key={k} id={`dt-tab-${k}`} type="button" role="tab" aria-selected={tab === k} aria-controls="dt-panel" tabIndex={tab === k ? 0 : -1} onClick={() => pick(k)}>
               {label}{k === 'values' && <span className="dt-count">{sections.reduce((n, [, rows]) => n + rows.reduce((m, r) => m + r.keys.length, 0), 0)}</span>}
             </button>
@@ -244,8 +272,12 @@ const DeviceDashboardInner: React.FC<{ deviceId: string }> = ({ deviceId }) => {
         {tab === 'values' && d.last_reading_at && <AllValuesTab sections={sections} latest={d.latest} history={d.history} lastReadingAt={d.last_reading_at} />}
         {tab === 'readings' && <ReadingsTab deviceId={Number(deviceId)} meter={d.device_type === 'energy_meter'} />}
         {tab === 'ops' && <OperationsTab dev={d} firmware={firmware} isDark={isDark} />}
+        {tab === 'details' && <DetailsTab deviceId={Number(deviceId)} serial={d.serial} meter={d.device_type === 'energy_meter'} siteId={d.site_id} />}
         </div>
       </div>
+      <EditDeviceModal isOpen={!!edit} device={edit?.device ?? null} isDark={isDark} presets={edit?.presets ?? []} onClose={() => setEdit(null)}
+        onSave={async data => { await apiService.updateDevice(Number(deviceId), data); setEdit(null); setReload(n => n + 1); }} />
+      <DeleteDeviceModal open={delOpen} device={{ id: Number(deviceId), device_serial: d.serial }} onClose={() => setDelOpen(false)} onConfirm={confirmDelete} />
     </div>
   );
 };

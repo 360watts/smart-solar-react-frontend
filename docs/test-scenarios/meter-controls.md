@@ -1,10 +1,10 @@
 # Test scenarios: EM26 meter controls (staff dashboard)
 
 **Feature:** the Edit Device modal gets a "Meter settings" section for energy meters:
-- **Telemetry interval:** a normal field, saved with Save Changes.
+- **Telemetry intervals:** online (meter default 2 s) and offline storage (meter default 5 s), normal fields saved with Save Changes. Per the EM26 spec v2.7.0 (2026-11-02 update).
 - **Calibration:** a one-shot action with its own button and confirm dialog. It is never part of Save.
 
-Gateway-only fields (preset / config version, auto reboot, log streaming) are hidden for meters. Other screens drop the meter actions the EM26 doesn't have (rollback) and warn that a meter hard reset wipes its Wi-Fi.
+Gateway-only fields (preset / config version, auto reboot, log streaming) are hidden for meters. Other screens drop the meter actions the EM26 doesn't have (rollback). A meter hard reset sends `e-mem`, so every reset warning says what it erases (Wi-Fi, calibration, energy totals, offline readings), that the cloud certificate is kept, and that someone may need to be on site (`METER_RESET_TEXT` in `MeterSettingsSection.tsx`).
 
 Backend: `smart-solar-django-backend/docs/test-scenarios/em26-meter-control.md` (calibrate route, `meter_*` device fields, status derived on read).
 
@@ -17,6 +17,8 @@ Tests: `src/features/staff/MeterSettingsSection.test.tsx`, `src/features/staff/E
 | M1 | meter → "Meter settings" shown; preset, config version, auto reboot and log streaming hidden | unit | P0 | passing |
 | M2 | gateway → no meter section; existing fields unchanged | unit | P0 | passing |
 | M3 | meter, interval set to 10 s → Save payload has `meter_publish_interval_ms: 10000` | unit | P0 | passing |
+| M3b | meter, offline interval set to 10 s → Save payload has `meter_offline_interval_ms: 10000` and no online key | unit | P0 | passing |
+| M3c | viewer Settings tab: offline storage interval row, placeholders show the meter defaults (2 s online, 5 s offline), out of range blocks Review, apply sends `meter_offline_interval_ms` | unit | P0 | passing |
 | M4 | meter, interval untouched → key not in the payload | unit | P1 | passing |
 | M5 | interval 0 or 3601 s → Save blocked with an error, `onSave` not called | unit | P1 | passing |
 
@@ -36,7 +38,7 @@ Tests: `src/features/staff/MeterSettingsSection.test.tsx`, `src/features/staff/E
 
 | ID | Given / when / then | Type | Pri | Status |
 |---|---|---|---|---|
-| S1 | viewer device page, meter → no Roll back, Auto reboot or Send logs (switches or read-only tiles); hard reset text mentions Wi-Fi and a site visit | unit | P1 | passing |
+| S1 | viewer device page, meter → no Roll back, Auto reboot or Send logs (switches or read-only tiles); hard reset text mentions Wi-Fi, a site visit and that the cloud certificate is kept | unit | P1 | passing |
 | S2 | OTA rollback picker leaves out meters (uses `device_type` now in `/ota/devices/status/`) | manual | P2 | planned |
 | S3 | staff device detail, meter → no logs / auto-reboot checkboxes; hard reset warning adds the Wi-Fi line; mobile reset text likewise | manual | P2 | planned |
 

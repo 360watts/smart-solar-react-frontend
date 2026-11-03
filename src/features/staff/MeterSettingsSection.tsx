@@ -11,10 +11,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { apiService } from '../../services/api';
 import { ConfirmDialog, useTokens } from './siteHardware/ui';
 
-// Keep in sync with smart-solar-django-backend api/services/em26.py.
+// Keep in sync with smart-solar-django-backend api/services/em26.py (EM26 spec v2.7.0).
 export const CAL_V = [100, 300] as const;
 export const CAL_I = [0.1, 100] as const;
 export const INTERVAL_S = [1, 3600] as const;
+export const DEFAULT_ONLINE_S = 2;   // meter default when no interval is set
+export const DEFAULT_OFFLINE_S = 5;
+// Hard reset on a meter sends `e-mem`: it keeps the cloud certificate but erases everything else stored on it.
+export const METER_RESET_TEXT = "This erases the meter's Wi-Fi, calibration, energy totals and the readings it stored while offline. It keeps its cloud certificate. If it can't rejoin Wi-Fi, someone on site has to set it up again from its setup hotspot. Only do this if an engineer asked you to.";
 const POLL_MS = 10_000;
 const POLL_MAX = 30; // 5 minutes, same as the backend's confirmation timeout
 
@@ -22,6 +26,7 @@ export interface MeterFields {
   id: number;
   is_online?: boolean;
   meter_publish_interval_ms?: number | null;
+  meter_offline_interval_ms?: number | null;
   meter_interval_confirmed_at?: string | null;
   meter_calibration?: { mode?: string; v1?: number; v2?: number; v3?: number; i1?: number; i2?: number; i3?: number;
     requested_at?: string; requested_by?: string } | null;
@@ -32,11 +37,13 @@ export interface MeterFields {
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '');
 const inRange = (x: number, [lo, hi]: readonly [number, number]) => Number.isFinite(x) && x >= lo && x <= hi;
 
-export default function MeterSettingsSection({ device, isDark, intervalMs, onIntervalChange, canCalibrate }: {
+export default function MeterSettingsSection({ device, isDark, intervalMs, onIntervalChange, offlineMs, onOfflineChange, canCalibrate }: {
   device: MeterFields;
   isDark: boolean;
   intervalMs: number | null | undefined;
   onIntervalChange: (ms: number | null) => void;
+  offlineMs?: number | null;
+  onOfflineChange?: (ms: number | null) => void;  // omit to hide the offline interval
   canCalibrate: boolean;
 }) {
   const t = useTokens(isDark);
@@ -103,7 +110,10 @@ export default function MeterSettingsSection({ device, isDark, intervalMs, onInt
 
   const seconds = intervalMs == null ? '' : String(intervalMs / 1000);
   const confirmedMs = live.meter_interval_confirmed_at ? live.meter_publish_interval_ms : null;
-  const intervalWaiting = intervalMs != null && (intervalMs !== live.meter_publish_interval_ms || !live.meter_interval_confirmed_at);
+  // Both intervals go to the meter together and are confirmed together.
+  const on = intervalMs ?? null, off = onOfflineChange ? offlineMs ?? null : live.meter_offline_interval_ms ?? null;
+  const intervalWaiting = (on != null || off != null) && (on !== (live.meter_publish_interval_ms ?? null)
+    || off !== (live.meter_offline_interval_ms ?? null) || !live.meter_interval_confirmed_at);
 
   const cal = live.meter_calibration;
   const status = live.meter_calibration_status;
@@ -115,13 +125,21 @@ export default function MeterSettingsSection({ device, isDark, intervalMs, onInt
       {/* Telemetry interval: saved with the rest of the form */}
       <label style={label} htmlFor="meter-interval">How often the meter sends readings (seconds)</label>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
-        <input id="meter-interval" type="number" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder="5 (meter default)"
+        <input id="meter-interval" type="number" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder={`${DEFAULT_ONLINE_S} (meter default)`}
           value={seconds} style={{ ...input, width: 140 }}
           onChange={e => onIntervalChange(e.target.value === '' ? null : Math.round(Number(e.target.value) * 1000))} />
-        {[5, 10, 60].map(s => (
+        {[2, 5, 10, 60].map(s => (
           <button key={s} type="button" style={pick(intervalMs === s * 1000)} onClick={() => onIntervalChange(s * 1000)}>{s} s</button>
         ))}
       </div>
+      {onOfflineChange && <>
+        <label style={{ ...label, marginTop: 12 }} htmlFor="meter-offline-interval">While offline, store a reading every (seconds)</label>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+          <input id="meter-offline-interval" type="number" min={INTERVAL_S[0]} max={INTERVAL_S[1]} placeholder={`${DEFAULT_OFFLINE_S} (meter default)`}
+            value={offlineMs == null ? '' : String(offlineMs / 1000)} style={{ ...input, width: 140 }}
+            onChange={e => onOfflineChange(e.target.value === '' ? null : Math.round(Number(e.target.value) * 1000))} />
+        </div>
+      </>}
       <div style={{ fontSize: 12, color: t.ink2, marginBottom: 18 }}>
         {intervalWaiting
           ? <span style={chip(t.waitBg, t.waitInk)}>Waiting for meter after you save</span>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { getCsrfToken, setCsrfToken } from '../services/api';
+import { apiService, getCsrfToken, setCsrfToken } from '../services/api';
 import { API_BASE_URL } from '../app/constants';
 import type { Feature } from '../shared/access/features';
 
@@ -59,17 +59,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Bootstrap by asking the backend who (if anyone) the cookie belongs to.
   const refreshSession = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/user/`, {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        setUser(await response.json());
-      } else {
-        setUser(null);
-      }
+      const get = () => fetch(`${API_BASE_URL}/auth/user/`, { credentials: 'include' });
+      let response = await get();
+      // The access cookie lasts 1 h; an expired one is a 401, not a sign-out. Refresh once and retry.
+      if (response.status === 401 && (await apiService.refreshToken())) response = await get();
+      if (response.ok) setUser(await response.json());
+      else if (response.status === 401 || response.status === 403) setUser(null);
+      // Any other status (5xx, proxy timeout) says nothing about the session: keep whoever is signed in.
     } catch (error) {
-      console.error('Session check failed:', error);
-      setUser(null);
+      console.error('Session check failed:', error); // network error: keep the current user, don't log out
     }
   }, []);
 

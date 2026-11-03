@@ -75,6 +75,15 @@ it('M3: a changed interval is sent with Save', async () => {
   expect(onSave.mock.calls[0][0].meter_publish_interval_ms).toBe(10000);
 });
 
+it('M3b: a changed offline interval is sent with Save', async () => {
+  const onSave = openMeter();
+  fireEvent.change(screen.getByLabelText(/While offline, store a reading every/), { target: { value: '10' } });
+  clickSave();
+  await waitFor(() => expect(onSave).toHaveBeenCalled());
+  expect(onSave.mock.calls[0][0].meter_offline_interval_ms).toBe(10000);
+  expect('meter_publish_interval_ms' in onSave.mock.calls[0][0]).toBe(false);
+});
+
 it('M4 + C7: untouched interval and calibration are never in the Save payload', async () => {
   const onSave = openMeter({ meter_publish_interval_ms: 5000 });
   clickSave();

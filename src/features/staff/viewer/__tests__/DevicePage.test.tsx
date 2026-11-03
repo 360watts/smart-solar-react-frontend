@@ -397,6 +397,7 @@ describe('DevicePage', () => {
     click(/^hard reset$/i);
     expect(dialog().textContent).toMatch(/wi-fi/i);
     expect(dialog().textContent).toMatch(/on site/i);
+    expect(dialog().textContent).toMatch(/keeps its cloud certificate/i);  // e-mem, not a full flash erase
     unmount();
 
     mockCan.mockReturnValue(false);

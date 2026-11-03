@@ -4,6 +4,7 @@ import { apiService } from '../../../services/api';
 import { useAccess } from '../../../shared/access/useAccess';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ConfirmDialog } from '../siteHardware/ui';
+import { METER_RESET_TEXT } from '../MeterSettingsSection';
 import { at, buildsFor, isNewer, normVersion, updateFor, type Dev, type Firmware } from './DevicePage';
 import OpsSettings from './OpsSettings';
 import OpsFirmware from './OpsFirmware';
@@ -50,7 +51,7 @@ const CONFIRM = {
   update: { tone: 'danger' as const, title: 'Update', body: "It downloads the new firmware and restarts by itself. Readings pause for a few minutes. Don't unplug it while it updates.", ok: 'Update', cancel: 'Keep it' },
 };
 const OLDER = { ...CONFIRM.update, ok: 'Install', body: "This build is older than what the device runs now. It downloads it and restarts by itself, and settings made for newer firmware may not work. Only do this if an engineer asked you to or you are testing." };
-const METER_RESET = { ...CONFIRM.reset, body: "This erases the meter's Wi-Fi and settings. It stops reporting until someone on site sets it up again from its setup hotspot. Only do this if an engineer asked you to." };
+const METER_RESET = { ...CONFIRM.reset, body: METER_RESET_TEXT };
 type Pending = { kind: 'reboot' | 'reset' | 'rollback' } | { kind: 'update'; fw: Firmware } | null;
 
 const Btn = ({ children, onClick, disabled, cls = '' }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; cls?: string }) =>

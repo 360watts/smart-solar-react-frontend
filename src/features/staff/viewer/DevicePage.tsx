@@ -4,7 +4,7 @@ import { useTokens, StatusChip, Btn, ConfirmDialog, DetailsToggle } from '../sit
 import { useAccess } from '../../../shared/access/useAccess';
 import LogsCard from './LogsCard';
 import GatewayActivity, { GatewayFields } from '../GatewayActivity';
-import MeterSettingsSection, { INTERVAL_S, type MeterFields } from '../MeterSettingsSection';
+import MeterSettingsSection, { INTERVAL_S, METER_RESET_TEXT, type MeterFields } from '../MeterSettingsSection';
 import BuildsCard from './BuildsCard';
 import { firmwareKind } from '../firmwareImage';
 import { getFirmware } from './deviceCache';
@@ -121,8 +121,8 @@ const CONFIRM = {
   rollback: { tone: 'danger' as const, title: 'Roll back', body: 'It goes back to the firmware it ran before and restarts. Only do this if the latest update caused trouble.', ok: 'Roll back', cancel: 'Keep it' },
   update: { tone: 'danger' as const, title: 'Update', body: "It downloads the new firmware and restarts by itself. Readings pause for a few minutes. Don't unplug it while it updates.", ok: 'Update', cancel: 'Keep it' },
 };
-// EM26 factory reset wipes its Wi-Fi too: it opens its setup hotspot and needs someone on site.
-const METER_RESET = { ...CONFIRM.reset, body: "This erases the meter's Wi-Fi and settings. It stops reporting until someone on site sets it up again from its setup hotspot. Only do this if an engineer asked you to." };
+// EM26 hard reset (e-mem) wipes its Wi-Fi too, so it may need someone on site.
+const METER_RESET = { ...CONFIRM.reset, body: METER_RESET_TEXT };
 
 function Switch({ isDark, label, hint, checked, onChange }: { isDark: boolean; label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   const t = useTokens(isDark);

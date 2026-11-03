@@ -27,7 +27,7 @@ export function sectionProgress(d: OnboardingData, withSavings = true): Record<S
     site: count(SITE_FIELDS.map(k => s[k])),
     // appliances: any answer counts, including an explicit "none" (0 is a real answer here)
     appliances: {
-      filled: [p.num_ac_units, p.num_geysers, p.num_ev_chargers, p.has_water_pump, p.pump_on_inverter]
+      filled: [p.num_ac_units, p.num_geysers, p.num_ev_chargers, p.ac_units_on_inverter, p.appliance_notes]
         .filter(v => v !== null && v !== undefined).length,
       total: 5,
     },

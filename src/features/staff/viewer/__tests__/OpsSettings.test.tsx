@@ -51,7 +51,7 @@ it('G1/G2 gateway groups, APN, no Wi-Fi fields', async () => {
 });
 it('G3 meter has only the Meter tab', async () => {
   view(em);
-  expect((await screen.findAllByRole('tab')).map(t => t.textContent)).toEqual(['Meter 2', 'Connection 1']);
+  expect((await screen.findAllByRole('tab')).map(t => t.textContent)).toEqual(['Meter 3', 'Connection 1']);
   expect(screen.getByLabelText('Publish interval (seconds)')).toBeInTheDocument();
   expect(screen.queryByRole('switch')).toBeNull();
   fireEvent.click(screen.getByRole('tab', { name: /Connection/ }));
@@ -161,6 +161,18 @@ it('M1/M2 interval validation and apply', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Review and apply' }));
   fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Apply' }));
   await waitFor(() => expect(api.updateDevice).toHaveBeenCalledWith(47, { meter_publish_interval_ms: 10000 }));
+});
+it('M2b offline storage interval validation and apply', async () => {
+  view(em);
+  const ov = await screen.findByLabelText('Offline storage interval (seconds)');
+  expect(ov).toHaveAttribute('placeholder', '5 (default)');
+  expect(screen.getByLabelText('Publish interval (seconds)')).toHaveAttribute('placeholder', '2 (default)');
+  fireEvent.change(ov, { target: { value: '0' } });
+  expect(screen.getByRole('button', { name: 'Review and apply' })).toBeDisabled();
+  fireEvent.change(ov, { target: { value: '10' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Review and apply' }));
+  fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Apply' }));
+  await waitFor(() => expect(api.updateDevice).toHaveBeenCalledWith(47, { meter_offline_interval_ms: 10000 }));
 });
 it('M3/M4 calibration confirm and range check', async () => {
   view(em);
