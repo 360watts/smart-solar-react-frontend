@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MobileConfiguration from '../mobile/staff/MobileConfiguration';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
-import ReactDOM from 'react-dom';
-import { Pencil, Trash2, AlertTriangle, X, CheckCircle2, Cpu } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
+import { Input } from '../../shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
+import { Switch } from '../../shared/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../shared/ui/table';
+import { ConfirmDialog } from './siteHardware/ui';
 import { apiService } from '../../services/api';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
 import PageHeader from '../../shared/layout/PageHeader';
@@ -34,8 +40,18 @@ interface SlaveDevice {
   registers: any[];
 }
 
+type StatusFilter = 'all' | 'enabled' | 'disabled';
+const DATA_TYPES: Record<number, string> = {
+  0: 'U16', 1: 'S16', 2: 'U32', 3: 'S32', 4: 'F32', 5: 'U64', 6: 'S64', 7: 'F64', 8: 'BOOL', 9: 'STR',
+};
+
 const Configuration: React.FC = () => {
   const isMobile = useIsMobile();
+  const { isDark } = useTheme();
+  const { addToast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [savingReg, setSavingReg] = useState(false);
   const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +70,6 @@ const Configuration: React.FC = () => {
 
   // Delete / success modals
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; slave: SlaveDevice | null }>({ show: false, slave: null });
-  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const mapSlave = (slave: any): SlaveDevice => ({
     id: slave.id,
@@ -135,6 +150,32 @@ const Configuration: React.FC = () => {
 
   // ── Save handler (called by SlaveConfigModal) ───────────────────────────────
 
+  const toRegisterPayload = (r: any) => ({
+    label: r.label, address: r.address, numRegisters: r.numRegisters, functionCode: r.functionCode,
+    registerType: r.registerType, dataType: r.dataType, byteOrder: r.byteOrder, wordOrder: r.wordOrder,
+    accessMode: r.accessMode, scaleFactor: r.scaleFactor, offset: r.offset, unit: r.unit,
+    decimalPlaces: r.decimalPlaces, category: r.category, highAlarmThreshold: r.highAlarmThreshold,
+    lowAlarmThreshold: r.lowAlarmThreshold, description: r.description, enabled: r.enabled,
+  });
+
+  // Switch on the register table: send the slave with that one register flipped, show the server's answer.
+  const toggleRegister = async (slave: SlaveDevice, index: number, enabled: boolean) => {
+    setSavingReg(true);
+    try {
+      const registers = slave.registers.map((r, i) => (i === index ? { ...r, enabled } : r));
+      const updated = await apiService.updateGlobalSlave(slave.id, {
+        slave_id: slave.slaveId, device_name: slave.deviceName,
+        polling_interval_ms: slave.pollingIntervalMs, timeout_ms: slave.timeoutMs,
+        enabled: slave.enabled, registers: registers.map(toRegisterPayload),
+      });
+      setSlaves((prev) => prev.map((s) => (s.id === slave.id ? mapSlave(updated) : s)));
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not change the register', message: err instanceof Error ? err.message : undefined });
+    } finally {
+      setSavingReg(false);
+    }
+  };
+
   const handleSaveSlave = async (formData: SlaveFormData) => {
     const slaveId = parseInt(formData.slave_id);
 
@@ -209,7 +250,7 @@ const Configuration: React.FC = () => {
       await apiService.deleteGlobalSlave(deleteModal.slave.id);
       setSlaves(slaves.filter((s) => s.id !== deleteModal.slave!.id));
       setDeleteModal({ show: false, slave: null });
-      setSuccessModal({ show: true, message: `Slave device "${deleteModal.slave.deviceName}" deleted successfully.` });
+      addToast({ type: 'success', title: 'Slave deleted', message: deleteModal.slave.deviceName });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete slave');
       setDeleteModal({ show: false, slave: null });
@@ -220,127 +261,189 @@ const Configuration: React.FC = () => {
 
   if (loading) return <div className="loading">Loading configuration...</div>;
 
+  if (isMobile) return <MobileConfiguration />;
+
+  if (loading && slaves.length === 0) return <div className="loading">Loading configuration...</div>;
+
+  const visible = slaves.filter((s) => statusFilter === 'all' || (statusFilter === 'enabled') === s.enabled);
+  const selected = slaves.find((s) => s.id === selectedId) ?? visible[0] ?? null;
+  const activeRegs = (s: SlaveDevice) => s.registers.filter((r: any) => r.enabled).length;
+
   return (
     <div className="admin-container responsive-page">
       <PageHeader
         icon={<Cpu size={20} color="white" />}
-        title="Slave Configuration"
-        subtitle="Configure Modbus slave devices and their register mappings"
+        title="Slave configuration"
+        subtitle="Modbus slaves and their registers"
       />
 
       {!creatingSlave && !editingSlave && error && (
         <div className="alert alert-error" style={{ marginBottom: '20px' }}>
           <strong>Error:</strong> {error}
-          <button onClick={() => setError(null)} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+          <button onClick={() => setError(null)} aria-label="Dismiss error" style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
         </div>
       )}
 
-      <div className="card">
-        <div className="card-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0 }}>
-              Slave Devices {totalCount > 0 ? `(${totalCount})` : ''}
-            </h2>
-            <input
-              type="text"
-              placeholder="Search by name, ID…"
+      <section className="overflow-hidden rounded-[20px] border border-border bg-card" aria-label="Slave devices">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-border px-4 py-3.5">
+          <div className="flex min-w-0 flex-[1_1_240px] flex-wrap items-center gap-x-3.5 gap-y-2.5">
+            <h2 className="m-0 text-[1.05rem] font-semibold">Slave devices</h2>
+            {totalCount > 0 && <span className="font-mono text-[0.85rem] text-muted-foreground">{totalCount} slaves</span>}
+            <Input
+              type="search"
+              aria-label="Search slaves"
+              placeholder="Search name or slave ID"
               value={slaveSearch}
               onChange={(e) => setSlaveSearch(e.target.value)}
-              className="search-input"
+              className="max-w-80 flex-[1_1_200px]"
             />
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger aria-label="Filter by status" className="w-auto min-w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="enabled">Enabled</SelectItem>
+                <SelectItem value="disabled">Disabled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <button onClick={() => { setCreatingSlave(true); setModalError(null); }} className="btn">Configure New Slave</button>
+          <button type="button" onClick={() => { setCreatingSlave(true); setModalError(null); }} className="ui-btn ui-btn--main">Add slave</button>
         </div>
 
-        {slaves.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-            <Cpu size={40} strokeWidth={1.25} style={{ color: 'var(--text-muted)', marginBottom: 12 }} />
-            {totalCount === 0 && !debouncedSlaveSearch
-              ? <><p style={{ fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No slave devices configured</p><p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>Click "Configure New Slave" to add your first device.</p></>
-              : <p style={{ color: 'var(--text-muted)', margin: 0 }}>No slaves match your search.</p>}
+        {visible.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <Cpu size={40} strokeWidth={1.25} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="m-0 font-semibold">
+              {totalCount === 0 && !debouncedSlaveSearch ? 'No slaves yet' : 'No slaves match'}
+            </p>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">
+              {totalCount === 0 && !debouncedSlaveSearch ? 'Use Add slave to create the first one.' : 'Change the search or the status filter.'}
+            </p>
           </div>
         ) : (
-          <div className="slave-grid">
-            {slaves.map((slave) => {
-              const enabledRegs = slave.registers.filter((r: any) => r.enabled).length;
-              return (
-                <div key={slave.id} className="slave-card">
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <div>
-                      <div className="slave-card-name">{slave.deviceName}</div>
-                      <div className="slave-card-id">Slave ID #{slave.slaveId} · {slave.configName || 'global'}</div>
-                    </div>
-                    <span className={slave.enabled ? 'status-online' : 'status-offline'} style={{ flexShrink: 0, marginTop: 2 }}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Slave ID</TableHead>
+                <TableHead>Preset</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Polling</TableHead>
+                <TableHead className="text-right">Timeout</TableHead>
+                <TableHead className="text-right">Registers</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((slave) => (
+                <TableRow
+                  key={slave.id}
+                  data-testid={`slave-row-${slave.id}`}
+                  aria-selected={selected?.id === slave.id}
+                  tabIndex={0}
+                  onClick={() => setSelectedId(slave.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setSelectedId(slave.id); }}
+                  className={`cursor-pointer ${selected?.id === slave.id ? 'bg-primary/10' : ''}`}
+                >
+                  <TableCell className="font-medium">{slave.deviceName}</TableCell>
+                  <TableCell className="text-right font-mono">#{slave.slaveId}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{slave.configName || 'global'}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${slave.enabled ? 'bg-primary/15 text-primary' : 'border border-border text-muted-foreground'}`}>
+                      <span className="size-[7px] rounded-full bg-current" />
                       {slave.enabled ? 'Enabled' : 'Disabled'}
                     </span>
-                  </div>
-                  <div className="slave-card-stats">
-                    <div className="slave-stat">
-                      <div className="slave-stat-label">Polling</div>
-                      <div className="slave-stat-value">{slave.pollingIntervalMs}ms</div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">{slave.pollingIntervalMs} ms</TableCell>
+                  <TableCell className="text-right font-mono">{slave.timeoutMs} ms</TableCell>
+                  <TableCell className={`text-right font-mono ${activeRegs(slave) === 0 ? 'text-amber-500' : ''}`}>
+                    {activeRegs(slave)} / {slave.registers.length}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1.5">
+                      <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={(e) => { e.stopPropagation(); setEditingSlave(slave); }}>Edit</button>
+                      <button type="button" className="ui-btn ui-btn--danger ui-btn--sm" onClick={(e) => { e.stopPropagation(); handleDeleteSlave(slave); }}>Delete</button>
                     </div>
-                    <div className="slave-stat">
-                      <div className="slave-stat-label">Timeout</div>
-                      <div className="slave-stat-value">{slave.timeoutMs}ms</div>
-                    </div>
-                    <div className="slave-stat" style={{ gridColumn: '1 / -1' }}>
-                      <div className="slave-stat-label">Registers</div>
-                      <div className="slave-stat-value">{enabledRegs} active / {slave.registers.length} total</div>
-                    </div>
-                  </div>
-                  <div className="slave-card-actions">
-                    <button onClick={() => setEditingSlave(slave)} className="slave-card-btn slave-card-btn-edit">
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button onClick={() => handleDeleteSlave(slave)} className="slave-card-btn slave-card-btn-delete">
-                      <Trash2 size={13} /> Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
 
-        {/* Pagination */}
         {totalCount > 0 && (
-          <div className="pagination-bar" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', gap: '16px' }}>
-            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount} slaves
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <span className="font-mono text-[0.85rem] text-muted-foreground">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
+                <SelectTrigger aria-label="Rows per page" className="w-auto min-w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n} per page</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={currentPage === 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>Previous</button>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}>Next</button>
             </div>
-            <div className="pagination-controls">
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
-                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? '0.5' : '1' }}
-              >← Previous</button>
-              <div className="pagination-pages">
-                {(() => {
-                  const pages: React.ReactNode[] = [];
-                  let lastWasEllipsis = false;
-                  for (let i = 1; i <= totalPages; i++) {
-                    const show = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
-                    if (show) {
-                      lastWasEllipsis = false;
-                      pages.push(<button key={i} onClick={() => setCurrentPage(i)} style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: i === currentPage ? 'rgba(99,102,241,0.2)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: i === currentPage ? 'bold' : 'normal', minWidth: '32px' }}>{i}</button>);
-                    } else if (!lastWasEllipsis) {
-                      lastWasEllipsis = true;
-                      pages.push(<span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>);
-                    }
-                  }
-                  return pages;
-                })()}
-              </div>
-              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
-                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === totalPages ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? '0.5' : '1' }}
-              >Next →</button>
-            </div>
-            <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-              style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
-            >
-              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
-            </select>
           </div>
         )}
-      </div>
+      </section>
+
+      {selected && (
+        <section className="mt-5 overflow-hidden rounded-[20px] border border-border bg-card" aria-label="Registers">
+          <div className="flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2.5 border-b border-border px-4 py-3.5">
+            <div className="min-w-0">
+              <h2 className="m-0 text-[1.05rem] font-semibold">{selected.deviceName} registers</h2>
+              <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
+                <span>Slave <b className="font-mono font-medium text-foreground">#{selected.slaveId}</b></span>
+                <span>Polling <b className="font-mono font-medium text-foreground">{selected.pollingIntervalMs} ms</b></span>
+                <span>Timeout <b className="font-mono font-medium text-foreground">{selected.timeoutMs} ms</b></span>
+                <span>Active <b className="font-mono font-medium text-foreground">{activeRegs(selected)} of {selected.registers.length}</b></span>
+              </div>
+            </div>
+            <button type="button" className="ui-btn ui-btn--support" onClick={() => setEditingSlave(selected)}>Edit registers</button>
+          </div>
+          {selected.registers.length === 0 ? (
+            <p className="m-0 px-5 py-8 text-center text-sm text-muted-foreground">No registers on this slave yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Label</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead className="text-right">Function</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Scale</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Enabled</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selected.registers.map((r: any, i: number) => (
+                  <TableRow key={r.id ?? i}>
+                    <TableCell className="font-medium">{r.label}</TableCell>
+                    <TableCell className="font-mono">0x{Number(r.address).toString(16).toUpperCase().padStart(4, '0')}</TableCell>
+                    <TableCell className="text-right font-mono">{r.functionCode}</TableCell>
+                    <TableCell className="font-mono">{DATA_TYPES[r.dataType] ?? r.dataType}</TableCell>
+                    <TableCell className="text-right font-mono">{r.scaleFactor}</TableCell>
+                    <TableCell>{r.unit || ''}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={!!r.enabled}
+                        disabled={savingReg}
+                        aria-label={`${r.label} enabled`}
+                        onCheckedChange={(v) => toggleRegister(selected, i, v)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </section>
+      )}
 
       {/* Shared SlaveConfigModal */}
       <SlaveConfigModal
@@ -354,69 +457,16 @@ const Configuration: React.FC = () => {
         onClearError={() => setModalError(null)}
       />
 
-      {/* Delete Confirmation Modal */}
-      {deleteModal.show && deleteModal.slave && ReactDOM.createPortal(
-        <div className="portal-modal-backdrop">
-          <div className="portal-modal-container">
-            <div className="portal-modal-header">
-              <div className="portal-modal-header-left">
-                <div className="portal-modal-icon portal-modal-icon-danger">
-                  <AlertTriangle size={22} color="white" />
-                </div>
-                <span className="portal-modal-title">Delete Slave Device</span>
-              </div>
-              <button onClick={() => setDeleteModal({ show: false, slave: null })} className="portal-modal-close-btn">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="portal-modal-body">
-              <p>
-                Are you sure you want to delete slave device <strong>{deleteModal.slave.deviceName}</strong> (ID: {deleteModal.slave.slaveId})?
-              </p>
-              <div className="portal-modal-warning-box">
-                <strong><AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Warning:</strong> This will permanently delete the slave device and all its register mappings.
-              </div>
-            </div>
-            <div className="portal-modal-footer">
-              <button onClick={() => setDeleteModal({ show: false, slave: null })} className="portal-modal-btn portal-modal-btn-cancel">
-                Cancel
-              </button>
-              <button onClick={confirmDeleteSlave} className="portal-modal-btn portal-modal-btn-danger">
-                Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Success Modal */}
-      {successModal.show && ReactDOM.createPortal(
-        <div className="portal-modal-backdrop">
-          <div className="portal-modal-container">
-            <div className="portal-modal-header">
-              <div className="portal-modal-header-left">
-                <div className="portal-modal-icon portal-modal-icon-success">
-                  <CheckCircle2 size={22} color="white" />
-                </div>
-                <span className="portal-modal-title">Success</span>
-              </div>
-              <button onClick={() => setSuccessModal({ show: false, message: '' })} className="portal-modal-close-btn">
-                <X size={16} />
-              </button>
-            </div>
-            <div className="portal-modal-body">
-              <p>{successModal.message}</p>
-            </div>
-            <div className="portal-modal-footer">
-              <button onClick={() => setSuccessModal({ show: false, message: '' })} className="portal-modal-btn portal-modal-btn-primary">
-                Got it!
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <ConfirmDialog
+        isDark={isDark}
+        open={deleteModal.show && !!deleteModal.slave}
+        title="Delete this slave?"
+        body={deleteModal.slave && `${deleteModal.slave.deviceName} (slave #${deleteModal.slave.slaveId}) and its ${deleteModal.slave.registers.length} registers will be removed. This cannot be undone.`}
+        confirmLabel="Delete slave"
+        cancelLabel="Cancel"
+        onConfirm={confirmDeleteSlave}
+        onCancel={() => setDeleteModal({ show: false, slave: null })}
+      />
     </div>
   );
 };

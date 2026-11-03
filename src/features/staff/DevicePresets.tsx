@@ -561,7 +561,7 @@ const DevicePresets: React.FC = () => {
               onChange={handleSearch}
               className="search-input"
             />
-            <button onClick={() => setCreatingPreset(true)} className="btn">
+            <button onClick={() => setCreatingPreset(true)} className="ui-btn ui-btn--main">
               <Layers size={15} style={{ marginRight: 6 }} />
               Create New Preset
             </button>
@@ -1005,7 +1005,7 @@ const DevicePresets: React.FC = () => {
                             onChange={(e) => setEditPresetSlaveSearch(e.target.value)}
                             style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.78rem', minWidth: 130 }}
                           />
-                          <button type="button" onClick={() => handleConfigureSlaves(editingPreset)} className="btn btn-sm">Configure Slaves</button>
+                          <button type="button" onClick={() => handleConfigureSlaves(editingPreset)} className="ui-btn ui-btn--support ui-btn--sm">Configure Slaves</button>
                         </div>
                       </div>
                       {slaves.length === 0 ? (
@@ -1055,8 +1055,8 @@ const DevicePresets: React.FC = () => {
               borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>{editingPreset ? 'Save' : 'Create'}</button>
+              <button type="button" onClick={handleCancel} className="ui-btn ui-btn--link">Cancel</button>
+              <button type="submit" onClick={(e) => { e.preventDefault(); editingPreset ? handleSave() : handleCreate(); }} className="ui-btn ui-btn--main">{editingPreset ? 'Save' : 'Create'}</button>
             </div>
           </div>
         </div>,
@@ -1155,7 +1155,7 @@ const DevicePresets: React.FC = () => {
               borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-strong)',
               flexShrink: 0,
             }}>
-              <button type="button" onClick={handleCloseDetails} style={{ padding: '10px 20px', borderRadius: 8, border: isDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-strong)', background: 'var(--muted)', color: 'var(--muted-foreground)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+              <button type="button" onClick={handleCloseDetails} className="ui-btn ui-btn--support">Close</button>
             </div>
           </div>
         </div>,
