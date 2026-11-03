@@ -10,22 +10,11 @@ import { Switch } from '../../shared/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../shared/ui/table';
 import { ConfirmDialog } from './siteHardware/ui';
 import { apiService } from '../../services/api';
-import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import type { SlaveFormData } from './SlaveConfigModal';
+import SlaveEditDialog from './SlaveEditDialog';
+import { DATA_TYPES, hex, toRegisterPayload, toSlavePayload } from './slaveForm';
 import PageHeader from '../../shared/layout/PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../../app/constants';
-
-interface GatewayConfig {
-  configId: string;
-  updatedAt: string;
-  configSchemaVer: number;
-  uartConfig: {
-    baudRate: number;
-    dataBits: number;
-    stopBits: number;
-    parity: number;
-  };
-  slaves: SlaveDevice[];
-}
 
 interface SlaveDevice {
   id: number;
@@ -41,9 +30,6 @@ interface SlaveDevice {
 }
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
-const DATA_TYPES: Record<number, string> = {
-  0: 'U16', 1: 'S16', 2: 'U32', 3: 'S32', 4: 'F32', 5: 'U64', 6: 'S64', 7: 'F64', 8: 'BOOL', 9: 'STR',
-};
 
 const Configuration: React.FC = () => {
   const isMobile = useIsMobile();
@@ -52,14 +38,12 @@ const Configuration: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [savingReg, setSavingReg] = useState(false);
-  const [config, setConfig] = useState<GatewayConfig | null>(null);
   const [slaves, setSlaves] = useState<SlaveDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [creatingSlave, setCreatingSlave] = useState(false);
   const [editingSlave, setEditingSlave] = useState<SlaveDevice | null>(null);
-  const [globalMode] = useState(true);
   const [slaveSearch, setSlaveSearch] = useState('');
   const [debouncedSlaveSearch, setDebouncedSlaveSearch] = useState('');
 
@@ -121,7 +105,6 @@ const Configuration: React.FC = () => {
         setSlaves((Array.isArray(list) ? list : []).map(mapSlave));
         setTotalCount(result.count ?? (Array.isArray(list) ? list.length : 0));
         setTotalPages(result.total_pages ?? 1);
-        setConfig(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -150,14 +133,6 @@ const Configuration: React.FC = () => {
 
   // ── Save handler (called by SlaveConfigModal) ───────────────────────────────
 
-  const toRegisterPayload = (r: any) => ({
-    label: r.label, address: r.address, numRegisters: r.numRegisters, functionCode: r.functionCode,
-    registerType: r.registerType, dataType: r.dataType, byteOrder: r.byteOrder, wordOrder: r.wordOrder,
-    accessMode: r.accessMode, scaleFactor: r.scaleFactor, offset: r.offset, unit: r.unit,
-    decimalPlaces: r.decimalPlaces, category: r.category, highAlarmThreshold: r.highAlarmThreshold,
-    lowAlarmThreshold: r.lowAlarmThreshold, description: r.description, enabled: r.enabled,
-  });
-
   // Switch on the register table: send the slave with that one register flipped, show the server's answer.
   const toggleRegister = async (slave: SlaveDevice, index: number, enabled: boolean) => {
     setSavingReg(true);
@@ -166,7 +141,7 @@ const Configuration: React.FC = () => {
       const updated = await apiService.updateGlobalSlave(slave.id, {
         slave_id: slave.slaveId, device_name: slave.deviceName,
         polling_interval_ms: slave.pollingIntervalMs, timeout_ms: slave.timeoutMs,
-        enabled: slave.enabled, registers: registers.map(toRegisterPayload),
+        priority: slave.priority ?? 1, enabled: slave.enabled, registers: registers.map(toRegisterPayload),
       });
       setSlaves((prev) => prev.map((s) => (s.id === slave.id ? mapSlave(updated) : s)));
     } catch (err) {
@@ -189,38 +164,10 @@ const Configuration: React.FC = () => {
     }
 
     try {
-      const slaveData = {
-        slave_id: slaveId,
-        device_name: formData.device_name,
-        polling_interval_ms: formData.polling_interval_ms,
-        timeout_ms: formData.timeout_ms,
-        enabled: formData.enabled,
-        registers: formData.registers.map((r) => ({
-          label: r.label,
-          address: r.address,
-          numRegisters: r.numRegisters,
-          functionCode: r.functionCode,
-          registerType: r.registerType,
-          dataType: r.dataType,
-          byteOrder: r.byteOrder,
-          wordOrder: r.wordOrder,
-          accessMode: r.accessMode,
-          scaleFactor: r.scaleFactor,
-          offset: r.offset,
-          unit: r.unit,
-          decimalPlaces: r.decimalPlaces,
-          category: r.category,
-          highAlarmThreshold: r.highAlarmThreshold,
-          lowAlarmThreshold: r.lowAlarmThreshold,
-          description: r.description,
-          enabled: r.enabled,
-        })),
-      };
+      const slaveData = toSlavePayload(formData);
 
       if (editingSlave) {
-        const updated = globalMode
-          ? await apiService.updateGlobalSlave(editingSlave.id, slaveData)
-          : await apiService.updateSlave(config!.configId, editingSlave.slaveId, slaveData);
+        const updated = await apiService.updateGlobalSlave(editingSlave.id, slaveData);
         setSlaves(slaves.map((s) => (s.id === editingSlave.id ? mapSlave(updated) : s)));
       } else {
         const created = await apiService.createGlobalSlave(slaveData);
@@ -256,10 +203,6 @@ const Configuration: React.FC = () => {
       setDeleteModal({ show: false, slave: null });
     }
   };
-
-  if (isMobile) return <MobileConfiguration />;
-
-  if (loading) return <div className="loading">Loading configuration...</div>;
 
   if (isMobile) return <MobileConfiguration />;
 
@@ -322,7 +265,7 @@ const Configuration: React.FC = () => {
             </p>
           </div>
         ) : (
-          <Table>
+          <Table containerClassName="rounded-none border-0">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -408,23 +351,23 @@ const Configuration: React.FC = () => {
           {selected.registers.length === 0 ? (
             <p className="m-0 px-5 py-8 text-center text-sm text-muted-foreground">No registers on this slave yet.</p>
           ) : (
-            <Table>
+            <Table containerClassName="max-h-[420px] overflow-y-auto rounded-none border-0">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Function</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Scale</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Enabled</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card">Label</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card">Address</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card text-right">Function</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card">Type</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card text-right">Scale</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card">Unit</TableHead>
+                  <TableHead className="sticky top-0 z-10 bg-card">Enabled</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {selected.registers.map((r: any, i: number) => (
                   <TableRow key={r.id ?? i}>
                     <TableCell className="font-medium">{r.label}</TableCell>
-                    <TableCell className="font-mono">0x{Number(r.address).toString(16).toUpperCase().padStart(4, '0')}</TableCell>
+                    <TableCell className="font-mono">{hex(r.address)}</TableCell>
                     <TableCell className="text-right font-mono">{r.functionCode}</TableCell>
                     <TableCell className="font-mono">{DATA_TYPES[r.dataType] ?? r.dataType}</TableCell>
                     <TableCell className="text-right font-mono">{r.scaleFactor}</TableCell>
@@ -446,7 +389,7 @@ const Configuration: React.FC = () => {
       )}
 
       {/* Shared SlaveConfigModal */}
-      <SlaveConfigModal
+      <SlaveEditDialog
         open={creatingSlave || !!editingSlave}
         editingSlave={editingSlave}
         existingSlaveIds={slaves.filter((s) => s.configId === null).map((s) => s.slaveId)}

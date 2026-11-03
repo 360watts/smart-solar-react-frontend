@@ -1036,10 +1036,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   value={dateRange}
                   onChange={e => setDateRange(e.target.value)}
                   style={{
-                    background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
                     border: '1px solid rgba(15,159,143, 0.3)',
                     borderRadius: 8,
-                    padding: '6px 12px',
+                    padding: '6px 30px 6px 12px',
                     fontSize: '0.75rem',
                     color: 'var(--text-primary)',
                     cursor: 'pointer',
@@ -1094,10 +1094,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 value={forecastWindow}
                 onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '2d')}
                 style={{
-                  background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
                   border: '1px solid rgba(15,159,143, 0.3)',
                   borderRadius: 8,
-                  padding: '6px 12px',
+                  padding: '6px 30px 6px 12px',
                   fontSize: '0.75rem',
                   color: 'var(--text-primary)',
                   cursor: 'pointer',
@@ -1126,29 +1126,10 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 : lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }) + ' IST'}
             </span>
           )}
-          <motion.button
-            whileHover={{ scale: 1.05, rotate: 180 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-            onClick={() => { fetchAll(true); }}
-            style={{
-              background: 'none',
-              border: '1px solid rgba(15,159,143, 0.3)',
-              borderRadius: 8,
-              padding: '4px 12px',
-              fontSize: '0.75rem',
-              color: '#0F9F8F',
-              cursor: 'pointer',
-              fontFamily: 'Rubik, sans-serif',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
+          <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={() => { fetchAll(true); }}>
             <RefreshCw size={14} />
             Refresh
-          </motion.button>
+          </button>
         </div>
       </>
   );
@@ -1190,7 +1171,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             transition={{ delay: 0.2 }}
             style={{
               display: 'flex',
-              flex: '1 1 320px',
+              flex: '1 1 auto',
+              maxWidth: '100%',
               minWidth: 0,
               borderBottom: '1px solid var(--border)',
               gap: 4,
@@ -1235,7 +1217,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             })}
           </motion.div>
           {headerControls && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', marginLeft: 'auto', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', marginLeft: 'auto', flex: '0 0 auto', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
               {headerControls}
             </div>
           )}

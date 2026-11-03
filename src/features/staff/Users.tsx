@@ -1,38 +1,20 @@
-import { Cpu } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
-import PhoneInput from '../../shared/components/PhoneInput';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, X, AlertTriangle, CheckCircle2, UserPlus, Users as UsersIcon } from 'lucide-react';
+import { Cpu, Users as UsersIcon } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileUsers from '../mobile/staff/MobileUsers';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import { EmptyState } from '../../shared/components/Feedback';
-import { SkeletonTableRow } from '../../shared/components/SkeletonLoader';
+import PhoneInput from '../../shared/components/PhoneInput';
 import PageHeader from '../../shared/layout/PageHeader';
-import { Loader } from '../../shared/ui/Loader';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../shared/ui/dialog';
+import { Input } from '../../shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../shared/ui/table';
+import { ConfirmDialog } from './siteHardware/ui';
 import { DEFAULT_PAGE_SIZE } from '../../app/constants';
-
-// ── Avatar helpers ────────────────────────────────────────────────────────────
-const AVATAR_COLORS_U = [
-  'linear-gradient(135deg,#6366f1,#8b5cf6)',
-  'linear-gradient(135deg,#0F9F8F,#138881)',
-  'linear-gradient(135deg,#f59e0b,#d97706)',
-  'linear-gradient(135deg,#3b82f6,#1d4ed8)',
-  'linear-gradient(135deg,#ec4899,#be185d)',
-  'linear-gradient(135deg,#14b8a6,#0F9F8F)',
-];
-const userAvatarColor = (s: string) => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-  return AVATAR_COLORS_U[Math.abs(h) % AVATAR_COLORS_U.length];
-};
-const userInitials = (first: string, last: string, username: string) => {
-  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
-  if (first) return first.substring(0, 2).toUpperCase();
-  return username.substring(0, 2).toUpperCase();
-};
 
 interface User {
   id: number;
@@ -42,8 +24,6 @@ interface User {
   last_name: string;
   mobile_number?: string;
   address?: string;
-  is_staff: boolean;
-  is_superuser: boolean;
   is_active: boolean;
   customer_id: string | null;
   date_joined: string;
@@ -58,1255 +38,352 @@ interface Device {
   config_version?: string;
 }
 
+type StatusFilter = 'all' | 'active' | 'inactive';
+type Form = { email: string; first_name: string; last_name: string; mobile_number: string; address: string };
+const EMPTY: Form = { email: '', first_name: '', last_name: '', mobile_number: '', address: '' };
+
+const AVATARS = ['#2EF0CC', '#E9B949', '#8FB8F0', '#F0A58F', '#C9A6F0', '#9BE3A0'];
+const avatarColor = (s: string) => AVATARS[Math.abs([...s].reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0)) % AVATARS.length];
+const initials = (u: User) =>
+  (u.first_name && u.last_name ? u.first_name[0] + u.last_name[0] : (u.first_name || u.username).slice(0, 2)).toUpperCase();
+const fullName = (u: User) => `${u.first_name} ${u.last_name}`.trim() || u.username;
+const day = (iso?: string) => {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d.getTime()) ? d.toLocaleDateString() : '-';
+};
+
+function Field({ label, error, children, wide }: { label: string; error?: string; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1" style={wide ? { gridColumn: '1 / -1' } : undefined}>
+      <label className="text-[0.78rem] font-medium text-muted-foreground">{label}</label>
+      {children}
+      {error && <span className="text-[0.75rem] leading-tight text-destructive" role="alert">{error}</span>}
+    </div>
+  );
+}
+
 const Users: React.FC = () => {
   const isMobile = useIsMobile();
-  if (isMobile) return <MobileUsers />;
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  // ── Design tokens — mobile AppTheme aligned ──────────────────────────────
-  const T = {
-    bg:      'var(--background)',
-    surface: 'var(--card)',
-    cardEl:  'var(--card)',
-    border:  isDark ? 'rgba(255,255,255,0.07)'       : 'rgba(18,21,26,0.09)',
-    borderM: isDark ? 'rgba(255,255,255,0.04)'       : 'rgba(18,21,26,0.05)',
-    text:    'var(--foreground)',
-    textM:   'var(--muted-foreground)',
-    textD:   'var(--text-dim)',
-    accent:  'var(--brand-green)',
-  };
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const { addToast } = useToast();
+
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [creatingUser, setCreatingUser] = useState(false);
-  const [creatingLoading, setCreatingLoading] = useState(false);
-  const [savingLoading, setSavingLoading] = useState(false);
-  const [deletingLoading, setDeletingLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userDevices, setUserDevices] = useState<Device[]>([]);
-  const [loadingDevices, setLoadingDevices] = useState(false);
-  const [deviceSearch, setDeviceSearch] = useState('');
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const [editForm, setEditForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile_number: '',
-    address: '',
-  });
-  const [createForm, setCreateForm] = useState({
-    email: '',
-    first_name: '',
-    last_name: '',
-    mobile_number: '',
-    address: '',
-  });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+  const [deviceSearch, setDeviceSearch] = useState('');
 
-  // Modern modal states
-  const [deleteModal, setDeleteModal] = useState<{ show: boolean; user: User | null }>({ show: false, user: null });
-  const [successModal, setSuccessModal] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
-
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [dialog, setDialog] = useState<{ open: boolean; user: User | null }>({ open: false, user: null });
+  const [form, setForm] = useState<Form>(EMPTY);
+  const [tried, setTried] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  useEffect(() => {
-    fetchUsers(debouncedSearchTerm, currentPage, pageSize);
-  }, [debouncedSearchTerm, currentPage, pageSize]);
-
-  const fetchUsers = async (search?: string, page = 1, size = DEFAULT_PAGE_SIZE) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiService.getUsers(search, page, size);
-      const list = response.results || [];
-      setFilteredUsers(list);
-      setTotalCount(response.count ?? 0);
-      setTotalPages(response.total_pages ?? 0);
-      setLoading(false);
+      const r = await apiService.getUsers(debouncedSearch || undefined, page, pageSize);
+      setUsers(r.results || []);
+      setTotalCount(r.count ?? 0);
+      setTotalPages(r.total_pages ?? 0);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
       setLoading(false);
     }
+  }, [debouncedSearch, page, pageSize]);
+  useEffect(() => { load(); }, [load]);
+
+  const visible = users.filter((u) => statusFilter === 'all' || (statusFilter === 'active') === u.is_active);
+  const selected = users.find((u) => u.id === selectedId) ?? visible[0] ?? null;
+  const selectedKey = selected?.id ?? null;
+
+  useEffect(() => {
+    if (selectedKey === null) { setDevices([]); return; }
+    let live = true;
+    setLoadingDevices(true); setDeviceSearch('');
+    apiService.getUserDevices(selectedKey)
+      .then((d) => { if (live) setDevices(Array.isArray(d) ? d : []); })
+      .catch(() => { if (live) setDevices([]); })
+      .finally(() => { if (live) setLoadingDevices(false); });
+    return () => { live = false; };
+  }, [selectedKey]);
+
+  const openDialog = (user: User | null) => {
+    setForm(user ? {
+      email: user.email, first_name: user.first_name, last_name: user.last_name,
+      mobile_number: user.mobile_number || '', address: user.address || '',
+    } : EMPTY);
+    setTried(false); setDialogError(null); setDialog({ open: true, user });
   };
+  const closeDialog = () => setDialog({ open: false, user: null });
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+  const errs: Partial<Record<keyof Form, string>> = {};
+  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errs.email = 'Enter a valid email';
+  if (!form.first_name.trim()) errs.first_name = 'Required';
+  if (!form.last_name.trim()) errs.last_name = 'Required';
+  if (!form.mobile_number.trim()) errs.mobile_number = 'Required';
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setEditForm({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      mobile_number: user.mobile_number || '',
-      address: user.address || '',
-    });
-  };
-
-  const handleSave = async () => {
-    if (!editingUser) return;
-
+  const save = async () => {
+    setTried(true);
+    if (Object.keys(errs).length) return;
+    setSaving(true); setDialogError(null);
     try {
-      await apiService.updateUser(editingUser.id, editForm);
-      setEditingUser(null);
-      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
+      if (dialog.user) await apiService.updateUser(dialog.user.id, form);
+      else await apiService.createUser(form);
+      closeDialog();
+      addToast({ type: 'success', title: dialog.user ? 'User saved' : 'User added', message: dialog.user ? undefined : 'The account starts inactive. Use Activate to send the setup email.' });
+      await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
-    }
-  };
-
-  const handleCreate = async () => {
-    try {
-      setCreatingLoading(true);
-      await apiService.createUser(createForm);
-      setCreatingUser(false);
-      setCreateForm({ email: '', first_name: '', last_name: '', mobile_number: '', address: '' });
-      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user');
+      setDialogError(err instanceof Error ? err.message : 'Could not save the user');
     } finally {
-      setCreatingLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleDelete = (user: any) => {
-    setDeleteModal({ show: true, user });
-  };
-
-  const handleActivate = async (user: User) => {
+  const activate = async (u: User) => {
     try {
-      await apiService.activateUser(user.id);
-      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
-      setSuccessModal({
-        show: true,
-        message: `Account activated — setup email sent to ${user.email}.`,
-      });
+      await apiService.activateUser(u.id);
+      addToast({ type: 'success', title: 'Account activated', message: `Setup email sent to ${u.email}.` });
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to activate user');
     }
   };
 
   const confirmDelete = async () => {
-    if (!deleteModal.user) return;
-    
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      setDeletingLoading(true);
-      await apiService.deleteUser(deleteModal.user.id);
-      if (selectedUser?.id === deleteModal.user.id) {
-        setSelectedUser(null);
-        setUserDevices([]);
-      }
-      setDeleteModal({ show: false, user: null });
-      await fetchUsers(debouncedSearchTerm, currentPage, pageSize);
-      setSuccessModal({ 
-        show: true, 
-        message: `User "${deleteModal.user.username}" has been deleted successfully.` 
-      });
+      await apiService.deleteUser(deleteTarget.id);
+      addToast({ type: 'success', title: 'User deleted', message: deleteTarget.username });
+      if (selectedId === deleteTarget.id) setSelectedId(null);
+      setDeleteTarget(null);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
-      setDeleteModal({ show: false, user: null });
+      setDeleteTarget(null);
     } finally {
-      setDeletingLoading(false);
+      setDeleting(false);
     }
   };
 
-  const handleViewUser = async (user: User) => {
-    setSelectedUser(user);
-    setLoadingDevices(true);
+  if (isMobile) return <MobileUsers />;
 
-    try {
-      const devices = await apiService.getUserDevices(user.id);
-      setUserDevices(devices);
-    } catch (err) {
-      console.error('Error fetching user devices:', err);
-      setUserDevices([]);
-    } finally {
-      setLoadingDevices(false);
-    }
-  };
-
-  const handleBackToList = () => {
-    setSelectedUser(null);
-    setUserDevices([]);
-  };
-
-  const handleCancel = () => {
-    setEditingUser(null);
-    setCreatingUser(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="admin-container responsive-page">
-        <PageHeader
-          icon={<UsersIcon size={20} color="white" />}
-          title="User Management"
-          subtitle="Manage portal users and their assigned devices"
-        />
-        <div className="card">
-          <div className="card-header"><h2>Users</h2></div>
-          <div className="table-responsive">
-          <table className="table">
-            <thead><tr><th>Username</th><th>Email</th><th>Name</th><th>Actions</th></tr></thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <SkeletonTableRow key={i} columns={4} />
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="error">Error: {error}</div>;
-  }
-
-  // Show user dashboard when a user is selected
-  if (selectedUser) {
-    return (
-      <div className="admin-container responsive-page">
-        <PageHeader
-          icon={<UsersIcon size={20} color="white" />}
-          title={`${selectedUser.first_name} ${selectedUser.last_name}'s Dashboard`}
-          subtitle={`@${selectedUser.username}`}
-          rightSlot={
-            <button
-              onClick={handleBackToList}
-              className="btn btn-secondary"
-            >
-              ← Back to Users
-            </button>
-          }
-        />
-
-        {/* User Information */}
-        <div className="card" style={{ marginBottom: '20px' }}>
-          <div className="card-header">
-            <h2>User Information</h2>
-            <button onClick={() => handleEdit(selectedUser)} className="btn">
-              Edit User
-            </button>
-          </div>
-          <div style={{ padding: '20px' }}>
-            <div className="device-info-grid responsive-grid-2">
-              <div>
-                <strong>Username:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedUser.username}</p>
-              </div>
-              <div>
-                <strong>Email:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedUser.email}</p>
-              </div>
-              <div>
-                <strong>Mobile:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedUser.mobile_number || '-'}</p>
-              </div>
-              <div>
-                <strong>Address:</strong>
-                <p style={{ margin: '5px 0' }}>{selectedUser.address || '-'}</p>
-              </div>
-              <div>
-                <strong>Joined:</strong>
-                <p style={{ margin: '5px 0' }}>
-                  {selectedUser.date_joined
-                    ? new Date(selectedUser.date_joined).toLocaleDateString()
-                    : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <strong>Account Status:</strong>
-                <p style={{ margin: '5px 0' }}>
-                  {selectedUser.is_active ? (
-                    <span style={{ color: '#0F9F8F', fontWeight: 600 }}>Active</span>
-                  ) : (
-                    <>
-                      <span style={{ color: '#d97706', fontWeight: 600 }}>Inactive</span>
-                      <button
-                        onClick={() => handleActivate(selectedUser)}
-                        style={{
-                          marginLeft: 12, padding: '4px 12px', borderRadius: 6,
-                          border: 'none', background: '#0F9F8F', color: '#fff',
-                          fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-                        }}
-                      >
-                        Activate Account
-                      </button>
-                    </>
-                  )}
-                </p>
-              </div>
-              {selectedUser.customer_id && (
-                <div>
-                  <strong>Customer ID:</strong>
-                  <p style={{ margin: '5px 0', fontFamily: 'Fira Code, monospace', fontSize: '0.9rem' }}>
-                    {selectedUser.customer_id}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Assigned Devices */}
-        <div className="card" style={{ marginBottom: '20px' }}>
-          <div className="card-header">
-            <h2>Assigned Devices ({userDevices.length}{deviceSearch ? ` · ${userDevices.filter(d => d.device_serial.toLowerCase().includes(deviceSearch.toLowerCase()) || (d.hw_id || '').toLowerCase().includes(deviceSearch.toLowerCase())).length} shown` : ''})</h2>
-            {userDevices.length > 0 && (
-              <input
-                type="text"
-                placeholder="Search by serial or HW ID…"
-                value={deviceSearch}
-                onChange={(e) => setDeviceSearch(e.target.value)}
-                style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '0.82rem', minWidth: 200 }}
-              />
-            )}
-          </div>
-          {loadingDevices ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted-foreground)' }}>Loading devices...</div>
-          ) : userDevices.length > 0 ? (
-            <div className="table-responsive"><table className="table">
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'center' }}>Device Serial</th>
-                  <th style={{ textAlign: 'center' }}>MAC / HW ID</th>
-                  <th style={{ textAlign: 'center' }}>Model</th>
-                  <th style={{ textAlign: 'center' }}>Config Version</th>
-                  <th style={{ textAlign: 'center' }}>Provisioned At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userDevices.filter(d => !deviceSearch || d.device_serial.toLowerCase().includes(deviceSearch.toLowerCase()) || (d.hw_id || '').toLowerCase().includes(deviceSearch.toLowerCase())).map((device) => (
-                  <tr
-                    key={device.id}
-                    className="clickable-row"
-                    onClick={() => navigate(`/devices?deviceId=${device.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td style={{ textAlign: 'center', fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{device.device_serial}</td>
-                    <td style={{ textAlign: 'center', fontFamily: 'Fira Code, monospace', fontSize: '0.85rem' }}>{device.hw_id || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
-                    <td style={{ textAlign: 'center' }}>{device.model || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
-                    <td style={{ textAlign: 'center' }}>{device.config_version || '-'}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      {device.provisioned_at
-                        ? new Date(device.provisioned_at).toLocaleDateString()
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-          ) : (
-            <EmptyState icon={Cpu} title="No devices assigned yet" />
-          )}
-        </div>
-
-        {/* Edit User modal */}
-        {editingUser && ReactDOM.createPortal(
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: '20px',
-          }} onClick={handleCancel}>
-            <div style={{
-              background: T.surface,
-              borderRadius: 16,
-              boxShadow: isDark
-                ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
-                : '0 25px 50px -12px rgba(0,0,0,0.25)',
-              maxWidth: '600px', width: '100%',
-              maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-            }} onClick={e => e.stopPropagation()}>
-              {/* Header */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '24px 28px',
-                borderBottom: `1px solid ${T.border}`,
-                flexShrink: 0,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
-                  }}>
-                    <Pencil size={22} color="white" />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
-                      Edit User: {editingUser.username}
-                    </div>
-                    <div style={{ fontSize: '0.813rem', color: T.textM, marginTop: 2 }}>
-                      Update user account details
-                    </div>
-                  </div>
-                </div>
-                <button type="button" onClick={handleCancel} style={{
-                  width: 40, height: 40, borderRadius: 10, border: 'none',
-                  background: T.borderM,
-                  color: T.textM, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <X size={18} />
-                </button>
-              </div>
-              {/* Scrollable body */}
-              <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-                  {/* Account Information */}
-                  <div style={{
-                    background: T.borderM,
-                    borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: `1px solid ${T.border}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                        Account Information
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Email Address</label>
-                        <input
-                          type="email"
-                          value={editForm.email}
-                          onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                          required
-                          autoComplete="off"
-                          placeholder="john.doe@example.com"
-                          style={{
-                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: `1px solid ${T.border}`,
-                            background: T.surface,
-                            color: T.text,
-                            fontSize: '0.875rem',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Personal Details */}
-                  <div style={{
-                    background: T.borderM,
-                    borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: `1px solid ${T.border}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                        Personal Details
-                      </span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>First Name</label>
-                        <input
-                          type="text"
-                          value={editForm.first_name}
-                          onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
-                          required
-                          autoComplete="off"
-                          placeholder="John"
-                          style={{
-                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: `1px solid ${T.border}`,
-                            background: T.surface,
-                            color: T.text,
-                            fontSize: '0.875rem',
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Last Name</label>
-                        <input
-                          type="text"
-                          value={editForm.last_name}
-                          onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
-                          required
-                          autoComplete="off"
-                          placeholder="Doe"
-                          style={{
-                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: `1px solid ${T.border}`,
-                            background: T.surface,
-                            color: T.text,
-                            fontSize: '0.875rem',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contact Information */}
-                  <div style={{
-                    background: T.borderM,
-                    borderRadius: 12, padding: '20px', marginBottom: 16,
-                    border: `1px solid ${T.border}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                      <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                        Contact Information
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Mobile Number</label>
-                        <PhoneInput
-                          value={editForm.mobile_number}
-                          onChange={(v) => setEditForm({...editForm, mobile_number: v})}
-                          required
-                          isDark={isDark}
-                          inlineStyle
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Address</label>
-                        <textarea
-                          value={editForm.address}
-                          onChange={(e) => setEditForm({...editForm, address: e.target.value})}
-                          autoComplete="off"
-                          rows={3}
-                          placeholder="123 Solar Street..."
-                          style={{
-                            padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                            border: `1px solid ${T.border}`,
-                            background: T.surface,
-                            color: T.text,
-                            fontSize: '0.875rem',
-                            resize: 'vertical',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Footer */}
-                <div style={{
-                  display: 'flex', gap: 10, justifyContent: 'flex-end',
-                  padding: '16px 28px',
-                  borderTop: `1px solid ${T.border}`,
-                  flexShrink: 0,
-                }}>
-                  <button type="button" onClick={handleCancel} style={{
-                    padding: '10px 20px', borderRadius: 8,
-                    border: `1px solid ${T.border}`,
-                    background: T.cardEl,
-                    color: T.textM, fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
-                  }}>Cancel</button>
-                  <button type="submit" style={{
-                    padding: '10px 20px', borderRadius: 8, border: 'none',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    color: 'white', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-                  }}>Save Changes</button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
-
-      </div>
-    );
-  }
+  const dq = deviceSearch.trim().toLowerCase();
+  const shownDevices = devices.filter((d) => !dq || d.device_serial.toLowerCase().includes(dq) || (d.hw_id || '').toLowerCase().includes(dq));
+  const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 10 } as const;
 
   return (
     <div className="admin-container responsive-page">
-      <PageHeader
-        icon={<UsersIcon size={20} color="white" />}
-        title="User Management"
-        subtitle="Manage portal users and their assigned devices"
-      />
+      <PageHeader icon={<UsersIcon size={20} color="white" />} title="Users" subtitle="Customer accounts and their devices" />
 
-      <div className="card">
-        <div className="card-header">
-          <h2>Users</h2>
-          <div className="card-actions">
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="search-input"
-            />
-            <button onClick={() => setCreatingUser(true)} className="btn">
-              <UserPlus size={15} style={{ marginRight: 6 }} />
-              Register New User
-            </button>
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: 20 }}>
+          <strong>Error:</strong> {error}
+          <button onClick={() => setError(null)} aria-label="Dismiss error" style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+        </div>
+      )}
+
+      <section className="overflow-hidden rounded-[20px] border border-border bg-card" aria-label="Users">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-border px-4 py-3.5">
+          <div className="flex min-w-0 flex-[1_1_240px] flex-wrap items-center gap-x-3.5 gap-y-2.5">
+            <h2 className="m-0 text-[1.05rem] font-semibold">Users</h2>
+            {totalCount > 0 && <span className="font-mono text-[0.85rem] text-muted-foreground">{totalCount} users</span>}
+            <Input type="search" aria-label="Search users" placeholder="Search name, email or mobile" value={search}
+              onChange={(e) => setSearch(e.target.value)} className="max-w-80 flex-[1_1_200px]" />
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger aria-label="Filter by status" className="w-auto min-w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All accounts</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          <button type="button" className="ui-btn ui-btn--main" onClick={() => openDialog(null)}>Add user</button>
         </div>
 
-        {/* Stats row */}
-        <div className="stats-chips-row">
-          <div className="stats-chip">
-            <UsersIcon size={13} />
-            <span className="stats-chip-count">{totalCount}</span>
-            <span>Total Users</span>
+        {loading && users.length === 0 ? (
+          <p className="m-0 px-5 py-10 text-center text-sm text-muted-foreground">Loading users...</p>
+        ) : visible.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <UsersIcon size={40} strokeWidth={1.25} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="m-0 font-semibold">{totalCount === 0 && !debouncedSearch ? 'No users yet' : 'No users match'}</p>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">
+              {totalCount === 0 && !debouncedSearch ? 'Use Add user to create the first one.' : 'Change the search or the status filter.'}
+            </p>
           </div>
-        </div>
-
-        <div className="table-responsive"><table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th style={{ textAlign: 'center' }}>Email</th>
-              <th style={{ textAlign: 'center' }}>Mobile</th>
-              <th style={{ textAlign: 'center' }}>Address</th>
-              <th style={{ textAlign: 'center' }}>Joined</th>
-              <th style={{ textAlign: 'center' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
-                  <EmptyState
-                    title={searchTerm ? 'No users match your search' : 'No users yet'}
-                    description={searchTerm ? 'Try a different search term.' : 'Create a user to get started.'}
-                    action={!searchTerm ? { label: 'Create User', onClick: () => setCreatingUser(true) } : undefined}
-                  />
-                </td>
-              </tr>
-            ) : filteredUsers.map((user) => (
-              <tr
-                key={user.id}
-                onClick={() => handleViewUser(user)}
-                style={{ cursor: 'pointer' }}
-                className="clickable-row"
-              >
-                <td>
-                  <div className="table-avatar-cell">
-                    <div
-                      className="avatar-initials avatar-initials-sm"
-                      style={{ background: userAvatarColor(user.username) }}
-                    >
-                      {userInitials(user.first_name, user.last_name, user.username)}
+        ) : (
+          <Table containerClassName="rounded-none border-0">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Mobile</TableHead>
+                <TableHead>Joined</TableHead><TableHead>Status</TableHead><TableHead><span className="sr-only">Actions</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((u) => (
+                <TableRow key={u.id} data-testid={`user-row-${u.id}`} tabIndex={0} aria-selected={selected?.id === u.id}
+                  onClick={() => setSelectedId(u.id)} onKeyDown={(e) => { if (e.key === 'Enter') setSelectedId(u.id); }}
+                  className={`cursor-pointer ${selected?.id === u.id ? 'bg-primary/10' : ''}`}>
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid size-[34px] shrink-0 place-items-center rounded-full text-[0.8rem] font-semibold text-[#06070B]" style={{ background: avatarColor(u.username) }}>{initials(u)}</span>
+                      <div className="min-w-0">
+                        <div className="font-medium">{fullName(u)}</div>
+                        <div className="font-mono text-[0.78rem] text-text-dim">@{u.username}</div>
+                      </div>
                     </div>
-                    <div className="table-name-block">
-                      <span className="table-name-primary">
-                        {user.first_name} {user.last_name}
-                        {!user.is_active && (
-                          <span style={{
-                            display: 'inline-block', marginLeft: 8,
-                            padding: '2px 8px', borderRadius: 999,
-                            background: 'rgba(245,158,11,0.12)',
-                            color: '#d97706', fontSize: '0.75rem', fontWeight: 700,
-                            letterSpacing: '0.04em', textTransform: 'uppercase',
-                            verticalAlign: 'middle',
-                          }}>Inactive</span>
-                        )}
-                      </span>
-                      <span className="table-name-secondary">@{user.username}</span>
+                  </TableCell>
+                  <TableCell>{u.email}</TableCell>
+                  <TableCell className="font-mono">{u.mobile_number || '-'}</TableCell>
+                  <TableCell>{day(u.date_joined)}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${u.is_active ? 'bg-primary/15 text-primary' : 'bg-secondary/20 text-secondary'}`}>
+                      <span className="size-[7px] rounded-full bg-current" />{u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1.5">
+                      {!u.is_active && <button type="button" className="ui-btn ui-btn--main ui-btn--sm" onClick={(e) => { e.stopPropagation(); activate(u); }}>Activate</button>}
+                      <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={(e) => { e.stopPropagation(); openDialog(u); }}>Edit</button>
+                      <button type="button" className="ui-btn ui-btn--danger ui-btn--sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(u); }}>Delete</button>
                     </div>
-                  </div>
-                </td>
-                <td style={{ textAlign: 'center' }}>{user.email}</td>
-                <td style={{ textAlign: 'center' }}>{user.mobile_number || '-'}</td>
-                <td style={{ textAlign: 'center' }}>{user.address || '-'}</td>
-                <td style={{ textAlign: 'center' }}>
-                  {(() => {
-                    if (!user.date_joined) return 'N/A';
-                    const date = new Date(user.date_joined);
-                    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
-                  })()}
-                </td>
-                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleEdit(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', margin: '0 6px' }} title="Edit">
-                    <Pencil size={16} strokeWidth={2} />
-                  </button>
-                  {!user.is_active && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleActivate(user); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0F9F8F', margin: '0 6px' }}
-                      title="Activate account"
-                    >
-                      <CheckCircle2 size={16} strokeWidth={2} />
-                    </button>
-                  )}
-                  <button onClick={() => handleDelete(user)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger-color, #ef4444)', margin: '0 6px' }} title="Delete">
-                    <Trash2 size={16} strokeWidth={2} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
 
-        {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div className="pagination-bar" style={{
-            padding: '16px',
-            borderTop: '1px solid var(--border-color, rgba(148, 163, 184, 0.1))',
-            gap: '16px'
-          }}>
-            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
-              Showing {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} of {totalCount} users
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <span className="font-mono text-[0.85rem] text-muted-foreground">
+              Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(1); }}>
+                <SelectTrigger aria-label="Rows per page" className="w-auto min-w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{[10, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n} per page</SelectItem>)}</SelectContent>
+              </Select>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button>
             </div>
-            <div className="pagination-controls">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                  borderRadius: '6px',
-                  background: currentPage === 1 ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
-                  color: 'var(--text-primary, #f8fafc)',
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === 1 ? '0.5' : '1'
-                }}
-              >
-                ← Previous
-              </button>
-              <div className="pagination-pages">
-                {(() => {
-                  const pages = [];
-                  for (let i = 1; i <= totalPages; i++) {
-                    const showPage = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
-                    if (showPage) {
-                      pages.push(
-                        <button
-                          key={i}
-                          onClick={() => setCurrentPage(i)}
-                          style={{
-                            padding: '6px 10px',
-                            border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                            borderRadius: '4px',
-                            background: i === currentPage ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                            color: 'var(--text-primary, #f8fafc)',
-                            cursor: 'pointer',
-                            fontWeight: i === currentPage ? 'bold' : 'normal',
-                            minWidth: '32px'
-                          }}
-                        >
-                          {i}
-                        </button>
-                      );
-                    } else if (pages[pages.length - 1]?.key !== 'ellipsis-' + Math.floor(i / 10)) {
-                      pages.push(
-                        <span key={`ellipsis-${Math.floor(i / 10)}`} style={{ padding: '0 4px', color: 'var(--muted-foreground)' }}>...</span>
-                      );
-                    }
-                  }
-                  return pages;
-                })()}
-              </div>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                style={{
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-color, rgba(148, 163, 184, 0.2))',
-                  borderRadius: '6px',
-                  background: currentPage === totalPages ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
-                  color: 'var(--text-primary, #f8fafc)',
-                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  opacity: currentPage === totalPages ? '0.5' : '1'
-                }}
-              >
-                Next →
-              </button>
-            </div>
-            <select
-              className="pagination-size-select"
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(parseInt(e.target.value));
-                setCurrentPage(1);
-              }}
-              style={{
-                padding: '8px',
-                border: isDark ? '1px solid #404040' : '1px solid rgba(148, 163, 184, 0.2)',
-                borderRadius: '6px',
-                background: 'var(--input)',
-                color: 'var(--foreground)',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-              <option value={100}>100 per page</option>
-            </select>
           </div>
         )}
-      </div>
+      </section>
 
-      {(editingUser || creatingUser) && ReactDOM.createPortal(
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999, padding: '20px',
-        }} onClick={handleCancel}>
-          <div style={{
-            background: T.surface,
-            borderRadius: 16,
-            boxShadow: isDark
-              ? '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)'
-              : '0 25px 50px -12px rgba(0,0,0,0.25)',
-            maxWidth: '600px', width: '100%',
-            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          }} onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '24px 28px',
-              borderBottom: `1px solid ${T.border}`,
-              flexShrink: 0,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                  background: editingUser ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'linear-gradient(135deg, #0F9F8F, #138881)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: editingUser ? '0 4px 14px rgba(99,102,241,0.4)' : '0 4px 14px rgba(16,185,129,0.4)',
-                }}>
-                  {editingUser ? <Pencil size={22} color="white" /> : <UserPlus size={22} color="white" />}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
-                    {editingUser ? `Edit User: ${editingUser.username}` : 'Register New User'}
-                  </div>
-                  <div style={{ fontSize: '0.813rem', color: T.textM, marginTop: 2 }}>
-                    {editingUser ? 'Update user account details' : 'Create a new user account'}
-                  </div>
-                </div>
-              </div>
-              <button type="button" onClick={handleCancel} style={{
-                width: 40, height: 40, borderRadius: 10, border: 'none',
-                background: T.borderM,
-                color: T.textM, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <X size={18} />
-              </button>
+      {selected && (
+        <section className="mt-5 overflow-hidden rounded-[20px] border border-border bg-card" aria-label="User details">
+          <div className="flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2.5 border-b border-border px-4 py-3.5">
+            <div className="min-w-0">
+              <h2 className="m-0 text-[1.05rem] font-semibold">{fullName(selected)}</h2>
+              <span className="font-mono text-[0.82rem] text-text-dim">@{selected.username}{selected.customer_id ? ` · ${selected.customer_id}` : ''}</span>
             </div>
-            {/* Scrollable body + footer */}
-            <form onSubmit={(e) => { e.preventDefault(); editingUser ? handleSave() : handleCreate(); }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-
-                {/* Account Information */}
-                <div style={{
-                  background: T.borderM,
-                  borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: `1px solid ${T.border}`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                      Account Information
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {creatingUser && (
-                      <>
-                        <input type="text" autoComplete="username" style={{display: 'none'}} />
-                        <input type="password" autoComplete="current-password" style={{display: 'none'}} />
-                        <p style={{ fontSize: '0.813rem', color: T.textM, marginBottom: 8 }}>
-                          Account will be created as inactive. Activate it after installation to send the welcome email.
-                        </p>
-                      </>
-                    )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Email Address</label>
-                      <input
-                        type="email"
-                        value={editingUser ? editForm.email : createForm.email}
-                        onChange={(e) => {
-                          if (editingUser) { setEditForm({...editForm, email: e.target.value}); }
-                          else { setCreateForm({...createForm, email: e.target.value}); }
-                        }}
-                        required
-                        autoComplete="off"
-                        placeholder="john.doe@example.com"
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                          border: `1px solid ${T.border}`, background: T.surface,
-                          color: T.text, fontSize: '0.875rem',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Details */}
-                <div style={{
-                  background: T.borderM,
-                  borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: `1px solid ${T.border}`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                      Personal Details
-                    </span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>First Name</label>
-                      <input
-                        type="text"
-                        value={editingUser ? editForm.first_name : createForm.first_name}
-                        onChange={(e) => editingUser ? setEditForm({...editForm, first_name: e.target.value}) : setCreateForm({...createForm, first_name: e.target.value})}
-                        required
-                        autoComplete="off"
-                        placeholder="John"
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: `1px solid ${T.border}`,
-                          background: T.surface,
-                          color: T.text,
-                          fontSize: '0.875rem',
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Last Name</label>
-                      <input
-                        type="text"
-                        value={editingUser ? editForm.last_name : createForm.last_name}
-                        onChange={(e) => editingUser ? setEditForm({...editForm, last_name: e.target.value}) : setCreateForm({...createForm, last_name: e.target.value})}
-                        required
-                        autoComplete="off"
-                        placeholder="Doe"
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: `1px solid ${T.border}`,
-                          background: T.surface,
-                          color: T.text,
-                          fontSize: '0.875rem',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div style={{
-                  background: T.borderM,
-                  borderRadius: 12, padding: '20px', marginBottom: 16,
-                  border: `1px solid ${T.border}`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <div style={{ width: 4, height: 20, borderRadius: 3, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.813rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--info)' }}>
-                      Contact Information
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Mobile Number</label>
-                      <PhoneInput
-                        value={editingUser ? editForm.mobile_number : createForm.mobile_number}
-                        onChange={(v) => editingUser ? setEditForm({...editForm, mobile_number: v}) : setCreateForm({...createForm, mobile_number: v})}
-                        required
-                        isDark={isDark}
-                        inlineStyle
-                      />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: '0.813rem', fontWeight: 600, color: T.textM }}>Address</label>
-                      <textarea
-                        value={editingUser ? editForm.address : createForm.address}
-                        onChange={(e) => editingUser ? setEditForm({...editForm, address: e.target.value}) : setCreateForm({...createForm, address: e.target.value})}
-                        autoComplete="off"
-                        rows={3}
-                        placeholder="123 Solar Street..."
-                        style={{
-                          padding: '10px 12px', borderRadius: 8, width: '100%', boxSizing: 'border-box',
-                          border: `1px solid ${T.border}`,
-                          background: T.surface,
-                          color: T.text,
-                          fontSize: '0.875rem',
-                          resize: 'vertical',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-              {/* Footer */}
-              <div style={{
-                display: 'flex', gap: 10, justifyContent: 'flex-end',
-                padding: '16px 28px',
-                borderTop: `1px solid ${T.border}`,
-                flexShrink: 0,
-              }}>
-                <button type="button" onClick={handleCancel} disabled={creatingLoading || savingLoading} style={{
-                  padding: '10px 20px', borderRadius: 8,
-                  border: `1px solid ${T.border}`,
-                  background: T.cardEl,
-                  color: T.textM, fontSize: '0.875rem', fontWeight: 600, cursor: creatingLoading || savingLoading ? 'not-allowed' : 'pointer',
-                  opacity: creatingLoading || savingLoading ? 0.6 : 1,
-                }}>Cancel</button>
-                <button
-                  type="submit"
-                  disabled={creatingLoading || savingLoading}
-                  style={{
-                    padding: '10px 20px', borderRadius: 8, border: 'none',
-                    background: (creatingLoading || savingLoading)
-                      ? 'rgba(99,102,241,0.4)'
-                      : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    color: 'white', fontSize: '0.875rem', fontWeight: 600,
-                    cursor: (creatingLoading || savingLoading) ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                  {(creatingLoading || savingLoading) && <Loader size={16} />}
-                  {editingUser ? 'Save Changes' : 'Create User'}
-                </button>
-              </div>
-            </form>
+            <button type="button" className="ui-btn ui-btn--support" onClick={() => openDialog(selected)}>Edit user</button>
           </div>
-        </div>,
-        document.body
+          <div className="flex flex-wrap gap-x-8 gap-y-3.5 border-b border-border px-4 py-3.5">
+            {[['Email', selected.email], ['Mobile', selected.mobile_number || '-'], ['Joined', day(selected.date_joined)]].map(([k, v]) => (
+              <div key={k} className="min-w-[140px]"><div className="text-[0.78rem] text-text-dim">{k}</div><div className="break-words text-[0.92rem]">{v}</div></div>
+            ))}
+            <div className="min-w-[220px] flex-[1_1_220px]"><div className="text-[0.78rem] text-text-dim">Address</div><div className="break-words text-[0.92rem]">{selected.address || '-'}</div></div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-3">
+            <h3 className="m-0 text-[0.95rem] font-semibold">Devices <span className="font-mono font-normal text-text-dim">({devices.length}{dq ? `, ${shownDevices.length} shown` : ''})</span></h3>
+            {devices.length > 0 && <Input type="search" aria-label="Search devices" placeholder="Search serial or hardware ID" value={deviceSearch}
+              onChange={(e) => setDeviceSearch(e.target.value)} className="max-w-64" />}
+          </div>
+          {loadingDevices ? (
+            <p className="m-0 px-4 pb-5 text-sm text-muted-foreground">Loading devices...</p>
+          ) : devices.length === 0 ? (
+            <EmptyState icon={Cpu} title="No devices assigned yet" />
+          ) : (
+            <Table containerClassName="rounded-none border-0 border-t">
+              <TableHeader>
+                <TableRow><TableHead>Serial</TableHead><TableHead>Hardware ID</TableHead><TableHead>Model</TableHead><TableHead>Config version</TableHead><TableHead>Provisioned</TableHead></TableRow>
+              </TableHeader>
+              <TableBody>
+                {shownDevices.map((d) => (
+                  <TableRow key={d.id} data-testid={`device-row-${d.id}`} className="cursor-pointer" onClick={() => navigate(`/devices/${d.id}/dashboard`)}>
+                    <TableCell className="font-mono">{d.device_serial}</TableCell>
+                    <TableCell className="font-mono">{d.hw_id || '-'}</TableCell>
+                    <TableCell>{d.model || '-'}</TableCell>
+                    <TableCell className="font-mono">{d.config_version || '-'}</TableCell>
+                    <TableCell>{day(d.provisioned_at)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </section>
       )}
 
-      {/* Modern Delete User Confirmation Modal */}
-      {deleteModal.show && deleteModal.user && ReactDOM.createPortal(
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px',
-        }}>
-          <div style={{
-            background: T.surface,
-            borderRadius: 16,
-            boxShadow: isDark
-              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
-              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            maxWidth: '480px',
-            width: '100%',
-            overflow: 'hidden',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
-              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
-                  boxShadow: '0 4px 14px rgba(220,53,69,0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <AlertTriangle size={22} color="white" />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
-                  Delete User
-                </span>
-              </div>
-              <button
-                onClick={() => setDeleteModal({ show: false, user: null })}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: 'none',
-                  background: T.borderM,
-                  color: T.textM,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
-                Are you sure you want to delete user <strong>{deleteModal.user.username}</strong>?
-              </p>
-              <div style={{
-                background: isDark ? 'rgba(220,53,69,0.12)' : '#fef2f2',
-                border: isDark ? '1px solid rgba(220,53,69,0.25)' : '1px solid #fecaca',
-                borderRadius: 8,
-                padding: '12px 14px',
-                fontSize: '0.875rem',
-                color: 'var(--destructive)',
-              }}>
-                This will permanently delete the user account. Any devices associated with this user will become unassigned.
-              </div>
-            </div>
-
-            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteModal({ show: false, user: null })}
-                disabled={deletingLoading}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 8,
-                  border: `1px solid ${T.border}`,
-                  background: T.cardEl,
-                  color: T.textM,
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
-                  opacity: deletingLoading ? 0.5 : 1,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deletingLoading}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #dc3545, #c82333)',
-                  color: 'white',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: deletingLoading ? 'not-allowed' : 'pointer',
-                  opacity: deletingLoading ? 0.7 : 1,
-                  boxShadow: '0 4px 12px rgba(220,53,69,0.35)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  justifyContent: 'center',
-                }}
-              >
-                {deletingLoading && <Loader size={14} />}
-                {deletingLoading ? 'Deleting...' : 'Yes, Delete'}
-              </button>
+      <Dialog open={dialog.open} onOpenChange={(o) => { if (!o) closeDialog(); }}>
+        <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden rounded-[20px] bg-popover p-0 sm:max-w-lg">
+          <div className="border-b border-border px-4 py-2.5 pr-12">
+            <DialogTitle className="m-0 text-base">{dialog.user ? 'Edit user' : 'Add user'}</DialogTitle>
+            <DialogDescription className="m-0 font-mono text-[0.78rem]">{dialog.user ? `@${dialog.user.username}` : 'New customer account'}</DialogDescription>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {dialogError && <div className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-sm text-destructive" role="alert">{dialogError}</div>}
+            <div style={grid}>
+              <Field label="Email" wide error={tried ? errs.email : undefined}>
+                <Input aria-label="Email" type="email" value={form.email} className="h-8 px-2.5 text-[0.85rem]" autoComplete="off"
+                  onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </Field>
+              <Field label="First name" error={tried ? errs.first_name : undefined}>
+                <Input aria-label="First name" value={form.first_name} className="h-8 px-2.5 text-[0.85rem]" onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+              </Field>
+              <Field label="Last name" error={tried ? errs.last_name : undefined}>
+                <Input aria-label="Last name" value={form.last_name} className="h-8 px-2.5 text-[0.85rem]" onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+              </Field>
+              <Field label="Mobile" error={tried ? errs.mobile_number : undefined}>
+                <PhoneInput value={form.mobile_number} onChange={(v) => setForm({ ...form, mobile_number: v })} required isDark={isDark} inlineStyle />
+              </Field>
+              <Field label="Address">
+                <Input aria-label="Address" value={form.address} className="h-8 px-2.5 text-[0.85rem]" autoComplete="off" onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </Field>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Modern Success Notification Modal */}
-      {successModal.show && ReactDOM.createPortal(
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px',
-        }}>
-          <div style={{
-            background: T.surface,
-            borderRadius: 16,
-            boxShadow: isDark
-              ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)'
-              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            maxWidth: '480px',
-            width: '100%',
-            overflow: 'hidden',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 24px 0' }}>
-              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
-                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
-                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <CheckCircle2 size={22} color="white" />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '1.125rem', color: T.text }}>
-                  Success
-                </span>
-              </div>
-              <button
-                onClick={() => setSuccessModal({ show: false, message: '' })}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  border: 'none',
-                  background: T.borderM,
-                  color: T.textM,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ padding: '20px 24px' }}>
-              <p style={{ color: T.textM, lineHeight: 1.6, fontSize: '0.9rem', marginBottom: 14 }}>
-                {successModal.message}
-              </p>
-            </div>
-
-            <div style={{ padding: '0 24px 24px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setSuccessModal({ show: false, message: '' })}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #0F9F8F, #138881)',
-                  color: 'white',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(16,185,129,0.35)',
-                }}
-              >
-                Got it!
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card px-4 py-2.5">
+            {!dialog.user && <span className="mr-auto text-[0.82rem] text-text-dim">Starts inactive. Activate it to send the setup email.</span>}
+            <button type="button" className="ui-btn ui-btn--link" onClick={closeDialog}>Cancel</button>
+            <button type="button" className="ui-btn ui-btn--main" disabled={saving} onClick={save}>{saving ? 'Saving...' : 'Save user'}</button>
           </div>
-        </div>,
-        document.body
-      )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        isDark={isDark}
+        open={!!deleteTarget}
+        title="Delete this user?"
+        body={deleteTarget && `${fullName(deleteTarget)} (@${deleteTarget.username}) and their sign-in will be removed. This cannot be undone.`}
+        confirmLabel="Delete user"
+        cancelLabel="Cancel"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };
