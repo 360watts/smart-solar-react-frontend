@@ -25,7 +25,6 @@ import '../features/auth/otp.css';
 import '../features/profile/profile.css';
 import '../features/quotation/quotation-legacy.css';
 import '../features/staff/slave-cards.css';
-import '../features/staff/presets.css';
 import '../features/staff/users.css';
 import '../features/staff/staff-portal.css';
 import '../features/staff/site.css';

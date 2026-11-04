@@ -436,6 +436,7 @@ export interface QuotationListItem {
   status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
   customer_name: string;
   customer_phone: string;
+  customer_email: string;
   system_type: string;
   system_kw: string;
   net_investment: string;
@@ -444,6 +445,8 @@ export interface QuotationListItem {
   pdf_status: string;
   is_archived: boolean;
   created_by_name: string;
+  sent_at: string | null;
+  accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -462,8 +465,7 @@ export interface QuotationDetail extends QuotationListItem {
   pdf_generated_at: string | null;
   pdf_status_updated_at: string | null;
   notes: string;
-  sent_at: string | null;
-  accepted_at: string | null;
+  customer: number | null;
   events: QuotationEvent[];
 }
 
@@ -2031,6 +2033,16 @@ class ApiService {
     return this.request(`/ota/devices/status/`);
   }
 
+  /** Stop the pending update on chosen devices; they stay on what they run now. */
+  async stopDeviceUpdates(deviceSerials: string[]): Promise<{ stopped: string[] }> {
+    return this.request(`/ota/updates/stop-devices/`, { method: 'POST', body: JSON.stringify({ device_serials: deviceSerials }) });
+  }
+
+  /** Clear a device's failed attempt so its next check-in tries again at once. */
+  async retryDeviceUpdate(deviceSerial: string): Promise<any> {
+    return this.request(`/ota/devices/${encodeURIComponent(deviceSerial)}/logs/reset/`, { method: 'POST' });
+  }
+
   async cancelTargetedUpdate(updateId: number): Promise<any> {
     return this.request(`/ota/updates/${updateId}/cancel/`, { method: 'POST' });
   }
@@ -2199,18 +2211,23 @@ class ApiService {
     customer_name?: string;
     search?: string;
     page?: number;
+    /** Only quotes sent 3+ days ago with no answer. */
+    follow_up?: boolean;
   }): Promise<{
     results: QuotationListItem[]; total: number; page: number; page_size: number; total_pages: number; next_cursor: string | null;
     // Aggregated across every status matching the current search/customer_name filters
     // (not narrowed by `status`, and not paginated) — the real pipeline breakdown,
     // independent of which page or status filter the list itself is currently on.
     stats: Record<string, { count: number; value: number }>;
+    /** Sent 3+ days ago with no answer, same search scope as stats. */
+    follow_up: { count: number; value: number };
   }> {
     const qs = new URLSearchParams();
     if (params?.status) qs.set('status', params.status);
     if (params?.customer_name) qs.set('customer_name', params.customer_name);
     if (params?.search) qs.set('search', params.search);
     if (params?.page) qs.set('page', String(params.page));
+    if (params?.follow_up) qs.set('follow_up', '1');
     const query = qs.toString() ? `?${qs.toString()}` : '';
     return this.request(`/v1/quotations/${query}`);
   }

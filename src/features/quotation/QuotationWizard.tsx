@@ -177,19 +177,17 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
   const [dir, setDir] = useState(1);
   const [loadingDraft, setLoadingDraft] = useState(!!publicId);
   const [showPreview, setShowPreview] = useState(false);
-  const [quoteStatus, setQuoteStatus] = useState<string>('draft');
   const [railCollapsed, setRailCollapsed] = useState(false);
   const form = useForm<QuotationData>({ defaultValues: getDefaults() });
   const { generating, generate } = usePdfExport();
-  const { saveDraft, saving, lastSavedAt, quoteNumber, publicId: savedPublicId, setExistingDraft } = useSaveDraft();
+  const { saveDraft, saving, lastSavedAt, quoteNumber, publicId: savedPublicId, status: quoteStatus, revisedFrom, setExistingDraft } = useSaveDraft();
 
   useEffect(() => {
     if (!publicId) return;
     apiService.getQuotation(publicId)
       .then(detail => {
         if (detail.form_data) form.reset(detail.form_data as unknown as QuotationData);
-        setExistingDraft(detail.public_id, detail.quote_number ?? null, detail.version ?? 1);
-        setQuoteStatus(detail.status ?? 'draft');
+        setExistingDraft(detail.public_id, detail.quote_number ?? null, detail.version ?? 1, detail.status ?? 'draft');
       })
       .catch(err => console.error('Failed to load draft', err))
       .finally(() => setLoadingDraft(false));
@@ -279,8 +277,10 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
 
   async function persistDraft({ silent = false, leaveWizard = false }: { silent?: boolean; leaveWizard?: boolean } = {}) {
     try {
+      const revising = quoteStatus !== 'draft';
       await saveDraft(form.getValues());
-      if (!silent) toast.success('Draft saved');
+      if (revising) toast.success('Saved as a new revision. The sent quote is unchanged.');
+      else if (!silent) toast.success('Draft saved');
       if (leaveWizard) onSaved?.();
       return true;
     } catch (err) {
@@ -377,6 +377,14 @@ export default function QuotationWizard({ publicId, onSaved }: WizardProps = {})
       <div className="sq-body-split">
         <div className="sq-content">
           {/* Content header */}
+          {(quoteStatus !== 'draft' || revisedFrom) && (
+            <div role="status" className="mb-3 rounded-[14px] border border-border bg-muted/60 px-4 py-2.5 text-sm">
+              {revisedFrom
+                ? <>You are editing <b>{quoteNumber}</b>, a revision of {revisedFrom}. The sent quote is unchanged.</>
+                : <><b>{quoteNumber}</b> has been {quoteStatus}. Saving creates a new revision; the {quoteStatus} quote stays as it is.</>}
+            </div>
+          )}
+
           <div className="sq-content-header">
             <motion.p
               key={`eyebrow-${step}`}

@@ -153,9 +153,10 @@ work at a glance.
 
 New staff pages use Tailwind classes and the semantic tokens in `index.css` (`bg-needed-soft`, `text-done-ink`, `bg-forest`, `bg-card`, `text-muted-foreground`), not inline styles and not hex values. Reasons: classes can do hover, focus-visible, responsive and dark mode; tokens change in one place. Keep inline `style` for values computed at runtime (a progress width). Reference pages: `Sites.tsx` and `SiteOnboarding.tsx`. The `useTokens` helper in section 4 still applies to older screens that use it; migrate those when you touch them.
 
-Two traps from the legacy CSS (see F-013-UI):
-1. Do not use the class `grid` in new code. `App.css` defines a global `.grid` with its own columns, gap and margin that overrides Tailwind. Use `[display:grid]` plus `grid-cols-[...]`.
-2. Plain `.card`, `.btn`-style classes in `App.css` and `shared/styles/` are unlayered and beat Tailwind utilities on the same element. Do not mix them with utility classes on one element.
+Traps from the legacy CSS (see F-013-UI):
+1. Do not use the class `grid` in new code. `App.css` defines a global `.grid` with its own columns, gap and margin that overrides Tailwind. Use `[display:grid]` plus `grid-cols-[...]`. The same goes for bare `grid-cols-2` and `grid-cols-3` (`App.css` redefines both as auto-fit with a 300 px minimum); write `grid-cols-[repeat(2,minmax(0,1fr))]`. Prefixed ones (`md:grid-cols-4`) are safe.
+2. Plain `.card`, `.btn`-style classes in `App.css` and `shared/styles/` are unlayered and beat Tailwind utilities on the same element. Do not mix them with utility classes on one element. This includes display: `.ui-btn` sets `display`, so `lg:hidden` on a `ui-btn` does nothing; put the breakpoint class on a wrapper.
+3. The shared `TableCell` is `whitespace-nowrap`. Give long text cells (names, models) `whitespace-normal` and a `min-w-[...]`, or one long value pushes the other columns out of the card.
 
 ## Colour, type and shape (2026-10-09)
 

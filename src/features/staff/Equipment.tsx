@@ -12,6 +12,10 @@ import MobileEquipment from '../mobile/staff/MobileEquipment';
 import { EmptyState } from '../../shared/components/Feedback';
 import PageHeader from '../../shared/layout/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
+import { Input } from '../../shared/ui/input';
+import { Switch } from '../../shared/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../shared/ui/table';
+import { ConfirmDialog } from './siteHardware/ui';
 
 // ── Theme ──────────────────────────────────────────────────────────────────────
 
@@ -135,7 +139,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   iot:          '#f87171',
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 // ── KV spec editor ─────────────────────────────────────────────────────────────
 
@@ -353,48 +357,6 @@ const itemToForm = (item: ProductCatalogItem): FormShape => {
       return Object.keys(extra).length ? JSON.stringify(extra, null, 2) : '{}';
     })(),
   };
-};
-
-// ── Delete modal ───────────────────────────────────────────────────────────────
-
-const DeleteModal: React.FC<{ open: boolean; label: string; onConfirm: () => void; onCancel: () => void; isDark: boolean }> = ({ open, label, onConfirm, onCancel, isDark }) => {
-  const T = mkT(isDark);
-  return ReactDOM.createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: T.overlay, backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <motion.div variants={panelVariants} initial="hidden" animate="visible" exit="exit"
-            style={{ background: T.glass, border: `1px solid ${T.glassHL}`, borderRadius: 16, width: 400, maxWidth: '95vw', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }}>
-            {/* Danger header */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.14) 0%, transparent 60%)', padding: '22px 24px 18px', borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Trash2 size={18} color="#ef4444" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: T.text, fontFamily: 'Rubik, Rubik, sans-serif' }}>Delete Product?</h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: T.textM }}>This cannot be undone</p>
-                </div>
-              </div>
-            </div>
-            <div style={{ padding: '16px 24px 20px' }}>
-              <p style={{ margin: '0 0 20px', color: T.textM, fontSize: '0.875rem', lineHeight: 1.55 }}>
-                <strong style={{ color: T.text }}>{label}</strong> will be permanently removed from the catalog.
-              </p>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
-                <button onClick={onConfirm} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#dc2626', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(220,38,38,0.35)', transition: 'background 150ms' }}>
-                  Delete
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body,
-  );
 };
 
 // ── Bulk import ────────────────────────────────────────────────────────────────
@@ -652,7 +614,7 @@ const BulkImportModal: React.FC<{ open: boolean; isDark: boolean; onClose: () =>
               )}
             </div>
 
-            <div style={{ padding: '14px 22px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end', background: T.surfaceRaised }}>
+            <div style={{ padding: '14px 22px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={onClose} className="btn btn-secondary">{results ? 'Close' : 'Cancel'}</button>
               {rows.length > 0 && !results && (
                 <button onClick={handleImport} disabled={importing || validRows.length === 0}
@@ -687,9 +649,9 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
 
   const handleSave = async () => {
     setErr(null);
-    if (!form.brand?.trim()) { setErr('Brand is required.'); return; }
-    if (!form.model_name?.trim()) { setErr('Model name is required.'); return; }
-    if (!form.price_per_unit) { setErr('Price is required.'); return; }
+    if (!form.brand?.trim()) { setErr('Add a brand to save this product.'); return; }
+    if (!form.model_name?.trim()) { setErr('Add a model name to save this product.'); return; }
+    if (!form.price_per_unit) { setErr('Add a price to save this product.'); return; }
     setSaving(true);
     try {
       const payload: Partial<ProductCatalogItem> = {
@@ -705,19 +667,15 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
       if (item) await apiService.updateProductCatalogItem(item.id, payload);
       else await apiService.createProductCatalogItem(payload);
       onSaved(); onClose();
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Save failed'); }
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Could not save the product. Check the fields and try again.'); }
     finally { setSaving(false); }
   };
 
-  const secLabel = (label: string, icon: React.ReactNode) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '6px 0 2px' }}>
-      <div style={{ width: 3, height: 14, borderRadius: 2, background: catColor, flexShrink: 0 }} />
-      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', fontWeight: 700, color: T.textM, letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif' }}>{icon}{label}</span>
-      <div style={{ flex: 1, height: 1, background: T.border }} />
-    </div>
+  const secLabel = (label: string) => (
+    <h4 style={{ margin: '10px 0 0', paddingTop: 12, borderTop: `1px solid ${T.border}`, fontSize: '0.9375rem', fontWeight: 600, color: T.text, fontFamily: 'Rubik, sans-serif' }}>{label}</h4>
   );
 
-  const productTitle = [form.brand, form.model_name].filter(Boolean).join(' ') || (item ? `${item.brand} ${item.model_name}` : 'New Product');
+  const productTitle = [form.brand, form.model_name].filter(Boolean).join(' ') || (item ? `${item.brand} ${item.model_name}` : 'New product');
 
   return ReactDOM.createPortal(
     <AnimatePresence>
@@ -725,19 +683,16 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
         <motion.div variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
           style={{ position: 'fixed', inset: 0, zIndex: 1000, background: T.overlay, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <motion.div variants={panelVariants} initial="hidden" animate="visible" exit="exit"
-            style={{ background: T.glass, border: `1px solid ${T.glassHL}`, borderRadius: 16, width: '100%', maxWidth: 640, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }}>
+            style={{ background: 'var(--card)', border: `1px solid ${T.border}`, borderRadius: 20, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }}>
 
-            {/* Gradient header */}
-            <div style={{ background: `linear-gradient(135deg, ${catColor}1a 0%, transparent 55%), ${T.surfaceRaised}`, padding: '18px 22px 16px', borderBottom: `1px solid ${T.border}` }}>
+            {/* Header */}
+            <div style={{ padding: '18px 22px 14px', borderBottom: `1px solid ${T.border}` }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: catColor, boxShadow: `0 0 6px ${catColor}80` }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: catColor, letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif' }}>{catLabel}</span>
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: T.text, fontFamily: 'Rubik, Rubik, sans-serif', lineHeight: 1.2 }}>{productTitle}</h3>
+                  <div style={{ fontSize: '0.875rem', color: T.textM }}>{item ? 'Edit product' : 'Add product'}</div>
+                  <h3 style={{ margin: '2px 0 0', fontSize: '1.25rem', fontWeight: 600, color: T.text, fontFamily: 'Rubik, sans-serif', lineHeight: 1.25 }}>{productTitle}</h3>
                 </div>
-                <button onClick={onClose} style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer', color: T.textM, width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: `1px solid ${T.border}`, cursor: 'pointer', color: T.textM, width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <X size={16} />
                 </button>
               </div>
@@ -745,23 +700,23 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
 
             {/* Body */}
             <div style={{ overflowY: 'auto', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {secLabel('Product Info', <Package size={11} />)}
+              {secLabel('Product')}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
                 <div>
-                  <label style={labelStyle(isDark)}>Category <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label style={labelStyle(isDark)}>Category</label>
                   <StyledSelect value={cat} onChange={v => f('category', v as ProductCatalogCategory)} isDark={isDark} options={ALL_CATEGORY_OPTIONS} />
                 </div>
                 <div>
-                  <label style={labelStyle(isDark)}>Brand <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label style={labelStyle(isDark)}>Brand</label>
                   <input value={form.brand ?? ''} onChange={e => f('brand', e.target.value)} style={inputStyle(isDark)} placeholder="e.g., Waaree" />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle(isDark)}>Model Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label style={labelStyle(isDark)}>Model name</label>
                   <input value={form.model_name ?? ''} onChange={e => f('model_name', e.target.value)} style={inputStyle(isDark)} placeholder="e.g., TOPCon 700Wp" />
                 </div>
               </div>
 
-              {secLabel(cat === 'panels' ? 'Panel Specs' : cat === 'inverters' ? 'Inverter Specs' : cat === 'batteries' ? 'Battery Specs' : 'Specs', <Zap size={11} />)}
+              {secLabel(cat === 'panels' ? 'Panel specs' : cat === 'inverters' ? 'Inverter specs' : cat === 'batteries' ? 'Battery specs' : 'Specs')}
               {cat === 'panels' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
                   <div><label style={labelStyle(isDark)}>Wattage (Wp)</label><input type="number" value={form.specs_panels_wp} onChange={e => f('specs_panels_wp', e.target.value)} style={inputStyle(isDark)} placeholder="700" /></div>
@@ -770,13 +725,13 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                     <label style={labelStyle(isDark)}>Technology</label>
                     <StyledSelect
                       value={form.specs_panels_technology} onChange={v => f('specs_panels_technology', v)} isDark={isDark}
-                      placeholder="— Select —"
+                      placeholder="Choose one"
                       options={['Mono PERC','TOPCon','Bifacial TOPCon','HJT','Bifacial PERC','Polycrystalline'].map(t => ({ value: t, label: t }))}
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 20 }}>
                     <input type="checkbox" checked={form.specs_panels_dcr} onChange={e => f('specs_panels_dcr', e.target.checked)} style={{ width: 16, height: 16, accentColor: catColor, cursor: 'pointer' }} />
-                    <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>DCR (Dual-Cut Ribbon)</label>
+                    <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>DCR (domestic content)</label>
                   </div>
                 </div>
               )}
@@ -794,7 +749,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                     <label style={labelStyle(isDark)}>Phases</label>
                     <StyledSelect
                       value={form.specs_inv_phases} onChange={v => f('specs_inv_phases', v)} isDark={isDark}
-                      options={[{ value: '1', label: 'Single Phase' }, { value: '3', label: 'Three Phase' }]}
+                      options={[{ value: '1', label: 'Single phase' }, { value: '3', label: 'Three phase' }]}
                     />
                   </div>
                 </div>
@@ -802,7 +757,7 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
               {cat === 'batteries' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
                   <div><label style={labelStyle(isDark)}>Capacity (kWh)</label><input type="number" value={form.specs_bat_kwh} onChange={e => f('specs_bat_kwh', e.target.value)} style={inputStyle(isDark)} placeholder="5.12" /></div>
-                  <div><label style={labelStyle(isDark)}>Nominal Voltage (V)</label><input type="number" value={form.specs_bat_voltage} onChange={e => f('specs_bat_voltage', e.target.value)} style={inputStyle(isDark)} placeholder="51.2" /></div>
+                  <div><label style={labelStyle(isDark)}>Nominal voltage (V)</label><input type="number" value={form.specs_bat_voltage} onChange={e => f('specs_bat_voltage', e.target.value)} style={inputStyle(isDark)} placeholder="51.2" /></div>
                   <div>
                     <label style={labelStyle(isDark)}>Chemistry</label>
                     <StyledSelect
@@ -813,12 +768,12 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                 </div>
               )}
               {!isStructured && <KVEditor key={`kv-g-${cat}`} value={form.specs_generic} onChange={v => f('specs_generic', v)} category={cat} isDark={isDark} label="Specs" hint="fields that describe this product" />}
-              {isStructured && <KVEditor key={`kv-e-${cat}`} value={form.specs_extra} onChange={v => f('specs_extra', v)} category={cat} isDark={isDark} label="Additional specs" hint="optional · merged with fields above" />}
+              {isStructured && <KVEditor key={`kv-e-${cat}`} value={form.specs_extra} onChange={v => f('specs_extra', v)} category={cat} isDark={isDark} label="More specs" hint="optional, added to the fields above" />}
 
-              {secLabel('Pricing', <Tag size={11} />)}
+              {secLabel('Pricing')}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 11 }}>
                 <div>
-                  <label style={labelStyle(isDark)}>Price Per Unit <span style={{ color: '#ef4444' }}>*</span></label>
+                  <label style={labelStyle(isDark)}>Price</label>
                   <input type="number" value={form.price_per_unit ?? ''} onChange={e => f('price_per_unit', e.target.value)} style={inputStyle(isDark)} placeholder="23.5" />
                 </div>
                 <div>
@@ -829,45 +784,45 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
                   />
                 </div>
                 <div>
-                  <label style={labelStyle(isDark)}>Margin %</label>
+                  <label style={labelStyle(isDark)}>Margin (%)</label>
                   <input type="number" value={form.margin_pct ?? ''} onChange={e => f('margin_pct', e.target.value)} style={inputStyle(isDark)} placeholder="12" />
                 </div>
                 <div>
-                  <label style={labelStyle(isDark)}>GST %</label>
+                  <label style={labelStyle(isDark)}>GST (%)</label>
                   <input type="number" value={form.gst_pct ?? ''} onChange={e => f('gst_pct', e.target.value)} style={inputStyle(isDark)} placeholder="18" />
                 </div>
                 <div>
-                  <label style={labelStyle(isDark)}>Retail / Pallet</label>
+                  <label style={labelStyle(isDark)}>Sold as</label>
                   <StyledSelect
                     value={form.retail_or_pallet ?? 'retail'} onChange={v => f('retail_or_pallet', v)} isDark={isDark}
                     options={[{ value: 'retail', label: 'Retail' }, { value: 'pallet', label: 'Pallet' }]}
                   />
                 </div>
                 <div style={{ gridColumn: '2 / -1' }}>
-                  <label style={labelStyle(isDark)}>Price Updated On</label>
+                  <label style={labelStyle(isDark)}>Price last updated</label>
                   <input type="date" value={form.price_updated_on ?? ''} onChange={e => f('price_updated_on', e.target.value || null)} style={inputStyle(isDark)} />
                 </div>
               </div>
 
-              {secLabel('Dealer & Stock', <Store size={11} />)}
+              {secLabel('Dealer and stock')}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-                <div><label style={labelStyle(isDark)}>Dealer Name</label><input value={form.dealer_name ?? ''} onChange={e => f('dealer_name', e.target.value)} style={inputStyle(isDark)} placeholder="SolarXL Distributors" /></div>
-                <div><label style={labelStyle(isDark)}>Dealer Location</label><input value={form.dealer_location ?? ''} onChange={e => f('dealer_location', e.target.value)} style={inputStyle(isDark)} placeholder="Coimbatore" /></div>
-                <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle(isDark)}>Stock Notes</label><input value={form.stock_notes ?? ''} onChange={e => f('stock_notes', e.target.value)} style={inputStyle(isDark)} placeholder="e.g., Pallet of 36" /></div>
+                <div><label style={labelStyle(isDark)}>Dealer name</label><input value={form.dealer_name ?? ''} onChange={e => f('dealer_name', e.target.value)} style={inputStyle(isDark)} placeholder="SolarXL Distributors" /></div>
+                <div><label style={labelStyle(isDark)}>Dealer location</label><input value={form.dealer_location ?? ''} onChange={e => f('dealer_location', e.target.value)} style={inputStyle(isDark)} placeholder="Coimbatore" /></div>
+                <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle(isDark)}>Stock note</label><input value={form.stock_notes ?? ''} onChange={e => f('stock_notes', e.target.value)} style={inputStyle(isDark)} placeholder="e.g., Pallet of 36" /></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="checkbox" checked={form.in_stock ?? true} onChange={e => f('in_stock', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#0F9F8F', cursor: 'pointer' }} />
-                  <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>In Stock</label>
+                  <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>In stock</label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="checkbox" checked={form.is_active ?? true} onChange={e => f('is_active', e.target.checked)} style={{ width: 16, height: 16, accentColor: catColor, cursor: 'pointer' }} />
-                  <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>Active</label>
+                  <label style={{ ...labelStyle(isDark), marginBottom: 0 }}>Active in quotes</label>
                 </div>
               </div>
 
-              {secLabel('Display Order', <ListOrdered size={11} />)}
+              {secLabel('Order in lists')}
               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 11, alignItems: 'start' }}>
-                <div><label style={labelStyle(isDark)}>Sort Order</label><input type="number" value={form.sort_order ?? 0} onChange={e => f('sort_order', Number(e.target.value))} style={inputStyle(isDark)} placeholder="0" /></div>
-                <p style={{ margin: '22px 0 0', fontSize: '0.75rem', color: T.textM, lineHeight: 1.55 }}>Lower numbers appear first. Equal sort orders fall back to alphabetical by brand.</p>
+                <div><label style={labelStyle(isDark)}>Order</label><input type="number" value={form.sort_order ?? 0} onChange={e => f('sort_order', Number(e.target.value))} style={inputStyle(isDark)} placeholder="0" /></div>
+                <p style={{ margin: '22px 0 0', fontSize: '0.75rem', color: T.textM, lineHeight: 1.55 }}>Lower numbers show first. Products with the same number are listed by brand.</p>
               </div>
 
               {err && (
@@ -879,10 +834,9 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
 
             {/* Footer */}
             <div style={{ padding: '14px 22px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end', background: T.surfaceRaised }}>
-              <button onClick={onClose} className="btn btn-secondary">Cancel</button>
-              <button onClick={handleSave} disabled={saving}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: saving ? T.border : 'linear-gradient(135deg, #0F9F8F 0%, #1A9E96 100%)', color: '#fff', fontWeight: 700, fontSize: '0.875rem', boxShadow: saving ? 'none' : '0 4px 14px rgba(15,159,143,0.35)', transition: 'all 150ms' }}>
-                {saving ? 'Saving…' : item ? 'Save Changes' : 'Add Product'}
+              <button type="button" onClick={onClose} className="ui-btn ui-btn--link">Cancel</button>
+              <button type="button" onClick={handleSave} disabled={saving} className="ui-btn ui-btn--main">
+                {saving ? 'Saving…' : item ? 'Save changes' : 'Add product'}
               </button>
             </div>
           </motion.div>
@@ -895,12 +849,40 @@ const CatalogFormModal: React.FC<{ open: boolean; item: ProductCatalogItem | nul
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
+const UNITS: Record<string, string> = { pct: '%', years: 'years', mm: 'mm', kg: 'kg', v: 'V', a: 'A', w: 'W', wp: 'Wp', kw: 'kW', kwh: 'kWh', m: 'm', sqmm: 'mm²' };
+const prettyKey = (k: string) => {
+  const parts = k.split('_');
+  const unit = parts.length > 1 ? UNITS[parts[parts.length - 1]] : undefined;
+  const s = (unit ? parts.slice(0, -1) : parts).join(' ');
+  return s.charAt(0).toUpperCase() + s.slice(1) + (unit ? ` (${unit})` : '');
+};
+const prettyVal = (v: unknown) => v === true ? 'Yes' : v === false ? 'No' : String(v ?? '–');
+const money = (v: string | number) => `₹${Number(v).toLocaleString('en-IN')}`;
+const catLabel = (id: string) => ALL_CATEGORY_OPTIONS.find(o => o.value === id)?.label ?? id;
+
+type SortKey = 'product' | 'price' | 'stock';
+
+const DetailList: React.FC<{ title: string; rows: [string, string][]; empty?: string }> = ({ title, rows, empty }) => (
+  <div className="border-b border-border px-5 py-3">
+    <h3 className="m-0 mb-1 text-[0.9375rem] font-medium text-muted-foreground">{title}</h3>
+    {rows.length === 0 ? <p className="m-0 py-1 text-sm text-muted-foreground">{empty}</p> : (
+      <dl className="m-0 [display:grid] grid-cols-[auto_1fr] gap-x-4">
+        {rows.map(([k, v]) => (
+          <React.Fragment key={k}>
+            <dt className="py-1.5 text-sm text-muted-foreground">{k}</dt>
+            <dd className="m-0 py-1.5 text-right font-mono text-sm">{v}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+    )}
+  </div>
+);
+
 const ProductCatalog: React.FC = () => {
   const isMobile = useIsMobile();
   if (isMobile) return <MobileEquipment />;
 
   const { isDark } = useTheme();
-  const T = mkT(isDark);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [items, setItems] = useState<ProductCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -908,287 +890,242 @@ const ProductCatalog: React.FC = () => {
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<'all'|'in_stock'|'out_of_stock'>('all');
   const [activeFilter, setActiveFilter] = useState<'all'|'active'|'inactive'>('all');
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'product', dir: 1 });
   const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [modal, setModal] = useState<{ open: boolean; item: ProductCatalogItem | null }>({ open: false, item: null });
   const [deleteTarget, setDeleteTarget] = useState<ProductCatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
+  // Load everything once; category, search and filters apply here so the rail can show every count.
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const cat = category === 'all' ? undefined : category;
-      const data = await apiService.getProductCatalog(cat);
+      const data = await apiService.getProductCatalog();
       setItems(Array.isArray(data) ? data : []);
-      setPage(1);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load catalog'); }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load the catalog. Check your connection and try again.'); }
     finally { setLoading(false); }
-  }, [category]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, stockFilter, activeFilter]);
+  useEffect(() => { setPage(1); }, [category, search, stockFilter, activeFilter, sort]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    try { await apiService.deleteProductCatalogItem(deleteTarget.id); setDeleteTarget(null); load(); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Delete failed'); }
+    try {
+      await apiService.deleteProductCatalogItem(deleteTarget.id);
+      if (selectedId === deleteTarget.id) setSelectedId(null);
+      setDeleteTarget(null); load();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not delete the product. Try again.'); setDeleteTarget(null); }
   };
 
+  // The In stock and Active switches in the detail panel save as soon as they change.
+  const patchItem = async (it: ProductCatalogItem, patch: Partial<ProductCatalogItem>) => {
+    setItems(prev => prev.map(x => x.id === it.id ? { ...x, ...patch } : x));
+    try { await apiService.updateProductCatalogItem(it.id, patch); }
+    catch (e) { setItems(prev => prev.map(x => x.id === it.id ? it : x)); setError(e instanceof Error ? e.message : 'Could not save the change. Try again.'); }
+  };
+
+  const q = search.trim().toLowerCase();
   const filtered = items.filter(it => {
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (!it.brand.toLowerCase().includes(q) && !it.model_name.toLowerCase().includes(q) && !(it.display_label ?? '').toLowerCase().includes(q) && !(it.dealer_name ?? '').toLowerCase().includes(q)) return false;
-    }
+    if (category !== 'all' && it.category !== category) return false;
+    if (q && !`${it.brand} ${it.model_name} ${it.display_label ?? ''} ${it.dealer_name ?? ''}`.toLowerCase().includes(q)) return false;
     if (stockFilter === 'in_stock' && !it.in_stock) return false;
     if (stockFilter === 'out_of_stock' && it.in_stock) return false;
     if (activeFilter === 'active' && !it.is_active) return false;
     if (activeFilter === 'inactive' && it.is_active) return false;
     return true;
+  }).sort((a, b) => {
+    const d = sort.key === 'price' ? Number(a.price_per_unit) - Number(b.price_per_unit)
+      : sort.key === 'stock' ? Number(b.in_stock) - Number(a.in_stock)
+      : `${a.brand} ${a.model_name}`.localeCompare(`${b.brand} ${b.model_name}`);
+    return d * sort.dir;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-  // Per-category counts for tab badges
   const catCounts = items.reduce<Record<string, number>>((acc, it) => { acc[it.category] = (acc[it.category] || 0) + 1; return acc; }, {});
+  const selected = items.find(it => it.id === selectedId) ?? null;
+  const hasFilters = stockFilter !== 'all' || activeFilter !== 'all' || q !== '';
 
-  // Spec chips for table rows
-  const specChips = (it: ProductCatalogItem): string[] => {
+  const specChips = (it: ProductCatalogItem): string => {
     const s = it.specs as any ?? {};
-    if (it.category === 'panels') return [s.wp && `${s.wp}Wp`, s.technology, s.dcr !== undefined ? (s.dcr ? 'DCR' : 'non-DCR') : null].filter(Boolean) as string[];
-    if (it.category === 'inverters') return [s.kw && `${s.kw}kW`, s.phases && (s.phases === 3 ? '3-ph' : '1-ph'), s.type].filter(Boolean) as string[];
-    if (it.category === 'batteries') return [s.kwh && `${s.kwh}kWh`, s.chemistry, s.voltage && `${s.voltage}V`].filter(Boolean) as string[];
-    return Object.entries(s).slice(0, 2).map(([k, v]) => `${k}: ${v}`);
+    const parts = it.category === 'panels' ? [s.wp && `${s.wp} Wp`, s.technology, s.dcr !== undefined ? (s.dcr ? 'DCR' : 'non-DCR') : null]
+      : it.category === 'inverters' ? [s.kw && `${s.kw} kW`, s.phases && (Number(s.phases) === 3 ? '3-phase' : '1-phase'), s.type]
+      : it.category === 'batteries' ? [s.kwh && `${s.kwh} kWh`, s.chemistry, s.voltage && `${s.voltage} V`]
+      : Object.entries(s).slice(0, 3).map(([k, v]) => `${prettyKey(k)} ${prettyVal(v)}`);
+    return parts.filter(Boolean).join('  ·  ') || '–';
   };
 
-  const hasActiveFilters = stockFilter !== 'all' || activeFilter !== 'all' || search.trim() !== '';
+  const sortBy = (key: SortKey) => setSort(s => ({ key, dir: s.key === key ? (-s.dir as 1 | -1) : 1 }));
+  const sortHead = (key: SortKey, label: string, right = false) => (
+    <TableHead aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'} className={right ? 'text-right' : ''}>
+      <button type="button" onClick={() => sortBy(key)} className="cursor-pointer hover:text-foreground">
+        {label}{sort.key === key ? (sort.dir === 1 ? ' ↑' : ' ↓') : ''}
+      </button>
+    </TableHead>
+  );
 
-  const dotGrid = isDark
-    ? 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)'
-    : 'radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px)';
-
-  const thStyle: React.CSSProperties = { padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: T.textM, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'Rubik, sans-serif', borderBottom: `1px solid ${T.border}`, background: T.surfaceRaised, whiteSpace: 'nowrap' };
-  const tdStyle: React.CSSProperties = { padding: '11px 14px', verticalAlign: 'middle', borderBottom: `1px solid ${T.border}` };
+  const rail = CATEGORY_TABS.filter(ct => ct.id === 'all' || catCounts[ct.id] || ct.id === category);
 
   return (
-    <div className="admin-container responsive-page" style={{ backgroundImage: dotGrid, backgroundSize: '22px 22px' }}>
+    <div className="admin-container responsive-page">
       <PageHeader
         icon={<Package size={20} color="white" />}
         title="Product Catalog"
-        subtitle="Solar panels, inverters, batteries & BOS"
+        subtitle="Panels, inverters, batteries and balance-of-system parts"
         rightSlot={
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setImportOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: `1px solid ${T.borderStrong}`, background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: T.textM, transition: 'all 140ms' }}>
-              <Upload size={14} /> Import
-            </button>
-            <button onClick={() => setModal({ open: true, item: null })} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #0F9F8F 0%, #1A9E96 100%)', color: '#fff', fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 14px rgba(15,159,143,0.35)', transition: 'all 140ms' }}>
-              <Plus size={14} /> Add Product
-            </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setImportOpen(true)} className="ui-btn ui-btn--support">Import CSV</button>
+            <button type="button" onClick={() => setModal({ open: true, item: null })} className="ui-btn ui-btn--main">Add product</button>
           </div>
         }
       />
 
-      {/* Category tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
-        {CATEGORY_TABS.map(ct => {
-          const active = category === ct.id;
-          const color = ct.id === 'all' ? T.accent : (CATEGORY_COLORS[ct.id] || T.accent);
-          const cnt = ct.id === 'all' ? items.length : (catCounts[ct.id] || 0);
-          return (
-            <button key={ct.id} onClick={() => setCategory(ct.id)} style={{
-              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
-              padding: '6px 14px', borderRadius: 99, border: `1px solid ${active ? color + '55' : T.border}`,
-              cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, transition: 'all 160ms', fontFamily: 'Rubik, sans-serif',
-              background: active ? `${color}18` : T.surfaceRaised,
-              color: active ? color : T.textM,
-              boxShadow: active ? `0 0 0 1px ${color}30, 0 0 14px ${color}20` : 'none',
-            }}>
-              <span style={{ fontSize: '0.82rem' }}>{ct.emoji}</span>
-              {ct.label}
-              {cnt > 0 && <span style={{ fontSize: '0.75rem', fontFamily: 'Fira Code, monospace', opacity: 0.75 }}>{cnt}</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filters + search toolbar */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <StyledSelect
-          value={stockFilter} onChange={v => setStockFilter(v as typeof stockFilter)} isDark={isDark}
-          className="w-auto h-8 text-[0.8rem]"
-          options={[{ value: 'all', label: 'All stock' }, { value: 'in_stock', label: 'In stock' }, { value: 'out_of_stock', label: 'Out of stock' }]}
-        />
-        <StyledSelect
-          value={activeFilter} onChange={v => setActiveFilter(v as typeof activeFilter)} isDark={isDark}
-          className="w-auto h-8 text-[0.8rem]"
-          options={[{ value: 'all', label: 'All status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
-        />
-        {hasActiveFilters && (
-          <button onClick={() => { setSearch(''); setStockFilter('all'); setActiveFilter('all'); }}
-            style={{ padding: '4px 10px', borderRadius: 99, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
-            ✕ Clear
-          </button>
-        )}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '0.75rem', color: T.textM }}>{filtered.length} of {items.length}</span>
-          <div style={{ position: 'relative' }}>
-            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: T.textM, pointerEvents: 'none' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search brand, model…"
-              style={{ ...inputStyle(isDark), paddingLeft: 30, width: 200, fontSize: '0.8rem' }} />
-          </div>
-        </div>
-      </div>
-
       {error && (
-        <div style={{ marginBottom: 14, padding: '11px 16px', borderRadius: 9, background: isDark ? 'rgba(239,68,68,0.10)' : '#fef2f2', border: '1px solid rgba(239,68,68,0.30)', color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span>{error}</span>
-          <button onClick={load} className="btn btn-secondary" style={{ fontSize: '0.78rem' }}>Retry</button>
+        <div className="alert alert-error" style={{ marginBottom: 16 }}>
+          {error}
+          <button type="button" onClick={load} className="ui-btn ui-btn--support ui-btn--sm" style={{ marginLeft: 12 }}>Try again</button>
         </div>
       )}
 
-      {/* Table */}
-      <div style={{ background: T.surface, borderRadius: 12, border: `1px solid ${T.border}`, overflow: 'hidden', boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.22)' : '0 1px 8px rgba(18,21,26,0.07)' }}>
-        {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: T.textM, fontSize: '0.875rem' }}>
-            <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.6 }}>Loading catalog…</motion.div>
+      <div className="[display:grid] grid-cols-1 gap-4 md:grid-cols-[170px_minmax(0,1fr)] xl:grid-cols-[170px_minmax(0,1fr)_320px] 2xl:grid-cols-[200px_minmax(0,1fr)_340px]">
+        <nav aria-label="Categories" className="rounded-[20px] border border-border bg-card p-2">
+          <div className="flex gap-1 overflow-x-auto md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:flex-col md:overflow-y-auto">
+          {rail.map(ct => {
+            const on = category === ct.id;
+            const n = ct.id === 'all' ? items.length : (catCounts[ct.id] || 0);
+            return (
+              <button key={ct.id} type="button" aria-pressed={on} onClick={() => setCategory(ct.id)}
+                className={`flex shrink-0 items-center justify-between gap-2 rounded-full px-3 py-1.5 text-left text-sm md:rounded-xl ${on ? 'bg-primary/10 font-semibold text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+                <span>{ct.id === 'all' ? 'All products' : catLabel(ct.id)}</span>
+                <span className="font-mono text-[0.8125rem]">{n}</span>
+              </button>
+            );
+          })}
           </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: 48 }}><EmptyState title={hasActiveFilters ? 'No results' : 'No products yet'} description={hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add the first product to the catalog.'} /></div>
-        ) : (
-          <div className="table-responsive">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Brand / Model</th>
-                  <th style={thStyle}>Category</th>
-                  <th style={thStyle}>Specs</th>
-                  <th style={thStyle}>Price</th>
-                  <th style={thStyle}>Dealer</th>
-                  <th style={thStyle}>Stock</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageItems.map(it => {
-                  const cc = CATEGORY_COLORS[it.category] || T.accent;
-                  const isHovered = hoveredRow === it.id;
-                  const chips = specChips(it);
-                  return (
-                    <tr key={it.id} onMouseEnter={() => setHoveredRow(it.id)} onMouseLeave={() => setHoveredRow(null)}
-                      style={{ background: isHovered ? (isDark ? 'rgba(255,255,255,0.024)' : 'rgba(0,0,0,0.014)') : 'transparent', transition: 'background 120ms' }}>
+        </nav>
 
-                      {/* Brand / Model — colored left border via borderLeft on first td */}
-                      <td style={{ ...tdStyle, borderLeft: `3px solid ${cc}` }}>
-                        <div style={{ fontWeight: 700, color: T.text, fontFamily: 'Rubik, sans-serif', fontSize: '0.88rem' }}>{it.brand}</div>
-                        <div style={{ fontSize: '0.75rem', color: T.textM, marginTop: 1 }}>{it.model_name}</div>
-                      </td>
-
-                      <td style={tdStyle}>
-                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 700, background: `${cc}1a`, color: cc, border: `1px solid ${cc}30` }}>
-                          {it.category}
-                        </span>
-                      </td>
-
-                      <td style={tdStyle}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {chips.length > 0 ? chips.map((chip, i) => (
-                            <span key={i} style={{ padding: '1px 7px', borderRadius: 4, fontSize: '0.75rem', fontFamily: 'Fira Code, monospace', background: T.surfaceRaised, color: T.textM, border: `1px solid ${T.border}` }}>{chip}</span>
-                          )) : <span style={{ color: T.textM, fontSize: '0.75rem' }}>—</span>}
-                        </div>
-                      </td>
-
-                      <td style={tdStyle}>
-                        {it.price_per_unit ? (
-                          <span style={{ fontFamily: 'Fira Code, monospace', fontWeight: 700, color: T.amber, fontSize: '0.88rem' }}>
-                            ₹{Number(it.price_per_unit).toLocaleString('en-IN')}<span style={{ fontSize: '0.75rem', fontWeight: 400, color: T.textM }}>/{it.price_unit}</span>
-                          </span>
-                        ) : <span style={{ color: T.textM }}>—</span>}
-                      </td>
-
-                      <td style={{ ...tdStyle, maxWidth: 140 }}>
-                        {it.dealer_name ? (
-                          <>
-                            <div style={{ fontSize: '0.8rem', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.dealer_name}</div>
-                            {it.dealer_location && <div style={{ fontSize: '0.75rem', color: T.textM }}>{it.dealer_location}</div>}
-                          </>
-                        ) : <span style={{ color: T.textM }}>—</span>}
-                      </td>
-
-                      <td style={tdStyle}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: it.in_stock ? '#0F9F8F' : '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 8 }}>●</span>{it.in_stock ? 'In Stock' : 'Out'}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: 4, background: it.is_active ? 'rgba(15,159,143,0.10)' : 'rgba(148,163,184,0.12)', color: it.is_active ? '#0F9F8F' : T.textM, fontWeight: 600, width: 'fit-content' }}>
-                            {it.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', opacity: isHovered ? 1 : 0.2, transition: 'opacity 140ms' }}>
-                          <button onClick={() => setModal({ open: true, item: it })}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 7, border: `1px solid ${T.border}`, background: T.surfaceRaised, cursor: 'pointer', color: T.textM, transition: 'all 120ms' }}>
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => setDeleteTarget(it)}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 7, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', cursor: 'pointer', color: '#ef4444', transition: 'all 120ms' }}>
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <section aria-label="Products" className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-card">
+          <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-4 py-3.5">
+            <Input type="search" aria-label="Search products" placeholder="Search brand, model or dealer"
+              value={search} onChange={e => setSearch(e.target.value)} className="max-w-80 flex-[1_1_200px]" />
+            <StyledSelect value={stockFilter} onChange={v => setStockFilter(v as typeof stockFilter)} isDark={isDark} className="w-auto min-w-[130px]"
+              options={[{ value: 'all', label: 'All stock' }, { value: 'in_stock', label: 'In stock' }, { value: 'out_of_stock', label: 'Out of stock' }]} />
+            <StyledSelect value={activeFilter} onChange={v => setActiveFilter(v as typeof activeFilter)} isDark={isDark} className="w-auto min-w-[130px]"
+              options={[{ value: 'all', label: 'All status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
+            {hasFilters && <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={() => { setSearch(''); setStockFilter('all'); setActiveFilter('all'); }}>Clear filters</button>}
+            <span className="ml-auto font-mono text-[0.85rem] text-muted-foreground">{filtered.length} of {items.length} products</span>
           </div>
-        )}
 
-        {/* Pagination */}
-        {!loading && totalPages > 1 && (
-          <div style={{ padding: '12px 18px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', background: T.surfaceRaised }}>
-            <span style={{ fontSize: '0.75rem', color: T.textM, fontFamily: 'Fira Code, monospace' }}>
-              {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
-            </span>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[{ label: '«', onClick: () => setPage(1), disabled: safePage === 1 }, { label: '‹', onClick: () => setPage(p => Math.max(1, p-1)), disabled: safePage === 1 }].map(btn => (
-                <button key={btn.label} onClick={btn.onClick} disabled={btn.disabled}
-                  style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${T.border}`, background: 'transparent', cursor: btn.disabled ? 'default' : 'pointer', fontSize: '0.8rem', color: T.textM, opacity: btn.disabled ? 0.35 : 1 }}>
-                  {btn.label}
-                </button>
-              ))}
-              {Array.from({ length: totalPages }, (_, i) => i+1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                .reduce<(number|'…')[]>((acc, p, i, arr) => { if (i > 0 && (p as number)-(arr[i-1] as number) > 1) acc.push('…'); acc.push(p); return acc; }, [])
-                .map((p, i) => p === '…' ? (
-                  <span key={`e${i}`} style={{ padding: '4px 6px', fontSize: '0.8rem', color: T.textM }}>…</span>
-                ) : (
-                  <button key={p} onClick={() => setPage(p as number)}
-                    style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${safePage === p ? T.accent : T.border}`, background: safePage === p ? `${T.accent}20` : 'transparent', cursor: 'pointer', fontSize: '0.8rem', fontWeight: safePage === p ? 700 : 400, color: safePage === p ? T.accent : T.textM, minWidth: 32 }}>
-                    {p}
-                  </button>
-                ))
-              }
-              {[{ label: '›', onClick: () => setPage(p => Math.min(totalPages, p+1)), disabled: safePage === totalPages }, { label: '»', onClick: () => setPage(totalPages), disabled: safePage === totalPages }].map(btn => (
-                <button key={btn.label} onClick={btn.onClick} disabled={btn.disabled}
-                  style={{ padding: '4px 10px', borderRadius: 7, border: `1px solid ${T.border}`, background: 'transparent', cursor: btn.disabled ? 'default' : 'pointer', fontSize: '0.8rem', color: T.textM, opacity: btn.disabled ? 0.35 : 1 }}>
-                  {btn.label}
-                </button>
-              ))}
+          {loading ? (
+            <p className="m-0 px-5 py-12 text-center text-sm text-muted-foreground">Loading the catalog…</p>
+          ) : filtered.length === 0 ? (
+            <div className="px-5 py-12 text-center">
+              <Package size={40} strokeWidth={1.25} className="mx-auto mb-3 text-muted-foreground" />
+              <p className="m-0 font-semibold">{items.length === 0 ? 'No products yet' : 'No products match'}</p>
+              <p className="m-0 mt-1 text-sm text-muted-foreground">{items.length === 0 ? 'Use Add product to create the first one.' : 'Change the search or the filters.'}</p>
             </div>
+          ) : (
+            <Table containerClassName="rounded-none border-0">
+              <TableHeader>
+                <TableRow>
+                  {sortHead('product', 'Product')}
+                  <TableHead>Key specs</TableHead>
+                  {sortHead('price', 'Price', true)}
+                  {/* Dealer is in the side panel; the column only fits on wide screens */}
+                  <TableHead className="hidden 2xl:table-cell">Dealer</TableHead>
+                  {sortHead('stock', 'Stock')}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageItems.map(it => (
+                  <TableRow key={it.id} tabIndex={0} aria-selected={it.id === selectedId}
+                    onClick={() => setSelectedId(it.id)}
+                    onKeyDown={e => { if (e.key === 'Enter') setSelectedId(it.id); }}
+                    className={`cursor-pointer ${it.id === selectedId ? 'bg-primary/10' : ''}`}>
+                    <TableCell className="min-w-[180px] whitespace-normal">
+                      <div className="font-medium">{it.brand}</div>
+                      <div className="text-sm text-muted-foreground">{it.model_name}</div>
+                    </TableCell>
+                    <TableCell className="min-w-[140px] max-w-[300px] whitespace-normal font-mono text-sm leading-snug">{specChips(it)}</TableCell>
+                    <TableCell className="text-right font-mono">{money(it.price_per_unit)}<span className="text-sm text-muted-foreground"> /{it.price_unit}</span></TableCell>
+                    <TableCell className="hidden max-w-[180px] 2xl:table-cell">
+                      <div className="truncate">{it.dealer_name || '–'}</div>
+                      {it.dealer_location && <div className="text-sm text-muted-foreground">{it.dealer_location}</div>}
+                    </TableCell>
+                    <TableCell>
+                      {it.is_active
+                        ? <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.in_stock ? 'bg-primary/15 text-primary' : 'bg-amber-500/15 text-amber-500'}`}><span className="size-[7px] rounded-full bg-current" />{it.in_stock ? 'In stock' : 'Out of stock'}</span>
+                        : <span className="inline-flex rounded-full border border-border px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">Inactive</span>}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {!loading && filtered.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+              <span className="font-mono text-[0.85rem] text-muted-foreground">
+                Showing {(safePage - 1) * PAGE_SIZE + 1} to {Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              {totalPages > 1 && (
+                <div className="flex gap-2">
+                  <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>Previous</button>
+                  <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>Next</button>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <aside aria-label="Product details" aria-live="polite" className="rounded-[20px] border border-border bg-card md:col-span-2 xl:col-span-1">
+          <div>
+          {!selected ? (
+            <p className="m-0 px-6 py-16 text-center text-sm text-muted-foreground">Pick a product to see its specs, price and dealer here.</p>
+          ) : (
+            <>
+              <div className="border-b border-border px-5 pb-4 pt-4">
+                <div className="text-sm text-muted-foreground">{catLabel(selected.category)}</div>
+                <h2 className="m-0 mb-2 text-xl font-semibold leading-tight">{selected.brand} {selected.model_name}</h2>
+                <div className="font-mono text-[1.75rem] font-medium text-primary">{money(selected.price_per_unit)}<span className="text-sm text-muted-foreground"> per {selected.price_unit}</span></div>
+              </div>
+              <DetailList title="Specs" rows={Object.entries(selected.specs ?? {}).map(([k, v]) => [prettyKey(k), prettyVal(v)] as [string, string])} empty="No specs added yet." />
+              <DetailList title="Pricing" rows={[
+                ['Margin', selected.margin_pct ? `${Number(selected.margin_pct)} %` : '–'],
+                ['GST', selected.gst_pct ? `${Number(selected.gst_pct)} %` : '–'],
+                ['Sold as', selected.retail_or_pallet === 'pallet' ? 'Pallet' : 'Retail'],
+                ['Price updated', selected.price_updated_on || '–'],
+              ]} />
+              <DetailList title="Dealer" rows={[
+                ['Name', selected.dealer_name || '–'],
+                ['Location', selected.dealer_location || '–'],
+                ...(selected.stock_notes ? [['Stock note', selected.stock_notes]] as [string, string][] : []),
+              ]} />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5">
+                <label className="flex items-center gap-2.5 text-sm">
+                  <Switch checked={selected.in_stock} onCheckedChange={c => patchItem(selected, { in_stock: c })} /> In stock
+                </label>
+                <label className="flex items-center gap-2.5 text-sm">
+                  <Switch checked={selected.is_active} onCheckedChange={c => patchItem(selected, { is_active: c })} /> Active in quotes
+                </label>
+              </div>
+              <div className="sticky bottom-0 flex gap-2 rounded-b-[20px] border-t border-border bg-card px-5 py-3.5">
+                <button type="button" className="ui-btn ui-btn--main flex-1" onClick={() => setModal({ open: true, item: selected })}>Edit product</button>
+                <button type="button" className="ui-btn ui-btn--danger" onClick={() => setDeleteTarget(selected)}>Delete</button>
+              </div>
+            </>
+          )}
           </div>
-        )}
-        {!loading && filtered.length > 0 && totalPages <= 1 && (
-          <div style={{ padding: '10px 18px', borderTop: `1px solid ${T.border}`, fontSize: '0.75rem', color: T.textM, background: T.surfaceRaised }}>
-            {filtered.length} product{filtered.length !== 1 ? 's' : ''}
-          </div>
-        )}
+        </aside>
       </div>
 
       <CatalogFormModal open={modal.open} item={modal.item} isDark={isDark} onClose={() => setModal({ open: false, item: null })} onSaved={load} />
-      <DeleteModal open={!!deleteTarget} label={deleteTarget ? `${deleteTarget.brand} ${deleteTarget.model_name}` : ''} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} isDark={isDark} />
+      <ConfirmDialog isDark={isDark} open={!!deleteTarget} title="Delete this product?"
+        body={deleteTarget ? `${deleteTarget.brand} ${deleteTarget.model_name} will be removed from the catalog. This cannot be undone.` : undefined}
+        confirmLabel="Delete" cancelLabel="Keep it" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
       <BulkImportModal open={importOpen} isDark={isDark} onClose={() => setImportOpen(false)} onImported={load} />
     </div>
   );

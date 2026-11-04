@@ -7,6 +7,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useIsMobile } from '../../shared/hooks/useIsMobile';
 import MobileDevicePresets from '../mobile/staff/MobileDevicePresets';
 import SlaveConfigModal, { SlaveFormData } from './SlaveConfigModal';
+import { Input } from '../../shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../shared/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../shared/ui/table';
 import PageHeader from '../../shared/layout/PageHeader';
 import { DEFAULT_PAGE_SIZE } from '../../app/constants';
 
@@ -550,116 +553,95 @@ const DevicePresets: React.FC = () => {
         subtitle="Reusable gateway configuration templates for your devices"
       />
 
-      <div className="card">
-        <div className="card-header">
-          <h2>Presets{filteredPresets.length !== presets.length ? ` · ${filteredPresets.length} of ${presets.length}` : ` (${presets.length})`}</h2>
-          <div className="card-actions">
-            <input
-              type="text"
-              placeholder="Search presets..."
+      <section className="overflow-hidden rounded-[20px] border border-border bg-card" aria-label="Presets">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-border px-4 py-3.5">
+          <div className="flex min-w-0 flex-[1_1_240px] flex-wrap items-center gap-x-3.5 gap-y-2.5">
+            <h2 className="m-0 text-[1.05rem] font-semibold">Presets</h2>
+            {totalCount > 0 && <span className="font-mono text-[0.85rem] text-muted-foreground">{totalCount} presets</span>}
+            <Input
+              type="search"
+              aria-label="Search presets"
+              placeholder="Search name, ID or description"
               value={searchTerm}
               onChange={handleSearch}
-              className="search-input"
+              className="max-w-80 flex-[1_1_200px]"
             />
-            <button onClick={() => setCreatingPreset(true)} className="ui-btn ui-btn--main">
-              <Layers size={15} style={{ marginRight: 6 }} />
-              Create New Preset
-            </button>
           </div>
+          <button type="button" onClick={() => setCreatingPreset(true)} className="ui-btn ui-btn--main">Add preset</button>
         </div>
 
         {filteredPresets.length === 0 ? (
-          <EmptyState icon={Layers} title="No presets found" description={searchTerm ? 'Try a different search term.' : 'Create a preset to get started.'} />
+          <div className="px-5 py-12 text-center">
+            <Layers size={40} strokeWidth={1.25} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="m-0 font-semibold">{searchTerm ? 'No presets match' : 'No presets yet'}</p>
+            <p className="m-0 mt-1 text-sm text-muted-foreground">
+              {searchTerm ? 'Change the search.' : 'Use Add preset to create the first one.'}
+            </p>
+          </div>
         ) : (
-          <div className="preset-grid">
-            {filteredPresets.map((preset) => {
-              const baudRate = preset.gateway_configuration?.uart_configuration?.baud_rate;
-              return (
-                <div key={preset.id} className="preset-card">
-                  <div className="preset-card-header">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="preset-card-title">{preset.name}</div>
-                      {preset.description && (
-                        <div className="preset-card-desc">{preset.description}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="preset-card-chips">
-                    <span className="preset-chip">
-                      <Settings size={11} />
-                      {preset.config_id}
-                    </span>
-                    {baudRate && (
-                      <span className="preset-chip">
-                        {baudRate} baud
-                      </span>
-                    )}
-                    <span className="preset-chip">
-                      <Layers size={11} />
-                      {preset.slaves_count || 0} slave{preset.slaves_count !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-
-                  <div className="preset-card-actions">
-                    <button onClick={() => handleViewDetails(preset)} className="preset-card-btn preset-card-btn-view" title="View Details">
-                      <Eye size={13} /> View
-                    </button>
-                    <button onClick={() => handleConfigureSlaves(preset)} className="preset-card-btn preset-card-btn-configure" title="Configure Slaves">
-                      <Settings size={13} /> Slaves
-                    </button>
-                    <button onClick={() => handleEdit(preset)} className="preset-card-btn preset-card-btn-edit" title="Edit">
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button onClick={() => handleDelete(preset)} className="preset-card-btn preset-card-btn-delete" title="Delete">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Table containerClassName="rounded-none border-0">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Baud rate</TableHead>
+                <TableHead>Frame</TableHead>
+                <TableHead className="text-right">Slaves</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPresets.map((preset) => {
+                const uart = preset.gateway_configuration?.uart_configuration;
+                const count = preset.slaves_count || 0;
+                return (
+                  <TableRow
+                    key={preset.id}
+                    tabIndex={0}
+                    onClick={() => handleViewDetails(preset)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleViewDetails(preset); }}
+                    className="cursor-pointer"
+                  >
+                    <TableCell className="min-w-[160px] whitespace-normal">
+                      <div className="font-medium">{preset.name}</div>
+                      {preset.description && <div className="mt-0.5 line-clamp-1 max-w-[60ch] text-sm text-muted-foreground">{preset.description}</div>}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{uart?.baud_rate ?? '–'}</TableCell>
+                    <TableCell className="font-mono" title={uart ? `${uart.data_bits} data bits, ${uart.parity} parity, ${uart.stop_bits} stop bit${uart.stop_bits === 1 ? '' : 's'}` : undefined}>
+                      {uart ? `${uart.data_bits}${(uart.parity || 'None')[0].toUpperCase()}${uart.stop_bits}` : '–'}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${count === 0 ? 'text-amber-500' : ''}`}>{count}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={(e) => { e.stopPropagation(); handleConfigureSlaves(preset); }}>Slaves</button>
+                        <button type="button" className="ui-btn ui-btn--support ui-btn--sm" onClick={(e) => { e.stopPropagation(); handleEdit(preset); }}>Edit</button>
+                        <button type="button" className="ui-btn ui-btn--danger ui-btn--sm" onClick={(e) => { e.stopPropagation(); handleDelete(preset); }}>Delete</button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
 
-        {/* Pagination */}
         {totalCount > 0 && (
-          <div className="pagination-bar" style={{ padding: '16px', borderTop: '1px solid var(--border-color)', gap: '16px' }}>
-            <div className="pagination-info" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount} presets
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <span className="font-mono text-[0.85rem] text-muted-foreground">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v)); setCurrentPage(1); }}>
+                <SelectTrigger aria-label="Rows per page" className="w-auto min-w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n} per page</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={currentPage === 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>Previous</button>
+              <button type="button" className="ui-btn ui-btn--support ui-btn--sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}>Next</button>
             </div>
-            <div className="pagination-controls">
-              <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
-                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === 1 ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? '0.5' : '1' }}
-              >← Previous</button>
-              <div className="pagination-pages">
-                {(() => {
-                  const pages: React.ReactNode[] = [];
-                  let lastWasEllipsis = false;
-                  for (let i = 1; i <= totalPages; i++) {
-                    const show = i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1;
-                    if (show) {
-                      lastWasEllipsis = false;
-                      pages.push(<button key={i} onClick={() => setCurrentPage(i)} style={{ padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: '4px', background: i === currentPage ? 'rgba(99,102,241,0.2)' : 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: i === currentPage ? 'bold' : 'normal', minWidth: '32px' }}>{i}</button>);
-                    } else if (!lastWasEllipsis) {
-                      lastWasEllipsis = true;
-                      pages.push(<span key={`e${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)' }}>…</span>);
-                    }
-                  }
-                  return pages;
-                })()}
-              </div>
-              <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
-                style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', background: currentPage === totalPages ? 'rgba(148,163,184,0.1)' : 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? '0.5' : '1' }}
-              >Next →</button>
-            </div>
-            <select value={pageSize} onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-              style={{ padding: '8px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
-            >
-              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} per page</option>)}
-            </select>
           </div>
         )}
-      </div>
+      </section>
 
       {(editingPreset || creatingPreset) && ReactDOM.createPortal(
         <div style={{

@@ -37,12 +37,16 @@ export function useSaveDraft() {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [publicId, setPublicId] = useState<string | null>(null);
   const [quoteNumber, setQuoteNumber] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('draft');
+  // Set after a save turns a sent quote into a new revision, so the wizard can say so.
+  const [revisedFrom, setRevisedFrom] = useState<string | null>(null);
   const versionRef = useRef<number>(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  function setExistingDraft(id: string, qNumber: string | null, version: number) {
+  function setExistingDraft(id: string, qNumber: string | null, version: number, quoteStatus = 'draft') {
     setPublicId(id);
     setQuoteNumber(qNumber);
+    setStatus(quoteStatus);
     versionRef.current = version;
   }
 
@@ -54,6 +58,13 @@ export function useSaveDraft() {
         setPublicId(result.public_id);
         setQuoteNumber(result.quote_number ?? null);
         versionRef.current = result.version ?? 1;
+      } else if (status !== 'draft') {
+        // Only drafts can be edited. Saving a sent, accepted, rejected or expired quote
+        // creates a new draft revision; the original stays as it was sent.
+        const { form_data, pricing_snapshot, system_kw, net_investment, customer_email } = buildPayload(data);
+        const result = await apiService.reviseQuotation(publicId, { form_data, pricing_snapshot, system_kw, net_investment, customer_email });
+        setRevisedFrom(quoteNumber);
+        setExistingDraft(result.public_id, result.quote_number ?? null, result.version ?? 1, result.status ?? 'draft');
       } else {
         const result = await apiService.patchQuotation(publicId, {
           ...buildPayload(data),
@@ -81,5 +92,5 @@ export function useSaveDraft() {
     }
   }
 
-  return { saveDraft, saving, lastSavedAt, publicId, quoteNumber, setExistingDraft, startAutoSave, stopAutoSave };
+  return { saveDraft, saving, lastSavedAt, publicId, quoteNumber, status, revisedFrom, setExistingDraft, startAutoSave, stopAutoSave };
 }
