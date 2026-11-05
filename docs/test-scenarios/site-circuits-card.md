@@ -11,4 +11,8 @@ Why (coim_002, Nov 5 2026): a line labelled "Grid" was added through "Something 
 | C3 | Guard | Composer open | type "Grid" (or "inverter", "mains", "backup") as the name | warning that the monitor and meter already cover it; Add is disabled | unit | P0 | passing |
 | C4 | Guard | Composer open | type "Garage EV charger" | no warning; Add enabled | unit | P1 | passing |
 | C5 | Existing line | A saved line named "Grid" | open the page | the row is marked "Already covered by the meter — remove this" | unit | P1 | passing |
-| L1 | Live | coim_002 after removing line 2 | circuit map | `is_fully_metered` true, `unmonitored` empty | live | P0 | planned |
+| L1 | Live | coim_002 after removing line 2 | circuit map | `is_fully_metered` true, `unmonitored` empty | live | P0 | live-verified |
+
+## Live verification
+
+- 2026-11-05: removing "Grid" first failed with a 500 (the edit/delete endpoint looked the site up by its internal number; fixed in backend `b127214b`). After the deploy it worked: line 2 has `deleted_at` 09:36:27 UTC; the only active line is "EV" with plug 1; the site has 1 gateway and 1 energy meter, so `get_metering_completeness` gives fully metered with nothing unmonitored (checked read-only).
