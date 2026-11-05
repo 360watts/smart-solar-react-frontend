@@ -1,6 +1,6 @@
 import {
-  ROLES, roleOf, roleInfo, worksOn, statusOf, formError, buildPayload,
-  formFromPerson, friendlyError, savedMessage, firstNameOf, Person,
+  ROLES, roleOf, roleInfo, statusOf, formError, buildPayload, employmentTag, mobileDigits, toMobile, mobileError, relativeTime,
+  formFromPerson, friendlyError, savedMessage, firstNameOf, Person, ROLE_MATRIX,
 } from '../roles';
 
 const person = (over: Partial<Person> = {}): Person => ({
@@ -25,24 +25,72 @@ describe('roleOf / roleInfo', () => {
   });
 });
 
-describe('worksOn', () => {
-  const names = { s1: 'Coimbatore 02', s2: 'Erode 01', s3: 'Pollachi 03' };
-  it('summarises a viewer', () => {
-    expect(worksOn(person(), names)).toEqual({ headline: '3 sites', note: 'Coimbatore 02, Erode 01 +1 more' });
+describe('statusOf', () => {
+  it('maps flags to a calm vocabulary', () => {
+    expect(statusOf(person({ is_active: false })).label).toBe("Can't sign in");
+    expect(statusOf(person({ employment_status: 'on_leave' })).label).toBe('On leave');
+    expect(statusOf(person()).label).toBe('Can sign in');
   });
-  it('handles no sites, one site, admins and employees', () => {
-    expect(worksOn(person({ assigned_sites: [] }), names).headline).toBe('No sites yet');
-    expect(worksOn(person({ assigned_sites: ['s2'] }), names)).toEqual({ headline: '1 site', note: 'Erode 01' });
-    expect(worksOn(person({ role: 'admin' }), names).headline).toBe('Everything');
-    expect(worksOn(person({ role: 'employee' }), names).headline).toBe('All sites');
+  it('keeps sign-in and employment apart: Left but still allowed in reads "Can sign in" with a Left tag', () => {
+    const left = person({ employment_status: 'terminated' });
+    expect(statusOf(left).key).toBe('active');
+    expect(employmentTag(left)).toBe('Left');
+    expect(employmentTag(person())).toBeNull();
   });
 });
 
-describe('statusOf', () => {
-  it('maps flags to a calm vocabulary', () => {
-    expect(statusOf(person({ is_active: false })).label).toBe('Inactive');
-    expect(statusOf(person({ employment_status: 'on_leave' })).label).toBe('On leave');
-    expect(statusOf(person()).label).toBe('Active');
+describe('mobile helpers', () => {
+  it('reads the 10 digits however the number was stored', () => {
+    expect(mobileDigits('+91-98400 12345')).toBe('9840012345');
+    expect(mobileDigits('9840012345')).toBe('9840012345');
+    expect(mobileDigits(null)).toBe('');
+  });
+  it('sends +91 and the digits, and checks for 10 digits', () => {
+    expect(toMobile('9840012345')).toBe('+919840012345');
+    expect(toMobile('')).toBe('');
+    expect(mobileError('98400')).toBe('Enter all 10 digits');
+    expect(mobileError('9840012345')).toBeNull();
+    expect(mobileError('')).toBeNull();
+  });
+  it('blocks an invite with a short mobile number', () => {
+    const f = { first_name: 'A', last_name: 'B', email: 'a@b.in', mobile_number: '+9198400', role: 'employee' as const, assigned_sites: [] as string[], device_ops_enabled: true };
+    expect(formError(f, 'create')).toBe('Enter all 10 digits of the mobile number.');
+    expect(formError({ ...f, mobile_number: '+919840012345' }, 'create')).toBeNull();
+  });
+});
+
+describe('employment and sign-in in the payload', () => {
+  it('reads both from the person and sends them on edit', () => {
+    const f = formFromPerson(person({ employment_status: 'on_leave', is_active: false }));
+    expect(f.employment_status).toBe('on_leave');
+    expect(f.is_active).toBe(false);
+    const body = buildPayload(f);
+    expect(body.employment_status).toBe('on_leave');
+    expect(body.is_active).toBe(false);
+  });
+  it('lets the sign-in toggle override the form', () => {
+    expect(buildPayload(formFromPerson(person()), { is_active: false }).is_active).toBe(false);
+  });
+});
+
+describe('relativeTime', () => {
+  const now = Date.parse('2026-11-05T12:00:00Z');
+  it('words last sign-in plainly', () => {
+    expect(relativeTime(null, now)).toBe('Not yet recorded');
+    expect(relativeTime('2026-11-05T11:59:30Z', now)).toBe('Just now');
+    expect(relativeTime('2026-11-05T11:20:00Z', now)).toBe('40 min ago');
+    expect(relativeTime('2026-11-05T09:00:00Z', now)).toBe('3 h ago');
+    expect(relativeTime('2026-11-04T10:00:00Z', now)).toBe('Yesterday');
+    expect(relativeTime('2026-10-30T12:00:00Z', now)).toBe('6 days ago');
+  });
+});
+
+describe('Compare roles table', () => {
+  it('matches the backend: the Firmware updates page is admin only, sending updates is not', () => {
+    const page = ROLE_MATRIX.find((r) => r.what === 'Firmware updates page')!;
+    expect([page.admin, page.employee, page.viewer]).toEqual(['Yes', 'No', 'No']);
+    expect(ROLE_MATRIX.find((r) => r.what === 'Send firmware updates')!.employee).toBe('Yes');
+    expect(roleInfo('employee').cant).toContain('Open the Firmware updates page');
   });
 });
 
@@ -91,13 +139,7 @@ describe('device operations switch', () => {
     expect(buildPayload({ ...form, role: 'viewer', device_ops_enabled: false }).device_ops_enabled).toBe(false);
     expect('device_ops_enabled' in buildPayload({ ...form, role: 'admin' })).toBe(false);
   });
-  it('adds Watch only to the note when off, leaving the headline alone', () => {
-    const names = { s1: 'Coimbatore 02' };
-    expect(worksOn(person({ role: 'employee', device_ops_enabled: false }), names)).toEqual({ headline: 'All sites', note: 'Monitors and fixes systems. Watch only' });
-    expect(worksOn(person({ assigned_sites: ['s1'], device_ops_enabled: false }), names)).toEqual({ headline: '1 site', note: 'Coimbatore 02. Watch only' });
-    expect(worksOn(person({ assigned_sites: [], device_ops_enabled: false }), names)).toEqual({ headline: 'No sites yet', note: 'Watch only' });
-    expect(worksOn(person({ role: 'admin', device_ops_enabled: false }), names).note).toBe('Including team and billing');
-  });
+
 });
 
 describe('formFromPerson / names / savedMessage', () => {

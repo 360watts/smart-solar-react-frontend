@@ -945,31 +945,43 @@ class ApiService {
     return this.request(`/auth/check-contact/?${param}`);
   }
 
-  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE, role?: string): Promise<any> {
-    const cacheKey = `employees_${search || 'all'}_${role || 'any'}_${page}_${pageSize}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-
+  /** `extra` holds the Employees page's sort and filters (backend employees_list). */
+  async getEmployees(search?: string, page = 1, pageSize = DEFAULT_PAGE_SIZE, role?: string, extra: EmployeeFilters = {}): Promise<any> {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (role) params.set('role', role);
+    if (extra.ordering) params.set('ordering', extra.ordering);
+    if (extra.team?.length) params.set('team', extra.team.join(','));
+    if (extra.site) params.set('site', extra.site);
+    if (extra.deviceOps != null) params.set('device_ops', String(extra.deviceOps));
+    if (extra.isActive != null) params.set('is_active', String(extra.isActive));
+    if (extra.employment?.length) params.set('status', extra.employment.join(','));
     params.set('page', String(page));
     params.set('page_size', String(pageSize));
+    const cacheKey = `employees_${params.toString()}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
     const data = await this.request(`/employees/?${params.toString()}`);
     cacheService.set(cacheKey, data, 5 * 60 * 1000);
     return data;
   }
 
-  /** Tab counts for the Employees page: one tiny request per role (only `count` is used). */
-  async getEmployeeRoleCounts(): Promise<{ all: number; admin: number; employee: number; viewer: number }> {
-    const one = async (role?: string): Promise<number> => {
-      const params = new URLSearchParams({ page: '1', page_size: '1' });
-      if (role) params.set('role', role);
+  // Header counts for the Employees page views (page_size=1 reads just `count`).
+  async getEmployeeRoleCounts(): Promise<{ all: number; admin: number; employee: number; viewer: number; inactive: number }> {
+    const one = async (extra: Record<string, string> = {}): Promise<number> => {
+      const params = new URLSearchParams({ page: '1', page_size: '1', ...extra });
       const data = await this.request(`/employees/?${params.toString()}`);
       return data?.count ?? 0;
     };
-    const [all, admin, employee, viewer] = await Promise.all([one(), one('admin'), one('employee'), one('viewer')]);
-    return { all, admin, employee, viewer };
+    const [all, admin, employee, viewer, inactive] = await Promise.all([
+      one(), one({ role: 'admin' }), one({ role: 'employee' }), one({ role: 'viewer' }), one({ is_active: 'false' }),
+    ]);
+    return { all, admin, employee, viewer, inactive };
+  }
+
+  /** One person's device operations, for the Employees page popup (admin only). */
+  async getEmployeeOperations(id: number, days = 30): Promise<MyOperations> {
+    return this.request(`/employees/${id}/operations/?days=${days}`);
   }
 
   async createEmployee(employeeData: any): Promise<any> {
@@ -2493,6 +2505,16 @@ export interface MyOperation {
 }
 
 export interface MyOperations { days: number; rows: MyOperation[] }
+
+/** Employees list sort + filters (GET /employees/). `ordering`: name|role|team|sign_in|last_active|joined, '-' for descending. */
+export interface EmployeeFilters {
+  ordering?: string;
+  team?: number[];
+  site?: string;
+  deviceOps?: boolean;
+  isActive?: boolean;
+  employment?: string[];
+}
 
 export interface AccessSummary {
   devices: AccessDevice[];

@@ -20,6 +20,9 @@ export function useDialogBehavior(onEscape: () => void) {
     ref.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 
     const onKey = (e: KeyboardEvent) => {
+      // A popup opened on top of this one (Compare roles, a confirm) owns the keys while focus is in it.
+      const el = document.activeElement;
+      if (ref.current && el && el !== document.body && !ref.current.contains(el)) return;
       if (e.key === 'Escape') { escape.current(); return; }
       if (e.key !== 'Tab' || !ref.current) return;
       const nodes = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE));

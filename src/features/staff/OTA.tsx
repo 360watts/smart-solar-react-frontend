@@ -27,7 +27,7 @@ const NO_DEV: DevFilter = { type: 'all', states: [], versions: [], chips: [], ch
 const NO_BUILD: BuildFilter = { type: 'all', on: 'any', chips: [], use: 'any' };
 const NOT_REPORTED = '';
 const HOUR = 3600e3;
-const PAGE_SIZE = 25;
+const PAGE_SIZE = { devices: 25, builds: 10 }; // builds tab shows 1-10 by default
 
 const checkinOk = (iso: string | null, c: Checkin) => {
   if (c === 'any') return true;
@@ -97,7 +97,7 @@ function Segmented({ label, value, options, onChange }: { label: string; value: 
       <div className="flex flex-wrap gap-1 rounded-xl bg-muted p-[3px]">
         {options.map(([v, l]) => (
           <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}
-            className={`flex-1 rounded-lg px-2 py-1 text-sm ${value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>{l}</button>
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1 text-sm ${value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>{l}</button>
         ))}
       </div>
     </fieldset>
@@ -198,11 +198,12 @@ function OtaDesktop() {
   }, [builds, bp, bSort, devices]);
   useEffect(() => { setPage(1); }, [tab, df, bf, query, devSort, bSort, group]);
   const total = tab === 'devices' ? devRows.length : buildRows.length;
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const size = PAGE_SIZE[tab];
+  const pages = Math.max(1, Math.ceil(total / size));
   const safePage = Math.min(page, pages); // the 20 s poll can shrink the list under the current page
-  const from = (safePage - 1) * PAGE_SIZE;
-  const pageDevs = devRows.slice(from, from + PAGE_SIZE);
-  const pageBuilds = buildRows.slice(from, from + PAGE_SIZE);
+  const from = (safePage - 1) * size;
+  const pageDevs = devRows.slice(from, from + size);
+  const pageBuilds = buildRows.slice(from, from + size);
 
   const facet = <T,>(rows: T[], p: Preds<T>, key: string, values: string[], get: (x: T) => string, label = (v: string) => v) =>
     values.map(v => ({ v, label: label(v), n: rows.filter(x => passes(p, x, key) && get(x) === v).length }));
@@ -333,35 +334,43 @@ function OtaDesktop() {
         </div>
       )}
 
-      <div className="[display:grid] grid-cols-1 items-start gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-        {/* filter rail */}
-        <aside id="ota-filters" aria-label="Filters" className={`${railOpen ? '[display:grid]' : 'hidden'} items-start gap-5 rounded-[22px] border border-border bg-card p-4 sm:grid-cols-2 xl:sticky xl:top-4 xl:[display:grid] xl:grid-cols-1`}>
+      <div className="[display:grid] grid-cols-1 items-start gap-4">
+        {/* filter bar, above the table */}
+        <aside id="ota-filters" aria-label="Filters" className={`${railOpen ? '[display:grid]' : 'hidden'} items-start gap-5 rounded-[22px] border border-border bg-card p-4 sm:grid-cols-2 xl:[display:grid] xl:grid-cols-1`}>
           {tab === 'devices' ? (<>
+            <div className="contents xl:flex xl:flex-wrap xl:items-start xl:gap-x-8 xl:gap-y-4">
             <Segmented label="Type" value={df.type} onChange={v => setDf({ ...df, type: v })}
               options={[['all', 'All'], ['gateway', 'Gateways'], ['energy_meter', 'Meters']]} />
+            <label className="[display:grid] gap-1.5 text-sm font-medium">Last update check
+              <select value={df.checkin} onChange={e => setDf({ ...df, checkin: e.target.value as Checkin })}
+                className="h-9 rounded-md border border-border bg-input-background px-2 font-normal xl:w-44">
+                {(Object.keys(CHECKIN_LABEL) as Checkin[]).map(c => <option key={c} value={c}>{CHECKIN_LABEL[c]}</option>)}
+              </select>
+            </label>
+            <Segmented label="Site" value={df.site} onChange={v => setDf({ ...df, site: v })}
+              options={[['any', 'Any'], ['on', 'On a site'], ['none', 'No site']]} />
+            </div>
+            <div className="contents xl:[display:grid] xl:grid-cols-3 xl:gap-8 xl:border-t xl:border-border xl:pt-4">
             <Checks label="Update state" picked={df.states} onToggle={v => setDf({ ...df, states: toggle(df.states, v) })}
               options={facet(devices, dp, 'states', STATE_ORDER, d => d.state, v => STATE_LABEL[v as DevState])} />
             <Checks label="Running version" picked={df.versions} onToggle={v => setDf({ ...df, versions: toggle(df.versions, v) })}
               options={facet(devices, dp, 'versions', versionsSeen, d => d.run ?? NOT_REPORTED, unknown)} />
             <Checks label="Chip" picked={df.chips} onToggle={v => setDf({ ...df, chips: toggle(df.chips, v) })}
               options={facet(devices, dp, 'chips', devChips, d => d.chip ?? NOT_REPORTED, unknown)} />
-            <label className="[display:grid] gap-1.5 text-sm font-medium">Last update check
-              <select value={df.checkin} onChange={e => setDf({ ...df, checkin: e.target.value as Checkin })}
-                className="h-9 rounded-md border border-border bg-input-background px-2 font-normal">
-                {(Object.keys(CHECKIN_LABEL) as Checkin[]).map(c => <option key={c} value={c}>{CHECKIN_LABEL[c]}</option>)}
-              </select>
-            </label>
-            <Segmented label="Site" value={df.site} onChange={v => setDf({ ...df, site: v })}
-              options={[['any', 'Any'], ['on', 'On a site'], ['none', 'No site']]} />
+            </div>
           </>) : (<>
+            <div className="contents xl:flex xl:flex-wrap xl:items-start xl:gap-x-8 xl:gap-y-4">
             <Segmented label="For" value={bf.type} onChange={v => setBf({ ...bf, type: v })}
               options={[['all', 'All'], ['gateway', 'Gateways'], ['energymeter', 'Meters']]} />
             <Segmented label="Switched on" value={bf.on} onChange={v => setBf({ ...bf, on: v })}
               options={[['any', 'Any'], ['on', 'On'], ['off', 'Off']]} />
-            <Checks label="Chip" picked={bf.chips} onToggle={v => setBf({ ...bf, chips: toggle(bf.chips, v) })}
-              options={facet(builds, bp, 'chips', buildChips, b => b.chip ?? NOT_REPORTED, unknown)} />
             <Segmented label="In use" value={bf.use} onChange={v => setBf({ ...bf, use: v })}
               options={[['any', 'Any'], ['running', 'Running'], ['unused', 'Unused']]} />
+            </div>
+            <div className="contents xl:[display:grid] xl:grid-cols-3 xl:gap-8 xl:border-t xl:border-border xl:pt-4">
+            <Checks label="Chip" picked={bf.chips} onToggle={v => setBf({ ...bf, chips: toggle(bf.chips, v) })}
+              options={facet(builds, bp, 'chips', buildChips, b => b.chip ?? NOT_REPORTED, unknown)} />
+            </div>
           </>)}
         </aside>
 
@@ -502,7 +511,7 @@ function OtaDesktop() {
           {loaded && total > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
               <span className="font-mono text-sm text-muted-foreground">
-                Showing {from + 1} to {Math.min(from + PAGE_SIZE, total)} of {total}
+                Showing {from + 1} to {Math.min(from + size, total)} of {total}
               </span>
               {pages > 1 && (
                 <div className="flex items-center gap-2">

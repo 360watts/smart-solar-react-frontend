@@ -9,7 +9,7 @@ import NodeDetailModal, { NodeData } from './NodeDetailModal';
 import { fmtPower, mixShares, wholeHomeKw } from './flowModel';
 import FlowRing from './FlowRing';
 import FlowLines, { FLOW_COLORS } from './FlowLines';
-import { RailStack, RailTile, Sparkline, LedgerRow, MixBar } from './FlowRail';
+import { RailStack, RailTile, Sparkline, LedgerRow, MixBar, OwnGridBar } from './FlowRail';
 import { EnergyFlowBlockProps, SmartDeviceNode } from './types';
 import { isDeviceOffline, anomalousDevices, freshLatest, isPlug, plugGroup, createDeviceNodeData } from './plugHelpers';
 import { apiService, CtMeterReading } from '../../../services/api';
@@ -342,10 +342,21 @@ export default function EnergyFlowBlock({ pvKw, loadKw, gridKw, battKw, battSoc,
                 <span title={`Partly counted: only ${today.usedPartial} so far; a circuit has no reading today`}>
                   Partly counted · {today.usedPartial}
                 </span>
-              ) : today?.usedNote ?? undefined} />
+              ) : today?.usedNote ?? (today?.usedKwh != null && today.ownPct != null ? (
+                // kWh split of today's use: own power (solar + battery) vs bought from the grid
+                <OwnGridBar ownPct={today.ownPct} labels={[
+                  `Own ${(today.usedKwh * today.ownPct / 100).toFixed(1)} kWh`,
+                  `Grid ${(today.usedKwh * (100 - today.ownPct) / 100).toFixed(1)} kWh`,
+                ]} />
+              ) : undefined)} />
             <RailTile isDark={isDark} title="From your own power" color={FLOW_COLORS.batt}
               value={today?.ownPct != null ? `${Math.round(today.ownPct)}%` : null}
-              sub={today?.ownPct != null ? `${100 - Math.round(today.ownPct)}% bought from the grid` : undefined} />
+              sub={today?.ownPct != null ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <OwnGridBar ownPct={today.ownPct} />
+                  <span>{100 - Math.round(today.ownPct)}% bought from the grid</span>
+                </div>
+              ) : undefined} />
           </RailStack>
 
           {/* centre */}

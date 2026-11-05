@@ -36,9 +36,10 @@ export const ROLES: RoleInfo[] = [
       'Watch live power, alerts and equipment on every site',
       'Restart or adjust any device',
       'Handle support tickets and service visits (customer names and contact details stay hidden)',
-      'Push firmware updates',
+      'Send firmware updates to devices',
     ],
     cant: [
+      'Open the Firmware updates page',
       'See bills, savings or quotations',
       'See customer contact details or Wi-Fi passwords',
       "Change team settings or other people's roles",
@@ -69,6 +70,30 @@ export function roleInfo(key?: string): RoleInfo {
 
 export interface Team { id: number; name: string }
 
+/** The Compare roles table. KEEP IN SYNC with staff_roles.py, like `can` / `cant` above. */
+export const ROLE_MATRIX: { what: string; admin: string; employee: string; viewer: string }[] = [
+  { what: 'Sites', admin: 'All', employee: 'All', viewer: 'Picked only' },
+  { what: 'Live power and alerts', admin: 'Yes', employee: 'Yes', viewer: 'Yes' },
+  { what: 'Restart or adjust devices', admin: 'Yes', employee: 'If switched on', viewer: 'If switched on' },
+  { what: 'Send firmware updates', admin: 'Yes', employee: 'Yes', viewer: 'Own devices, if switched on' },
+  { what: 'Firmware updates page', admin: 'Yes', employee: 'No', viewer: 'No' },
+  { what: 'Bills, savings, quotations', admin: 'Yes', employee: 'No', viewer: 'No' },
+  { what: 'Customer contact details', admin: 'Yes', employee: 'No', viewer: 'No' },
+  { what: 'Manage the team', admin: 'Yes', employee: 'No', viewer: 'No' },
+];
+
+export type Employment = 'active' | 'on_leave' | 'terminated';
+export const EMPLOYMENT_LABEL: Record<Employment, string> = { active: 'Working', on_leave: 'On leave', terminated: 'Left' };
+
+/** The 10 local digits of an Indian mobile number however it was stored ("+91-98400 12345" -> "9840012345"). */
+export function mobileDigits(raw?: string | null): string {
+  const d = (raw ?? '').replace(/\D/g, '');
+  return d.length === 12 && d.startsWith('91') ? d.slice(2) : d;
+}
+/** What the forms send: "+91" and the 10 digits; empty stays empty. */
+export const toMobile = (digits: string) => (digits ? `+91${digits}` : '');
+export const mobileError = (digits: string) => (digits && digits.length !== 10 ? 'Enter all 10 digits' : null);
+
 export interface Person {
   id: number;
   email: string;
@@ -84,6 +109,7 @@ export interface Person {
   assigned_devices?: number[];
   team?: Team | null;
   date_joined?: string;
+  last_login?: string | null;
   /** Missing counts as on. Always true for admins. */
   device_ops_enabled?: boolean;
 }
@@ -109,25 +135,29 @@ export function initialsOf(p: Pick<Person, 'first_name' | 'last_name' | 'email'>
   return (a || p.email.slice(0, 2)).toUpperCase();
 }
 
-export function worksOn(p: Person, siteNames: Record<string, string>): { headline: string; note: string } {
-  const role = roleOf(p);
-  if (role === 'admin') return { headline: 'Everything', note: 'Including team and billing' };
-  const watchOnly = (note: string) => (p.device_ops_enabled === false ? (note ? `${note}. Watch only` : 'Watch only') : note);
-  if (role === 'employee') return { headline: 'All sites', note: watchOnly('Monitors and fixes systems') };
-  const ids = p.assigned_sites ?? [];
-  const nDev = p.assigned_devices?.length ?? 0;
-  if (ids.length === 0 && nDev > 0) return { headline: nDev === 1 ? '1 device' : `${nDev} devices`, note: watchOnly('') };
-  const names = ids.map((id) => siteNames[id] ?? id);
-  const headline = ids.length === 0 ? 'No sites yet' : ids.length === 1 ? '1 site' : `${ids.length} sites`;
-  const note = names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2} more` : '');
-  return { headline, note: watchOnly(note) };
-}
-
 export type StatusKey = 'active' | 'on_leave' | 'inactive';
+/** Sign-in on/off is `is_active`; employment (On leave / Left) is a tag beside it, never the same thing. */
 export function statusOf(p: Person): { key: StatusKey; label: string } {
-  if (p.is_active === false || p.employment_status === 'terminated') return { key: 'inactive', label: 'Inactive' };
+  if (p.is_active === false) return { key: 'inactive', label: "Can't sign in" };
   if (p.employment_status === 'on_leave') return { key: 'on_leave', label: 'On leave' };
-  return { key: 'active', label: 'Active' };
+  return { key: 'active', label: 'Can sign in' };
+}
+/** "On leave" / "Left", or null when working. */
+export const employmentTag = (p: Person): string | null =>
+  p.employment_status && p.employment_status !== 'active' ? EMPLOYMENT_LABEL[p.employment_status] : null;
+
+/** "Just now", "3 h ago", "Yesterday", "5 days ago", then a date; null = "Not yet recorded". */
+export function relativeTime(iso?: string | null, now = Date.now()): string {
+  if (!iso) return 'Not yet recorded';
+  const mins = Math.round((now - new Date(iso).getTime()) / 60000);
+  if (mins < 2) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h} h ago`;
+  const d = Math.round(h / 24);
+  if (d === 1) return 'Yesterday';
+  if (d < 30) return `${d} days ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export interface PersonForm {
@@ -141,6 +171,9 @@ export interface PersonForm {
   /** Device ids as strings (the picker's value type). */
   assigned_devices?: string[];
   device_ops_enabled: boolean;
+  /** Edit only. Left also turns sign-in off (owner decision 2026-11-05). */
+  employment_status?: Employment;
+  is_active?: boolean;
 }
 
 export function formFromPerson(p: Person): PersonForm {
@@ -154,6 +187,8 @@ export function formFromPerson(p: Person): PersonForm {
     assigned_sites: [...(p.assigned_sites ?? [])],
     assigned_devices: (p.assigned_devices ?? []).map(String),
     device_ops_enabled: p.device_ops_enabled !== false,
+    employment_status: p.employment_status ?? 'active',
+    is_active: p.is_active !== false,
   };
 }
 
@@ -162,6 +197,7 @@ export function formError(f: PersonForm, mode: 'create' | 'edit'): string | null
   if (!f.first_name.trim() || !f.last_name.trim()) return 'Add a first and last name.';
   if (!f.email.trim()) return 'Add an email address.';
   if (mode === 'create' && !f.mobile_number.trim()) return 'Add a mobile number.';
+  if (mode === 'create' && mobileError(mobileDigits(f.mobile_number))) return 'Enter all 10 digits of the mobile number.';
   if (f.role === 'viewer' && f.assigned_sites.length === 0 && !f.assigned_devices?.length) {
     return `Pick at least one site or device, or ${f.first_name.trim() || 'they'} won't see anything.`;
   }
@@ -188,6 +224,8 @@ export function buildPayload(
   };
   // Admins always have device operations; the backend ignores the key for them, so don't send it.
   if (f.role !== 'admin') payload.device_ops_enabled = f.device_ops_enabled;
+  if (f.employment_status) payload.employment_status = f.employment_status;
+  if (f.is_active !== undefined) payload.is_active = f.is_active;
   if (f.team_id != null) payload.team_id = f.team_id;
   else if (extra.clearTeam) payload.team_id = null;
   // The update endpoint blanks `address` when it is missing, so edits always carry it through.

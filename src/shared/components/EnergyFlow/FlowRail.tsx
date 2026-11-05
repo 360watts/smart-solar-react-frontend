@@ -111,6 +111,28 @@ export const LedgerRow: React.FC<{ label: string; value: string; muted?: boolean
   </div>
 );
 
+/** Two-part bar for the left rail: own power (battery colour) vs bought from the grid. `labels` adds a legend. */
+export const OwnGridBar: React.FC<{ ownPct: number; labels?: [string, string] }> = ({ ownPct, labels }) => {
+  const own = Math.max(0, Math.min(100, ownPct));
+  return (
+    <div data-own-grid-bar style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div role="img" aria-label={`${Math.round(own)}% own power, ${100 - Math.round(own)}% grid`} style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: 'var(--surface-muted)' }}>
+        <div style={{ width: `${own}%`, background: FLOW_COLORS.batt }} />
+        <div style={{ width: `${100 - own}%`, background: FLOW_COLORS.grid }} />
+      </div>
+      {labels && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontVariantNumeric: 'tabular-nums' }}>
+          {labels.map((t, i) => (
+            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+              <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 2, background: i ? FLOW_COLORS.grid : FLOW_COLORS.batt }} />{t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const MIX: { key: keyof MixShares; name: string; color: string }[] = [
   { key: 'solar', name: 'Solar', color: FLOW_COLORS.solar },
   { key: 'battery', name: 'Battery', color: FLOW_COLORS.batt },
