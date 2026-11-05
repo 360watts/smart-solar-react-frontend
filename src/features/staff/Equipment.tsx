@@ -878,9 +878,10 @@ const DetailList: React.FC<{ title: string; rows: [string, string][]; empty?: st
   </div>
 );
 
-const ProductCatalog: React.FC = () => {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileEquipment />;
+// Layout picked in a wrapper: an early return before the hooks breaks when the width crosses the mobile breakpoint.
+const ProductCatalog: React.FC = () => (useIsMobile() ? <MobileEquipment /> : <DesktopProductCatalog />);
+
+const DesktopProductCatalog: React.FC = () => {
 
   const { isDark } = useTheme();
   const [category, setCategory] = useState<CategoryFilter>('all');

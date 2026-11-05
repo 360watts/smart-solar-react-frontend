@@ -76,8 +76,8 @@ Status: `planned` -> `written` -> `passing` -> `live-verified`.
 
 | # | Check | Pri | Status |
 |---|---|---|---|
-| L1 | Sign in, then the list shows "Last sign-in: just now" for you | P0 | planned |
-| L2 | Search a phone number (last 4+ digits) and a site id; both find the person | P1 | planned |
-| L3 | Set someone Left: they can't sign in; Turn on sign-in brings them back | P0 | planned |
-| L4 | Device activity for a staff member who rebooted a device shows it | P1 | planned |
-| L5 | Phone width: card list, popups fill the screen, no sideways scroll | P1 | planned |
+| L1 | Sign in, then the list shows "Last sign-in: just now" for you | P0 | live-verified |
+| L2 | Search a phone number (last 4+ digits) and a site id; both find the person | P1 | live-verified |
+| L3 | Set someone Left: they can't sign in; Turn on sign-in brings them back | P0 | live-verified |
+| L4 | Device activity for a staff member who rebooted a device shows it | P1 | live-verified |
+| L5 | Phone width: card list, popups fill the screen, no sideways scroll | P1 | live-verified |

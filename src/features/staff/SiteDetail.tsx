@@ -430,9 +430,13 @@ const EqPanelSection: React.FC<{siteId:string;isDark:boolean;items:EqPanel[];loa
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// Pick the layout in a wrapper: an early return before the page's hooks changes the hook count when the width
+// crosses the mobile breakpoint ("Rendered fewer hooks than expected").
 export default function SiteDetail() {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileSiteDetail />;
+  return useIsMobile() ? <MobileSiteDetail /> : <DesktopSiteDetail />;
+}
+
+function DesktopSiteDetail() {
   const { siteId: siteIdParam } = useParams<{ siteId: string }>();
   const siteId = siteIdParam ? (() => { try { return decodeURIComponent(siteIdParam); } catch { return siteIdParam; } })() : '';
   const { isDark } = useTheme();

@@ -43,6 +43,8 @@ interface CircuitLineForm {
   label: string;
   device: number | null;
 }
+// Names of the two parts the monitor and meter already measure; a circuit line with one of them is a mistake.
+const COVERED_NAME = /\b(grid|mains|inverter|backup)\b/i;
 const blankCircuitLineForm = (): CircuitLineForm => ({
   circuit: 'ev_line',
   label: '',
@@ -568,7 +570,7 @@ export default function InverterMeasurementConfig({
         index={2}
         icon={<Zap size={21} strokeWidth={1.8} />}
         title="Circuits"
-        purpose="What this site's power is split into. The inverter's backup output and the grid feed are always covered by the hardware — add an EV charger or another isolated circuit here if you want it tracked on its own."
+        purpose="What this site's power is split into. The inverter side and the grid board are measured by the monitor and the meter above — only add a circuit wired on its own, like an EV charger."
         action={!circuitComposerOpen && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Btn isDark={isDark} variant="soft" size="sm" onClick={() => beginAddCircuitLine({ circuit: 'ev_line', label: 'EV charger' })}><Plus size={14} /> Add EV charger</Btn>
@@ -576,15 +578,20 @@ export default function InverterMeasurementConfig({
           </div>
         )}
       >
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-          padding: '12px 14px', borderRadius: 12, border: `1px solid ${t.line}`, background: t.card2, fontSize: '0.88rem',
-        }}>
-          <span>Inverter</span>
-          {hasGateway
-            ? <span style={{ color: t.goodInk, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Check size={14} strokeWidth={2.6} /> Tracked</span>
-            : <span style={{ color: t.waitInk, fontWeight: 600 }}>Not tracked yet</span>}
-        </div>
+        {[
+          { name: 'Inverter side', by: gw ? `monitor ${gw.device_serial}` : null },
+          { name: 'Grid board', by: energyMeters.length ? `meter ${energyMeters.map((m: any) => m.device_serial).join(', ')}` : null },
+        ].map(row => (
+          <div key={row.name} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+            padding: '12px 14px', borderRadius: 12, border: `1px solid ${t.line}`, background: t.card2, fontSize: '0.88rem',
+          }}>
+            <span>{row.name}</span>
+            {row.by
+              ? <span style={{ color: t.goodInk, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Check size={14} strokeWidth={2.6} /> Measured by {row.by}</span>
+              : <span style={{ color: t.waitInk, fontWeight: 600 }}>Not measured yet</span>}
+          </div>
+        ))}
 
         {circuitLinesLoading ? (
           <div style={{ fontSize: '0.85rem', color: t.ink2 }}>Loading…</div>
@@ -595,6 +602,7 @@ export default function InverterMeasurementConfig({
             icon={<PlugZap size={19} strokeWidth={1.8} />}
             title={line.label || 'Circuit'}
             status={(() => {
+              if (COVERED_NAME.test(line.label || '')) return <span style={{ color: t.waitInk, fontWeight: 600 }}>Already covered by the monitor or meter — remove this</span>;
               if (!line.is_monitored) return 'Noted — not measured';
               const meter = smartDevices.find((d: any) => d.id === line.device);
               return meter
@@ -617,7 +625,7 @@ export default function InverterMeasurementConfig({
           footer={
             <>
               <Btn isDark={isDark} variant="plain" onClick={resetCircuitLineForm}>Cancel</Btn>
-              <Btn isDark={isDark} disabled={circuitLinesSaving} onClick={saveCircuitLine}>
+              <Btn isDark={isDark} disabled={circuitLinesSaving || COVERED_NAME.test(circuitLineDraft.label)} onClick={saveCircuitLine}>
                 {circuitLinesSaving ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} strokeWidth={3} />}
                 {editingCircuitLineId != null ? 'Save' : 'Add'}
               </Btn>
@@ -625,11 +633,13 @@ export default function InverterMeasurementConfig({
           }
         >
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
-            <Field isDark={isDark} label="What is it?">
+            <Field isDark={isDark} label="What is it?" hint={COVERED_NAME.test(circuitLineDraft.label)
+              ? 'The inverter side and the grid board are already measured by the monitor and the meter — no need to add them here.'
+              : undefined}>
               <input value={circuitLineDraft.label} onChange={e => setCircuitLineDraft({ ...circuitLineDraft, label: e.target.value })}
                 placeholder="e.g. Garage EV charger" style={controlStyle(isDark)} />
             </Field>
-            <Field isDark={isDark} label="Measured by" hint="a plug, clamp meter, or wired meter on this circuit — or leave as not measured">
+            <Field isDark={isDark} label="Measured by" hint="a smart plug or clamp on this circuit — or leave as not measured">
               <select
                 value={circuitLineDraft.device != null ? String(circuitLineDraft.device) : ''}
                 onChange={e => setCircuitLineDraft({ ...circuitLineDraft, device: e.target.value ? parseInt(e.target.value, 10) : null })}

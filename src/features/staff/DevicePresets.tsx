@@ -67,9 +67,10 @@ interface RegisterMapping {
   enabled: boolean;
 }
 
-const DevicePresets: React.FC = () => {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileDevicePresets />;
+// Layout picked in a wrapper: an early return before the hooks breaks when the width crosses the mobile breakpoint.
+const DevicePresets: React.FC = () => (useIsMobile() ? <MobileDevicePresets /> : <DesktopDevicePresets />);
+
+const DesktopDevicePresets: React.FC = () => {
   const { isDark } = useTheme();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [filteredPresets, setFilteredPresets] = useState<Preset[]>([]);

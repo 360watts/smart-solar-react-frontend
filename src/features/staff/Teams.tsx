@@ -90,9 +90,10 @@ const fullName = (employee: Employee) => {
   return name || employee.email || `Employee #${employee.id}`;
 };
 
-const Teams: React.FC = () => {
-  const isMobile = useIsMobile();
-  if (isMobile) return <MobileTeams />;
+// Layout picked in a wrapper: an early return before the hooks breaks when the width crosses the mobile breakpoint.
+const Teams: React.FC = () => (useIsMobile() ? <MobileTeams /> : <DesktopTeams />);
+
+const DesktopTeams: React.FC = () => {
 
   const { isDark } = useTheme();
   const tokens = getDesignTokens(isDark);
