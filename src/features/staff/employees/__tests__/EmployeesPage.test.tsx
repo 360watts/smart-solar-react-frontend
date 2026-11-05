@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, configure } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EmployeesPage from '../EmployeesPage';
 import { apiService } from '../../../../services/api';
@@ -16,6 +16,10 @@ jest.mock('../../../../services/api', () => ({
     deleteEmployee: jest.fn(), updateEmployee: jest.fn(), createTeam: jest.fn(), getEmployeeOperations: jest.fn(),
   },
 }));
+
+// The page debounces search by 300 ms; under a full parallel run the 1 s default wait was too tight.
+configure({ asyncUtilTimeout: 5000 });
+jest.setTimeout(20000);
 
 const api = apiService as jest.Mocked<typeof apiService>;
 const priya: Person = { id: 1, email: 'Priya@Example.com', first_name: 'Priya', last_name: 'Raman', role: 'admin', is_active: true };
