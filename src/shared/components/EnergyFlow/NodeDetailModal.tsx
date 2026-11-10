@@ -17,7 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-function ctActivePowerW(reading: CtMeterReading | null): number | null {
+export function ctActivePowerW(reading: CtMeterReading | null): number | null {
   if (!reading) return null;
   const reported = reading.active_power_total;
   if (reported != null && Math.abs(reported) > 0.05) return reported;

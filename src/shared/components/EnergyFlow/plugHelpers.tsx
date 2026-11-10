@@ -52,11 +52,34 @@ export const freshLatest = (device: SmartDeviceNode) =>
 // stale (Sep 5 2026). Reading recency doesn't have that failure mode.
 export const isDeviceOffline = (d: SmartDeviceNode): boolean => !isFreshReading(d.latest?.timestamp);
 
-/** Offline (no reading in 5 min), Running (active and drawing > 1 W) or Idle. */
-export const plugState = (d: SmartDeviceNode): 'offline' | 'running' | 'idle' =>
-  isDeviceOffline(d) ? 'offline' : d.is_active && (freshLatest(d)?.power_w ?? 0) > 1 ? 'running' : 'idle';
+// At or below this draw an appliance is on standby, not running; others use 1 W.
+// Starting guesses: tune per appliance from real plug history. A fridge between cooling cycles is deliberately left out.
+const STANDBY_W: Partial<Record<ApplianceLabel, number>> = { ac_unit: 15, washing_machine: 5 };
 
-const kwOf = (d: SmartDeviceNode) => (freshLatest(d)?.power_w ?? 0) / 1000;
+/** Offline (no reading in 5 min), Idle (off or at most 1 W), Standby (see STANDBY_W) or Running. */
+export const plugState = (d: SmartDeviceNode): 'offline' | 'running' | 'standby' | 'idle' => {
+  if (isDeviceOffline(d)) return 'offline';
+  const w = freshLatest(d)?.power_w ?? 0;
+  if (!d.is_active || w <= 1) return 'idle';
+  return w > (STANDBY_W[d.appliance_label] ?? 1) ? 'running' : 'standby';
+};
+
+export const kwOf = (d: SmartDeviceNode) => (freshLatest(d)?.power_w ?? 0) / 1000;
+
+export interface CircuitLoad { plugsKw: number; totalKw: number; gapKw: number }
+
+/** Plugs against the circuit's own inverter/meter reading. Null (no bar) when the reading is missing or zero; pass null when it is not live. */
+export function circuitLoad(plugs: SmartDeviceNode[], readingKw: number | null | undefined): CircuitLoad | null {
+  if (readingKw == null || readingKw <= 0) return null;
+  const plugsKw = plugs.reduce((s, d) => s + kwOf(d), 0);
+  return { plugsKw, totalKw: readingKw, gapKw: Math.max(0, readingKw - plugsKw) };
+}
+
+/** "105 of 640 W" / "0.00 of 1.20 kW": one unit for both numbers. */
+export const loadOfText = (plugsKw: number, totalKw: number) =>
+  Math.max(plugsKw, totalKw) >= 1
+    ? `${plugsKw.toFixed(2)} of ${totalKw.toFixed(2)} kW`
+    : `${(plugsKw * 1000).toFixed(0)} of ${(totalKw * 1000).toFixed(0)} W`;
 
 export interface PlugRanking {
   live: SmartDeviceNode[];      // running first by draw, then idle; never offline
@@ -118,7 +141,7 @@ export function createDeviceNodeData(device: SmartDeviceNode, accentColor: strin
   const latest = freshLatest(device);
   const sdKw = (latest?.power_w ?? 0) / 1000;
   const deviceName = deviceLabel(device);
-  const sdActive = device.is_active && sdKw > 0.001;
+  const sdActive = plugState(device) === 'running';
   // Takes priority over the power-based active/inactive read: an offline
   // device shouldn't show as "inactive" (implies it's just idle) when it's
   // actually disconnected. See isDeviceOffline's doc comment for why this

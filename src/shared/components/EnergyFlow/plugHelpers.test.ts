@@ -1,4 +1,4 @@
-import { plugRanking, lastSeenText, hourLabels } from './plugHelpers';
+import { plugRanking, lastSeenText, hourLabels, plugState, circuitLoad, loadOfText, createDeviceNodeData } from './plugHelpers';
 import type { SmartDeviceNode } from './types';
 
 const NOW = Date.parse('2026-10-08T11:08:00Z');
@@ -41,6 +41,39 @@ describe('plugRanking', () => {
     expect(r.todayPartial).toBe(true);
     expect(plugRanking([ev, fridge]).todayPartial).toBe(false);
     expect(plugRanking([plug(9, 'X', 5, undefined)]).todayKwh).toBeNull();
+  });
+});
+
+describe('plugState', () => {
+  const ac = (w: number) => plug(1, 'AC', w, 0, fresh, { appliance_label: 'ac_unit' });
+  it('reads low draw as Standby per appliance, and does not call it active in the popup (R20)', () => {
+    expect(plugState(ac(9))).toBe('standby');
+    expect(plugState(plug(2, 'W', 4, 0, fresh, { appliance_label: 'washing_machine' }))).toBe('standby');
+    expect(createDeviceNodeData(ac(9), '#000000').status).toBe('inactive');
+  });
+  it('keeps Running above the threshold, Idle at 1 W or less, and fridges out of Standby (R21)', () => {
+    expect(plugState(ac(40))).toBe('running');
+    expect(plugState(ac(1))).toBe('idle');
+    expect(plugState(plug(3, 'F', 3, 0))).toBe('running');
+    expect(createDeviceNodeData(ac(40), '#000000').status).toBe('active');
+  });
+});
+
+describe('circuitLoad', () => {
+  const live = [plug(1, 'a', 96, 0), plug(2, 'b', 9, 0), plug(3, 'old', 500, 0, stale(3))];
+  it('compares fresh plugs to the reading', () => {
+    const l = circuitLoad(live, 0.64)!;
+    expect(l.plugsKw).toBeCloseTo(0.105, 3);
+    expect(l.gapKw).toBeCloseTo(0.535, 3);
+  });
+  it('has no bar without a reading, and never a negative gap', () => {
+    expect(circuitLoad(live, null)).toBeNull();
+    expect(circuitLoad(live, 0)).toBeNull();
+    expect(circuitLoad(live, 0.05)!.gapKw).toBe(0);
+  });
+  it('uses one unit for both numbers (R19)', () => {
+    expect(loadOfText(0.105, 0.64)).toBe('105 of 640 W');
+    expect(loadOfText(0.95, 1.2)).toBe('0.95 of 1.20 kW');
   });
 });
 

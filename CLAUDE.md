@@ -73,7 +73,7 @@ src/
     mobile/       — Mobile-specific staff/ variants (customer-facing mobile/portal/ variant removed with the portal decommission)
     quotation/    — Quotation builder (components/, hooks/, types/, utils/, doc/)
   shared/
-    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...); EnergyFlow/flowModel.ts holds the pure flow helpers (mix shares, line geometry); smart plugs are listed in the site panel's Smart plugs tab (`SiteDataPanel/tabs/PlugsTab.tsx`, read-only ranked table with today's kWh and a 24 h curve fed by `smart_devices[].today`, helpers in `EnergyFlow/plugHelpers.tsx`), the flow only shows load totals + an "N smart plugs ›" link
+    components/   — Cross-feature components (ErrorBoundary, Toast, SiteDataPanel/, EnergyFlow/, ...); EnergyFlow/flowModel.ts holds the pure flow helpers (mix shares, line geometry); smart plugs are listed in the site panel's Smart plugs tab (`SiteDataPanel/tabs/PlugsTab.tsx`, read-only rows of slim tiles per circuit, Backup first, Backup and Grid direct compared to their live inverter/meter reading, today's kWh and a 24 h curve fed by `smart_devices[].today`, helpers in `EnergyFlow/plugHelpers.tsx`), the flow only shows load totals + an "N smart plugs ›" link
     guards/       — StaffRoute (AdminRoute is no longer used by any route)
     access/       — Feature keys, `useAccess()`, `RequireAccess` (see "Role-based access")
     hooks/        — Custom React hooks

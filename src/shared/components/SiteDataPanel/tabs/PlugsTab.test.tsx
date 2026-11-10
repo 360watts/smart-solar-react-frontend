@@ -28,10 +28,10 @@ const DEVICES = [
 beforeEach(() => { jest.spyOn(Date, 'now').mockReturnValue(NOW); });
 afterEach(() => jest.restoreAllMocks());
 
-it('ranks by live draw with offline plugs last (R1)', () => {
+it('shows Backup first with offline plugs last (R1)', () => {
   render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
   const rows = screen.getAllByTestId('plug-row').map(r => within(r).getByTestId('plug-name').textContent);
-  expect(rows).toEqual(['EV Charger', 'Fridge 1', 'Water Pump']);
+  expect(rows).toEqual(['Fridge 1', 'Water Pump', 'EV Charger']);
   expect(screen.getByTestId('plug-offline-Geyser 1')).not.toBeNull();
 });
 
@@ -64,19 +64,86 @@ it('groups tiles into circuit rows, each ranked by draw (R7)', () => {
   expect(backup).toEqual(['Fridge 2', 'Fridge 1']);
 });
 
-it('orders circuit rows by plug count, most first, ties keep EV/Backup/Grid (R12)', () => {
+it('keeps Backup first, then most installed plugs counting offline ones, ties EV before Grid (R12)', () => {
   const order = () => screen.getAllByTestId(/^circuit-/).map(n => n.getAttribute('data-testid'));
-  const { unmount } = render(<PlugsTab smartDevices={[...DEVICES, mk(6, 'Fridge 2', 300, fresh, 1)]} isDark siteId="s1" />);
-  expect(order()).toEqual(['circuit-backup', 'circuit-ev', 'circuit-grid']);
+  const { unmount } = render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  expect(order()).toEqual(['circuit-backup', 'circuit-grid', 'circuit-ev']);
   unmount();
-  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
-  expect(order()).toEqual(['circuit-ev', 'circuit-backup', 'circuit-grid']);
+  render(<PlugsTab smartDevices={DEVICES.filter(d => d.id !== 4)} isDark siteId="s1" />);
+  expect(order()).toEqual(['circuit-backup', 'circuit-ev', 'circuit-grid']);
+});
+
+describe('circuit load bars', () => {
+  const BACKUP = [mk(2, 'Fridge 1', 96, fresh, 0.9), mk(7, 'AC 3', 9, fresh, 0.1, { appliance_label: 'ac_unit' })];
+  const draw = (devices: SmartDeviceNode[], backup: number | null, grid: number | null = null) =>
+    render(<PlugsTab smartDevices={devices} isDark siteId="s1" circuitKw={{ backup, grid }} />);
+
+  it('compares plugs to the inverter reading, with a segment per plug and swatches (R13)', () => {
+    draw(BACKUP, 0.64);
+    const head = screen.getByTestId('load-backup').textContent;
+    expect(head).toContain('105 of 640 W');
+    expect(head).toContain('backup load');
+    expect(head).toContain('535 W not on a plug');
+    expect(screen.getByTestId('bar-backup').children).toHaveLength(3);
+    expect(screen.getByTestId('swatch-Fridge 1')).not.toBeNull();
+  });
+
+  it.each([[null], [0]])('shows only the plug total when the reading is %s (R14)', reading => {
+    draw(BACKUP, reading);
+    expect(screen.queryByTestId('bar-backup')).toBeNull();
+    expect(screen.queryByTestId('swatch-Fridge 1')).toBeNull();
+    expect(screen.getByTestId('load-backup').textContent).toBe('105 W on plugs');
+  });
+
+  it('drops the gap when plugs add up to more than the reading (R15)', () => {
+    draw(BACKUP, 0.05);
+    expect(screen.getByTestId('bar-backup').children).toHaveLength(2);
+    expect(screen.queryByTestId('gap-backup')).toBeNull();
+    expect(screen.getByTestId('load-backup').textContent).toBe('105 W on plugs');
+  });
+
+  it('says when the gap includes a plug that is not reporting (R16)', () => {
+    draw([...BACKUP, mk(8, 'Fridge 2', 50, old, null)], 0.64);
+    expect(screen.getByTestId('load-backup').textContent).toContain('includes 1 plug not reporting');
+  });
+
+  it('gives Grid direct the same bar from the meter (R17)', () => {
+    draw(DEVICES, null, 1.2);
+    expect(screen.getByTestId('load-grid').textContent).toContain('0.00 of 1.20 kW');
+    expect(screen.getByTestId('load-grid').textContent).toContain('grid-direct load');
+    expect(screen.getByTestId('bar-grid').children).toHaveLength(1);
+  });
+
+  it('shows no bar or row total for a single EV plug (R18)', () => {
+    draw(DEVICES, 0.64, 1.2);
+    expect(screen.queryByTestId('bar-ev')).toBeNull();
+    expect(screen.queryByTestId('load-ev')).toBeNull();
+  });
+});
+
+it('shows Standby on the tile and leaves it out of the running count (R20)', () => {
+  render(<PlugsTab smartDevices={[mk(2, 'Fridge 1', 96, fresh, 0.9), mk(7, 'AC 3', 9, fresh, 0.1, { appliance_label: 'ac_unit' })]} isDark siteId="s1" />);
+  expect(screen.getByTestId('plug-state-AC 3').textContent).toBe('Standby');
+  expect(screen.getByTestId('sum-running').textContent).toBe('1 of 2 running');
+});
+
+it('offline chip shows today so the summary can be reconciled (R22)', () => {
+  render(<PlugsTab smartDevices={[DEVICES[1], mk(4, 'Geyser 1', 900, old, 2.5, { circuit: 'grid_direct', appliance_label: 'geyser' })]} isDark siteId="s1" />);
+  expect(screen.getByTestId('plug-offline-Geyser 1').textContent).toContain('Today 2.5 kWh');
+});
+
+it('leaves amps and volts to the popup (R23)', () => {
+  const latest = { power_w: 96, current_a: 0.42, voltage_v: 231, energy_kwh: null, switch_on: true, timestamp: fresh };
+  render(<PlugsTab smartDevices={[mk(2, 'Fridge 1', 96, fresh, 0.9, { latest })]} isDark siteId="s1" />);
+  const tile = screen.getByTestId('plug-row').textContent;
+  expect(tile).not.toContain('231');
+  expect(tile).not.toContain('0.42');
 });
 
 it('row click opens the detail modal (R6)', () => {
   render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
   fireEvent.click(screen.getAllByTestId('plug-row')[0]);
-  expect(screen.getByTestId('node-modal').textContent).toContain('EV Charger');
+  expect(screen.getByTestId('node-modal').textContent).toContain('Fridge 1');
 });
 
 it('offline chip opens the detail modal too', () => {

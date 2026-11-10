@@ -48,19 +48,34 @@ Left out on purpose: an on/off or schedule control. The app has no plug switch o
 | LV-2 | Site with no plugs | Open site panel | No Smart plugs tab; flow cards show no plug link | live | P1 | planned |
 | LV-3 | Viewer assigned to coim_002 | Open `/my-sites/coim_002` | Smart plugs tab present, read-only | live | P2 | planned |
 
-## Ranked table (redesign)
+## Circuit rows with slim tiles (redesign, 2026-11-10)
+
+The tab answers "what is drawing now". Amps and volts stay in the detail popup.
 
 | ID | Given | When | Then | Type | Pri | Status |
 |---|---|---|---|---|---|---|
-| R1 | EV 2.68 kW, Fridge 82 W, Pump 0 W idle, one offline | Tab renders | Rows ordered EV, Fridge, Pump; offline plug listed last | unit | P0 | written |
+| R1 | EV 2.68 kW, Fridge 82 W, Pump 0 W idle, one offline | Tab renders | Backup row first, then Grid direct, then EV; offline plug listed last, as a chip | unit | P0 | passing |
 | R2 | Same | Summary strip | "On plugs now" = sum of fresh plug kW; Running counts running of N; Not reporting counts offline | unit | P0 | written |
 | R3 | Offline plug | Renders | Dashed chip, no wattage; "Last seen N h ago" or "No reading yet" | unit | P0 | written |
 | R4 | A plug with `today` null | Renders | No Today line and no sparkline (left out, not a dash); summary Today says "partly counted" | unit | P0 | written |
 | R5 | Curve with null hours | Sparkline renders | Gaps drawn, never zero-filled | unit | P0 | written |
 | R6 | Any row | Clicked | Existing node detail modal opens | unit | P1 | written |
-| R7 | Plugs on three circuits | Renders | Circuit is a muted label (Backup / Grid direct / EV), no per-circuit accent colours | unit | P1 | written |
+| R7 | Plugs on three circuits | Renders | Circuit is a label (Backup / Grid direct / EV) with its reporting plug count, the same colour on every circuit; tiles in a row ranked by draw | unit | P1 | passing |
 | R8 | Site with no plugs | Renders | Existing empty state | unit | P1 | written |
-| R9 | coim_002 | View at 1440, 1024, 390 px, dark and light | Table, then stacked rows at 390 px; no overflow | live | P1 | planned |
+| R9 | coim_002 | View at 1440, 1024, 390 px, dark and light | Circuit rows of tiles, one column at 390 px; bars readable; no overflow | live | P1 | planned |
 | R10 | Plug not reporting | Chip clicked | Detail popup opens (same as a running tile) | unit | P1 | written |
 | R11 | Overview tab | Header renders | No time-range dropdown; it shows on History only, and Overview resets the range to Today | manual | P2 | planned |
-| R12 | Circuits with different numbers of reporting plugs | Renders | Circuit rows ordered by plug count, most first; ties keep EV, Backup, Grid direct | unit | P1 | passing |
+| R12 | Grid direct has more installed plugs than EV, one of them offline | Renders | Backup first, then most installed plugs (offline counted); ties keep EV before Grid direct | unit | P1 | passing |
+| R13 | Live inverter reading 640 W, Backup plugs 105 W | Renders | "105 of 640 W backup load · 535 W not on a plug", bar with a segment per drawing plug and a gap segment; tiles carry matching swatches | unit | P0 | passing |
+| R14 | Reading missing, zero, or not live (panel passes null) | Renders | No bar; Backup shows "N W on plugs" when it has two or more plugs | unit | P0 | passing |
+| R15 | Plugs add up to more than the reading | Renders | Bar has plug segments only, no gap; header shows only the plug total | unit | P0 | passing |
+| R16 | A Backup plug is offline and a reading exists | Renders | Header adds "includes 1 plug not reporting" | unit | P1 | passing |
+| R17 | Live meter reading on Grid direct | Renders | Same bar and "of" text, with "grid-direct load" | unit | P0 | passing |
+| R18 | One EV plug | Renders | No bar and no row total (the tile is the total) | unit | P1 | passing |
+| R19 | Figures on either side of 1 kW | Renders | One unit per line: "0.95 of 1.20 kW", never "950 W of 1.20 kW" | unit | P1 | passing |
+| R20 | AC at 9 W, washer at 4 W | State read | Standby, not counted in "running"; popup status is not "active" | unit | P0 | passing |
+| R21 | Fridge at 3 W, AC at 40 W, plug at 1 W or less | State read | Fridge Running, AC Running, Idle | unit | P0 | passing |
+| R22 | Offline plug with a today figure | Renders | Chip shows "Today N kWh" so the summary can be reconciled | unit | P1 | passing |
+| R23 | Any tile | Renders | No amps or volts on the tile | unit | P1 | passing |
+| R24 | coim_002, inverter and meter live | Compare with Overview | Backup and Grid direct "of" figures match the energy flow cards | live | P0 | planned |
+| R25 | coim_002 plug history | Review a week | Standby thresholds (AC 15 W, washer 5 W) match real standby draw | live | P2 | planned |

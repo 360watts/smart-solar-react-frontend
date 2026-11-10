@@ -51,6 +51,7 @@ import PhaseLoadTab from './tabs/PhaseLoadTab';
 import UsageTab from './tabs/UsageTab';
 import PlugsTab from './tabs/PlugsTab';
 import { isPlug } from '../EnergyFlow/plugHelpers';
+import { ctActivePowerW } from '../EnergyFlow/NodeDetailModal';
 import { railToday, type HomeToday } from '../EnergyFlow/flowModel';
 import ViewerDevices from '../../../features/staff/viewer/ViewerDevices';
 import ViewerEvents from '../../../features/staff/viewer/ViewerEvents';
@@ -763,6 +764,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const loadPhaseSumW = hasLoadPhaseData ? (loadL1PowerW ?? 0) + (loadL2PowerW ?? 0) + (loadL3PowerW ?? 0) : null;
   const loadKw = loadPhaseSumW != null ? loadPhaseSumW / 1000 : loadKwRaw;
   const loadPowerDisplay = formatPowerForKpi(loadKw);
+  // Smart plugs tab bars: only readings that are live now. Plugs are at most 5 min old, so an older figure would not be comparable.
+  const ctLiveW = ctAgeMs != null && ctAgeMs <= 15 * 60 * 1000 ? ctActivePowerW(ctLatest) : null;
+  const plugCircuitKw = { backup: isDataLive ? loadKw : null, grid: ctLiveW != null ? Math.abs(ctLiveW) / 1000 : null };
   const inverterPhasesForFlow = {
     l1: { power_w: loadL1PowerW, voltage_v: latest?.load_l1_voltage_v ?? null, current_a: latest?.load_l1_current_a ?? null },
     l2: { power_w: loadL2PowerW, voltage_v: latest?.load_l2_voltage_v ?? null, current_a: latest?.load_l2_current_a ?? null },
@@ -1396,7 +1400,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             {activeTab === 'events' && <ViewerEvents key="events" siteId={siteId} />}
             {activeTab === 'devices' && <ViewerDevices key="devices" siteId={siteId} />}
 
-            {activeTab === 'plugs' && <PlugsTab key="plugs" smartDevices={smartDevices} isDark={isDark} siteId={siteId} />}
+            {activeTab === 'plugs' && <PlugsTab key="plugs" smartDevices={smartDevices} isDark={isDark} siteId={siteId} circuitKw={plugCircuitKw} />}
 
             {activeTab === 'phase-load' && (
               <PhaseLoadTab
