@@ -71,9 +71,8 @@ const PlugsTab: React.FC<{ smartDevices: SmartDeviceNode[]; isDark: boolean; sit
         <div className="pt-stat" data-testid="sum-running">{r.running} of {plugs.length} running</div>
       </section>
 
-      <div className="pt-cols">
-      {(['ev', 'backup', 'grid'] as const).map(g => {
-        const rows = r.live.filter(d => plugGroup(d) === g);
+      <div className="pt-rows">
+      {(['ev', 'backup', 'grid'] as const).map(g => ({ g, rows: r.live.filter(d => plugGroup(d) === g) })).sort((a, b) => b.rows.length - a.rows.length).map(({ g, rows }) => {
         return rows.length === 0 ? null : (
       <section key={g} aria-label={`${CIRCUIT[g]} plugs`}>
         <div className="pt-label" data-testid={`circuit-${g}`}>{CIRCUIT[g]} · {rows.length}</div>

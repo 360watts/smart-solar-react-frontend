@@ -64,6 +64,15 @@ it('groups tiles into circuit rows, each ranked by draw (R7)', () => {
   expect(backup).toEqual(['Fridge 2', 'Fridge 1']);
 });
 
+it('orders circuit rows by plug count, most first, ties keep EV/Backup/Grid (R12)', () => {
+  const order = () => screen.getAllByTestId(/^circuit-/).map(n => n.getAttribute('data-testid'));
+  const { unmount } = render(<PlugsTab smartDevices={[...DEVICES, mk(6, 'Fridge 2', 300, fresh, 1)]} isDark siteId="s1" />);
+  expect(order()).toEqual(['circuit-backup', 'circuit-ev', 'circuit-grid']);
+  unmount();
+  render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
+  expect(order()).toEqual(['circuit-ev', 'circuit-backup', 'circuit-grid']);
+});
+
 it('row click opens the detail modal (R6)', () => {
   render(<PlugsTab smartDevices={DEVICES} isDark siteId="s1" />);
   fireEvent.click(screen.getAllByTestId('plug-row')[0]);

@@ -63,3 +63,4 @@ Left out on purpose: an on/off or schedule control. The app has no plug switch o
 | R9 | coim_002 | View at 1440, 1024, 390 px, dark and light | Table, then stacked rows at 390 px; no overflow | live | P1 | planned |
 | R10 | Plug not reporting | Chip clicked | Detail popup opens (same as a running tile) | unit | P1 | written |
 | R11 | Overview tab | Header renders | No time-range dropdown; it shows on History only, and Overview resets the range to Today | manual | P2 | planned |
+| R12 | Circuits with different numbers of reporting plugs | Renders | Circuit rows ordered by plug count, most first; ties keep EV, Backup, Grid direct | unit | P1 | passing |
