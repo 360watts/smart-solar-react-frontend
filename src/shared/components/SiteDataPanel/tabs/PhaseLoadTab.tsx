@@ -1494,7 +1494,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           {showVsActual ? (
             vsActualChartData.length > 0 ? (
               <div style={{ height: 250 }}>
+                {/* key: without it React reuses the 7-day chart's instance here, and react-chartjs-2 only
+                    fills `ref` at mount, so this chartRef stayed null and Reset Zoom did nothing. */}
                 <CJLine
+                  key="vs-actual"
                   ref={vsActualLoadChartZoom.chartRef}
                   data={{
                     labels: vsActualChartData.map(d => d.time),
@@ -1515,6 +1518,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
             loadForecast.length > 0 ? (
               <div style={{ height: 230 }}>
                 <CJLine
+                  key="forecast"
                   ref={loadForecastChartZoom.chartRef}
                   data={{
                     labels: loadForecastChartData.map(d => d.time),
