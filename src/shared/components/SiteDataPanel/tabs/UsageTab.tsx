@@ -203,7 +203,8 @@ const TIPS = {
 
 // ── Curve geometry ─────────────────────────────────────────────────────────────
 
-const X0 = 36, X1 = 712, Y0 = 196, YTOP = 14;
+// Drawn at the card's real pixel width, so text keeps its size on a phone and on a wide screen.
+const X0 = 46, PAD_R = 14, H = 220, Y0 = 192, YTOP = 26, MIN_W = 300, DEFAULT_W = 720;
 
 /** Break the series into runs at nulls so gaps stay gaps (never interpolated). */
 function runs(series: (number | null)[], px: (i: number) => number, py: (v: number) => number): [number, number][][] {
@@ -240,6 +241,17 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   const [hover, setHover] = useState<number | null>(null);        // curve slot under the pointer or keyboard
   const [dayHover, setDayHover] = useState<number | null>(null);  // Energy by day bar
   const [heat, setHeat] = useState<[number, number] | null>(null); // heat map [row, hour]
+  const [curveEl, setCurveEl] = useState<HTMLDivElement | null>(null);
+  const [curveW, setCurveW] = useState(DEFAULT_W);
+  useEffect(() => {
+    if (!curveEl) return;
+    const measure = () => { const w = curveEl.clientWidth; if (w > 0) setCurveW(Math.max(MIN_W, Math.round(w))); };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(curveEl);
+    return () => ro.disconnect();
+  }, [curveEl]);
 
   useEffect(() => {
     let alive = true;
@@ -510,7 +522,8 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   // Curve
   const slots = data.curve.yesterday.length || 96;
   const all = [...data.curve.today, ...data.curve.yesterday].filter((v): v is number => v != null);
-  const ymax = niceMax(all.length ? Math.max(...all) : 0);
+  const W = curveW, X1 = W - PAD_R;
+  const ymax = niceMax(all.length ? Math.max(...all) * 1.1 : 0); // ~10% headroom above the highest point
   const px = (i: number) => X0 + ((i + 0.5) / slots) * (X1 - X0);
   const py = (v: number) => Y0 - (Math.min(v, ymax) / ymax) * (Y0 - YTOP);
   const todayRuns = runs(data.curve.today, px, py);
@@ -518,11 +531,22 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   let lastIdx = -1;
   data.curve.today.forEach((v, i) => { if (v != null) lastIdx = i; });
   const nowX = px(lastIdx);
-  const nowV = data.curve.today[lastIdx] as number;
   const nowKw = liveKw(ctLatest, Date.now());
+  const nowV = nowKw ?? (data.curve.today[lastIdx] as number); // the live reading when there is one, so dot and label agree
+  const nowY = py(nowV);
+  const nowLabelY = Math.max(14, nowY - 12);
+  // Missing slots before the latest reading: shaded so a gap reads as "no reading", not a drawing fault.
+  const gaps: [number, number][] = [];
+  for (let i = 0; i <= lastIdx; i++) {
+    if (data.curve.today[i] != null) continue;
+    const g = gaps[gaps.length - 1];
+    if (g && g[1] === i - 1) g[1] = i; else gaps.push([i, i]);
+  }
+  const slotW = (X1 - X0) / slots;
   const nowLabel = nowKw == null ? 'Now · —' : `Now · ${fmt(nowKw, 2)} kW`;
   const hourX = (h: number) => X0 + (h / 24) * (X1 - X0);
   const yTicks = [0, ymax / 2, ymax];
+  const hourAnchor = (h: number) => (h === 0 ? 'start' : h === 24 ? 'end' : 'middle');
   const yesterdayNow = data.curve.yesterday[lastIdx] ?? null;
   const step = data.step_minutes || 15;
   const slotTime = (i: number) => {
@@ -533,7 +557,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   const pick = (e: React.PointerEvent<SVGSVGElement>) => {
     const box = e.currentTarget.getBoundingClientRect();
     if (!box.width) return;
-    const x = ((e.clientX - box.left) / box.width) * 720;
+    const x = ((e.clientX - box.left) / box.width) * W;
     setHover(clampSlot(Math.round(((x - X0) / (X1 - X0)) * slots - 0.5)));
   };
   const onCurveKey = (e: React.KeyboardEvent<SVGSVGElement>) => {
@@ -548,7 +572,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   };
   const hv = hover == null ? null : { x: px(hover), today: data.curve.today[hover] ?? null, yest: data.curve.yesterday[hover] ?? null };
   const curveReadout = hover == null || !hv ? null
-    : `${slotTime(hover)} · Today ${hv.today == null ? '—' : `${fmt(hv.today, 2)} kW`} · Yesterday ${hv.yest == null ? '—' : `${fmt(hv.yest, 2)} kW`}`;
+    : `${slotTime(hover)} · Today ${hv.today == null ? (hover <= lastIdx ? 'no reading' : '—') : `${fmt(hv.today, 2)} kW`} · Yesterday ${hv.yest == null ? '—' : `${fmt(hv.yest, 2)} kW`}`;
 
   const kpis: { label: string; value: string; unit: string; note: string; tip: string }[] = [
     { tip: TIPS.now, label: 'Using right now', value: fmt(nowKw, 2), unit: 'kW', note: nowKw == null ? 'No reading in the last 15 minutes' : yesterdayNow != null ? `Yesterday at this time: ${fmt(yesterdayNow, 2)} kW` : 'Live from the meter' },
@@ -606,7 +630,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
       {/* Hero + curve, side cards */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'stretch' }}>
         <section style={{ ...card, flex: '999 1 560px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: t.ink2 }}>{data.meter_only === false ? 'Energy through the meter today, so far' : 'Energy used today, so far'}<InfoTip label="today's energy" text={TIPS.hero} t={t} /></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: t.ink2 }}>{data.meter_only === false ? 'Metered today, so far' : 'Energy used today, so far'}<InfoTip label="today's energy" text={TIPS.hero} t={t} /></div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 14 }}>
             <div data-testid="hero-kwh" style={{ ...NUM, fontFamily: t.head, fontWeight: 700, fontSize: 'clamp(52px, 11vw, 84px)', lineHeight: 1, letterSpacing: '-0.03em' }}>
               {fmt(e, 1)}<span style={{ fontSize: 28, fontWeight: 500, color: t.ink2, marginLeft: 8 }}>kWh</span>
@@ -619,27 +643,32 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
           </div>
           {yesterdayLine.length > 0 && <div style={{ fontSize: 14, color: t.ink2 }}>{yesterdayLine.join(', and ')}.</div>}
 
-          <div style={{ marginTop: 14 }}>
+          <div ref={setCurveEl} data-testid="curve-wrap" style={{ marginTop: 'auto', paddingTop: 14 }}>
             <svg
-              viewBox="0 0 720 220" width="100%" role="img" tabIndex={0} data-testid="usage-curve"
+              viewBox={`0 0 ${W} ${H}`} width="100%" height={H} data-width={W} role="img" tabIndex={0} data-testid="usage-curve"
               aria-label="Power through the day: today against yesterday. Use the arrow keys to read each time."
               onPointerMove={pick} onPointerDown={pick} onPointerLeave={() => setHover(null)} onKeyDown={onCurveKey} onBlur={() => setHover(null)}
               style={{ display: 'block', touchAction: 'pan-y', cursor: 'crosshair' }}
             >
               <defs>
                 <linearGradient id="usageAmberFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={t.wait} stopOpacity="0.42" />
-                  <stop offset="100%" stopColor={t.wait} stopOpacity="0.02" />
+                  <stop offset="0%" stopColor={t.wait} stopOpacity={isDark ? 0.55 : 0.42} />
+                  <stop offset="100%" stopColor={t.wait} stopOpacity={isDark ? 0.08 : 0.02} />
                 </linearGradient>
               </defs>
+              {gaps.map(([a, b]) => (
+                <rect key={a} data-testid="curve-gap" x={X0 + a * slotW} y={YTOP} width={(b - a + 1) * slotW} height={Y0 - YTOP} fill={t.idleBg} opacity={0.7}>
+                  <title>{`No reading ${slotTime(a)} to ${slotTime(b + 1)}`}</title>
+                </rect>
+              ))}
               {yTicks.map(v => (
                 <g key={v}>
                   <line x1={X0} x2={X1} y1={py(v)} y2={py(v)} stroke={t.line2} />
-                  <text x={X0 - 6} y={py(v) + 4} textAnchor="end" fontSize="11" fill={t.ink2} fontFamily={t.body}>{`${+v.toFixed(1)} kW`}</text>
+                  <text x={X0 - 8} y={py(v) + 4} textAnchor="end" fontSize="12" fill={t.ink2} fontFamily={t.body}>{`${+v.toFixed(1)} kW`}</text>
                 </g>
               ))}
               {[0, 6, 12, 18, 24].map(h => (
-                <text key={h} x={hourX(h)} y={212} textAnchor="middle" fontSize="11" fill={t.ink2} fontFamily={t.body}>
+                <text key={h} data-testid="hour-label" x={hourX(h)} y={Y0 + 20} textAnchor={hourAnchor(h)} fontSize="12" fill={t.ink2} fontFamily={t.body}>
                   {h === 0 || h === 24 ? '12 am' : hourWord(h)}
                 </text>
               ))}
@@ -647,7 +676,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <path d={areaPath(todayRuns)} fill="url(#usageAmberFill)" />
               <path data-testid="today-line" d={linePath(todayRuns)} fill="none" stroke={t.wait} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" />
               <line x1={nowX} x2={nowX} y1={YTOP} y2={Y0} stroke={t.ink} strokeWidth="1" strokeDasharray="2 3" opacity={hv ? 0.3 : 1} />
-              <circle cx={nowX} cy={py(nowV)} r="5" fill={t.wait} stroke={t.card} strokeWidth="2.5" />
+              <circle data-testid="now-dot" cx={nowX} cy={nowY} r="5" fill={t.wait} stroke={t.card} strokeWidth="2.5" />
               {hv && (
                 <g data-testid="curve-guide" pointerEvents="none">
                   <line x1={hv.x} x2={hv.x} y1={YTOP} y2={Y0} stroke={t.ink} strokeWidth="1.2" />
@@ -656,7 +685,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
                 </g>
               )}
               {!hv && <text
-                x={nowX > 400 ? nowX - 8 : nowX + 8} y={22} textAnchor={nowX > 400 ? 'end' : 'start'}
+                x={nowX > W * 0.6 ? nowX - 8 : nowX + 8} y={nowLabelY} textAnchor={nowX > W * 0.6 ? 'end' : 'start'}
                 fontSize="12" fontWeight="600" fill={t.ink} fontFamily={t.body}
               >
                 {nowLabel}
@@ -669,8 +698,8 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 18, height: 0, borderTop: `2px dashed ${t.ink2}` }} />Yesterday
               </span>
-              <span data-testid="curve-readout" aria-live="polite" style={{ ...NUM, marginLeft: 'auto', color: curveReadout ? t.ink : t.ink2, fontWeight: curveReadout ? 600 : 400 }}>
-                {curveReadout ?? 'Point at the chart to read a time'}
+              <span data-testid="curve-readout" aria-live="polite" style={{ ...NUM, color: curveReadout ? t.ink : t.ink2, fontWeight: curveReadout ? 600 : 400 }}>
+                {curveReadout ?? 'Point at or tap the chart to read a time'}
               </span>
             </div>
           </div>

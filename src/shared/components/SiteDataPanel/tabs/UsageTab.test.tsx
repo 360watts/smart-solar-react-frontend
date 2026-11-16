@@ -68,7 +68,7 @@ describe('UsageTab', () => {
     expect(await screen.findByTestId('meter-caveat')).toHaveTextContent(
       'Meter ME0042 measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab).');
     expect(screen.getByText('Power on the metered circuits')).toBeInTheDocument();
-    expect(screen.getByText('Energy through the meter today, so far')).toBeInTheDocument();
+    expect(screen.getByText('Metered today, so far')).toBeInTheDocument();
     expect(screen.queryByText(/grid connection/)).toBeNull();
     unmount();
     apiService.getMeterUsage.mockResolvedValue(usage());
@@ -313,7 +313,7 @@ describe('UsageTab', () => {
     renderTab();
     await screen.findByTestId('hero-kwh');
     const chart = screen.getByTestId('usage-curve');
-    expect(screen.getByTestId('curve-readout')).toHaveTextContent('Point at the chart to read a time');
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('Point at or tap the chart to read a time');
     expect(screen.queryByTestId('curve-guide')).toBeNull();
     fireEvent.keyDown(chart, { key: 'Home' });
     expect(screen.getByTestId('curve-readout')).toHaveTextContent('12:00 am · Today 0.40 kW · Yesterday 0.50 kW');
@@ -322,12 +322,43 @@ describe('UsageTab', () => {
     fireEvent.keyDown(chart, { key: 'ArrowRight' });
     expect(screen.getByTestId('curve-readout')).toHaveTextContent('12:15 am · Today 0.45 kW · Yesterday 0.54 kW');
     for (let i = 0; i < 9; i++) fireEvent.keyDown(chart, { key: 'ArrowRight' });
-    expect(screen.getByTestId('curve-readout')).toHaveTextContent('2:30 am · Today — · Yesterday'); // the gap stays a gap
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('2:30 am · Today no reading · Yesterday'); // the gap stays a gap
     fireEvent.keyDown(chart, { key: 'End' });
     expect(screen.getByTestId('curve-readout')).toHaveTextContent(/^4:45 pm · Today 3\.75 kW/);
     fireEvent.keyDown(chart, { key: 'Escape' });
     expect(screen.queryByTestId('curve-guide')).toBeNull();
     expect(screen.getByText(/^Now ·/)).toBeInTheDocument();
+  });
+
+  it('lays out the axes so nothing is clipped, with headroom and gaps shaded (CH-2..4, CH-6)', async () => {
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    const hours = screen.getAllByTestId('hour-label');
+    expect(hours.map(h => h.getAttribute('text-anchor'))).toEqual(['start', 'middle', 'middle', 'middle', 'end']);
+    const svg = screen.getByTestId('usage-curve');
+    const W = Number(svg.getAttribute('data-width'));
+    expect(Number(hours[4].getAttribute('x'))).toBeLessThanOrEqual(W); // ends inside the drawing
+    // fixture max is 4.3 kW (yesterday): 4.3 x 1.1 rounds up to an even 6 kW
+    expect(screen.getByText('6 kW')).toBeInTheDocument();
+    expect(screen.queryByText('5 kW')).toBeNull();
+    const gaps = screen.getAllByTestId('curve-gap'); // slot 10 (2:30 am) is missing in the fixture
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0].querySelector('title')).toHaveTextContent('No reading 2:30 am to 2:45 am');
+    // the Now dot uses the live 8.08 kW reading, so it sits at the top of a 6 kW axis, same height as a 6 kW point
+    expect(screen.getByText('Now · 8.08 kW')).toBeInTheDocument();
+  });
+
+  it('draws at the card width so text keeps its size (CH-1)', async () => {
+    const orig = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get() { return this.dataset?.testid === 'curve-wrap' ? 360 : 0; } });
+    try {
+      renderTab();
+      await screen.findByTestId('hero-kwh');
+      await waitFor(() => expect(screen.getByTestId('usage-curve')).toHaveAttribute('viewBox', '0 0 360 220'));
+      expect(screen.getAllByTestId('hour-label')[4]).toHaveAttribute('x', '346');
+    } finally {
+      if (orig) Object.defineProperty(HTMLElement.prototype, 'clientWidth', orig);
+    }
   });
 
   it('reads out a day bar on hover or focus, against the month average (IN-3)', async () => {

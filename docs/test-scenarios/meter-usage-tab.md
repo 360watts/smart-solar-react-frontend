@@ -15,7 +15,7 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 | TV-7 | `meter_only` unknown (`undefined`/`null`, overview not loaded or old backend) | Tabs are chosen | Today's behaviour, no `usage` | unit | P0 | passing |
 | TV-16 | `meter_only` false, `has_meter` true | Tabs are chosen | Today's tabs plus `usage` last; intersected with `visibleTabs` | unit | P0 | passing |
 | TV-17 | `has_meter` false/null/undefined | Tabs are chosen | No `usage`; `meter_only` true ignores `has_meter` | unit | P0 | passing |
-| TV-18 | Inverter site with a meter, not meter-only | Usage tab opens | Heading "Power on the metered circuits" and the caveat "Meter X measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab)."; meter-only sites keep "How this site uses power" and no caveat (changed 2026-11-16: the old grid-connection wording was wrong for coim_002, whose meter is on load circuits) | unit | P1 | passing |
+| TV-18 | Inverter site with a meter, not meter-only | Usage tab opens | Heading "Power on the metered circuits", hero label "Metered today, so far" and the caveat "Meter X measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab)."; meter-only sites keep "How this site uses power" and no caveat (changed 2026-11-16: the old grid-connection wording was wrong for coim_002, whose meter is on load circuits) | unit | P1 | passing |
 | TV-19 | Inverter site with a meter, person has not clicked a tab | Overview reports `has_meter` | No auto-switch; opens on the usual tab | manual | P1 | planned |
 | TV-8 | Meter-only site | Tab bar renders | Meter-only sites show only the Usage tab; inverter sites keep their tabs | unit | P1 | passing |
 | TV-9 | Meter-only site, person has not clicked a tab | Overview reports `meter_only` | First render after the skeleton is already Usage (derived via `resolveTab`, no effect) | component | P1 | passing |
@@ -135,4 +135,16 @@ EM26 firmware up to v2.7.2 sends PF 1.000, 50.00 Hz and Q 0 as fixed values. The
 | IN-2 | Today/yesterday chart | Pointer over the chart, or focus it and use the arrow keys (Home/End, Escape clears) | Guide line and dots at that time; readout "2:15 pm · Today 1.23 kW · Yesterday 0.98 kW"; the Now label hides meanwhile | unit | P1 | passing |
 | IN-3 | Energy by day bars | Hover or focus a bar | That bar lights up; readout gives the day, its kWh and the difference from this month's daily average (today: "so far") | unit | P1 | passing |
 | IN-4 | Heat map | Hover a cell | Readout gives day, hour and kW in place of "Busiest around" | unit | P2 | passing |
-| IN-5 | Phone width, touch | Tap an info button | Tooltip opens and fits the screen; tap elsewhere closes it | manual | P2 | planned |
+| IN-5 | Phone width, touch | Tap an info button | Tooltip opens and fits the screen; tap elsewhere closes it | manual | P2 | planned (deployed `b1f99af`, Nov 16) |
+
+## Chart layout (added 2026-11-16, from a screenshot review)
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| CH-1 | Card at any width (phone to wide monitor) | Chart renders | Drawn at the card's real width (ResizeObserver), so axis text stays 12 px instead of scaling with the card | unit | P0 | passing |
+| CH-2 | Hour labels | Chart renders | First "12 am" starts at the left edge, last "12 am" ends at the right edge (never clipped), the rest centred | unit | P0 | passing |
+| CH-3 | Data maximum 2.0 kW | Chart renders | Y axis has headroom (tops at 3 kW), so peaks never touch or pass the top line | unit | P1 | passing |
+| CH-4 | Today has missing slots before the latest reading (e.g. the 11:38 outage) | Chart renders | Each gap is lightly shaded with a "No reading" title; the readout says "Today no reading" there | unit | P1 | passing |
+| CH-5 | Dark mode | Chart renders | Area under today's line is visible (stronger dark fill) | manual | P2 | planned |
+| CH-6 | Live meter reading present | Chart renders | The Now dot sits at the live kW (same value as its label), label just above the dot; falls back to the last 15-min point when there is no live reading | unit | P1 | passing |
+| CH-7 | Card taller than its content (side cards stretch it) | Renders | Chart sits at the bottom of the card, no empty band under the legend; hint reads "Point at or tap the chart to read a time" next to the legend | unit | P2 | passing |
