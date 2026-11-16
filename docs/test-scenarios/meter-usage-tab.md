@@ -15,7 +15,7 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 | TV-7 | `meter_only` unknown (`undefined`/`null`, overview not loaded or old backend) | Tabs are chosen | Today's behaviour, no `usage` | unit | P0 | passing |
 | TV-16 | `meter_only` false, `has_meter` true | Tabs are chosen | Today's tabs plus `usage` last; intersected with `visibleTabs` | unit | P0 | passing |
 | TV-17 | `has_meter` false/null/undefined | Tabs are chosen | No `usage`; `meter_only` true ignores `has_meter` | unit | P0 | passing |
-| TV-18 | Inverter site with a meter, not meter-only | Usage tab opens | Calm caveat line under the heading ("Measured at the meter. If the meter sits at the grid connection, ..."); absent when meter-only | unit | P1 | passing |
+| TV-18 | Inverter site with a meter, not meter-only | Usage tab opens | Heading "Power on the metered circuits" and the caveat "Meter X measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab)."; meter-only sites keep "How this site uses power" and no caveat (changed 2026-11-16: the old grid-connection wording was wrong for coim_002, whose meter is on load circuits) | unit | P1 | passing |
 | TV-19 | Inverter site with a meter, person has not clicked a tab | Overview reports `has_meter` | No auto-switch; opens on the usual tab | manual | P1 | planned |
 | TV-8 | Meter-only site | Tab bar renders | Meter-only sites show only the Usage tab; inverter sites keep their tabs | unit | P1 | passing |
 | TV-9 | Meter-only site, person has not clicked a tab | Overview reports `meter_only` | First render after the skeleton is already Usage (derived via `resolveTab`, no effect) | component | P1 | passing |
@@ -118,3 +118,21 @@ Dashboard half of `smart-solar-django-backend/docs/superpowers/specs/2026-10-08-
 4. Sign in as a viewer assigned to the meter-only site: Usage is there; an unassigned site is refused. (planned)
 5. Open on a phone: stacking, sideways scrolling and the 44 px targets. (planned)
 6. Check dark mode and a meter that has stopped reporting (amber wording). (planned)
+
+## Measured values, wording and interaction (added 2026-11-16)
+
+EM26 firmware up to v2.7.2 sends PF 1.000, 50.00 Hz and Q 0 as fixed values. The backend's `measured` flags (backend scenarios M1–M4) say when.
+
+| ID | Given | When | Then | Type | Pri | Status |
+|---|---|---|---|---|---|---|
+| MV-1 | `measured.power_factor` false | Health renders | Power factor reads "Not measured" with a grey pill, no marker on the bar, and a note that the meter sends a fixed 1.00 | unit | P0 | passing |
+| MV-2 | `measured.frequency` false | Health renders | Frequency reads "Not measured", same treatment | unit | P0 | passing |
+| MV-3 | Either flag false | Raw table renders | The row keeps the meter's values, greyed, and the Total column reads "Not measured"; Reactive power follows the power factor flag | unit | P0 | passing |
+| MV-4 | Flags true, null or missing (older backend) | Tab renders | Values judged as before | unit | P0 | passing |
+| WD-1 | Latest reading shown | Raw readings heading | "Latest reading, per phase" and "…ago (time). The page checks for a new one every 30 seconds." (not "refreshes every 30 seconds": the meter itself reports every few seconds) | unit | P1 | passing |
+| WD-2 | Recent readings area | Rendered | Summary "Last 10 five-minute averages" (they are 5-min averages, not single readings); time column "5 min from" | unit | P1 | passing |
+| IN-1 | Info buttons on the hero, the four side cards, the health items, the heat map, Energy by day and the raw table | Hover, focus or tap | A tooltip explains how the figure is worked out; Escape or leaving closes it | unit | P1 | passing |
+| IN-2 | Today/yesterday chart | Pointer over the chart, or focus it and use the arrow keys (Home/End, Escape clears) | Guide line and dots at that time; readout "2:15 pm · Today 1.23 kW · Yesterday 0.98 kW"; the Now label hides meanwhile | unit | P1 | passing |
+| IN-3 | Energy by day bars | Hover or focus a bar | That bar lights up; readout gives the day, its kWh and the difference from this month's daily average (today: "so far") | unit | P1 | passing |
+| IN-4 | Heat map | Hover a cell | Readout gives day, hour and kW in place of "Busiest around" | unit | P2 | passing |
+| IN-5 | Phone width, touch | Tap an info button | Tooltip opens and fits the screen; tap elsewhere closes it | manual | P2 | planned |

@@ -38,6 +38,8 @@ export interface MeterUsage {
   meter_only: boolean;
   has_meter: boolean;
   meter: { device_serial: string | null; last_reading_at: string | null; age_seconds: number | null };
+  /** False when the meter sends a fixed value (EM26 up to v2.7.2: 50.00 Hz, PF 1.000); null or missing = unknown. */
+  measured?: { frequency: boolean | null; power_factor: boolean | null };
   step_minutes: number;
   today: {
     date: string;

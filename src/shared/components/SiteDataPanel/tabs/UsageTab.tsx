@@ -6,7 +6,7 @@ import { EmptyState } from '../../Feedback';
  * Design: smart-solar-django-backend/docs/superpowers/specs/2026-10-08-meter-usage-tab-design.md
  * House style: UI_GUIDE.md (plain copy, amber never red, tokens from useTokens).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { apiService } from '../../../../services/api';
 import type { CtMeterReading } from '../../../../services/api';
 import { useTokens } from '../../../../features/staff/siteHardware/ui';
@@ -79,10 +79,19 @@ export function liveKw(ct: Partial<CtMeterReading> | null | undefined, nowMs: nu
 export interface HealthItem {
   label: string; value: string; unit: string; status: string; ok: boolean; note: string;
   lo: number; hi: number; a: number; b: number; v: number | null;
+  /** The meter sends a fixed value here, not a measurement. */
+  fixed?: boolean;
 }
 
+type Measured = MeterUsage['measured'];
+
+const notMeasured = (label: string, unit: string, lo: number, hi: number, a: number, b: number, fixedText: string): HealthItem => ({
+  label, unit, lo, hi, a, b, v: null, value: 'Not measured', ok: false, fixed: true, status: 'Not measured',
+  note: `This meter sends a fixed ${fixedText} instead of measuring it. A firmware update will fix this.`,
+});
+
 /** Four range bars from the latest meter reading. Anything missing reads "—", never NaN. */
-export function computeHealth(ct: Partial<CtMeterReading> | null | undefined) {
+export function computeHealth(ct: Partial<CtMeterReading> | null | undefined, measured?: Measured) {
   const volts = nums(ct, 'voltage');
   const v = mean(volts);
   const voltage: HealthItem = {
@@ -110,7 +119,7 @@ export function computeHealth(ct: Partial<CtMeterReading> | null | undefined) {
 
   const pfRaw = ct?.power_factor_total ?? mean(nums(ct, 'power_factor'));
   const pfv = pfRaw == null || !Number.isFinite(pfRaw) ? null : Math.abs(pfRaw);
-  const pf: HealthItem = {
+  const pf: HealthItem = measured?.power_factor === false ? notMeasured('Power factor', '', 0.6, 1, 0.9, 1, '1.00') : {
     label: 'Power factor', unit: '', lo: 0.6, hi: 1, a: 0.9, b: 1, v: pfv,
     value: pfv == null ? '—' : pfv.toFixed(2),
     ok: pfv != null && pfv >= 0.9,
@@ -119,7 +128,7 @@ export function computeHealth(ct: Partial<CtMeterReading> | null | undefined) {
   };
 
   const fv = mean(nums(ct, 'frequency'));
-  const frequency: HealthItem = {
+  const frequency: HealthItem = measured?.frequency === false ? notMeasured('Frequency', 'Hz', 48.5, 51.5, 49.5, 50.5, '50.00 Hz') : {
     label: 'Frequency', unit: 'Hz', lo: 48.5, hi: 51.5, a: 49.5, b: 50.5, v: fv,
     value: fv == null ? '—' : fv.toFixed(2),
     ok: fv != null && fv >= 49.5 && fv <= 50.5,
@@ -150,6 +159,47 @@ const RAW_ROWS: { label: string; key: string; unit: string; dp: number; total: '
   { label: 'Apparent power', key: 'apparent_power', unit: 'VA', dp: 0, total: 'ownOrSum' },
   { label: 'Power factor', key: 'power_factor', unit: '', dp: 2, total: 'own' },
 ];
+
+// ── Info tooltip ───────────────────────────────────────────────────────────────
+
+type Tokens = ReturnType<typeof useTokens>;
+
+/** A small "i" button: hover, focus or tap shows the explanation; Escape, blur or leaving closes it. */
+export function InfoTip({ label, text, t }: { label: string; text: string; t: Tokens }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', verticalAlign: 'middle' }} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button" aria-label={`About ${label}`} aria-describedby={open ? id : undefined}
+        onClick={() => setOpen(true)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
+        style={{ width: 18, height: 18, borderRadius: 999, border: `1px solid ${t.line}`, background: 'transparent', color: t.ink2, fontSize: 11, fontWeight: 700, lineHeight: '16px', padding: 0, cursor: 'help', fontFamily: 'inherit' }}
+      >i</button>
+      {open && (
+        <span
+          role="tooltip" id={id}
+          style={{ position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 30, width: 'max-content', maxWidth: 'min(260px, 72vw)', padding: '10px 12px', borderRadius: 12, background: t.ink, color: t.card, fontSize: 13, fontWeight: 400, lineHeight: 1.45, textAlign: 'left', whiteSpace: 'normal', boxShadow: '0 6px 24px rgba(0,0,0,.18)' }}
+        >{text}</span>
+      )}
+    </span>
+  );
+}
+
+const TIPS = {
+  hero: 'All the energy the meter has measured since midnight, site time, added up from 5-minute averages. The chip compares it with yesterday up to the same time.',
+  now: "The meter's latest total power, if it is less than 15 minutes old.",
+  peak: 'The highest 5-minute average today. Short spikes inside those 5 minutes are smoothed out.',
+  avg: 'The average power since midnight. Multiply by the hours so far to get the energy used.',
+  base: 'The typical power between 1 and 5 am over the last 7 nights: what stays on when nobody is using anything (fridge, standby, routers).',
+  voltage: 'The average of the three phase voltages. In India the normal supply is 230 V, allowed from 207 to 253 V.',
+  balance: 'How far the busiest or quietest phase is from the average current. Under 10% is balanced.',
+  pf: 'How much of the current does useful work. 1.00 is perfect; motors and pumps pull it down. Below 0.90 the wiring carries extra current for nothing.',
+  frequency: 'The grid frequency. 50 Hz is normal; it drifts a little with demand on the grid.',
+  heat: 'Each square is the average power in that hour. A stronger colour means more power; grey means no reading.',
+  days: 'Energy measured on each of the last 14 days. Today is still counting.',
+  raw: "The meter's own figures from its latest reading, before any rounding into averages.",
+} as const;
 
 // ── Curve geometry ─────────────────────────────────────────────────────────────
 
@@ -187,6 +237,9 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   const [open, setOpen] = useState(false); // the Recent readings <details>
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
+  const [hover, setHover] = useState<number | null>(null);        // curve slot under the pointer or keyboard
+  const [dayHover, setDayHover] = useState<number | null>(null);  // Energy by day bar
+  const [heat, setHeat] = useState<[number, number] | null>(null); // heat map [row, hour]
 
   useEffect(() => {
     let alive = true;
@@ -234,7 +287,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   const sub: React.CSSProperties = { margin: 0, fontSize: 14, color: t.ink2 };
   const wrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 22, fontFamily: t.body, color: t.ink };
 
-  const health = computeHealth(ctLatest);
+  const health = computeHealth(ctLatest, data?.measured);
   const waiting = <div style={{ fontSize: 14, color: t.ink2 }}>Waiting for the first meter reading</div>;
   const currents = [1, 2, 3].map(i => ({ name: `Phase ${i}`, amps: (ctLatest as any)?.[`current_l${i}`] as number | null | undefined, color: PHASE_COLORS[`L${i}` as 'L1' | 'L2' | 'L3'] }));
   const havePhases = currents.filter(c => c.amps != null).length >= 2;
@@ -266,18 +319,18 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
                 return (
                   <div key={id} data-testid={`health-${id}`}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{h.label}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600 }}>{h.label}<InfoTip label={h.label} text={TIPS[id]} t={t} /></span>
                       {h.status && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 999, background: h.ok ? t.goodBg : t.waitBg, color: h.ok ? t.goodInk : t.waitInk, fontSize: 12, fontWeight: 600 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 999, background: h.fixed ? t.idleBg : h.ok ? t.goodBg : t.waitBg, color: h.fixed ? t.ink2 : h.ok ? t.goodInk : t.waitInk, fontSize: 12, fontWeight: 600 }}>
                           <span style={{ width: 6, height: 6, borderRadius: 999, background: 'currentColor' }} />{h.status}
                         </span>
                       )}
                     </div>
-                    <div style={{ ...NUM, fontFamily: t.head, fontWeight: 700, fontSize: 26, letterSpacing: '-0.02em' }}>
+                    <div style={{ ...NUM, fontFamily: t.head, fontWeight: 700, fontSize: h.fixed ? 20 : 26, letterSpacing: '-0.02em', color: h.fixed ? t.ink2 : t.ink }}>
                       {h.value}
-                      {h.value !== '—' && h.unit && <span style={{ fontSize: 14, fontWeight: 500, color: t.ink2, marginLeft: 4 }}>{h.unit}</span>}
+                      {h.value !== '—' && !h.fixed && h.unit && <span style={{ fontSize: 14, fontWeight: 500, color: t.ink2, marginLeft: 4 }}>{h.unit}</span>}
                     </div>
-                    <div style={{ position: 'relative', height: 10, borderRadius: 5, background: t.idleBg, margin: '10px 0 6px' }}>
+                    <div style={{ position: 'relative', height: 10, borderRadius: 5, background: t.idleBg, margin: '10px 0 6px', opacity: h.fixed ? 0.4 : 1 }}>
                       <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(h.a)}%`, width: `${pct(h.b) - pct(h.a)}%`, borderRadius: 5, background: t.good, opacity: 0.3 }} />
                       {h.v != null && (
                         <div style={{ position: 'absolute', top: -3, width: 4, height: 16, borderRadius: 2, background: t.ink, left: `${Math.max(0, Math.min(98, pct(h.v) - 0.5))}%` }} />
@@ -308,10 +361,10 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
       {/* Raw readings */}
       <section style={card}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-          <h2 style={{ ...h2, margin: 0 }}>Raw readings</h2>
+          <h2 style={{ ...h2, margin: 0, display: 'inline-flex', alignItems: 'center', gap: 8 }}>Latest reading, per phase<InfoTip label="the latest reading" text={TIPS.raw} t={t} /></h2>
           {ctLatest && (
             <span style={{ fontSize: 14, color: t.ink2 }}>
-              {`Exactly what the meter reported${ctAge != null ? `, ${ago(ctAge)}` : ''} (${clock(ctLatest.timestamp, tz, true)}). Refreshes every 30 seconds.`}
+              {`Sent by the meter${ctAge != null ? ` ${ago(ctAge)}` : ''} (${clock(ctLatest.timestamp, tz, true)}). The page checks for a new one every 30 seconds.`}
             </span>
           )}
         </div>
@@ -341,12 +394,16 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
                     : r.total === 'none' ? [null, '']
                     : hasOwn ? [own as number, '']
                     : r.total === 'ownOrSum' ? [sum(present), ' sum'] : [null, ''];
-                  const totalText = fmt(total, r.dp) + (total != null ? tag : '');
+                  const flag = r.key === 'frequency' ? data?.measured?.frequency
+                    : r.key === 'power_factor' || r.key === 'reactive_power' ? data?.measured?.power_factor : null;
+                  const fixed = flag === false;
+                  const totalText = fixed ? 'Not measured' : fmt(total, r.dp) + (total != null ? tag : '');
+                  const fixedTip = fixed ? 'A fixed value the meter sends, not a measurement. A firmware update will fix this.' : undefined;
                   return (
-                    <tr key={r.key} style={{ borderTop: `1px solid ${t.line2}`, textAlign: 'right' }}>
+                    <tr key={r.key} data-fixed={fixed ? 'true' : undefined} style={{ borderTop: `1px solid ${t.line2}`, textAlign: 'right', color: fixed ? t.ink2 : undefined }}>
                       <th scope="row" style={{ textAlign: 'left', padding: '11px 10px', fontWeight: 600 }}>{r.label}</th>
-                      {vals.map((v, i) => <td key={i} style={{ padding: '11px 10px' }}>{fmt(v, r.dp)}</td>)}
-                      <td style={{ padding: '11px 10px', fontWeight: 700 }}>{totalText}</td>
+                      {vals.map((v, i) => <td key={i} title={fixedTip} style={{ padding: '11px 10px' }}>{fmt(v, r.dp)}</td>)}
+                      <td title={fixedTip} style={{ padding: '11px 10px', fontWeight: fixed ? 500 : 700 }}>{totalText}</td>
                       <td style={{ textAlign: 'left', padding: '11px 10px', color: t.ink2 }}>{r.unit}</td>
                     </tr>
                   );
@@ -357,8 +414,8 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
         )}
 
         <details style={{ marginTop: 18 }} onToggle={e => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
-          <summary style={{ cursor: 'pointer', padding: '12px 0', fontSize: 14, fontWeight: 600 }}>Recent readings (last 10)</summary>
-          {serial && <p style={{ margin: '0 0 10px', fontSize: 13, color: t.ink2 }}>{`Meter ${serial}. Refreshes every minute while open.`}</p>}
+          <summary style={{ cursor: 'pointer', padding: '12px 0', fontSize: 14, fontWeight: 600 }}>Last 10 five-minute averages</summary>
+          {serial && <p style={{ margin: '0 0 10px', fontSize: 13, color: t.ink2 }}>{`Meter ${serial}, last hour. Updates every minute while open.`}</p>}
           {recentRows.length === 0 ? (
             <p style={{ ...sub, fontSize: 13 }}>No readings in the last hour.</p>
           ) : (
@@ -366,7 +423,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <table aria-label="Recent readings" style={{ ...NUM, width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ color: t.ink2 }}>
-                    <th scope="col" style={{ ...th, textAlign: 'left' }}>Time</th>
+                    <th scope="col" style={{ ...th, textAlign: 'left' }}>5 min from</th>
                     <th scope="col" style={th}>Power (kW)</th>
                     <th scope="col" style={th}>V1 / V2 / V3</th>
                     <th scope="col" style={th}>A1 / A2 / A3</th>
@@ -467,15 +524,40 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
   const hourX = (h: number) => X0 + (h / 24) * (X1 - X0);
   const yTicks = [0, ymax / 2, ymax];
   const yesterdayNow = data.curve.yesterday[lastIdx] ?? null;
+  const step = data.step_minutes || 15;
+  const slotTime = (i: number) => {
+    const m = i * step, h = Math.floor(m / 60) % 24;
+    return `${h % 12 || 12}:${String(m % 60).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+  };
+  const clampSlot = (i: number) => Math.max(0, Math.min(slots - 1, i));
+  const pick = (e: React.PointerEvent<SVGSVGElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    if (!box.width) return;
+    const x = ((e.clientX - box.left) / box.width) * 720;
+    setHover(clampSlot(Math.round(((x - X0) / (X1 - X0)) * slots - 0.5)));
+  };
+  const onCurveKey = (e: React.KeyboardEvent<SVGSVGElement>) => {
+    if (e.key === 'Escape') { setHover(null); return; }
+    const moves: Record<string, (h: number) => number> = {
+      ArrowLeft: h => h - 1, ArrowRight: h => h + 1, Home: () => 0, End: () => Math.max(0, lastIdx),
+    };
+    const mv = moves[e.key];
+    if (!mv) return;
+    e.preventDefault();
+    setHover(h => clampSlot(mv(h ?? Math.max(0, lastIdx))));
+  };
+  const hv = hover == null ? null : { x: px(hover), today: data.curve.today[hover] ?? null, yest: data.curve.yesterday[hover] ?? null };
+  const curveReadout = hover == null || !hv ? null
+    : `${slotTime(hover)} · Today ${hv.today == null ? '—' : `${fmt(hv.today, 2)} kW`} · Yesterday ${hv.yest == null ? '—' : `${fmt(hv.yest, 2)} kW`}`;
 
-  const kpis: { label: string; value: string; unit: string; note: string }[] = [
-    { label: 'Using right now', value: fmt(nowKw, 2), unit: 'kW', note: nowKw == null ? 'No reading in the last 15 minutes' : yesterdayNow != null ? `Yesterday at this time: ${fmt(yesterdayNow, 2)} kW` : 'Live from the meter' },
+  const kpis: { label: string; value: string; unit: string; note: string; tip: string }[] = [
+    { tip: TIPS.now, label: 'Using right now', value: fmt(nowKw, 2), unit: 'kW', note: nowKw == null ? 'No reading in the last 15 minutes' : yesterdayNow != null ? `Yesterday at this time: ${fmt(yesterdayNow, 2)} kW` : 'Live from the meter' },
     {
-      label: 'Highest demand today', value: fmt(today.peak_kw, 2), unit: 'kW',
+      tip: TIPS.peak, label: 'Highest demand today', value: fmt(today.peak_kw, 2), unit: 'kW',
       note: today.peak_kw == null ? 'No readings yet today' : `At ${clock(today.peak_at, tz)}${today.yesterday_peak_kw != null ? `. Yesterday: ${fmt(today.yesterday_peak_kw, 2)} kW` : ''}`,
     },
-    { label: 'Average load today', value: fmt(today.avg_kw, 2), unit: 'kW', note: today.avg_kw == null ? 'No readings yet today' : 'Since midnight' },
-    { label: 'Overnight base load', value: fmt(today.base_load_kw, 2), unit: 'kW', note: today.base_load_kw == null ? 'Needs a few nights of readings' : 'Between 1 and 5 am, over the last week' },
+    { tip: TIPS.avg, label: 'Average load today', value: fmt(today.avg_kw, 2), unit: 'kW', note: today.avg_kw == null ? 'No readings yet today' : 'Since midnight' },
+    { tip: TIPS.base, label: 'Overnight base load', value: fmt(today.base_load_kw, 2), unit: 'kW', note: today.base_load_kw == null ? 'Needs a few nights of readings' : 'Between 1 and 5 am, over the last week' },
   ];
 
   // Heat strip
@@ -489,13 +571,22 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
 
   // 14-day bars
   const maxDay = Math.max(1, ...data.days.map(d => d.kwh ?? 0));
+  const dayIdx = dayHover ?? data.days.length - 1;
+  const dayPick = data.days[dayIdx];
+  const avgDay = data.month.avg_day_kwh;
+  const dayReadout = !dayPick ? '' : dayPick.kwh == null ? `${dayLabel(dayPick.date)} · no reading`
+    : dayIdx === data.days.length - 1 ? `Today · ${fmt(dayPick.kwh, 1)} kWh so far`
+    : `${dayLabel(dayPick.date)} · ${fmt(dayPick.kwh, 1)} kWh${avgDay != null ? `, ${fmt(Math.abs(dayPick.kwh - avgDay), 1)} kWh ${dayPick.kwh >= avgDay ? 'above' : 'below'} this month's daily average` : ''}`;
+  const heatV = heat == null ? null : data.heatmap.kw[heat[0]]?.[heat[1]] ?? null;
+  const heatReadout = heat == null ? null
+    : `${dayLabel(data.heatmap.dates[heat[0]])}, ${hourWord(heat[1])} · ${heatV == null ? 'no reading' : `${heatV.toFixed(2)} kW`}`;
 
 
   return (
     <div style={wrap}>
       {/* Header strip */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <h2 style={{ ...h2, margin: 0, fontSize: 24, letterSpacing: '-0.02em' }}>How this site uses power</h2>
+        <h2 style={{ ...h2, margin: 0, fontSize: 24, letterSpacing: '-0.02em' }}>{data.meter_only === false ? 'Power on the metered circuits' : 'How this site uses power'}</h2>
         <div
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 999, fontSize: 14, fontWeight: 600,
@@ -508,14 +599,14 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
       </div>
       {data.meter_only === false && (
         <p data-testid="meter-caveat" style={{ ...sub, margin: '-6px 0 0' }}>
-          Measured at the meter. If the meter sits at the grid connection, this is the energy the site draws from the grid.
+          {`${serial ? `Meter ${serial}` : 'The meter'} measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab).`}
         </p>
       )}
 
       {/* Hero + curve, side cards */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'stretch' }}>
         <section style={{ ...card, flex: '999 1 560px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: t.ink2 }}>Energy used today, so far</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: t.ink2 }}>{data.meter_only === false ? 'Energy through the meter today, so far' : 'Energy used today, so far'}<InfoTip label="today's energy" text={TIPS.hero} t={t} /></div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 14 }}>
             <div data-testid="hero-kwh" style={{ ...NUM, fontFamily: t.head, fontWeight: 700, fontSize: 'clamp(52px, 11vw, 84px)', lineHeight: 1, letterSpacing: '-0.03em' }}>
               {fmt(e, 1)}<span style={{ fontSize: 28, fontWeight: 500, color: t.ink2, marginLeft: 8 }}>kWh</span>
@@ -529,7 +620,12 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
           {yesterdayLine.length > 0 && <div style={{ fontSize: 14, color: t.ink2 }}>{yesterdayLine.join(', and ')}.</div>}
 
           <div style={{ marginTop: 14 }}>
-            <svg viewBox="0 0 720 220" width="100%" role="img" aria-label="Power through the day: today against yesterday" style={{ display: 'block' }}>
+            <svg
+              viewBox="0 0 720 220" width="100%" role="img" tabIndex={0} data-testid="usage-curve"
+              aria-label="Power through the day: today against yesterday. Use the arrow keys to read each time."
+              onPointerMove={pick} onPointerDown={pick} onPointerLeave={() => setHover(null)} onKeyDown={onCurveKey} onBlur={() => setHover(null)}
+              style={{ display: 'block', touchAction: 'pan-y', cursor: 'crosshair' }}
+            >
               <defs>
                 <linearGradient id="usageAmberFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={t.wait} stopOpacity="0.42" />
@@ -550,14 +646,21 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <path data-testid="yesterday-line" d={linePath(yestRuns)} fill="none" stroke={t.ink2} strokeWidth="1.6" strokeDasharray="4 4" />
               <path d={areaPath(todayRuns)} fill="url(#usageAmberFill)" />
               <path data-testid="today-line" d={linePath(todayRuns)} fill="none" stroke={t.wait} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" />
-              <line x1={nowX} x2={nowX} y1={YTOP} y2={Y0} stroke={t.ink} strokeWidth="1" strokeDasharray="2 3" />
+              <line x1={nowX} x2={nowX} y1={YTOP} y2={Y0} stroke={t.ink} strokeWidth="1" strokeDasharray="2 3" opacity={hv ? 0.3 : 1} />
               <circle cx={nowX} cy={py(nowV)} r="5" fill={t.wait} stroke={t.card} strokeWidth="2.5" />
-              <text
+              {hv && (
+                <g data-testid="curve-guide" pointerEvents="none">
+                  <line x1={hv.x} x2={hv.x} y1={YTOP} y2={Y0} stroke={t.ink} strokeWidth="1.2" />
+                  {hv.yest != null && <circle cx={hv.x} cy={py(hv.yest)} r="4" fill={t.card} stroke={t.ink2} strokeWidth="2" />}
+                  {hv.today != null && <circle cx={hv.x} cy={py(hv.today)} r="5" fill={t.wait} stroke={t.card} strokeWidth="2" />}
+                </g>
+              )}
+              {!hv && <text
                 x={nowX > 400 ? nowX - 8 : nowX + 8} y={22} textAnchor={nowX > 400 ? 'end' : 'start'}
                 fontSize="12" fontWeight="600" fill={t.ink} fontFamily={t.body}
               >
                 {nowLabel}
-              </text>
+              </text>}
             </svg>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 13, color: t.ink2, marginTop: 2 }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -566,6 +669,9 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 18, height: 0, borderTop: `2px dashed ${t.ink2}` }} />Yesterday
               </span>
+              <span data-testid="curve-readout" aria-live="polite" style={{ ...NUM, marginLeft: 'auto', color: curveReadout ? t.ink : t.ink2, fontWeight: curveReadout ? 600 : 400 }}>
+                {curveReadout ?? 'Point at the chart to read a time'}
+              </span>
             </div>
           </div>
         </section>
@@ -573,7 +679,7 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
         <aside style={{ flex: '1 1 280px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
           {kpis.map(k => (
             <div key={k.label} data-testid="kpi-card" style={{ background: t.card, border: `1px solid ${t.line}`, borderRadius: 18, padding: '16px 20px', flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.ink2 }}>{k.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: t.ink2 }}>{k.label}<InfoTip label={k.label} text={k.tip} t={t} /></div>
               <div style={{ ...NUM, fontFamily: t.head, fontWeight: 700, fontSize: 32, letterSpacing: '-0.02em', margin: '2px 0' }}>
                 {k.value}
                 {k.value !== '—' && <span style={{ fontSize: 16, fontWeight: 500, color: t.ink2, marginLeft: 5 }}>{k.unit}</span>}
@@ -587,11 +693,11 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
       {/* Heat strip + 14-day bars */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'stretch' }}>
         <section style={{ ...card, flex: '999 1 560px' }}>
-          <h2 style={h2}>When this site uses power</h2>
+          <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>{data.meter_only === false ? 'When these circuits use power' : 'When this site uses power'}<InfoTip label="the heat map" text={TIPS.heat} t={t} /></h2>
           <p style={{ ...sub, marginBottom: 16 }}>The last 14 days, hour by hour. A stronger colour means more power.</p>
           <div style={{ overflowX: 'auto' }}>
             <div
-              style={{ minWidth: 560 }} role="img"
+              style={{ minWidth: 560 }} role="img" onMouseLeave={() => setHeat(null)}
               aria-label={`Heat map of power use over the last 14 days, hour by hour.${busiest != null ? ` Busiest around ${hourWord(busiest)}.` : ''}`}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '56px repeat(24, minmax(0, 1fr))', gap: 3, alignItems: 'center' }}>
@@ -609,8 +715,9 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
                       <div
                         key={h}
                         data-testid="heat-cell"
+                        onMouseEnter={() => setHeat([r, h])}
                         title={`${dayLabel(date)}, ${hourWord(h)} · ${v == null ? 'no reading' : `${v.toFixed(2)} kW`}`}
-                        style={{ height: 17, borderRadius: 4, background: v == null ? t.idleBg : ramp(stops, v / heatMax) }}
+                        style={{ height: 17, borderRadius: 4, background: v == null ? t.idleBg : ramp(stops, v / heatMax), outline: heat && heat[0] === r && heat[1] === h ? `2px solid ${t.ink}` : 'none', outlineOffset: -1 }}
                       />
                     );
                   })}
@@ -622,20 +729,22 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
             <span>Less</span>
             <span style={{ width: 120, height: 10, borderRadius: 5, background: `linear-gradient(90deg, ${stops.map(c => `rgb(${c.join(',')})`).join(', ')})` }} />
             <span>More</span>
-            {busiest != null && <span style={{ marginLeft: 'auto' }}>{`Busiest around ${hourWord(busiest)}.`}</span>}
+            <span data-testid="heat-readout" style={{ ...NUM, marginLeft: 'auto', color: heatReadout ? t.ink : t.ink2, fontWeight: heatReadout ? 600 : 400 }}>
+              {heatReadout ?? (busiest != null ? `Busiest around ${hourWord(busiest)}.` : '')}
+            </span>
           </div>
         </section>
 
         <section style={{ ...card, flex: '1 1 340px' }}>
-          <h2 style={h2}>Energy by day</h2>
+          <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>Energy by day<InfoTip label="energy by day" text={TIPS.days} t={t} /></h2>
           <p style={{ ...sub, marginBottom: 14 }}>Last 14 days, in kWh.</p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 170, borderBottom: `1px solid ${t.line}` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 170, borderBottom: `1px solid ${t.line}` }} onMouseLeave={() => setDayHover(null)}>
             {data.days.map((d, i) => {
               const isToday = i === data.days.length - 1;
               return (
-                <div key={d.date} data-testid="day-bar" role="img" aria-label={`${dayLabel(d.date)}: ${d.kwh == null ? 'no reading' : `${fmt(d.kwh, 1)} kWh`}`} data-today={isToday ? 'true' : 'false'} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', height: '100%', gap: 4 }}>
+                <div key={d.date} data-testid="day-bar" role="img" aria-label={`${dayLabel(d.date)}: ${d.kwh == null ? 'no reading' : `${fmt(d.kwh, 1)} kWh`}`} data-today={isToday ? 'true' : 'false'} tabIndex={0} onMouseEnter={() => setDayHover(i)} onFocus={() => setDayHover(i)} onBlur={() => setDayHover(null)} style={{ flex: 1, minWidth: 0, outlineOffset: 2, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', height: '100%', gap: 4 }}>
                   <span style={{ ...NUM, fontSize: 10, color: t.ink2 }}>{d.kwh == null ? '' : d.kwh.toFixed(0)}</span>
-                  <div style={{ width: '100%', height: d.kwh == null ? 0 : Math.round((d.kwh / maxDay) * 130), borderRadius: '6px 6px 2px 2px', background: t.wait, opacity: isToday ? 1 : 0.38 }} />
+                  <div style={{ width: '100%', height: d.kwh == null ? 0 : Math.round((d.kwh / maxDay) * 130), borderRadius: '6px 6px 2px 2px', background: t.wait, opacity: (dayHover == null ? isToday : dayHover === i) ? 1 : 0.38, transition: 'opacity .15s' }} />
                 </div>
               );
             })}
@@ -645,7 +754,8 @@ const UsageTab: React.FC<Props> = ({ siteId, isDark, ctLatest }) => {
               <span key={d.date} style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 10, color: t.ink2 }}>{Number(d.date.slice(8))}</span>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.line2}`, fontSize: 14 }}>
+          <div data-testid="day-readout" aria-live="polite" style={{ ...NUM, marginTop: 10, fontSize: 13, fontWeight: 600, color: t.ink }}>{dayReadout}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 14, borderTop: `1px solid ${t.line2}`, fontSize: 14 }}>
             <span style={{ color: t.ink2 }}>Daily average this month</span>
             <span style={{ ...NUM, fontWeight: 600 }}>{`${fmt(data.month.avg_day_kwh, 1)} kWh`}</span>
           </div>

@@ -1432,14 +1432,14 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         <ChartCard
           title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
           subtitle={showVsActual
-            ? `Historical scored forecasts (15-min slots · IST) · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
+            ? `Inverter (backup) side only, not grid-direct circuits · 15-min slots · IST · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
             : (() => {
                 if (!loadForecast.length) return 'Predictive load forecasting';
                 const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
                 if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
                 if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
                 return firstMethod;
-              })() + ' · drag to zoom'
+              })() + ' · inverter (backup) side only · drag to zoom'
           }
           isDark={isDark}
           isLive={false}
@@ -1504,8 +1504,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     datasets: [
                       { label: 'P10', data: vsActualChartData.map(d => d.p10), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false },
                       { label: 'P10–P90 Band', data: vsActualChartData.map(d => d.p90), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.1)' },
-                      { label: 'Historical Forecast (P50)', data: vsActualChartData.map(d => d.p50), borderColor: '#ef4444', borderWidth: 2, tension: 0.4, pointRadius: 0, fill: false, borderDash: [4, 3] },
-                      { label: 'Actual Load', data: vsActualChartData.map(d => d.actual), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: false },
+                      { label: 'Forecast, inverter side (P50)', data: vsActualChartData.map(d => d.p50), borderColor: '#ef4444', borderWidth: 2, tension: 0.4, pointRadius: 0, fill: false, borderDash: [4, 3] },
+                      { label: 'Actual, inverter side', data: vsActualChartData.map(d => d.actual), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: false },
                     ],
                   }}
                   options={vsActualLoadChartOptions}
@@ -1524,7 +1524,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                     labels: loadForecastChartData.map(d => d.time),
                     datasets: [
                       { label: 'P10', data: loadForecastChartData.map(d => d.p10), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false },
-                      { label: 'Forecast Load (P50)', data: loadForecastChartData.map(d => d.load), borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(239,68,68,0.15)' },
+                      { label: 'Forecast, inverter side (P50)', data: loadForecastChartData.map(d => d.load), borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(239,68,68,0.15)' },
                       { label: 'P90', data: loadForecastChartData.map(d => d.p90), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(239,68,68,0.15)' },
                     ],
                   }}

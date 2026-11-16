@@ -62,15 +62,20 @@ beforeEach(() => {
 });
 
 describe('UsageTab', () => {
-  it('shows the grid-connection caveat only when the site also has an inverter', async () => {
+  it('says the meter covers only its own circuits when the site also has an inverter (TV-18)', async () => {
     apiService.getMeterUsage.mockResolvedValue(usage({ meter_only: false }));
     const { unmount } = renderTab();
-    expect(await screen.findByTestId('meter-caveat')).toHaveTextContent(/Measured at the meter\. If the meter sits at the grid connection/);
+    expect(await screen.findByTestId('meter-caveat')).toHaveTextContent(
+      'Meter ME0042 measures only the circuits wired through it, not the whole home. Solar, battery and grid come from the inverter (Overview tab).');
+    expect(screen.getByText('Power on the metered circuits')).toBeInTheDocument();
+    expect(screen.getByText('Energy through the meter today, so far')).toBeInTheDocument();
+    expect(screen.queryByText(/grid connection/)).toBeNull();
     unmount();
     apiService.getMeterUsage.mockResolvedValue(usage());
     renderTab();
     await screen.findByTestId('hero-kwh');
     expect(screen.queryByTestId('meter-caveat')).toBeNull();
+    expect(screen.getByText('How this site uses power')).toBeInTheDocument();
   });
 
   it('shows skeletons first, then the energy figure and the change against yesterday', async () => {
@@ -155,6 +160,7 @@ describe('UsageTab', () => {
     expect(bars[12]).toHaveAttribute('data-today', 'false');
     expect(bars[0]).toHaveAttribute('aria-label', 'Fri 25: 18.0 kWh');
     expect(screen.getByRole('img', { name: /Heat map.*Busiest around/ })).toBeInTheDocument();
+    expect(screen.getByTestId('day-readout')).toHaveTextContent('Today · 31.0 kWh so far');
     expect(screen.getByText('Daily average this month').nextSibling).toHaveTextContent('22.0 kWh');
     expect(screen.getByText('Total this month so far').nextSibling).toHaveTextContent('161.0 kWh');
   });
@@ -179,6 +185,8 @@ describe('UsageTab', () => {
   it('lists every raw reading per phase with totals and units', async () => {
     renderTab();
     await screen.findByTestId('hero-kwh');
+    expect(screen.getByText('Latest reading, per phase')).toBeInTheDocument();
+    expect(screen.getByText(/The page checks for a new one every 30 seconds\./)).toBeInTheDocument();
     const table = screen.getByRole('table', { name: 'Raw readings' });
     const row = (label: string) =>
       Array.from((within(table).getByText(label).closest('tr') as HTMLElement).children).map(c => c.textContent);
@@ -244,7 +252,103 @@ describe('UsageTab', () => {
     await waitFor(() => expect(screen.getAllByTestId('recent-row')).toHaveLength(10));
     expect(screen.getAllByTestId('recent-row')[0]).toHaveTextContent('2.10'); // 2100 W is the newest
     expect(apiService.getEnergyMeterHistory).toHaveBeenCalledWith('coim_007', expect.objectContaining({ aggregate: '5min' }));
-    expect(screen.getByText('Recent readings (last 10)')).toBeInTheDocument();
+    expect(screen.getByText('Last 10 five-minute averages')).toBeInTheDocument();
+    expect(screen.getByText('5 min from')).toBeInTheDocument();
+    expect(screen.getByText('Meter ME0042, last hour. Updates every minute while open.')).toBeInTheDocument();
+  });
+
+  // ── Measured values (MV) and interaction (IN), docs/test-scenarios/meter-usage-tab.md ──
+
+  it('marks power factor and frequency as not measured when the meter sends fixed values (MV-1..3)', async () => {
+    apiService.getMeterUsage.mockResolvedValue(usage({ measured: { frequency: false, power_factor: false } }));
+    renderTab({ ctLatest: { ...ct, frequency_l1: 50, frequency_l2: 50, frequency_l3: 50, power_factor_l1: 1, power_factor_l2: 1, power_factor_l3: 1, power_factor_total: 1 } });
+    await screen.findByTestId('hero-kwh');
+    for (const id of ['health-pf', 'health-frequency']) {
+      const card = screen.getByTestId(id);
+      expect(card).toHaveTextContent('Not measured');
+      expect(card).not.toHaveTextContent('Good');
+      expect(card).not.toHaveTextContent('Steady');
+    }
+    expect(screen.getByTestId('health-pf')).toHaveTextContent('sends a fixed 1.00');
+    expect(screen.getByTestId('health-frequency')).toHaveTextContent('sends a fixed 50.00 Hz');
+    expect(screen.getByTestId('health-voltage')).toHaveTextContent('Steady'); // real measurements unaffected
+    const table = screen.getByRole('table', { name: 'Raw readings' });
+    const tr = (label: string) => within(table).getByText(label).closest('tr') as HTMLElement;
+    for (const label of ['Frequency', 'Power factor', 'Reactive power']) {
+      expect(tr(label)).toHaveAttribute('data-fixed', 'true');
+      expect(tr(label).children[4]).toHaveTextContent('Not measured');
+    }
+    expect(tr('Frequency').children[1]).toHaveTextContent('50.00'); // the value sent is still shown
+    expect(tr('Voltage')).not.toHaveAttribute('data-fixed');
+  });
+
+  it('judges the values as before when the flags are true or missing (MV-4)', async () => {
+    apiService.getMeterUsage.mockResolvedValue(usage({ measured: { frequency: true, power_factor: null } }));
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    expect(screen.getByTestId('health-pf')).toHaveTextContent('Good');
+    expect(screen.getByTestId('health-frequency')).toHaveTextContent('Steady');
+    expect(screen.queryByText('Not measured')).toBeNull();
+  });
+
+  it('explains each figure in a tooltip on hover, focus or tap, and closes it on Escape (IN-1)', async () => {
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    for (const label of ["today's energy", 'Using right now', 'Highest demand today', 'Average load today', 'Overnight base load',
+      'Voltage', 'Phase balance', 'Power factor', 'Frequency', 'the heat map', 'energy by day', 'the latest reading']) {
+      expect(screen.getByRole('button', { name: `About ${label}` })).toBeInTheDocument();
+    }
+    const base = screen.getByRole('button', { name: 'About Overnight base load' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.focus(base);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/between 1 and 5 am over the last 7 nights/);
+    expect(base).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id);
+    fireEvent.keyDown(base, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseEnter(screen.getByRole('button', { name: 'About Highest demand today' }).parentElement as HTMLElement);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/highest 5-minute average/);
+  });
+
+  it('reads out today and yesterday at any time on the chart, by keyboard (IN-2)', async () => {
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    const chart = screen.getByTestId('usage-curve');
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('Point at the chart to read a time');
+    expect(screen.queryByTestId('curve-guide')).toBeNull();
+    fireEvent.keyDown(chart, { key: 'Home' });
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('12:00 am · Today 0.40 kW · Yesterday 0.50 kW');
+    expect(screen.getByTestId('curve-guide')).toBeInTheDocument();
+    expect(screen.queryByText(/^Now ·/)).toBeNull(); // the Now label steps aside
+    fireEvent.keyDown(chart, { key: 'ArrowRight' });
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('12:15 am · Today 0.45 kW · Yesterday 0.54 kW');
+    for (let i = 0; i < 9; i++) fireEvent.keyDown(chart, { key: 'ArrowRight' });
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent('2:30 am · Today — · Yesterday'); // the gap stays a gap
+    fireEvent.keyDown(chart, { key: 'End' });
+    expect(screen.getByTestId('curve-readout')).toHaveTextContent(/^4:45 pm · Today 3\.75 kW/);
+    fireEvent.keyDown(chart, { key: 'Escape' });
+    expect(screen.queryByTestId('curve-guide')).toBeNull();
+    expect(screen.getByText(/^Now ·/)).toBeInTheDocument();
+  });
+
+  it('reads out a day bar on hover or focus, against the month average (IN-3)', async () => {
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    const bars = screen.getAllByTestId('day-bar');
+    fireEvent.mouseEnter(bars[0]);
+    expect(screen.getByTestId('day-readout')).toHaveTextContent("Fri 25 · 18.0 kWh, 4.0 kWh below this month's daily average");
+    fireEvent.focus(bars[12]);
+    expect(screen.getByTestId('day-readout')).toHaveTextContent("Wed 7 · 30.0 kWh, 8.0 kWh above this month's daily average");
+    fireEvent.mouseEnter(bars[3]);
+    expect(screen.getByTestId('day-readout')).toHaveTextContent('Mon 28 · no reading');
+  });
+
+  it('reads out a heat map cell on hover (IN-4)', async () => {
+    renderTab();
+    await screen.findByTestId('hero-kwh');
+    expect(screen.getByTestId('heat-readout')).toHaveTextContent(/^Busiest around/);
+    const cell = within(screen.getAllByTestId('heat-row')[0]).getAllByTestId('heat-cell')[0];
+    fireEvent.mouseEnter(cell);
+    expect(screen.getByTestId('heat-readout')).toHaveTextContent('Fri 25, 12 am · 0.30 kW');
   });
 
   const emptyToday = (meter: Partial<MeterUsage['meter']>) => usage({
