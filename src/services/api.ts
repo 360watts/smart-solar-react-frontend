@@ -1302,9 +1302,11 @@ class ApiService {
   }
 
   /** lead: which stored run the vs-actual line shows per past slot: latest | 1h | 6h | day (backend LOAD_LEADS). */
-  async getLoadForecastAccuracy(siteId: string, days: number = 30, lead: string = 'latest'): Promise<any> {
+  async getLoadForecastAccuracy(siteId: string, days: number = 30, lead: string = 'latest', line: 'inverter' | 'grid' = 'inverter'): Promise<any> {
     const enc = encodeURIComponent(siteId);
-    return cacheService.dedup(`load_forecast_accuracy_${siteId}_${days}_${lead}`, () => this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}&lead=${encodeURIComponent(lead)}`), 30 * 60 * 1000);
+    // grid: meter actual + 7-day median forecast; the inverter key stays as it was (refreshVsActualData clears it)
+    const grid = line === 'grid';
+    return cacheService.dedup(`load_forecast_accuracy_${siteId}_${days}_${lead}${grid ? '_grid' : ''}`, () => this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}&lead=${encodeURIComponent(lead)}${grid ? '&line=grid' : ''}`), 30 * 60 * 1000);
   }
 
   async getLoadForecast(siteId: string, days: number = 2): Promise<any[]> {

@@ -1,19 +1,19 @@
 import { EmptyState } from '../../Feedback';
 /**
  * PhaseLoadTab — extracted from SiteDataPanel.tsx
- * Contains: LOAD_SOURCE_META, PHASE_COLORS, PhaseKpiCard, LoadForecastAccuracySubTab, PhaseLoadTab
+ * Contains: PhaseKpiCard, LoadForecastAccuracySubTab, PhaseLoadTab (the Load chart itself is LoadCard.tsx)
  */
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, BarChart2, Activity } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 import { Line as CJLine, Bar as CJBar } from 'react-chartjs-2';
 import { type ChartOptions, type TooltipItem } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
 import { resolveCssVar } from '../../../lib/resolveCssVar';
 import { apiService } from '../../../../services/api';
-import { cacheService } from '../../../../services/cacheService';
 import { IST_TIMEZONE } from '../../../../app/constants';
-import { startOfSolarDayIST, istDateOffset } from '../istDate';
+import { startOfSolarDayIST } from '../istDate';
+import LoadCard from './LoadCard';
 
 const IST = IST_TIMEZONE;
 
@@ -164,14 +164,7 @@ const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({ label, value, sub, ac
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-export const LOAD_SOURCE_META = {
-  inverter: { label: 'Inverter Load', color: '#f59e0b' },
-  grid: { label: 'Grid Load', color: '#60a5fa' },
-  ev: { label: 'EV Load', color: '#0F9F8F' },
-} as const;
-type LoadSourceKey = keyof typeof LOAD_SOURCE_META;
-
-export const PHASE_COLORS = { L1: '#3b82f6', L2: '#f59e0b', L3: '#8b5cf6' };
+export { PHASE_COLORS } from './loadCardModel';
 
 // ── PhaseKpiCard ───────────────────────────────────────────────────────────────
 
@@ -256,15 +249,6 @@ export const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts,
     </motion.div>
   );
 };
-
-// Which stored forecast run the vs-actual line shows per slot (backend LOAD_LEADS, #31).
-type VsLead = 'latest' | '1h' | '6h' | 'day';
-const VS_LEADS: { key: VsLead; label: string; hint: string; subtitle: string }[] = [
-  { key: 'latest', label: 'Latest', hint: 'The last forecast made before each slot (5–20 min ahead)', subtitle: 'forecast from the run just before each slot' },
-  { key: '1h', label: '1 h', hint: 'The forecast made at least 1 hour before each slot', subtitle: 'forecast made ≥1 h ahead' },
-  { key: '6h', label: '6 h', hint: 'The forecast made at least 6 hours before each slot', subtitle: 'forecast made ≥6 h ahead' },
-  { key: 'day', label: 'Day-ahead', hint: "The day's first forecast (~00:10 IST), the one the accuracy scores use", subtitle: 'day-ahead forecast (00:10 IST run)' },
-];
 
 // ── LoadForecastAccuracySubTab ─────────────────────────────────────────────────
 
@@ -471,35 +455,21 @@ interface PhaseLoadTabProps {
 
 const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadForecast, smartDevices, latest, isDark, hours, onHoursChange, forecastAccuracy, onRefreshVsActual, ctLatest }) => {
   const [phaseForecastSubTab, setPhaseForecastSubTab] = useState<'chart' | 'accuracy'>('chart');
-  const [loadSourceView, setLoadSourceView] = useState<LoadSourceKey | 'total'>('inverter');
-  // Instantaneous power (kW), not cumulative kWh, is the correct default: a
-  // cumulative area chart never returns to zero once a load has run, so a
-  // completed EV charge (or any load) reads as "still active" for the rest
-  // of the window instead of dropping to a flat, empty baseline. Confirmed
-  // against real coim_002 data: EV charged 16:55-20:15 IST, then power_w=0
-  // for the next 18h+, but the cumulative default kept the "EV Charging
-  // Trace" area filled the whole time, looking like an ongoing charge.
-  const [loadChartCumulative, setLoadChartCumulative] = useState(false);
-  const [loadTotalCombined, setLoadTotalCombined] = useState(false);
-  const [selectedLoadDate, setSelectedLoadDate] = useState('');
-  const phaseLoadChartZoom = useChartZoomState();
-  const loadForecastChartZoom = useChartZoomState();
-  const vsActualLoadChartZoom = useChartZoomState();
-  const [showVsActual, setShowVsActual] = useState(false);
-  const [vsActual7d, setVsActual7d] = useState(false);
-  const [vsLead, setVsLead] = useState<VsLead>('latest');
-  const vsActualFetchedRef = useRef(false);
   const [evHistory, setEvHistory] = useState<any[]>([]);
   const [ctHistoryRows, setCtHistoryRows] = useState<any[]>([]);
   const [siteHistoryRows, setSiteHistoryRows] = useState<any[]>([]);
+  // Grid-direct line: meter actual + 7-day median forecast (backend docs/test-scenarios/load-line-grid-forecast.md)
+  const [gridAccuracy, setGridAccuracy] = useState<any>(null);
   const loadBucketMinutes = 15;
 
   useEffect(() => {
-    if (showVsActual && !vsActualFetchedRef.current) {
-      vsActualFetchedRef.current = true;
-      onRefreshVsActual?.(vsLead);
-    }
-  }, [showVsActual, onRefreshVsActual, vsLead]);
+    if (!siteId) return;
+    let cancelled = false;
+    apiService.getLoadForecastAccuracy(siteId, 7, 'latest', 'grid')
+      .then(r => { if (!cancelled) setGridAccuracy(r ?? null); })
+      .catch(() => { if (!cancelled) setGridAccuracy(null); });
+    return () => { cancelled = true; };
+  }, [siteId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -551,7 +521,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     return () => { cancelled = true; };
   }, [smartDevices, hours]);
 
-  const { chartData, availableLoadDates } = useMemo(() => {
+  const chartData = useMemo(() => {
     // For 24h view, clamp to solar day (6am IST → now) so the chart shows 6am→6am not a rolling window
     const solarDayStartMs = hours === 24 ? new Date(startOfSolarDayIST()).getTime() : 0;
     const phaseLoadFiltered = hours === 24
@@ -737,7 +707,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         const gridL2 = b.gridL2N > 0 ? +Number(b.gridL2 / b.gridL2N).toFixed(2) : null;
         const gridL3 = b.gridL3N > 0 ? +Number(b.gridL3 / b.gridL3N).toFixed(2) : null;
         const hasAnyRealGridPhase = b.gridL1N > 0 || b.gridL2N > 0 || b.gridL3N > 0;
-        const ev = +Number(b.ev / (b.evN || 1)).toFixed(2);
+        // null, not 0, when no EV reading landed in this bucket: the Load card shows it as a gap
+        const ev = b.evN > 0 ? +Number(b.ev / b.evN).toFixed(2) : null;
         return {
           rawTs: b.ts.getTime(),
           rawDate,
@@ -750,31 +721,12 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           ev,
         };
       });
-    const dates = Array.from(new Set(rows.map(row => row.rawDate))).sort();
-    return { chartData: rows, availableLoadDates: dates };
+    return rows;
   }, [phaseLoad, evHistory, ctHistoryRows, siteHistoryRows, loadBucketMinutes, hours]);
-
-  useEffect(() => {
-    if (selectedLoadDate && !availableLoadDates.includes(selectedLoadDate) && availableLoadDates.length > 0) {
-      setSelectedLoadDate('');
-    }
-  }, [availableLoadDates, selectedLoadDate]);
-
-  const filteredLoadChartData = useMemo(() => {
-    if (!selectedLoadDate) return chartData;
-    return chartData.filter(row => row.rawDate === selectedLoadDate);
-  }, [chartData, selectedLoadDate]);
-
-  const loadWindowLabel = useMemo(() => {
-    if (hours <= 24) return `last ${hours}h`;
-    if (selectedLoadDate) return `${selectedLoadDate} within last ${hours === 48 ? '48h' : '7d'}`;
-    return `last ${hours === 48 ? '48h' : '7d'}`;
-  }, [hours, selectedLoadDate]);
 
   const resolvedLoadChartData = useMemo(() => {
     const now = new Date();
     const todayIst = now.toLocaleDateString('en-CA', { timeZone: IST });
-    const isCurrentWindow = hours <= 24 || !selectedLoadDate || selectedLoadDate === todayIst;
     const freshSmartLatest = (device: any) => {
       const ts = device?.latest?.timestamp;
       if (!ts) return null;
@@ -791,10 +743,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     const gridL2 = ctLatest?.active_power_l2 != null ? Math.abs(Number(ctLatest.active_power_l2) / 1000) : 0;
     const gridL3 = ctLatest?.active_power_l3 != null ? Math.abs(Number(ctLatest.active_power_l3) / 1000) : 0;
 
-    const base = filteredLoadChartData.length > 0
-      ? filteredLoadChartData
-      : isCurrentWindow
-      ? [{
+    const base = chartData.length > 0
+      ? chartData
+      : [{
           rawTs: now.getTime(),
           rawDate: todayIst,
           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
@@ -802,10 +753,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           inverterL1: 0, inverterL2: 0, inverterL3: 0, inverter: 0,
           gridL1: 0, gridL2: 0, gridL3: 0, grid: 0,
           ev: 0,
-        }]
-      : [];
-
-    if (!isCurrentWindow || base.length === 0) return base;
+        }];
 
     const hasNonZero = (key: string) => base.some((row: any) => Math.abs(Number(row[key] ?? 0)) > 0.001);
     const useInvFallback = !hasNonZero('inverterL1') && !hasNonZero('inverterL2') && !hasNonZero('inverterL3') && (invL1 > 0 || invL2 > 0 || invL3 > 0);
@@ -825,755 +773,48 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       if (useEvFallback) next.ev = +evLatestKw.toFixed(2);
       return next;
     });
-  }, [filteredLoadChartData, hours, selectedLoadDate, smartDevices, latest, ctLatest]);
+  }, [chartData, smartDevices, latest, ctLatest]);
 
-  // Kept in sync every render (not a dep of phaseLoadChartOptions below) so the
-  // tooltip callback reads live data without rebuilding the options object on
-  // every telemetry poll — a fresh options object wipes chartjs-plugin-zoom's
-  // in-progress drag state, breaking drag-to-zoom (see chartUtils.ts comment).
-  const resolvedLoadChartDataRef = useRef(resolvedLoadChartData);
-  resolvedLoadChartDataRef.current = resolvedLoadChartData;
-
-  const hasInverterPhaseBreakdown = useMemo(
-    () => resolvedLoadChartData.some((row: any) => Math.abs(Number(row.inverterL2 ?? 0)) > 0.001 || Math.abs(Number(row.inverterL3 ?? 0)) > 0.001),
-    [resolvedLoadChartData]
-  );
-  const hasGridPhaseBreakdown = useMemo(
-    () => resolvedLoadChartData.some((row: any) => Math.abs(Number(row.gridL2 ?? 0)) > 0.001 || Math.abs(Number(row.gridL3 ?? 0)) > 0.001),
-    [resolvedLoadChartData]
-  );
-  const loadViewTitle = useMemo(() => {
-    if (loadSourceView === 'total') return 'Load Split Trends';
-    if (loadSourceView === 'ev') return 'EV Charging Trace';
-    if (loadSourceView === 'grid') return 'Grid Load Profile';
-    return 'Inverter Load Profile';
-  }, [loadSourceView]);
-  const loadViewSubtitle = useMemo(() => {
-    const window = hours === 24 ? 'Solar day 06:00 → 06:00 IST' : `Last ${hours === 48 ? '48h' : '7d'}`;
-    if (loadSourceView === 'total') return `${window} · all sources`;
-    if (loadSourceView === 'ev') return `${window} · smart-device charging`;
-    if (loadSourceView === 'grid') return hasGridPhaseBreakdown ? `${window} · phase-wise CT draw` : `${window} · grid import/export`;
-    return hasInverterPhaseBreakdown ? `${window} · phase-wise inverter load` : `${window} · inverter-side load`;
-  }, [loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown, hours]);
-  const loadInfoChips = useMemo(() => {
-    const activeSource = loadSourceView === 'total' ? 'All sources' : LOAD_SOURCE_META[loadSourceView].label;
-    return [
-      { label: 'Source', value: activeSource, color: loadSourceView === 'total' ? 'var(--foreground)' : LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color },
-      { label: 'Timezone', value: 'IST', color: '#14b8a6' },
-    ];
-  }, [loadSourceView]);
-
-  const loadRangeTotals = useMemo(() => {
-    const keys: LoadSourceKey[] = ['inverter', 'grid', 'ev'];
-    const totals = { inverter: 0, grid: 0, ev: 0 } as Record<LoadSourceKey, number>;
-    if (resolvedLoadChartData.length > 1) {
-      for (let i = 0; i < resolvedLoadChartData.length - 1; i += 1) {
-        const current = resolvedLoadChartData[i];
-        const next = resolvedLoadChartData[i + 1];
-        const hoursDelta = (next.rawTs - current.rawTs) / 3_600_000;
-        for (const key of keys) {
-          totals[key] += ((current[key] ?? 0) + (next[key] ?? 0)) / 2 * hoursDelta;
-        }
-      }
-    } else if (resolvedLoadChartData.length === 1) {
-      for (const key of keys) totals[key] = resolvedLoadChartData[0][key];
-    }
-
-    const evRows = evHistory
-      .filter((r: any) => r.power_w != null)
-      .map((r: any) => ({ ts: new Date(r.timestamp).getTime(), kw: (r.power_w as number) / 1000 }))
-      .filter((r) => {
-        if (!selectedLoadDate) return true;
-        const d = new Date(r.ts).toLocaleDateString('en-CA', { timeZone: IST });
-        return d === selectedLoadDate;
-      })
-      .sort((a, b) => a.ts - b.ts);
-    if (evRows.length > 1) {
-      totals.ev = evRows.reduce((acc, cur, i) => {
-        if (i === 0) return acc;
-        const prev = evRows[i - 1];
-        return acc + (prev.kw + cur.kw) / 2 * (cur.ts - prev.ts) / 3_600_000;
-      }, 0);
-    } else if (evRows.length === 1) {
-      totals.ev = 0;
-    }
-
-    return totals;
-  }, [resolvedLoadChartData, evHistory, selectedLoadDate]);
-
-  const loadChartHasMultipleDays = new Set(resolvedLoadChartData.map((row: any) => row.rawDate)).size > 1;
-  const loadChartLabels = resolvedLoadChartData.map((row: any) => (loadChartHasMultipleDays ? [row.dateLabel, row.time] : row.time));
-
-  const cumulativeLoadChartData = useMemo(() => {
-    const rows = resolvedLoadChartData;
-    if (rows.length === 0) return [];
-    const keys = ['inverter', 'grid', 'ev', 'inverterL1', 'inverterL2', 'inverterL3', 'gridL1', 'gridL2', 'gridL3'] as const;
-    const acc: Record<string, number> = { inverter: 0, grid: 0, ev: 0, inverterL1: 0, inverterL2: 0, inverterL3: 0, gridL1: 0, gridL2: 0, gridL3: 0 };
-    return rows.map((row: any, i: number) => {
-      if (i === 0) return { ...acc, rawDate: row.rawDate };
-      const prev = rows[i - 1];
-      const dt = (row.rawTs - prev.rawTs) / 3_600_000;
-      for (const k of keys) {
-        acc[k] = +(acc[k] + ((Number(prev[k] ?? 0) + Number(row[k] ?? 0)) / 2) * dt).toFixed(3);
-      }
-      return { ...acc, rawDate: row.rawDate };
-    });
-  }, [resolvedLoadChartData]);
-
-  const activeLoadChartData = loadChartCumulative ? cumulativeLoadChartData : resolvedLoadChartData;
-
-  const loadChartValues = useMemo(() => {
-    const src = loadChartCumulative ? cumulativeLoadChartData : resolvedLoadChartData;
-    if (loadSourceView === 'total') return src.flatMap((r: any) => [r.inverter, r.grid, r.ev]).filter((v: any) => Number.isFinite(v));
-    if (loadSourceView === 'inverter') return src.flatMap((r: any) => hasInverterPhaseBreakdown ? [r.inverterL1, r.inverterL2, r.inverterL3] : [r.inverter]).filter((v: any) => Number.isFinite(v));
-    if (loadSourceView === 'grid') return src.flatMap((r: any) => hasGridPhaseBreakdown ? [r.gridL1, r.gridL2, r.gridL3] : [r.grid]).filter((v: any) => Number.isFinite(v));
-    return src.map((r: any) => r[loadSourceView]).filter((v: any) => Number.isFinite(v));
-  }, [cumulativeLoadChartData, resolvedLoadChartData, loadChartCumulative, loadSourceView, hasGridPhaseBreakdown, hasInverterPhaseBreakdown]);
-
-  const loadChartUseWatts = useMemo(
-    () => !loadChartCumulative && loadChartValues.length > 0 && loadChartValues.every((v: number) => Math.abs(v) < 1),
-    [loadChartCumulative, loadChartValues]
-  );
-
-  const formatLoadChartValue = (value: number) => {
-    if (loadChartCumulative) return `${value.toFixed(2)} kWh`;
-    if (loadChartUseWatts) return `${(value * 1000).toFixed(0)} W`;
-    return `${value.toFixed(2)} kW`;
-  };
-
-  const loadForecastChartData = useMemo(() => {
-    return loadForecast.map((r: any) => {
-      const d = new Date(r.forecast_for);
-      return {
-        time: d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        load: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
-        p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
-        p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
-      };
-    });
-  }, [loadForecast]);
-
-  const vsActualChartData = useMemo(() => {
-    const ts: any[] = forecastAccuracy?.timeseries ?? [];
-    const rows = ts
-      .filter((r: any) => r.actual_kw != null && !!r.ts)
-      .map((r: any) => ({ ...r, __ms: new Date(r.ts).getTime() }))
-      .filter((r: any) => !Number.isNaN(r.__ms))
-      .sort((a: any, b: any) => a.__ms - b.__ms);
-
-    if (rows.length === 0) return [];
-
-    const cutoffMs = vsActual7d
-      ? Date.now() - 7 * 24 * 60 * 60 * 1000
-      : new Date(startOfSolarDayIST()).getTime();
-
-    return rows
-      .filter((r: any) => r.__ms >= cutoffMs)
-      .map((r: any) => {
-        const d = new Date(r.ts);
-        return {
-          time: vsActual7d
-            ? d.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST })
-            : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-          actual: r.actual_kw != null ? +Number(r.actual_kw).toFixed(2) : null,
-          p50: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
-          p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
-          p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
-          replay: String(r.method ?? '').endsWith('-replay'),
-          // staff only, set by the backend when actual is outside P10-P90 (docs/test-scenarios/load-miss-reasons.md)
-          missReason: (r.miss_reason?.text as string | undefined) ?? null,
-        };
-      });
-  }, [forecastAccuracy, vsActual7d]);
-
-  useEffect(() => {
-    phaseLoadChartZoom.resetZoom();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hours, selectedLoadDate, loadSourceView]);
-
-  const totalLoadW: number | null = latest?.load_power_w ?? null;
-  const rawL1W: number | null = latest?.load_l1_power_w ?? null;
-  const rawL2W: number | null = latest?.load_l2_power_w ?? null;
-  const rawL3W: number | null = latest?.load_l3_power_w ?? null;
-  const knownW = (rawL1W ?? 0) + (rawL2W ?? 0) + (rawL3W ?? 0);
-  const unknownPhases = (rawL1W == null ? 1 : 0) + (rawL2W == null ? 1 : 0) + (rawL3W == null ? 1 : 0);
-  const remainderW = totalLoadW != null ? Math.max(0, totalLoadW - knownW) : null;
-  const estUnknownW = remainderW != null && unknownPhases > 0 ? Math.round(remainderW / unknownPhases) : null;
-
-  const phaseLoadChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: {
-        display: true, position: 'top', align: 'center',
-        labels: {
-          color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
-          boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 16,
-        },
-      },
-      tooltip: {
-        backgroundColor: resolveCssVar('--popover'),
-        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: {
-          title: (items: TooltipItem<'line'>[]) => {
-            const row = resolvedLoadChartDataRef.current[items[0]?.dataIndex ?? -1];
-            if (!row) return '';
-            return loadChartHasMultipleDays ? `${row.dateLabel} · ${row.time}` : row.time;
-          },
-          label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${formatLoadChartValue(Number(item.parsed.y))}`,
-        },
-      },
-      zoom: createDragZoomPlugins(() => phaseLoadChartZoom.onZoomComplete.current()),
-    } as any,
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: loadChartHasMultipleDays ? 'Day / Time (IST)' : 'Time (IST)',
-          color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
-          padding: { top: 10, bottom: 0 },
-        },
-        ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-        grid: { display: false },
-      },
-      y: {
-        title: {
-          display: true,
-          text: loadChartCumulative ? 'Energy (kWh)' : (loadChartUseWatts ? 'Load (W)' : 'Load (kW)'),
-          color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any },
-          padding: { bottom: 6 },
-        },
-        ticks: {
-          color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Fira Code, monospace', size: 11 },
-          callback: (v: any) => loadChartCumulative ? Number(v).toFixed(1) : (loadChartUseWatts ? `${Math.round(Number(v) * 1000)}` : Number(v).toFixed(1)),
-        },
-        grid: { display: false },
-      },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark, loadChartHasMultipleDays, loadChartCumulative, loadChartUseWatts]);
-
-  const loadForecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: resolveCssVar('--popover'),
-        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: 'rgba(239,68,68,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` },
-      },
-      zoom: createDragZoomPlugins(() => loadForecastChartZoom.onZoomComplete.current()),
-    } as any,
-    scales: {
-      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
-
-  const vsActualLoadChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: {
-        display: true,
-        labels: {
-          color: resolveCssVar('--muted-foreground'),
-          font: { family: 'Rubik, sans-serif', size: 11 },
-          boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14,
-          filter: (item: any) => item.text !== 'P10',
-        },
-      },
-      tooltip: {
-        backgroundColor: resolveCssVar('--popover'),
-        titleColor: resolveCssVar('--foreground'),
-        bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(15,159,143,0.3)' : 'rgba(15,159,143,0.2)',
-        borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: {
-          label: (item: TooltipItem<'line'>) =>
-            item.dataset.label !== 'P10' ? ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` : '',
-          // runs before 2026-11-17 were not stored; their forecast line is a replay of the same model
-          footer: (items: TooltipItem<'line'>[]) => {
-            const row = items.length ? vsActualChartData[items[0].dataIndex] : undefined;
-            return [row?.missReason ? `Why off: ${row.missReason}` : '', row?.replay ? 'Forecast replayed (run not stored at the time)' : ''].filter(Boolean);
-          },
-        },
-      },
-      zoom: createDragZoomPlugins(() => vsActualLoadChartZoom.onZoomComplete.current()),
-    } as any,
-    scales: {
-      x: {
-        offset: true,
-        ticks: { color: resolveCssVar('--muted-foreground'), font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, padding: 8 },
-        grid: { display: false },
-      },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { display: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark, vsActualChartData]);
+  const hasEv = smartDevices.some((d: any) => d.appliance_label === 'ev_charger');
+  const subTabStyle = (on: boolean): React.CSSProperties => ({
+    padding: '6px 10px', borderRadius: 8, border: on ? '1px solid #0F9F8F' : '1px solid transparent',
+    background: on ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)') : 'transparent',
+    color: on ? 'var(--success)' : 'var(--muted-foreground)',
+    cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
+  });
 
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.35 }}>
-
-      {/* ── Header row with hours selector ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--foreground)' }}>
-            Load Source Monitoring
-          </h2>
-          <p style={{ margin: '2px 0 0', fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
-            Inverter, energy meter, and EV demand across live and recent windows
-          </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load forecast sub tabs">
-            <button
-              onClick={() => setPhaseForecastSubTab('chart')}
-              aria-pressed={phaseForecastSubTab === 'chart'}
-              style={{
-                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'chart' ? `1px solid #0F9F8F` : '1px solid transparent',
-                background: phaseForecastSubTab === 'chart' ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)') : 'transparent',
-                color: phaseForecastSubTab === 'chart' ? ('var(--success)') : 'var(--muted-foreground)',
-                cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem'
-              }}
-            >
-              Forecast
-            </button>
-            <button
-              onClick={() => setPhaseForecastSubTab('accuracy')}
-              aria-pressed={phaseForecastSubTab === 'accuracy'}
-              style={{
-                padding: '6px 10px', borderRadius: 8, border: phaseForecastSubTab === 'accuracy' ? `1px solid #0F9F8F` : '1px solid transparent',
-                background: phaseForecastSubTab === 'accuracy' ? (isDark ? 'rgba(15,159,143,0.12)' : 'rgba(15,159,143,0.08)') : 'transparent',
-                color: phaseForecastSubTab === 'accuracy' ? ('var(--success)') : 'var(--muted-foreground)',
-                cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem'
-              }}
-            >
-              Accuracy
-            </button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <input
-            type="date"
-            value={selectedLoadDate}
-            max={istDateOffset(0)}
-            onChange={e => {
-              const picked = e.target.value;
-              if (!picked) { setSelectedLoadDate(''); return; }
-              const pickedMs = new Date(picked + 'T00:00:00+05:30').getTime();
-              const windowStartMs = Date.now() - hours * 3_600_000;
-              if (pickedMs < windowStartMs && onHoursChange) onHoursChange(168);
-              setSelectedLoadDate(picked);
-            }}
-            style={{
-              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              borderRadius: 10, padding: '7px 10px', fontSize: '0.78rem',
-              color: 'var(--foreground)',
-              fontFamily: 'Rubik, sans-serif', fontWeight: 600,
-            }}
-          />
-          <select
-            value={hours}
-            onChange={e => onHoursChange(Number(e.target.value))}
-            style={{
-              background: isDark ? 'rgba(30,41,59,0.9)' : 'rgba(255,255,255,0.95)',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem',
-              color: 'var(--foreground)',
-              cursor: 'pointer', fontFamily: 'Rubik, sans-serif', fontWeight: 600,
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            <option value={6}>6 hours</option>
-            <option value={12}>12 hours</option>
-            <option value={24}>24 hours</option>
-            <option value={48}>48 hours</option>
-            <option value={168}>7 days</option>
-          </select>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--foreground)' }}>
+          Load Source Monitoring
+        </h2>
+        <p style={{ margin: '2px 0 0', fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+          Inverter, energy meter and EV load, actual and forecast
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }} role="tablist" aria-label="Load sub tabs">
+          <button onClick={() => setPhaseForecastSubTab('chart')} aria-pressed={phaseForecastSubTab === 'chart'} style={subTabStyle(phaseForecastSubTab === 'chart')}>
+            Load
+          </button>
+          <button onClick={() => setPhaseForecastSubTab('accuracy')} aria-pressed={phaseForecastSubTab === 'accuracy'} style={subTabStyle(phaseForecastSubTab === 'accuracy')}>
+            Accuracy
+          </button>
         </div>
       </div>
 
-      {/* ── Stacked area chart ── */}
-      <ChartCard
-        title={loadViewTitle}
-        subtitle={loadViewSubtitle}
-        isDark={isDark}
-        isLive={true}
-        height={0}
-        accentColor="#3b82f6"
-        delay={0.3}
-        headerRight={
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {/* Source segmented control */}
-            <div style={{
-              display: 'inline-flex', borderRadius: 10, overflow: 'hidden',
-              border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)'}`,
-              background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(241,245,249,0.8)',
-            }}>
-              {(['inverter', 'grid', 'ev', 'total'] as const).map((view, i) => {
-                const color = view === 'total' ? ('var(--foreground)') : LOAD_SOURCE_META[view as LoadSourceKey]?.color ?? '#3b82f6';
-                const isActive = loadSourceView === view;
-                return (
-                  <button
-                    key={view}
-                    onClick={() => setLoadSourceView(view)}
-                    style={{
-                      border: 'none',
-                      borderLeft: i > 0 ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
-                      background: isActive ? (isDark ? `${color}22` : `${color}15`) : 'transparent',
-                      color: isActive ? color : 'var(--muted-foreground)',
-                      padding: '5px 10px', fontSize: '0.75rem', fontWeight: isActive ? 700 : 600,
-                      cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      transition: 'all 0.15s ease',
-                      position: 'relative',
-                    }}
-                  >
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%', background: color,
-                      opacity: isActive ? 1 : 0.35, flexShrink: 0,
-                      boxShadow: isActive ? `0 0 5px ${color}80` : 'none',
-                    }} />
-                    {view === 'total' ? 'All' : LOAD_SOURCE_META[view as LoadSourceKey].label.replace(' Load', '')}
-                  </button>
-                );
-              })}
-            </div>
-            {/* kWh / kW toggle */}
-            <div style={{
-              display: 'inline-flex', borderRadius: 10, overflow: 'hidden',
-              border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)'}`,
-              background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(241,245,249,0.8)',
-            }}>
-              {([['kW', false, '⚡'], ['kWh', true, '∑']] as const).map(([label, val, icon]) => {
-                const isActive = loadChartCumulative === val;
-                return (
-                  <button
-                    key={label}
-                    onClick={() => setLoadChartCumulative(() => val)}
-                    style={{
-                      border: 'none',
-                      borderLeft: label === 'kWh' ? `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}` : 'none',
-                      background: isActive ? (isDark ? 'rgba(15,159,143,0.18)' : 'rgba(15,159,143,0.12)') : 'transparent',
-                      color: isActive ? 'var(--brand-green)' : 'var(--muted-foreground)',
-                      padding: '5px 10px', fontSize: '0.75rem', fontWeight: isActive ? 700 : 600,
-                      cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.75rem', lineHeight: 1 }}>{icon}</span>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            {loadSourceView === 'total' && (
-              <button
-                onClick={() => setLoadTotalCombined(v => !v)}
-                title={loadTotalCombined ? 'Show sources separately' : 'Combine into one line'}
-                style={{
-                  border: `1px solid ${loadTotalCombined ? 'rgba(56,189,248,0.4)' : (isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)')}`,
-                  background: loadTotalCombined ? (isDark ? 'rgba(56,189,248,0.14)' : 'rgba(56,189,248,0.09)') : 'transparent',
-                  color: loadTotalCombined ? '#38bdf8' : 'var(--muted-foreground)',
-                  borderRadius: 10, padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span style={{ fontSize: '0.8rem', lineHeight: 1 }}>{loadTotalCombined ? '━' : '≡'}</span>
-                {loadTotalCombined ? 'Combined' : 'Split'}
-              </button>
-            )}
-            <ZoomResetButton visible={phaseLoadChartZoom.isZoomed} onClick={phaseLoadChartZoom.resetZoom} />
-          </div>
-        }
-      >
-        {resolvedLoadChartData.length === 0 ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>
-            <Layers size={32} style={{ opacity: 0.3, marginBottom: 10 }} />
-            <div>No load source data for this period.</div>
-            <div style={{ fontSize: '0.78rem', opacity: 0.6, marginTop: 4 }}>Inverter load, energy meter load, and EV smart-device history appear when those sources are mapped and reporting.</div>
-          </div>
-        ) : (
-          <div style={{ height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {/* Solar day progress bar — only shown on 24h view */}
-            {hours === 24 && (() => {
-              const nowMs = Date.now();
-              const solarStartMs = new Date(startOfSolarDayIST()).getTime();
-              const solarEndMs = solarStartMs + 24 * 3600 * 1000;
-              const pct = Math.min(100, Math.max(0, (nowMs - solarStartMs) / (solarEndMs - solarStartMs) * 100));
-              return (
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'Rubik, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☀ 06:00 IST</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif' }}>{pct.toFixed(0)}% of solar day elapsed</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6366f1', fontFamily: 'Rubik, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>☾ 06:00 IST</span>
-                  </div>
-                  <div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)', overflow: 'hidden', position: 'relative' }}>
-                    <div style={{
-                      position: 'absolute', left: 0, top: 0, bottom: 0,
-                      width: `${pct}%`,
-                      background: 'linear-gradient(90deg, #f59e0b 0%, #3b82f6 60%, #6366f1 100%)',
-                      borderRadius: 4,
-                      transition: 'width 1s ease',
-                    }} />
-                  </div>
-                </div>
-              );
-            })()}
-            {/* Compact legend strip — info chips + source totals */}
-            <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 8, borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`, marginBottom: 8 }}>
-              {loadInfoChips.map(chip => (
-                <span
-                  key={`${chip.label}-${chip.value}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px',
-                    borderRadius: 999,
-                    background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
-                    border: `1px solid ${chip.color}28`,
-                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif',
-                  }}
-                >
-                  <span style={{ color: chip.color, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.04em' }}>{chip.label}</span>
-                  <span style={{ color: 'var(--muted-foreground)' }}>{chip.value}</span>
-                </span>
-              ))}
-              {loadSourceView === 'total' && (['inverter', 'grid', 'ev'] as const).map(key => (
-                <span
-                  key={key}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px',
-                    borderRadius: 999,
-                    background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(248,250,252,0.9)',
-                    border: `1px solid ${LOAD_SOURCE_META[key].color}28`,
-                    fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif',
-                  }}
-                >
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: LOAD_SOURCE_META[key].color, flexShrink: 0 }} />
-                  <span style={{ color: 'var(--muted-foreground)' }}>
-                    {key === 'ev' ? 'EV' : LOAD_SOURCE_META[key].label.replace(' Load', '')} {loadRangeTotals[key].toFixed(1)} kWh
-                  </span>
-                </span>
-              ))}
-            </div>
-            <div style={{ height: 360, position: 'relative' }}>
-            <CJLine
-              ref={phaseLoadChartZoom.chartRef}
-              data={{
-                labels: loadChartLabels,
-                datasets: loadSourceView === 'total'
-                  ? (loadTotalCombined
-                      ? [{
-                          label: 'Total Load',
-                          data: activeLoadChartData.map((d: any) => (Number(d.inverter ?? 0) + Number(d.grid ?? 0) + Number(d.ev ?? 0))),
-                          borderColor: '#38bdf8', borderWidth: 2.5, tension: 0.35, pointRadius: 0,
-                          fill: 'origin',
-                          backgroundColor: (ctx: any) => {
-                            const { chart } = ctx;
-                            if (!chart.chartArea) return 'rgba(56,189,248,0.15)';
-                            return makeGradient(chart.ctx, chart.chartArea, '#38bdf8', 0.32, 0.03);
-                          },
-                        }]
-                      : (['inverter', 'grid', 'ev'] as const).map(key => ({
-                          label: LOAD_SOURCE_META[key].label,
-                          data: activeLoadChartData.map((d: any) => d[key] as number),
-                          borderColor: LOAD_SOURCE_META[key].color,
-                          borderWidth: key === 'inverter' ? 2.4 : 2,
-                          tension: 0.35, pointRadius: 0, fill: false,
-                        })))
-                  : loadSourceView === 'inverter'
-                  ? (hasInverterPhaseBreakdown ? ([
-                      { key: 'inverterL1', label: 'L1', color: PHASE_COLORS.L1 },
-                      { key: 'inverterL2', label: 'L2', color: PHASE_COLORS.L2 },
-                      { key: 'inverterL3', label: 'L3', color: PHASE_COLORS.L3 },
-                    ] as const).map(series => ({
-                      label: series.label,
-                      data: activeLoadChartData.map((d: any) => d[series.key] as number),
-                      borderColor: series.color, borderWidth: 2.2, tension: 0.35, pointRadius: 0, fill: false,
-                    })) : [{
-                      label: LOAD_SOURCE_META.inverter.label,
-                      data: activeLoadChartData.map((d: any) => d.inverter as number),
-                      borderColor: LOAD_SOURCE_META.inverter.color, borderWidth: 2.4, tension: 0.35, pointRadius: 0, fill: false,
-                    }])
-                  : loadSourceView === 'grid'
-                  ? (hasGridPhaseBreakdown ? ([
-                      { key: 'gridL1', label: 'L1', color: PHASE_COLORS.L1 },
-                      { key: 'gridL2', label: 'L2', color: PHASE_COLORS.L2 },
-                      { key: 'gridL3', label: 'L3', color: PHASE_COLORS.L3 },
-                    ] as const).map(series => ({
-                      label: series.label,
-                      data: activeLoadChartData.map((d: any) => d[series.key] as number),
-                      borderColor: series.color, borderWidth: 2.2, tension: 0.35, pointRadius: 0, fill: false,
-                    })) : [{
-                      label: LOAD_SOURCE_META.grid.label,
-                      data: activeLoadChartData.map((d: any) => d.grid as number),
-                      borderColor: LOAD_SOURCE_META.grid.color, borderWidth: 2.4, tension: 0.35, pointRadius: 0, fill: false,
-                    }])
-                  : [{
-                      label: LOAD_SOURCE_META[loadSourceView as LoadSourceKey].label,
-                      data: activeLoadChartData.map((d: any) => d[loadSourceView] as number),
-                      borderColor: LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color,
-                      borderWidth: 2.4, tension: 0.35, pointRadius: 0,
-                      fill: 'origin',
-                      backgroundColor: (ctx: any) => {
-                        const { chart } = ctx;
-                        if (!chart.chartArea) return `${LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color}25`;
-                        return makeGradient(chart.ctx, chart.chartArea, LOAD_SOURCE_META[loadSourceView as LoadSourceKey].color, 0.35, 0.04);
-                      },
-                    }],
-              }}
-              options={phaseLoadChartOptions}
-            />
-            </div>
-          </div>
-        )}
-      </ChartCard>
-
-      {/* ── 7-Day Load Forecast / vs Actual ── */}
       <div style={{ display: phaseForecastSubTab === 'chart' ? 'block' : 'none' }}>
-        <ChartCard
-          title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
-          subtitle={showVsActual
-            ? `Inverter (backup) side only, not grid-direct circuits · ${VS_LEADS.find(l => l.key === vsLead)?.subtitle} · 15-min slots · IST · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
-            : (() => {
-                if (!loadForecast.length) return 'Predictive load forecasting';
-                const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
-                if (firstMethod.startsWith('ml_v1.0')) return 'ML-based forecast (v1.0)';
-                if (firstMethod === 'weighted_historical_avg') return 'Weighted historical average';
-                return firstMethod;
-              })() + ' · inverter (backup) side only · drag to zoom'
-          }
+        <LoadCard
           isDark={isDark}
-          isLive={false}
-          height={showVsActual ? (vsActualChartData.length > 0 ? 250 : 170) : (loadForecast.length > 0 ? 230 : 170)}
-          accentColor={showVsActual ? '#0F9F8F' : '#ef4444'}
-          delay={0.4}
-          headerRight={
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button
-                onClick={() => setShowVsActual(v => !v)}
-                aria-pressed={showVsActual}
-                title={showVsActual ? 'Show 7-day forward forecast' : 'Show historical forecast vs actual'}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 10px', borderRadius: 8,
-                  border: `1px solid ${showVsActual ? (isDark ? 'rgba(15,159,143,0.5)' : 'rgba(15,159,143,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
-                  background: showVsActual ? (isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.1)') : 'transparent',
-                  color: showVsActual ? ('var(--success)') : ('var(--muted-foreground)'),
-                  cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Activity size={12} />
-                Historical vs Actual
-              </button>
-              {showVsActual && (
-                <button
-                  onClick={() => setVsActual7d(v => !v)}
-                  aria-pressed={vsActual7d}
-                  title={vsActual7d ? 'Show today only' : 'Show last 7 days'}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '5px 10px', borderRadius: 8,
-                    border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
-                    background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
-                    color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'),
-                    cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <Activity size={12} />
-                  Last 7 Days
-                </button>
-              )}
-              {showVsActual && (
-                <div role="group" aria-label="Forecast made" style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 8, border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)'}` }}>
-                  {VS_LEADS.map(l => (
-                    <button
-                      key={l.key}
-                      onClick={() => { setVsLead(l.key); onRefreshVsActual?.(l.key); }}
-                      aria-pressed={vsLead === l.key}
-                      title={l.hint}
-                      style={{
-                        padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                        background: vsLead === l.key ? (isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.1)') : 'transparent',
-                        color: vsLead === l.key ? 'var(--success)' : 'var(--muted-foreground)',
-                        fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
-                      }}
-                    >
-                      {l.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <ZoomResetButton
-                visible={showVsActual ? vsActualLoadChartZoom.isZoomed : loadForecastChartZoom.isZoomed}
-                onClick={showVsActual ? vsActualLoadChartZoom.resetZoom : loadForecastChartZoom.resetZoom}
-              />
-            </div>
-          }
-        >
-          {showVsActual ? (
-            vsActualChartData.length > 0 ? (
-              <div style={{ height: 250 }}>
-                {/* key: without it React reuses the 7-day chart's instance here, and react-chartjs-2 only
-                    fills `ref` at mount, so this chartRef stayed null and Reset Zoom did nothing. */}
-                <CJLine
-                  key="vs-actual"
-                  ref={vsActualLoadChartZoom.chartRef}
-                  data={{
-                    labels: vsActualChartData.map(d => d.time),
-                    datasets: [
-                      { label: 'P10', data: vsActualChartData.map(d => d.p10), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false },
-                      { label: 'P10–P90 Band', data: vsActualChartData.map(d => d.p90), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.1)' },
-                      { label: 'Forecast, inverter side (P50)', data: vsActualChartData.map(d => d.p50), borderColor: '#ef4444', borderWidth: 2, tension: 0.4, pointRadius: 0, fill: false, borderDash: [4, 3] },
-                      { label: 'Actual, inverter side', data: vsActualChartData.map(d => d.actual), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: false },
-                    ],
-                  }}
-                  options={vsActualLoadChartOptions}
-                />
-              </div>
-            ) : (
-              <EmptyState icon={Activity} title="No forecast accuracy yet" description="Scores are worked out each day once real readings are in." />
-            )
-          ) : (
-            loadForecast.length > 0 ? (
-              <div style={{ height: 230 }}>
-                <CJLine
-                  key="forecast"
-                  ref={loadForecastChartZoom.chartRef}
-                  data={{
-                    labels: loadForecastChartData.map(d => d.time),
-                    datasets: [
-                      { label: 'P10', data: loadForecastChartData.map(d => d.p10), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: false },
-                      { label: 'Forecast, inverter side (P50)', data: loadForecastChartData.map(d => d.load), borderColor: '#ef4444', borderWidth: 2.2, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(239,68,68,0.15)' },
-                      { label: 'P90', data: loadForecastChartData.map(d => d.p90), borderColor: 'transparent', borderWidth: 0, tension: 0.4, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(239,68,68,0.15)' },
-                    ],
-                  }}
-                  options={loadForecastChartOptions}
-                />
-              </div>
-            ) : (
-              <EmptyState icon={BarChart2} title="No load forecast yet" description="A new forecast is made every 15 minutes." />
-            )
-          )}
-        </ChartCard>
+          actual={resolvedLoadChartData}
+          invAccuracy={forecastAccuracy}
+          invForward={loadForecast}
+          gridAccuracy={gridAccuracy}
+          hasEv={hasEv}
+          hours={hours}
+          onHoursChange={onHoursChange}
+          onLeadChange={lead => onRefreshVsActual?.(lead)}
+          solarStartMs={new Date(startOfSolarDayIST()).getTime()}
+        />
       </div>
       <div style={{ display: phaseForecastSubTab === 'accuracy' ? 'block' : 'none', marginBottom: 12 }}>
         <LoadForecastAccuracySubTab accuracy={forecastAccuracy} isDark={isDark} />
