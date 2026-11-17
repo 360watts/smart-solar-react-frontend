@@ -42,7 +42,9 @@ Tests: `tabs/loadCardModel.test.ts`, `tabs/LoadCard.test.tsx`.
 | C5 | lead Latest | Forecast = Off, then Day-ahead | Off: no forecast datasets, no fetch; Day-ahead: onLeadChange('day') | unit | P0 | passing |
 | C6 | a past slot with no grid reading | Line = All | "incomplete" shows | unit | P0 | passing |
 | C7 | the grid response carries a note | Line = Grid | the note shows; the forecast reads "Forecast (14-day pattern)" and the band "Likely range", not P10–P90 (calibrated bands reached about 71%, Nov 17 study) | unit | P1 | passing |
-| C8 | the grid forecast has P50 0.6 kW and mean 1.0 kW | Line = Grid, Today | the "+X forecast" kWh chip sums the mean, not P50 | unit | P0 | passing |
+| C8 | the grid forecast has P50 0.6 kW and mean 1.0 kW | Line = Grid, Today | the chip reads "~X kWh by 06:00" = so far + the summed mean, not P50 | unit | P0 | passing |
+| C9 | inverter forecast on (Nov 17 design review) | render | the forecast is dashed in the line's own hue, never red; every dataset has tension 0 (no overshoot between 15-min averages) | unit | P1 | passing |
+| C10 | inverter accuracy in the response | render, Today | accuracy is a plain caption "Day-ahead accuracy, last 7 days: typical error … · …% inside the range"; chips read "… so far" | unit | P2 | passing |
 
 ## Edge cases from design review
 
@@ -57,7 +59,7 @@ Tests: `tabs/loadCardModel.test.ts`, `tabs/LoadCard.test.tsx`.
 |---|---|---|
 | L1 | Today · Inverter · Latest: actual and forecast match the old vs-actual card for the same slots | planned |
 | L2 | Today · All: stack = inverter + grid + EV; after now hatched forecast; summed forecast line present | planned |
-| L3 | Grid shows the "Meter reads ~25% low" note and a median forecast across Next 7 days | planned |
+| L3 | Grid shows the "Meter reads ~25% low" note, "Forecast (14-day pattern)" with a "Likely range" band across Next 7 days, and its kWh chip matches the sum of `mean_kw` | planned |
 | L4 | Switching leads changes the inverter forecast only; grid stays the same | planned |
 | L5 | A known meter gap (if any in the week) is tinted red and the total says incomplete | planned |
 | L6 | Tooltip "Why off" still shows on an inverter miss | planned |

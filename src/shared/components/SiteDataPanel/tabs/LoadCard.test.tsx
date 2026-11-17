@@ -96,9 +96,23 @@ describe('LoadCard', () => {
   });
 
   it('C8 the grid kWh chip sums the expected value, not P50', () => {
-    // 79 future slots left today, P50 0.6 and mean 1.0 kW -> 19.8 kWh (P50 would give 11.9)
+    // 3.75 kWh so far + 79 future slots at mean 1.0 kW (19.75) -> ~23.5 by 06:00 (P50 0.6 would give 15.6)
     setup({ gridAccuracy: { timeseries: series(0.6).map(r => ({ ...r, mean_kw: 1.0 })) } });
     click('Grid');
-    expect(screen.getByText(/\+19\.8 forecast/)).toBeInTheDocument();
+    expect(screen.getByText(/~23\.5 kWh by 06:00/)).toBeInTheDocument();
+  });
+
+  it('C9 the forecast is drawn in its line colour, never red, on straight segments', () => {
+    setup();
+    const fc = chartProps.data.datasets.find((d: any) => d.label === 'Forecast (P50)');
+    expect(fc.borderColor).not.toBe('#ef4444');
+    expect(fc.borderDash).toBeTruthy();
+    expect(chartProps.data.datasets.every((d: any) => d.tension === 0)).toBe(true);
+  });
+
+  it('C10 the accuracy line is a caption and the chips read as so far / by the end', () => {
+    setup();
+    expect(screen.getByText(/Day-ahead accuracy, last 7 days: typical error 0\.20 kW · 80% inside the range/)).toBeInTheDocument();
+    expect(screen.getAllByText(/so far/).length).toBeGreaterThan(0);
   });
 });
