@@ -1532,7 +1532,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                 />
               </div>
             ) : (
-              <EmptyState icon={BarChart2} title="No load forecast yet" description="A new forecast is made every 30 minutes." />
+              <EmptyState icon={BarChart2} title="No load forecast yet" description="A new forecast is made every 15 minutes." />
             )
           )}
         </ChartCard>
