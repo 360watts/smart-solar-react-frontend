@@ -399,11 +399,14 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   }, []);
   const overviewReady = overviewDone || overviewWaitExpired;
 
-  const refreshVsActualData = useCallback(async () => {
+  // Lead chosen on the Phase Load vs-actual chart; the 5-min auto refresh reuses it.
+  const vsLeadRef = useRef('latest');
+  const refreshVsActualData = useCallback(async (lead?: string) => {
     if (!siteId) return;
-    cacheService.clear(`load_forecast_accuracy_${siteId}_7`);
+    if (lead) vsLeadRef.current = lead;
+    cacheService.clear(`load_forecast_accuracy_${siteId}_7_${vsLeadRef.current}`);
     try {
-      const lfa = await apiService.getLoadForecastAccuracy(siteId, 7);
+      const lfa = await apiService.getLoadForecastAccuracy(siteId, 7, vsLeadRef.current);
       setLoadForecastAccuracy(lfa ?? null);
     } catch {
       // ignore
@@ -647,7 +650,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       analyticsLoadedRef.current.phaseLoad = true;
       Promise.allSettled([
         apiService.getLoadForecast(siteId, 7),
-        apiService.getLoadForecastAccuracy(siteId, 7),
+        apiService.getLoadForecastAccuracy(siteId, 7, vsLeadRef.current),
       ]).then(([lf, lfa]) => {
         if (analyticsStaleRef.current) return;
         if (lf.status === 'fulfilled') setLoadForecast(Array.isArray(lf.value) ? lf.value : []);

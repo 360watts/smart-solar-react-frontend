@@ -1301,9 +1301,10 @@ class ApiService {
     return cacheService.dedup(`forecast_accuracy_${siteId}_${days}`, () => this.request(`/sites/${enc}/forecast-accuracy/?days=${days}`), 30 * 60 * 1000);
   }
 
-  async getLoadForecastAccuracy(siteId: string, days: number = 30): Promise<any> {
+  /** lead: which stored run the vs-actual line shows per past slot: latest | 1h | 6h | day (backend LOAD_LEADS). */
+  async getLoadForecastAccuracy(siteId: string, days: number = 30, lead: string = 'latest'): Promise<any> {
     const enc = encodeURIComponent(siteId);
-    return cacheService.dedup(`load_forecast_accuracy_${siteId}_${days}`, () => this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}`), 30 * 60 * 1000);
+    return cacheService.dedup(`load_forecast_accuracy_${siteId}_${days}_${lead}`, () => this.request(`/sites/${enc}/load-forecast-accuracy/?days=${days}&lead=${encodeURIComponent(lead)}`), 30 * 60 * 1000);
   }
 
   async getLoadForecast(siteId: string, days: number = 2): Promise<any[]> {

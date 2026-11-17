@@ -257,6 +257,15 @@ export const PhaseKpiCard: React.FC<PhaseKpiCardProps> = ({ phase, watts, volts,
   );
 };
 
+// Which stored forecast run the vs-actual line shows per slot (backend LOAD_LEADS, #31).
+type VsLead = 'latest' | '1h' | '6h' | 'day';
+const VS_LEADS: { key: VsLead; label: string; hint: string; subtitle: string }[] = [
+  { key: 'latest', label: 'Latest', hint: 'The last forecast made before each slot (5–20 min ahead)', subtitle: 'forecast from the run just before each slot' },
+  { key: '1h', label: '1 h', hint: 'The forecast made at least 1 hour before each slot', subtitle: 'forecast made ≥1 h ahead' },
+  { key: '6h', label: '6 h', hint: 'The forecast made at least 6 hours before each slot', subtitle: 'forecast made ≥6 h ahead' },
+  { key: 'day', label: 'Day-ahead', hint: "The day's first forecast (~00:10 IST), the one the accuracy scores use", subtitle: 'day-ahead forecast (00:10 IST run)' },
+];
+
 // ── LoadForecastAccuracySubTab ─────────────────────────────────────────────────
 
 export const LoadForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }> = ({ accuracy, isDark }) => {
@@ -456,7 +465,7 @@ interface PhaseLoadTabProps {
   hours: number;
   onHoursChange: (h: number) => void;
   forecastAccuracy?: any;
-  onRefreshVsActual?: () => void;
+  onRefreshVsActual?: (lead?: string) => void;
   ctLatest?: any;
 }
 
@@ -478,6 +487,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
   const vsActualLoadChartZoom = useChartZoomState();
   const [showVsActual, setShowVsActual] = useState(false);
   const [vsActual7d, setVsActual7d] = useState(false);
+  const [vsLead, setVsLead] = useState<VsLead>('latest');
   const vsActualFetchedRef = useRef(false);
   const [evHistory, setEvHistory] = useState<any[]>([]);
   const [ctHistoryRows, setCtHistoryRows] = useState<any[]>([]);
@@ -487,9 +497,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
   useEffect(() => {
     if (showVsActual && !vsActualFetchedRef.current) {
       vsActualFetchedRef.current = true;
-      onRefreshVsActual?.();
+      onRefreshVsActual?.(vsLead);
     }
-  }, [showVsActual, onRefreshVsActual]);
+  }, [showVsActual, onRefreshVsActual, vsLead]);
 
   useEffect(() => {
     let cancelled = false;
@@ -969,6 +979,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           p50: r.predicted_kw != null ? +Number(r.predicted_kw).toFixed(2) : null,
           p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
           p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
+          replay: String(r.method ?? '').endsWith('-replay'),
         };
       });
   }, [forecastAccuracy, vsActual7d]);
@@ -1093,6 +1104,9 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         callbacks: {
           label: (item: TooltipItem<'line'>) =>
             item.dataset.label !== 'P10' ? ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` : '',
+          // runs before 2026-11-17 were not stored; their forecast line is a replay of the same model
+          footer: (items: TooltipItem<'line'>[]) =>
+            items.length && vsActualChartData[items[0].dataIndex]?.replay ? 'Forecast replayed (run not stored at the time)' : '',
         },
       },
       zoom: createDragZoomPlugins(() => vsActualLoadChartZoom.onZoomComplete.current()),
@@ -1106,7 +1120,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
       y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => `${Number(v).toFixed(1)}` }, grid: { display: false } },
     },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
+  }), [isDark, vsActualChartData]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.35 }}>
@@ -1432,7 +1446,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         <ChartCard
           title={showVsActual ? `Load Forecast vs Actual — ${vsActual7d ? 'Last 7 Days' : 'Today'}` : '7-Day Load Forecast'}
           subtitle={showVsActual
-            ? `Inverter (backup) side only, not grid-direct circuits · 15-min slots · IST · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
+            ? `Inverter (backup) side only, not grid-direct circuits · ${VS_LEADS.find(l => l.key === vsLead)?.subtitle} · 15-min slots · IST · ${vsActual7d ? 'last 7 days' : 'today'} · drag to zoom`
             : (() => {
                 if (!loadForecast.length) return 'Predictive load forecasting';
                 const firstMethod = loadForecast[0]?.method || 'weighted_historical_avg';
@@ -1483,6 +1497,26 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
                   <Activity size={12} />
                   Last 7 Days
                 </button>
+              )}
+              {showVsActual && (
+                <div role="group" aria-label="Forecast made" style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 8, border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)'}` }}>
+                  {VS_LEADS.map(l => (
+                    <button
+                      key={l.key}
+                      onClick={() => { setVsLead(l.key); onRefreshVsActual?.(l.key); }}
+                      aria-pressed={vsLead === l.key}
+                      title={l.hint}
+                      style={{
+                        padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        background: vsLead === l.key ? (isDark ? 'rgba(15,159,143,0.15)' : 'rgba(15,159,143,0.1)') : 'transparent',
+                        color: vsLead === l.key ? 'var(--success)' : 'var(--muted-foreground)',
+                        fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
+                      }}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
               )}
               <ZoomResetButton
                 visible={showVsActual ? vsActualLoadChartZoom.isZoomed : loadForecastChartZoom.isZoomed}
