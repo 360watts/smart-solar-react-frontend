@@ -980,6 +980,8 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           p10: r.p10_kw != null ? +Number(r.p10_kw).toFixed(2) : null,
           p90: r.p90_kw != null ? +Number(r.p90_kw).toFixed(2) : null,
           replay: String(r.method ?? '').endsWith('-replay'),
+          // staff only, set by the backend when actual is outside P10-P90 (docs/test-scenarios/load-miss-reasons.md)
+          missReason: (r.miss_reason?.text as string | undefined) ?? null,
         };
       });
   }, [forecastAccuracy, vsActual7d]);
@@ -1105,8 +1107,10 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
           label: (item: TooltipItem<'line'>) =>
             item.dataset.label !== 'P10' ? ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} kW` : '',
           // runs before 2026-11-17 were not stored; their forecast line is a replay of the same model
-          footer: (items: TooltipItem<'line'>[]) =>
-            items.length && vsActualChartData[items[0].dataIndex]?.replay ? 'Forecast replayed (run not stored at the time)' : '',
+          footer: (items: TooltipItem<'line'>[]) => {
+            const row = items.length ? vsActualChartData[items[0].dataIndex] : undefined;
+            return [row?.missReason ? `Why off: ${row.missReason}` : '', row?.replay ? 'Forecast replayed (run not stored at the time)' : ''].filter(Boolean);
+          },
         },
       },
       zoom: createDragZoomPlugins(() => vsActualLoadChartZoom.onZoomComplete.current()),
