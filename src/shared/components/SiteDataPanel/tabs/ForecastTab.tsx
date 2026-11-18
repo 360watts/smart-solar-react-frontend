@@ -1,32 +1,20 @@
-import { EmptyState } from '../../Feedback';
 /**
  * ForecastTab — extracted from SiteDataPanel.tsx
- * Contains: ForecastTable, SatelliteKt*, EnhancedKPICard, PerformanceGauge,
+ * Contains: SatelliteKt*, EnhancedKPICard, PerformanceGauge,
  *           SatelliteKtCalendarPicker, SatelliteKtDayDetailChart, SatelliteKtTab,
  *           ForecastAccuracySubTab, ForecastTab (default export)
  */
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sun, Target, Satellite, BarChart2, TrendingUp, Activity, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { Sun, Target, Satellite, BarChart2, TrendingUp, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { Line as CJLine, Bar as CJBar } from 'react-chartjs-2';
 import { type ChartOptions, type TooltipItem } from 'chart.js';
 import { makeGradient, useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
 import { resolveCssVar } from '../../../lib/resolveCssVar';
-import { apiService } from '../../../../services/api';
-import { cacheService } from '../../../../services/cacheService';
 import { IST_TIMEZONE } from '../../../../app/constants';
-import { istDate, startOfSolarDayIST, endOfSolarDayIST, istDateOffset } from '../istDate';
+import SolarCard from './SolarCard';
 
 const IST = IST_TIMEZONE;
-
-// ── VS_ACTUAL_SERIES ───────────────────────────────────────────────────────────
-
-const VS_ACTUAL_SERIES = [
-  { key: 'Actual', label: 'Actual' },
-  { key: 'P50', label: 'P50' },
-  { key: 'Delta', label: 'Δ %' },
-] as const;
-type VsActualSeriesKey = typeof VS_ACTUAL_SERIES[number]['key'];
 
 // ── ChartCard (local copy) ─────────────────────────────────────────────────────
 
@@ -81,94 +69,6 @@ const ChartCard: React.FC<ChartCardProps> = ({
         ) : children}
       </div>
     </motion.div>
-  );
-};
-
-// ── REGIME_STYLE ───────────────────────────────────────────────────────────────
-
-const REGIME_STYLE: Record<string, { bg: string; color: string }> = {
-  night: { bg: '#1e293b1a', color: '#b8d0ec' },
-  ramp: { bg: '#f59e0b18', color: '#d97706' },
-  midday: { bg: '#F0752218', color: '#c2410c' },
-};
-
-// ── ForecastTable ──────────────────────────────────────────────────────────────
-
-export const ForecastTable = ({ data }: { data: any[] }) => {
-  const theadBg = 'var(--card)';
-  const rowBorder = '1px solid var(--border)';
-
-  return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid var(--border)` }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
-        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
-          <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
-            <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Regime</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b', borderBottom: `2px solid var(--border)` }}>P10 ↓</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid var(--border)` }}>P50</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid var(--border)` }}>P90 ↑</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Physics</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#eab308', borderBottom: `2px solid var(--border)` }}>GHI W/m²</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => {
-            const rc = row.regime ? (REGIME_STYLE[row.regime] ?? { bg: 'transparent', color: 'var(--text-muted)' }) : null;
-            return (
-              <tr key={i} style={{ borderBottom: rowBorder, transition: 'background 0.2s' }}>
-                <td style={{ padding: '10px 16px', color: 'var(--text-primary)', fontFamily: 'Fira Code, monospace' }}>
-                  {row.dateLabel ? <span style={{ marginRight: 8, color: '#0F9F8F', fontWeight: 700 }}>{row.dateLabel}</span> : null}
-                  {row.timeLabel ?? row.time}
-                </td>
-                <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                  {row.regime && rc && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: rc.bg, color: rc.color, padding: '3px 8px', borderRadius: 6, fontFamily: 'Rubik, sans-serif' }}>
-                      {row.regime}
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p10?.toFixed(2) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{row.p50?.toFixed(2) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.p90?.toFixed(2) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)', fontStyle: 'italic' }}>{row.physics?.toFixed(2) ?? '—'}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.ghi?.toFixed(0) ?? '—'}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-// ── VsActualTable ──────────────────────────────────────────────────────────────
-
-const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
-  const rowBorder = '1px solid var(--border)';
-  return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid var(--border)` }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
-        <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
-          <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid var(--border)` }}>Time</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid var(--border)` }}>Actual PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid var(--border)` }}>P50 Forecast (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid var(--border)` }}>Δ %</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 };
 
@@ -889,23 +789,8 @@ export const ForecastAccuracySubTab: React.FC<{ accuracy: any; isDark: boolean }
 interface ForecastTabProps {
   forecast: any[];
   isDark: boolean;
-  siteId: string;
   forecastSubTab: 'chart' | 'accuracy' | 'satellite';
   setForecastSubTab: (v: 'chart' | 'accuracy' | 'satellite') => void;
-  forecastZoom: ReturnType<typeof useChartZoomState>;
-  vsActualZoom: ReturnType<typeof useChartZoomState>;
-  showBands: Record<string, boolean>;
-  setShowBands: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-  showVsActualSeries: Record<string, boolean>;
-  setShowVsActualSeries: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-  forecastView: 'chart' | 'table';
-  setForecastView: (v: 'chart' | 'table') => void;
-  forecastWindow: 'today' | '3d' | '2d';
-  setForecastWindow: (v: 'today' | '3d' | '2d') => void;
-  vsActualView: 'chart' | 'table';
-  setVsActualView: (v: 'chart' | 'table') => void;
-  vsActual7d: boolean;
-  setVsActual7d: (v: boolean) => void;
   forecastAccuracy: any;
   weatherAccuracy: any;
   achievedPct: number | null | undefined;
@@ -916,178 +801,8 @@ interface ForecastTabProps {
 const tabTransition = { type: 'spring' as const, stiffness: 300, damping: 30 };
 
 const ForecastTab: React.FC<ForecastTabProps> = ({
-  forecast, isDark, siteId,
-  forecastSubTab, setForecastSubTab,
-  forecastZoom, vsActualZoom,
-  showBands, setShowBands,
-  showVsActualSeries, setShowVsActualSeries,
-  forecastView, setForecastView,
-  forecastWindow, setForecastWindow,
-  vsActualView, setVsActualView,
-  vsActual7d, setVsActual7d,
-  forecastAccuracy, weatherAccuracy, achievedPct,
+  forecast, isDark, forecastSubTab, setForecastSubTab, forecastAccuracy,
 }) => {
-  // Derived forecast data
-  const { forecastFiltered, forecastData } = useMemo(() => {
-    const todayIST = istDate(new Date());
-    const filtered = forecast.filter(row => {
-      const clean = row.forecast_for || row.timestamp?.replace('FORECAST#', '');
-      if (!clean) return false;
-      const forecastIST = istDate(new Date(clean));
-      if (forecastWindow === 'today') return forecastIST === todayIST;
-      if (forecastWindow === '3d') return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(3);
-      return forecastIST > istDateOffset(0) && forecastIST <= istDateOffset(2);
-    });
-    const mapped = filtered.map(row => {
-      const clean = row.forecast_for || row.timestamp?.replace('FORECAST#', '');
-      const d = new Date(clean);
-      const timeLabel = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-      const dateLabel = (forecastWindow === '3d' || forecastWindow === '2d')
-        ? d.toLocaleDateString([], { weekday: 'short', day: 'numeric', timeZone: IST })
-        : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', timeZone: IST });
-      const rawDate = istDate(d);
-      const rawTs = d.getTime();
-      const time = forecastWindow === 'today' ? timeLabel : `${dateLabel}||${timeLabel}`;
-      return {
-        time, dateLabel, timeLabel, rawDate, rawTs,
-        p50: row.p50_kw != null ? +Number(row.p50_kw).toFixed(2) : null,
-        p10: row.p10_kw != null ? +Number(row.p10_kw).toFixed(2) : null,
-        p90: row.p90_kw != null ? +Number(row.p90_kw).toFixed(2) : null,
-        physics: row.physics_baseline_kw != null ? +Number(row.physics_baseline_kw).toFixed(2) : null,
-        ghi: row.ghi_input_wm2 != null ? +row.ghi_input_wm2 : null,
-        temp: row.temperature_c != null ? +row.temperature_c : null,
-        regime: row.regime ?? null,
-      };
-    });
-    return { forecastFiltered: filtered, forecastData: mapped };
-  }, [forecast, forecastWindow]);
-
-  const forecastGeneratedAt = useMemo<Date | null>(() => {
-    if (forecast.length === 0) return null;
-    let maxGenAt = '';
-    for (const row of forecast) {
-      if (row.generated_at && row.generated_at > maxGenAt) maxGenAt = row.generated_at;
-    }
-    if (maxGenAt) return new Date(maxGenAt);
-    if (forecast[0]?.timestamp) {
-      return new Date(forecast[0].timestamp.replace('FORECAST#', '').split('T')[0] + 'T00:00:00Z');
-    }
-    return null;
-  }, [forecast]);
-
-  const { fcastP10, fcastP50, fcastP90 } = useMemo(() => {
-    let p10 = 0, p50 = 0, p90 = 0;
-    if (forecastFiltered.length > 1) {
-      for (let i = 0; i < forecastFiltered.length - 1; i++) {
-        const ts0 = forecastFiltered[i].forecast_for || forecastFiltered[i].timestamp?.replace('FORECAST#', '');
-        const ts1 = forecastFiltered[i + 1].forecast_for || forecastFiltered[i + 1].timestamp?.replace('FORECAST#', '');
-        if (!ts0 || !ts1) continue;
-        const h = Math.abs(new Date(ts1).getTime() - new Date(ts0).getTime()) / 3_600_000;
-        if (forecastFiltered[i].p10_kw != null && forecastFiltered[i + 1].p10_kw != null) p10 += (forecastFiltered[i].p10_kw + forecastFiltered[i + 1].p10_kw) / 2 * h;
-        if (forecastFiltered[i].p50_kw != null && forecastFiltered[i + 1].p50_kw != null) p50 += (forecastFiltered[i].p50_kw + forecastFiltered[i + 1].p50_kw) / 2 * h;
-        if (forecastFiltered[i].p90_kw != null && forecastFiltered[i + 1].p90_kw != null) p90 += (forecastFiltered[i].p90_kw + forecastFiltered[i + 1].p90_kw) / 2 * h;
-      }
-    }
-    return { fcastP10: p10, fcastP50: p50, fcastP90: p90 };
-  }, [forecastFiltered]);
-
-  // vs actual data — from forecastAccuracy timeseries (today + 7d)
-  const vsActualData = useMemo(() => {
-    const ts: any[] = forecastAccuracy?.timeseries ?? [];
-    // Keep rows with EITHER an actual reading or a forecast value — previously
-    // requiring actual_kw != null silently dropped every future-dated row, so
-    // "today" could never show anything past the last real telemetry sample.
-    // Actual is real-time (stops at now, naturally, since no reading exists
-    // yet); P50 forecast continues on its own past that point.
-    const rows = ts
-      .filter((r: any) => (r.actual_kw != null || r.predicted_kw != null) && (!!r.slot_ts || !!r.ts))
-      .map((r: any) => { const slot = r.slot_ts || r.ts; return { ...r, __ms: new Date(slot).getTime(), _slot: slot }; })
-      .filter((r: any) => !Number.isNaN(r.__ms));
-
-    if (rows.length === 0) return [];
-
-    const cutoffMs = vsActual7d
-      ? Date.now() - 7 * 24 * 60 * 60 * 1000
-      : new Date(startOfSolarDayIST()).getTime();
-    // "Today" is bounded above by 6am IST the next day, so the forecast line
-    // keeps drawing through the night instead of stopping wherever the data
-    // happens to end. The 7-day view is historical-only and needs no upper
-    // bound beyond "now".
-    const upperBoundMs = vsActual7d ? Date.now() : new Date(endOfSolarDayIST()).getTime();
-
-    // Bucket 5-min actual rows into 15-min slots (matching forecast resolution)
-    const BUCKET_MS = 15 * 60 * 1000;
-    const bucketMap = new Map<number, { sumActual: number; count: number; predicted_kw: number | null; p10_kw: number | null; p90_kw: number | null }>();
-    for (const r of rows.filter((r: any) => r.__ms >= cutoffMs && r.__ms <= upperBoundMs)) {
-      const bucketMs = Math.floor(r.__ms / BUCKET_MS) * BUCKET_MS;
-      const b = bucketMap.get(bucketMs) ?? { sumActual: 0, count: 0, predicted_kw: r.predicted_kw ?? null, p10_kw: r.p10_kw ?? null, p90_kw: r.p90_kw ?? null };
-      if (r.actual_kw != null) { b.sumActual += r.actual_kw; b.count += 1; }
-      if (b.predicted_kw == null && r.predicted_kw != null) b.predicted_kw = r.predicted_kw;
-      bucketMap.set(bucketMs, b);
-    }
-
-    return Array.from(bucketMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([bucketMs, b]) => ({
-        label: vsActual7d
-          ? new Date(bucketMs).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST })
-          : new Date(bucketMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST }),
-        fTs: bucketMs,
-        p50: b.predicted_kw != null ? +Number(b.predicted_kw).toFixed(2) : null,
-        actual: b.count > 0 ? +Number(b.sumActual / b.count).toFixed(2) : null,
-        diffPct: b.count > 0 && b.predicted_kw != null && b.predicted_kw > 0 ? Math.round(((b.sumActual / b.count - b.predicted_kw) / b.predicted_kw) * 100) : null,
-      }));
-  }, [forecastAccuracy, vsActual7d]);
-
-  const activeVsActualData = vsActualData;
-
-  // Chart options
-  const forecastChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
-      tooltip: {
-        backgroundColor: resolveCssVar('--popover'),
-        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(15,159,143,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'GHI' ? 'W/m²' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(2)} ${unit}`; } },
-      },
-      zoom: createDragZoomPlugins(() => forecastZoom.onZoomComplete.current()),
-    } as any,
-    scales: {
-      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
-      ghi: { type: 'linear', position: 'right', ticks: { color: '#eab308', font: { size: 10 }, callback: (v: any) => `${v}` }, grid: { drawOnChartArea: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
-
-  const vsActualChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: true, labels: { color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
-      tooltip: {
-        backgroundColor: resolveCssVar('--popover'),
-        titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
-      },
-      zoom: createDragZoomPlugins(() => vsActualZoom.onZoomComplete.current()),
-    } as any,
-    scales: {
-      x: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
-      pct: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
-
   return (
     <motion.div
       key="forecast"
@@ -1130,127 +845,7 @@ const ForecastTab: React.FC<ForecastTabProps> = ({
         <SatelliteKtTab accuracy={forecastAccuracy} isDark={isDark} />
       </div>
       <div style={{ display: forecastSubTab === 'chart' ? 'block' : 'none' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['chart', 'table'] as const).map(mode => (
-              <button key={mode} onClick={() => setForecastView(mode)}
-                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: forecastView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent', color: forecastView === mode ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {mode}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            {(['P10', 'P50', 'P90'] as const).map(key => (
-              <button key={key} onClick={() => setShowBands(prev => ({ ...prev, [key]: !prev[key] }))}
-                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: showBands[key] ? 'rgba(15,159,143, 0.14)' : 'transparent', color: showBands[key] ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}>
-                {key}
-              </button>
-            ))}
-            <button onClick={() => setShowBands(prev => ({ ...prev, GHI: !prev.GHI }))}
-              style={{ border: '1px solid rgba(234, 179, 8, 0.35)', background: showBands.GHI ? 'rgba(234, 179, 8, 0.14)' : 'transparent', color: showBands.GHI ? '#eab308' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: showBands.GHI ? '#eab308' : 'var(--text-muted)', display: 'inline-block', flexShrink: 0 }} />
-              GHI
-            </button>
-            <ZoomResetButton visible={forecastZoom.isZoomed} onClick={forecastZoom.resetZoom} />
-          </div>
-        </div>
-
-        {forecastGeneratedAt && (
-          <p style={{ margin: '0 0 10px', color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'Rubik, sans-serif' }}>
-            Forecast generated {forecastGeneratedAt.toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short', timeZone: IST })}
-          </p>
-        )}
-
-        <ChartCard
-          title="Solar Generation Forecast"
-          subtitle={`${forecastData.length} × 15-min slots · P10 / P50 / P90 bands`}
-          isDark={isDark} isLive={false} height={360} accentColor="#f59e0b" delay={0.1}
-        >
-          {forecastData.length === 0 ? (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>No forecast points for the selected window.</p>
-          ) : forecastView === 'chart' ? (
-            <div style={{ width: '100%', height: 360 }}>
-              <CJLine
-                ref={forecastZoom.chartRef}
-                data={{
-                  labels: forecastData.map(d => d.time),
-                  datasets: [
-                    showBands.P10 && { label: 'P10', data: forecastData.map(d => d.p10), borderColor: '#f59e0b', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: false },
-                    showBands.P50 && { label: 'P50', data: forecastData.map(d => d.p50), borderColor: '#0F9F8F', borderWidth: 2.4, tension: 0.3, pointRadius: 0, fill: showBands.P10 ? '-1' : false, backgroundColor: 'rgba(15,159,143,0.08)' },
-                    showBands.P90 && { label: 'P90', data: forecastData.map(d => d.p90), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, fill: showBands.P50 ? '-1' : false, backgroundColor: 'rgba(59,130,246,0.06)' },
-                    { label: 'Physics', data: forecastData.map(d => d.physics), borderColor: '#8B87A8', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [5, 4], fill: false },
-                    showBands.GHI && { label: 'GHI', yAxisID: 'ghi', data: forecastData.map(d => d.ghi), borderColor: '#eab308', borderWidth: 1.3, tension: 0.3, pointRadius: 0, fill: true, backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#eab30820'; return makeGradient(chart.ctx, chart.chartArea, '#eab308', 0.15, 0.01); } },
-                  ].filter(Boolean) as any[],
-                }}
-                options={forecastChartOptions}
-              />
-            </div>
-          ) : (
-            <ForecastTable data={forecastData} />
-          )}
-        </ChartCard>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {[`P10 = ${fcastP10.toFixed(2)} kWh`, `P50 = ${fcastP50.toFixed(2)} kWh`, `P90 = ${fcastP90.toFixed(2)} kWh`, `Points ${forecastData.length}`].map((chip, idx) => (
-            <span key={`${chip}-${idx}`} style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-muted)', border: '1px solid rgba(15,159,143, 0.2)', borderRadius: 999, padding: '5px 10px', background: isDark ? 'rgba(15,159,143, 0.08)' : 'rgba(15,159,143, 0.05)' }}>
-              {chip}
-            </span>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-primary)' }}>
-            Forecast vs Actual — {vsActual7d ? 'Last 7 Days' : 'Today'}
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => {
-                cacheService.clear(`forecast_accuracy_${siteId}_30`);
-                setVsActual7d(!vsActual7d);
-              }}
-              aria-pressed={vsActual7d}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`, background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent', color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'), cursor: 'pointer', fontWeight: 700, fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem', transition: 'all 0.15s ease' }}>
-              <Activity size={12} />Last 7 Days
-            </button>
-            {(['chart', 'table'] as const).map(mode => (
-              <button key={mode} onClick={() => setVsActualView(mode)}
-                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: vsActualView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent', color: vsActualView === mode ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {mode}
-              </button>
-            ))}
-            {VS_ACTUAL_SERIES.map(series => (
-              <button key={series.key} onClick={() => setShowVsActualSeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
-                style={{ border: '1px solid rgba(15,159,143, 0.25)', background: showVsActualSeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent', color: showVsActualSeries[series.key] ? '#0F9F8F' : 'var(--text-muted)', borderRadius: 8, padding: '6px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}>
-                {series.label}
-              </button>
-            ))}
-            <ZoomResetButton visible={vsActualZoom.isZoomed} onClick={vsActualZoom.resetZoom} />
-          </div>
-        </div>
-
-        <div style={{ padding: 16, borderRadius: 16, marginTop: 4, background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)', border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}` }}>
-          {activeVsActualData.length === 0 ? (
-            <EmptyState icon={Target} title={vsActual7d ? 'No scored forecast slots in the last 7 days' : 'Nothing to compare yet today'}
-            description={vsActual7d ? 'Slots are scored once real readings arrive for them.' : 'The chart fills in once readings overlap the forecast.'} />
-          ) : vsActualView === 'chart' ? (
-            <div style={{ width: '100%', height: 320 }}>
-              <CJLine
-                ref={vsActualZoom.chartRef}
-                data={{
-                  labels: activeVsActualData.map(d => d.label),
-                  datasets: [
-                    showVsActualSeries.Actual && { label: 'Actual', data: activeVsActualData.map(d => d.actual), borderColor: '#F07522', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false },
-                    showVsActualSeries.P50 && { label: 'P50', data: activeVsActualData.map(d => d.p50), borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false },
-                    showVsActualSeries.Delta && { label: 'Δ %', yAxisID: 'pct', data: activeVsActualData.map(d => d.diffPct), borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0, borderDash: [4, 4], fill: false },
-                  ].filter(Boolean) as any[],
-                }}
-                options={vsActualChartOptions}
-              />
-            </div>
-          ) : (
-            <VsActualTable data={activeVsActualData} />
-          )}
-        </div>
+        <SolarCard isDark={isDark} forecast={forecast} accuracy={forecastAccuracy} />
       </div>
     </motion.div>
   );

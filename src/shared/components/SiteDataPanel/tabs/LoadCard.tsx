@@ -14,6 +14,7 @@ import {
   buildSlots, cumulative, gapSlots, gridEnergy, kwh, num, stackTops, totalForecast, windowRange, PHASE_COLORS, SLOT_MS,
   type ActualLine, type LoadLead, type LoadLine, type LoadWindow,
 } from './loadCardModel';
+import { ChartLegend, KpiRow, KpiTile, Seg, groupLabel, groupRow, inkMuted, legendFrom, type Tone } from './cardParts';
 
 const IST = IST_TIMEZONE;
 const LINE_META: Record<ActualLine, { label: string; color: string }> = {
@@ -49,45 +50,12 @@ export interface LoadCardProps {
   nowMs?: number;       // tests
 }
 
-const segWrap = (isDark: boolean): React.CSSProperties => ({
-  display: 'inline-flex', borderRadius: 10, overflow: 'hidden',
-  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,23,42,0.1)'}`,
-  background: isDark ? 'rgba(15,23,42,0.5)' : 'rgba(241,245,249,0.8)',
-});
-// one neutral selected state for every group: colour in the controls carried no meaning
-const segBtn = (active: boolean, first: boolean, isDark: boolean): React.CSSProperties => ({
-  border: 'none', borderLeft: first ? 'none' : `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.08)'}`,
-  background: active ? 'var(--foreground)' : 'transparent',
-  color: active ? 'var(--background)' : 'var(--muted-foreground)',
-  padding: '0 12px', minHeight: 32, fontSize: '0.8125rem', fontWeight: active ? 600 : 500, cursor: 'pointer',
-  fontFamily: 'Rubik, sans-serif', display: 'inline-flex', alignItems: 'center', gap: 5,
-});
-const groupLabel: React.CSSProperties = {
-  fontSize: '0.75rem', fontWeight: 500, color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif',
-};
-const groupRow: React.CSSProperties = { display: 'flex', gap: 8, alignItems: 'center' };
 const chip = (color = 'var(--muted-foreground)', warn = false): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 999,
   border: `1px solid ${warn ? 'transparent' : 'var(--border)'}`, background: warn ? 'rgba(239,68,68,0.12)' : 'transparent',
-  color: warn ? '#dc2626' : color, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif',
+  color: warn ? '#dc2626' : color, fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'Rubik, sans-serif',
   fontVariantNumeric: 'tabular-nums',
 });
-
-function Seg<T extends string>({ label, value, options, onChange, isDark }: {
-  label: string; value: T; options: readonly (readonly [T, string, string?])[];
-  onChange: (v: T) => void; isDark: boolean;
-}) {
-  return (
-    <div role="group" aria-label={label} style={segWrap(isDark)}>
-      {options.map(([k, text, hint], i) => (
-        <button key={k} type="button" title={hint} aria-pressed={value === k} onClick={() => onChange(k)}
-          style={segBtn(value === k, i === 0, isDark)}>
-          {text}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 const fmt = (v: number | null | undefined, unit: string) => (v == null ? '–' : `${v.toFixed(2)} ${unit}`);
 
@@ -247,15 +215,7 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
     responsive: true, maintainAspectRatio: false, animation: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: {
-        display: true, position: 'top', align: 'start',
-        // swatches match the marks: line, dashed line (dataset borderDash), filled area ('rect')
-        labels: {
-          color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 12, weight: 500 as any },
-          boxWidth: 22, usePointStyle: true, padding: 16,
-          filter: (item: any) => !String(item.text).startsWith('_') && !String(item.text).endsWith(' forecast'),
-        },
-      },
+      legend: { display: false }, // HTML legend above the canvas (cardParts ChartLegend)
       tooltip: {
         backgroundColor: resolveCssVar('--popover'), titleColor: resolveCssVar('--foreground'), bodyColor: resolveCssVar('--muted-foreground'),
         borderColor: p.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
@@ -296,13 +256,14 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
     } as any,
     scales: {
       x: {
-        ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+        offset: true, // first and last slots sit in from the axes
+        ticks: { color: inkMuted(p.isDark), font: { family: 'Rubik, sans-serif', size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
         grid: { display: false },
       },
       y: {
-        beginAtZero: true,
-        title: { display: true, text: kwhMode ? 'Energy (kWh)' : 'Load (kW)', color: resolveCssVar('--muted-foreground'), font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any } },
-        ticks: { color: resolveCssVar('--muted-foreground'), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => Number(v).toFixed(1) },
+        beginAtZero: true, grace: '5%',
+        title: { display: true, text: kwhMode ? 'Energy (kWh)' : 'Load (kW)', color: inkMuted(p.isDark), font: { family: 'Rubik, sans-serif', size: 11, weight: 700 as any } },
+        ticks: { color: inkMuted(p.isDark), font: { family: 'Fira Code, monospace', size: 11 }, callback: (v: any) => Number(v).toFixed(1) },
         grid: { display: true, color: p.isDark ? 'rgba(148,163,184,0.09)' : 'rgba(15,23,42,0.06)' },
         border: { display: false },
       },
@@ -310,40 +271,48 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [p.isDark, kwhMode, multiDay]);
 
-  // ── chips ──
+  // ── KPI tiles (Nov 18: same tiles as the Solar card); chips are kept for warnings and notes ──
   const past = slots.filter((_, i) => isPast(i));
   const future = slots.filter((_, i) => !isPast(i));
   const soFar = (k: ActualLine) => kwh(past.map(s => s[k]));
   const ahead = (k: 'inv' | 'grid') => kwh(future.map(s => (k === 'inv' ? s.invP50 : gridEnergy(s))));
   const byWhen = win === 'today' ? `by ${label(end, false)}` : 'by the end';
-  const chips: React.ReactNode[] = [];
-  for (const k of shownLines) {
-    const dot = <span style={{ width: 7, height: 7, borderRadius: '50%', background: LINE_META[k].color }} />;
-    if (win === 'next7') {
-      chips.push(<span key={k} style={chip()}>{dot}{LINE_META[k].label} {k === 'ev' ? '· not forecast' : <><b style={{ color: 'var(--foreground)' }}>~{ahead(k).toFixed(1)} kWh</b> expected</>}</span>);
-    } else {
-      chips.push(
-        <span key={k} style={chip()}>{dot}{LINE_META[k].label} <b style={{ color: 'var(--foreground)' }}>{soFar(k).toFixed(1)} kWh</b> so far
-          {k === 'ev' ? ' · measured only' : fcOn && future.length > 0 ? ` · ~${(soFar(k) + ahead(k)).toFixed(1)} kWh ${byWhen}` : null}
-        </span>,
-      );
+  const TONE: Record<LoadLine, Tone> = { inv: 'amber', grid: 'blue', ev: 'teal', all: 'neutral' };
+  const fcLines = shownLines.filter((k): k is 'inv' | 'grid' => k !== 'ev');
+  const tiles: React.ReactNode[] = [];
+  if (win === 'next7') {
+    for (const k of fcLines) {
+      tiles.push(<KpiTile key={k} isDark={p.isDark} tone={TONE[k]} label={`${LINE_META[k].label} · next 7 days`} value={`~${ahead(k).toFixed(1)}`} unit="kWh"
+        sub={k === 'grid' ? "From the last 14 days' pattern" : 'Forecast P50'} />);
+    }
+    if (line === 'all' && fcLines.length > 1) {
+      tiles.push(<KpiTile key="total" isDark={p.isDark} label="Total · next 7 days" value={`~${fcLines.reduce((t, k) => t + ahead(k), 0).toFixed(1)}`} unit="kWh"
+        sub={lines.includes('ev') ? 'Inverter + grid · EV is not forecast' : 'Inverter + grid'} />);
+    }
+  } else {
+    const total = shownLines.reduce((t, k) => t + soFar(k), 0);
+    const projected = total + fcLines.reduce((t, k) => t + ahead(k), 0);
+    const willProject = fcOn && future.length > 0 && fcLines.length > 0;
+    const pct = willProject && projected > 0 ? Math.round((total / projected) * 100) : null;
+    const breakdown = line === 'all' ? shownLines.map(k => `${LINE_META[k].label} ${soFar(k).toFixed(1)}`).join(' · ') : null;
+    tiles.push(
+      <KpiTile key="sofar" isDark={p.isDark} tone={TONE[line]} label={line === 'all' ? 'Total so far' : `${LINE_META[line as ActualLine].label} so far`}
+        value={total.toFixed(1)} unit="kWh" bar={pct}
+        sub={<>{breakdown ?? (line === 'ev' ? 'Measured only' : pct != null ? `${pct}% of the expected total` : win === 'last7' ? 'Last 7 days' : 'Measured')}{gaps.size && line === 'all' ? ' · incomplete' : ''}</>} />,
+    );
+    if (willProject) {
+      tiles.push(<KpiTile key="expected" isDark={p.isDark} tone="teal" label={`Expected ${byWhen}`} value={`~${projected.toFixed(1)}`} unit="kWh"
+        sub={`~${(projected - total).toFixed(1)} kWh still to come${line === 'all' && lines.includes('ev') ? ' · EV not forecast' : ''}`} />);
     }
   }
-  if (line === 'all' && win !== 'next7') {
-    const total = shownLines.reduce((t, k) => t + soFar(k), 0);
-    const projected = total + (lines.includes('inv') ? ahead('inv') : 0) + (lines.includes('grid') ? ahead('grid') : 0);
-    chips.push(
-      <span key="total" style={chip('var(--foreground)')}>
-        <b>Total {total.toFixed(1)} kWh</b> so far{fcOn && future.length > 0 ? ` · ~${projected.toFixed(1)} kWh ${byWhen}` : ''}{gaps.size ? ' · incomplete' : ''}
-      </span>,
-    );
-  }
-  if (gaps.size) chips.push(<span key="gap" style={chip(undefined, true)}>⚠ {gaps.size * 15} min with a line missing{line === 'all' ? ' · total incomplete' : ''}</span>);
-  // accuracy is a quiet caption, not a chip: it describes the day-ahead run whatever lead is selected
+  // accuracy describes the day-ahead run whatever lead is selected
   const overall = p.invAccuracy?.overall;
-  const accuracy = (line === 'inv' || line === 'all') && fcOn && win !== 'next7' && overall?.mae_kw != null
-    ? `Day-ahead accuracy, last 7 days: typical error ${Number(overall.mae_kw).toFixed(2)} kW${overall.coverage_pct != null ? ` · ${Math.round(overall.coverage_pct)}% inside the range` : ''}`
-    : null;
+  if ((line === 'inv' || line === 'all') && fcOn && win !== 'next7' && overall?.mae_kw != null) {
+    tiles.push(<KpiTile key="acc" isDark={p.isDark} label="Typical error" value={Number(overall.mae_kw).toFixed(2)} unit="kW"
+      sub={`Day-ahead, last 7 days${overall.coverage_pct != null ? ` · ${Math.round(overall.coverage_pct)}% inside the range` : ''}`} />);
+  }
+  const chips: React.ReactNode[] = [];
+  if (gaps.size) chips.push(<span key="gap" style={chip(undefined, true)}>⚠ {gaps.size * 15} min with a line missing{line === 'all' ? ' · total incomplete' : ''}</span>);
   if (shownLines.includes('grid') && fcOn && line === 'grid') chips.push(<span key="median" style={chip()}>Forecast = last 14 days' pattern · kWh from its expected value</span>);
   if (shownLines.includes('grid') && p.gridAccuracy?.note) chips.push(<span key="note" style={chip('#d97706')}>{p.gridAccuracy.note}</span>);
 
@@ -400,11 +369,9 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
         </div>
       </div>
 
-      <div style={{ padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {chips}
-          {accuracy && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif' }}>{accuracy}</span>}
-        </div>
+      <div style={{ padding: '14px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {lines.length > 0 && !nothing && tiles.length > 0 && <KpiRow>{tiles}</KpiRow>}
+        {chips.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>{chips}</div>}
         {lines.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>
             No load data for this site yet. Inverter load, the energy meter and the EV plug appear here once they report.
@@ -414,7 +381,9 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
             EV is measured only, so there is nothing to forecast here.
           </div>
         ) : (
-          <div style={{ height: 340, position: 'relative' }}>
+          <div>
+          <ChartLegend items={legendFrom(datasets)} />
+          <div style={{ height: 320, position: 'relative' }}>
             <CJLine
               key={`${line}-${win}-${unit}`}
               ref={zoom.chartRef}
@@ -422,6 +391,7 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
               options={options}
               plugins={[overlay]}
             />
+          </div>
           </div>
         )}
         <p style={{ margin: 0, textAlign: 'right', fontSize: '0.75rem', color: 'var(--muted-foreground)', fontFamily: 'Rubik, sans-serif' }}>

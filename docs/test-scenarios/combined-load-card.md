@@ -45,9 +45,9 @@ Tests: `tabs/loadCardModel.test.ts`, `tabs/LoadCard.test.tsx`.
 | C5 | lead Latest | Forecast = Off, then Day-ahead | Off: no forecast datasets, no fetch; Day-ahead: onLeadChange('day') | unit | P0 | passing |
 | C6 | a past slot with no grid reading | Line = All | "incomplete" shows | unit | P0 | passing |
 | C7 | the grid response carries a note | Line = Grid | the note shows; the forecast reads "Forecast (14-day pattern)" and the band "Likely range", not P10–P90 (calibrated bands reached about 71%, Nov 17 study) | unit | P1 | passing |
-| C8 | the grid forecast has P50 0.6 kW and mean 1.0 kW | Line = Grid, Today | the chip reads "~X kWh by 06:00" = so far + the summed mean, not P50 | unit | P0 | passing |
+| C8 | the grid forecast has P50 0.6 kW and mean 1.0 kW | Line = Grid, Today | the "Expected by 06:00" KPI tile reads ~X kWh = so far + the summed mean, not P50 | unit | P0 | passing |
 | C9 | inverter forecast on (Nov 17 design review) | render | the forecast is dashed in the line's own hue, never red; every dataset has tension 0 (no overshoot between 15-min averages) | unit | P1 | passing |
-| C10 | inverter accuracy in the response | render, Today | accuracy is a plain caption "Day-ahead accuracy, last 7 days: typical error … · …% inside the range"; chips read "… so far" | unit | P2 | passing |
+| C10 | inverter accuracy in the response | render, Today | KPI tiles (Nov 18, shared with the Solar card): "Inverter so far", "Expected by …", "Typical error" with "Day-ahead, last 7 days · …% inside the range"; legend text 14 px bold; chips only for gaps and grid notes | unit | P2 | passing |
 
 ## Edge cases from design review
 

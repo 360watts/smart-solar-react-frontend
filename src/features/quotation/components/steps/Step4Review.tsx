@@ -104,7 +104,7 @@ export function Step4Review({ form }: Props) {
           <p className="sq-chart-label">Net Cumulative Savings (₹ thousands)</p>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
                 <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
@@ -127,9 +127,9 @@ export function Step4Review({ form }: Props) {
           <p className="sq-chart-label">Cumulative Cost Comparison (₹ thousands)</p>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
-                <XAxis dataKey="year" tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} style={CHART_STYLE}>
+                <XAxis dataKey="year" padding={{ left: 10, right: 10 }} tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, (max: number) => Math.ceil(max * 1.05)]} tick={{ fill: 'var(--fg-muted, #7A6A58)', fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                   wrapperStyle={{ fontFamily: "'Fira Code', monospace", fontSize: 9, color: 'var(--fg-muted, #7A6A58)' }}

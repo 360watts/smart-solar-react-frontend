@@ -95,11 +95,12 @@ describe('LoadCard', () => {
     expect(labels()).not.toContain('P10–P90');
   });
 
-  it('C8 the grid kWh chip sums the expected value, not P50', () => {
+  it('C8 the grid kWh tile sums the expected value, not P50', () => {
     // 3.75 kWh so far + 79 future slots at mean 1.0 kW (19.75) -> ~23.5 by 06:00 (P50 0.6 would give 15.6)
     setup({ gridAccuracy: { timeseries: series(0.6).map(r => ({ ...r, mean_kw: 1.0 })) } });
     click('Grid');
-    expect(screen.getByText(/~23\.5 kWh by 06:00/)).toBeInTheDocument();
+    expect(screen.getByText('Expected by 06:00')).toBeInTheDocument();
+    expect(screen.getByText(/~23\.5/)).toBeInTheDocument();
   });
 
   it('C9 the forecast is drawn in its line colour, never red, on straight segments', () => {
@@ -129,9 +130,13 @@ describe('LoadCard', () => {
     expect(labels()).not.toContain('EV');
   });
 
-  it('C10 the accuracy line is a caption and the chips read as so far / by the end', () => {
+  it('C10 KPI tiles: so far, expected, typical error', () => {
     setup();
-    expect(screen.getByText(/Day-ahead accuracy, last 7 days: typical error 0\.20 kW · 80% inside the range/)).toBeInTheDocument();
-    expect(screen.getAllByText(/so far/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('kpi')).toHaveLength(3);
+    expect(screen.getByText('Inverter so far')).toBeInTheDocument();
+    expect(screen.getByText('Typical error')).toBeInTheDocument();
+    expect(screen.getByText('Day-ahead, last 7 days · 80% inside the range')).toBeInTheDocument();
+    expect(chartProps.options.plugins.legend.display).toBe(false);
+    expect(screen.getByTestId('legend')).toHaveTextContent('Forecast (P50)');
   });
 });

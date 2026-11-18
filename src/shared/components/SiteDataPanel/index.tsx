@@ -233,7 +233,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // Set once the person picks a tab (or the caller names one), so the meter-only auto-switch never overrides them.
   const pickedTabRef = useRef(initialTab != null);
   const analyticsLoadedRef = useRef<{ weatherForecast: boolean; phaseLoad: boolean }>({ weatherForecast: false, phaseLoad: false });
-  const [showBands, setShowBands] = useState<Record<string, boolean>>({ P10: true, P50: true, P90: true, GHI: true });
   const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
     PV: true,
     Load: true,
@@ -252,14 +251,11 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const debouncedStart = useDebouncedValue(customStartDate, { delay: 600 });
   const debouncedEnd = useDebouncedValue(customEndDate, { delay: 600 });
 
-  const [forecastView, setForecastView] = useState<'chart' | 'table'>('chart');
-  const [forecastWindow, setForecastWindow] = useState<'today' | '3d' | '2d'>('2d');
   const [historyView, setHistoryView] = useState<'chart' | 'table'>('chart');
   const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
   const [vsActual7d, setVsActual7d] = useState(false);
 
   const historyZoom = useChartZoomState();
-  const forecastZoom = useChartZoomState();
   const vsActualZoom = useChartZoomState();
 
   // Chart.js draws on canvas, whose fillStyle can't resolve CSS var() — must be literal
@@ -605,10 +601,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     }, 1000);
     return () => clearInterval(tick);
   }, [lastUpdated]);
-
-  useEffect(() => {
-    forecastZoom.resetZoom();
-  }, [forecastWindow]);
 
   useEffect(() => {
     historyZoom.resetZoom();
@@ -978,12 +970,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       : null;
   }, [forecast, todayKwh, latest]);
 
-  const onToggleVsActual7d = useCallback(() => {
-    cacheService.clear(`forecast_accuracy_${siteId}_30`);
-    setForecastAccuracy(null);
-    setVsActual7d(v => !v);
-    apiService.getForecastAccuracy(siteId, 30).then(fa => setForecastAccuracy(fa ?? null)).catch(() => {});
-  }, [siteId]);
+  // the 30-day accuracy response already holds the 7-day series: toggling needs no refetch (Nov 18)
+  const onToggleVsActual7d = useCallback(() => setVsActual7d(v => !v), []);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   // A meter-only site never has inverter telemetry or a forecast; its tabs still need to show.
@@ -1104,27 +1092,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                   </>
                 )}
               </>
-            )}
-            {activeTab === 'forecast' && forecastSubTab === 'chart' && (
-              <select
-                value={forecastWindow}
-                onChange={e => setForecastWindow(e.target.value as 'today' | '3d' | '2d')}
-                style={{
-                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid rgba(15,159,143, 0.3)',
-                  borderRadius: 8,
-                  padding: '6px 30px 6px 12px',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontFamily: 'Rubik, sans-serif',
-                  fontWeight: 600,
-                }}
-              >
-                <option value="today">Today</option>
-                <option value="2d">Next 48 hours</option>
-                <option value="3d">Next 3 days</option>
-              </select>
             )}
           </div>
           {lastUpdated && (
@@ -1382,23 +1349,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
                 key="forecast"
                 forecast={forecast}
                 isDark={isDark}
-                siteId={siteId}
                 forecastSubTab={forecastSubTab}
                 setForecastSubTab={setForecastSubTab}
-                forecastZoom={forecastZoom}
-                vsActualZoom={vsActualZoom}
-                showBands={showBands}
-                setShowBands={setShowBands}
-                showVsActualSeries={showVsActualSeries}
-                setShowVsActualSeries={setShowVsActualSeries}
-                forecastView={forecastView}
-                setForecastView={setForecastView}
-                forecastWindow={forecastWindow}
-                setForecastWindow={setForecastWindow}
-                vsActualView={vsActualView}
-                setVsActualView={setVsActualView}
-                vsActual7d={vsActual7d}
-                setVsActual7d={setVsActual7d}
                 forecastAccuracy={forecastAccuracy}
                 weatherAccuracy={weatherAccuracy}
                 achievedPct={achievedPct}
