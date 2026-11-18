@@ -401,10 +401,17 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
 
   // Lead chosen on the Phase Load vs-actual chart; the 5-min auto refresh reuses it.
   const vsLeadRef = useRef('latest');
+  const vsFetchedRef = useRef<Record<string, number>>({});
   const refreshVsActualData = useCallback(async (lead?: string) => {
     if (!siteId) return;
     if (lead) vsLeadRef.current = lead;
-    cacheService.clear(`load_forecast_accuracy_${siteId}_7_${vsLeadRef.current}`);
+    // switching back to a lead fetched in the last 5 min reuses its response (runs arrive every 15 min);
+    // older, or a plain refresh, fetches again
+    const key = `load_forecast_accuracy_${siteId}_7_${vsLeadRef.current}`;
+    if (!lead || Date.now() - (vsFetchedRef.current[key] ?? 0) > 5 * 60_000) {
+      cacheService.clear(key);
+      vsFetchedRef.current[key] = Date.now();
+    }
     try {
       const lfa = await apiService.getLoadForecastAccuracy(siteId, 7, vsLeadRef.current);
       setLoadForecastAccuracy(lfa ?? null);
@@ -515,7 +522,9 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     } finally {
       isInitialLoad.current = false;
     }
-  }, [siteId, dateRange, debouncedStart, debouncedEnd, phaseLoadHours]);
+  // phaseLoadHours is not read here: listing it made every Load card window switch reload the whole panel (spinner,
+  // forecast, telemetry); the Phase Load tab fetches its own rows for the window (Nov 18)
+  }, [siteId, dateRange, debouncedStart, debouncedEnd]);
 
   const fetchHistory = useCallback(async () => {
     const now = new Date();

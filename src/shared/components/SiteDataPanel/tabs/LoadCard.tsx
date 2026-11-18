@@ -239,7 +239,8 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
   }), []);
 
   const options = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+    // no animation: every toggle remounts the chart (key), and a 300 ms grow-in read as slow loading
+    responsive: true, maintainAspectRatio: false, animation: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
