@@ -221,7 +221,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
       {/* ── Energy flow ── */}
       <div style={{ marginBottom: 24 }}>
-        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} latest={latest} today={flowToday} onOpenPlugs={onOpenPlugs} />
+        <EnergyFlowHealthRow siteId={siteId} inverterCapacityKw={inverterCapacityKw} smartDevices={smartDevices} ctReading={ctLatest} inverterPhases={inverterPhasesForFlow} latest={latest} today={flowToday} onOpenPlugs={onOpenPlugs} />
       </div>
 
       {/* ── Below the flow: flat tiles in the flow's card language, one 16 px rhythm ── */}

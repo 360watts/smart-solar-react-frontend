@@ -762,16 +762,16 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     return `${Math.floor(hr / 24)}d ago`;
   })();
 
-  const gridL1VoltageV = latest?.grid_l1_voltage_v || latest?.grid_voltage_v || null;
-  const gridL2VoltageV = latest?.grid_l2_voltage_v || null;
-  const gridL3VoltageV = latest?.grid_l3_voltage_v || null;
-  const gridL1CurrentA = latest?.grid_l1_current_a || null;
-  const gridL2CurrentA = latest?.grid_l2_current_a || null;
-  const gridL3CurrentA = latest?.grid_l3_current_a || null;
+  const gridL1VoltageV = latest?.grid_l1_voltage_v ?? latest?.grid_voltage_v ?? null;
+  const gridL2VoltageV = latest?.grid_l2_voltage_v ?? null;
+  const gridL3VoltageV = latest?.grid_l3_voltage_v ?? null;
+  const gridL1CurrentA = latest?.grid_l1_current_a ?? null;
+  const gridL2CurrentA = latest?.grid_l2_current_a ?? null;
+  const gridL3CurrentA = latest?.grid_l3_current_a ?? null;
 
-  const loadL1PowerW = latest?.load_l1_power_w || null;
-  const loadL2PowerW = latest?.load_l2_power_w || null;
-  const loadL3PowerW = latest?.load_l3_power_w || null;
+  const loadL1PowerW = latest?.load_l1_power_w ?? null;
+  const loadL2PowerW = latest?.load_l2_power_w ?? null;
+  const loadL3PowerW = latest?.load_l3_power_w ?? null;
   const hasLoadPhaseData = loadL1PowerW != null || loadL2PowerW != null || loadL3PowerW != null;
   const loadPhaseSumW = hasLoadPhaseData ? (loadL1PowerW ?? 0) + (loadL2PowerW ?? 0) + (loadL3PowerW ?? 0) : null;
   const loadKw = loadPhaseSumW != null ? loadPhaseSumW / 1000 : loadKwRaw;

@@ -479,9 +479,9 @@ function Skeleton({ B }: { B:ReturnType<typeof mkB> }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; latest?: any | null; today?: EnergyFlowBlockProps['today']; onOpenPlugs?: () => void; }
+interface Props { siteId: string; inverterCapacityKw?: number|null; smartDevices?: any[]; ctReading?: any | null; latest?: any | null; today?: EnergyFlowBlockProps['today']; onOpenPlugs?: () => void; inverterPhases?: EnergyFlowBlockProps['inverterPhases']; }
 
-export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, latest, today, onOpenPlugs }: Props) {
+export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, latest, today, onOpenPlugs, inverterPhases }: Props) {
   const { values } = useLiveTelemetry(latest ?? null);
   // The old "observatory" header strip (site name, LIVE chip, Health/Solar/Battery/Load chips) is gone:
   // EnergyFlowBlock has its own Live header, and the equipment health score moved to the Dashboard HealthBand.
@@ -492,6 +492,7 @@ export function EnergyFlowHealthRow({ siteId, smartDevices = [], ctReading, late
       battSoc={values.battSoc} siteId={siteId}
       smartDevices={smartDevices}
       ctReading={ctReading}
+      inverterPhases={inverterPhases}
       today={today}
       onOpenPlugs={onOpenPlugs}
     />

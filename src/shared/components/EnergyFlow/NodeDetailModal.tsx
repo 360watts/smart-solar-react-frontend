@@ -505,7 +505,7 @@ function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases | null;
       />
       <ComparisonMetricRow
         label="Power Factor" unit=""
-        invVals={[inv?.grid_power_factor ?? null, inv?.grid_power_factor ?? null, inv?.grid_power_factor ?? null]}
+        invVals={[null, null, null]} /* inverter PF register 621 reads ~0.01 while exporting kW: not a real PF, hidden (2026-11-18) */
         ctVals={[ct?.power_factor_l1 ?? null, ct?.power_factor_l2 ?? null, ct?.power_factor_l3 ?? null]}
         ctTotal={ct?.power_factor_total ?? null}
         isDark={isDark} delay={0.18}
@@ -517,7 +517,7 @@ function ComparisonPhasePanel({ inv, ct, isDark }: { inv: InverterPhases | null;
         isDark={isDark} delay={0.24}
       />
       <div style={{ fontSize: 8.5, color: DS.colors.textDim, paddingLeft: 2 }}>
-        Inverter power factor and frequency are aggregate registers — same value shown per phase
+        Inverter frequency is one aggregate register — same value shown per phase. Inverter power factor is not measured (its register is unreliable on this inverter).
       </div>
     </div>
   );
