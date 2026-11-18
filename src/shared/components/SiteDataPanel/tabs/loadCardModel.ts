@@ -102,14 +102,22 @@ export function cumulative(vals: (number | null)[]): (number | null)[] {
 /** Grid forecast for energy sums: the mean when the backend sends one, else P50. */
 export const gridEnergy = (s: LoadSlot) => s.gridMean ?? s.gridP50;
 
-/** Stack tops for the All view: actual up to now, forecast after (when shown); EV stops at now.
- *  energy: grid forecast from its mean (kWh mode), else P50. */
-export function stackTops(slots: LoadSlot[], nowMs: number, withForecast: boolean, energy = false) {
+const finished = (s: LoadSlot, nowMs: number) => s.ms + SLOT_MS <= nowMs;
+
+/** Stack tops for the All view: measured load only, finished slots only. The slot in progress has no full
+ *  reading yet, so it stays empty instead of dropping the stack to 0 kW at now. */
+export function stackTops(slots: LoadSlot[], nowMs: number) {
   return slots.map(s => {
-    const past = s.ms <= nowMs;
-    const inv = past ? s.inv ?? 0 : withForecast ? s.invP50 ?? 0 : 0;
-    const grid = past ? s.grid ?? 0 : withForecast ? (energy ? gridEnergy(s) : s.gridP50) ?? 0 : 0;
-    const ev = past ? s.ev ?? 0 : 0;
-    return { inv, invGrid: inv + grid, all: inv + grid + ev };
+    if (!finished(s, nowMs)) return null;
+    const inv = s.inv ?? 0, invGrid = inv + (s.grid ?? 0);
+    return { inv, invGrid, all: invGrid + (s.ev ?? 0) };
   });
+}
+
+/** The All view's one forecast line, across the whole window like the single-line views (so past slots can be
+ *  compared with the stack): inverter P50 + grid forecast. energy: running kWh, grid from its mean. EV is never forecast. */
+export function totalForecast(slots: LoadSlot[], energy = false): (number | null)[] {
+  const vals = slots.map(s => (s.invP50 == null && s.gridP50 == null ? null
+    : (s.invP50 ?? 0) + ((energy ? gridEnergy(s) : s.gridP50) ?? 0)));
+  return energy ? cumulative(vals) : vals;
 }

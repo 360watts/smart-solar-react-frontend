@@ -1,4 +1,4 @@
-import { buildSlots, cumulative, gapSlots, kwh, stackTops, windowRange, SLOT_MS } from './loadCardModel';
+import { buildSlots, cumulative, gapSlots, kwh, stackTops, totalForecast, windowRange, SLOT_MS } from './loadCardModel';
 
 // scenarios: docs/test-scenarios/combined-load-card.md
 const S0 = Date.UTC(2026, 10, 17, 0, 30); // 06:00 IST
@@ -53,19 +53,18 @@ describe('totals', () => {
   it('T2 cumulative stops after the last value', () => expect(cumulative([1, null, 2, null])).toEqual([0.25, 0.25, 0.75, null]));
 });
 
-describe('stackTops', () => {
-  const slots = buildSlots([S0, S0 + 2 * SLOT_MS], empty);
+describe('All view stack and forecast line', () => {
+  const slots = buildSlots([S0, S0 + 3 * SLOT_MS], empty);
   Object.assign(slots[0], { inv: 0.5, grid: 1, ev: 2 });
-  Object.assign(slots[1], { invP50: 0.4, gridP50: 0.6, ev: 3 });
-  const now = S0 + 60_000;
-  it('S1 actual before now, forecast after, EV stops at now', () =>
-    expect(stackTops(slots, now, true)).toEqual([{ inv: 0.5, invGrid: 1.5, all: 3.5 }, { inv: 0.4, invGrid: 1, all: 1 }]));
-  it('S2 forecast off leaves the future empty', () =>
-    expect(stackTops(slots, now, false)[1]).toEqual({ inv: 0, invGrid: 0, all: 0 }));
-  it('S3 energy mode uses the grid mean, kW mode the P50', () => {
-    const s = buildSlots([S0, S0 + 2 * SLOT_MS], empty);
-    Object.assign(s[1], { gridP50: 0.1, gridMean: 0.4 });
-    expect(stackTops(s, now, true, true)[1].invGrid).toBeCloseTo(0.4);
-    expect(stackTops(s, now, true, false)[1].invGrid).toBeCloseTo(0.1);
+  Object.assign(slots[1], { inv: 0.3, invP50: 0.2, gridP50: 0.3 }); // in progress
+  Object.assign(slots[2], { invP50: 0.4, gridP50: 0.6, gridMean: 0.9, ev: 3 });
+  const now = S0 + SLOT_MS + 60_000;
+  it('S1 finished slots stack; the slot in progress and the future are empty', () =>
+    expect(stackTops(slots, now)).toEqual([{ inv: 0.5, invGrid: 1.5, all: 3.5 }, null, null]));
+  it('S2 the forecast line is inverter + grid P50 on every slot with a forecast, never EV', () =>
+    expect(totalForecast(slots)).toEqual([null, 0.5, 1.0]));
+  it('S3 energy mode is a running kWh, grid from its mean', () => {
+    const f = totalForecast(slots, true);
+    expect(f[0]).toBe(0); expect(f[1]).toBeCloseTo(0.125); expect(f[2]).toBeCloseTo(0.45);
   });
 });

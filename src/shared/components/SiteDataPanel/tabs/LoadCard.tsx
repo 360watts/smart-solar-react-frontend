@@ -11,7 +11,7 @@ import { useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../ch
 import { resolveCssVar } from '../../../lib/resolveCssVar';
 import { IST_TIMEZONE } from '../../../../app/constants';
 import {
-  buildSlots, cumulative, gapSlots, gridEnergy, kwh, num, stackTops, windowRange, PHASE_COLORS, SLOT_MS,
+  buildSlots, cumulative, gapSlots, gridEnergy, kwh, num, stackTops, totalForecast, windowRange, PHASE_COLORS, SLOT_MS,
   type ActualLine, type LoadLead, type LoadLine, type LoadWindow,
 } from './loadCardModel';
 
@@ -89,20 +89,6 @@ function Seg<T extends string>({ label, value, options, onChange, isDark }: {
   );
 }
 
-/** Diagonal hatch for forecast areas; plain tint where the canvas has no 2D context (tests). */
-function hatch(color: string) {
-  return (ctx: any) => {
-    const c = document.createElement('canvas');
-    c.width = 8; c.height = 8;
-    const g = c.getContext?.('2d');
-    if (!g || !ctx?.chart?.ctx) return `${color}33`;
-    g.fillStyle = `${color}26`; g.fillRect(0, 0, 8, 8);
-    g.strokeStyle = color; g.lineWidth = 1.6;
-    g.beginPath(); g.moveTo(0, 8); g.lineTo(8, 0); g.stroke();
-    return ctx.chart.ctx.createPattern(c, 'repeat') ?? `${color}33`;
-  };
-}
-
 const fmt = (v: number | null | undefined, unit: string) => (v == null ? '–' : `${v.toFixed(2)} ${unit}`);
 
 const LoadCard: React.FC<LoadCardProps> = (p) => {
@@ -166,27 +152,25 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
     // straight segments: 15-min averages must not overshoot into peaks that never happened
     const base = { tension: 0, pointRadius: 0, borderWidth: 0, pointStyle: 'line' };
     if (line === 'all') {
-      const tops = stackTops(slots, now, fcOn, kwhMode);
-      const invV = tops.map(t => t.inv), gridV = tops.map(t => t.invGrid - t.inv), evV = tops.map(t => t.all - t.invGrid);
-      const top = (f: (t: (typeof tops)[number]) => number) => series(tops.map(f));
-      const invTop = top(t => t.inv), gridTop = top(t => t.invGrid), allTop = top(t => t.all);
-      const own = (vals: number[]) => (kwhMode ? cumulative(vals) : vals);
-      const ownInv = own(invV), ownGrid = own(gridV), ownEv = own(evV);
-      const pastOnly = (a: (number | null)[]) => a.map((v, i) => (isPast(i) ? v : null));
-      const futOnly = (a: (number | null)[]) => a.map((v, i) => (nowIdx < 0 || i >= nowIdx ? v : null));
-      const layer = (label: string, data: (number | null)[], color: string, fill: any, val: (number | null)[], future = false) => ({
-        ...base, label, data, borderColor: color, borderWidth: future ? 1 : 1.5, fill,
-        backgroundColor: future ? hatch(color) : `${color}aa`, __val: val, pointStyle: 'rect',
+      // measured load as a solid stack; the forecast is one dashed total line (per-line forecasts live in the
+      // Inverter and Grid views). Nov 18 review: stacked hatched forecasts outweighed the measured part.
+      const tops = stackTops(slots, now);
+      const pick = (f: (t: NonNullable<(typeof tops)[number]>) => number) => series(tops.map(t => (t ? f(t) : null)));
+      const has = (k: ActualLine) => lines.includes(k) && slots.some(s => s[k] != null);
+      const layer = (label: string, data: (number | null)[], color: string, val: (number | null)[]) => ({
+        ...base, label, data, borderColor: color, borderWidth: 1.5, fill: ds.length ? '-1' : 'origin',
+        backgroundColor: `${color}aa`, __val: val, pointStyle: 'rect',
       });
-      if (lines.includes('inv')) ds.push(layer('Inverter', pastOnly(invTop), LINE_META.inv.color, 'origin', ownInv));
-      if (lines.includes('grid')) ds.push(layer('Grid', pastOnly(gridTop), LINE_META.grid.color, ds.length ? '-1' : 'origin', ownGrid));
-      if (lines.includes('ev')) ds.push(layer('EV', pastOnly(allTop), LINE_META.ev.color, ds.length ? '-1' : 'origin', ownEv));
+      if (has('inv')) ds.push(layer('Inverter', pick(t => t.inv), LINE_META.inv.color, pick(t => t.inv)));
+      if (has('grid')) ds.push(layer('Grid', pick(t => t.invGrid), LINE_META.grid.color, pick(t => t.invGrid - t.inv)));
+      if (has('ev')) ds.push(layer('EV', pick(t => t.all), LINE_META.ev.color, pick(t => t.all - t.invGrid)));
       if (fcOn) {
-        const first = ds.length;
-        if (lines.includes('inv')) ds.push(layer('Inverter forecast', futOnly(invTop), LINE_META.inv.color, 'origin', ownInv, true));
-        if (lines.includes('grid')) ds.push(layer('Grid forecast', futOnly(gridTop), LINE_META.grid.color, ds.length > first ? '-1' : 'origin', ownGrid, true));
-        const summed = slots.map(s => (s.invP50 == null && s.gridP50 == null ? null : (s.invP50 ?? 0) + ((kwhMode ? gridEnergy(s) : s.gridP50) ?? 0)));
-        ds.push({ ...base, label: 'Forecast, inverter + grid', data: series(summed), borderColor: SUM_FC, borderWidth: 2, borderDash: [5, 4], fill: false, segment: fadePast(SUM_FC) });
+        // order -1: Chart.js paints the last dataset first, which hid this line under the filled stack
+        ds.push({
+          ...base, label: lines.includes('ev') ? 'Forecast (inverter + grid)' : 'Forecast (total)', order: -1,
+          data: totalForecast(slots, kwhMode), borderColor: SUM_FC, borderWidth: 2.2, borderDash: [6, 4], fill: false,
+          segment: fadePast(SUM_FC),
+        });
       }
       return ds;
     }

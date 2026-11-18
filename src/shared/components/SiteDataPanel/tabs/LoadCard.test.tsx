@@ -42,7 +42,7 @@ describe('LoadCard', () => {
   it('C1 the summed forecast is inverter + grid, never EV', () => {
     setup();
     click('All');
-    const summed = chartProps.data.datasets.find((d: any) => d.label === 'Forecast, inverter + grid');
+    const summed = chartProps.data.datasets.find((d: any) => d.label === 'Forecast (inverter + grid)');
     expect(summed.data[50]).toBeCloseTo(1.0);
     expect(labels()).not.toContain('EV forecast');
   });
@@ -108,6 +108,25 @@ describe('LoadCard', () => {
     expect(fc.borderColor).not.toBe('#ef4444');
     expect(fc.borderDash).toBeTruthy();
     expect(chartProps.data.datasets.every((d: any) => d.tension === 0)).toBe(true);
+  });
+
+  it('C11 All: solid measured stack, one dashed forecast line on top, nothing at the slot in progress', () => {
+    setup();
+    click('All');
+    expect(labels()).toEqual(['Inverter', 'Grid', 'EV', 'Forecast (inverter + grid)']);
+    const ds = (l: string) => chartProps.data.datasets.find((d: any) => d.label === l);
+    expect(ds('Inverter').data[15]).toBeCloseTo(0.5);
+    expect(ds('Inverter').data[16]).toBeNull(); // slot 16 holds now: no full reading yet, so no drop to 0
+    const fc = ds('Forecast (inverter + grid)');
+    expect(fc.order).toBe(-1); // drawn last, above the filled stack
+    expect(fc.data[5]).toBeCloseTo(1.0); // the whole day, past slots included, for comparison
+    expect(fc.data[60]).toBeCloseTo(1.0);
+  });
+
+  it('C12 an EV plug with no readings in the window gets no layer', () => {
+    setup({ actual: actual.map(r => ({ ...r, ev: null })) });
+    click('All');
+    expect(labels()).not.toContain('EV');
   });
 
   it('C10 the accuracy line is a caption and the chips read as so far / by the end', () => {

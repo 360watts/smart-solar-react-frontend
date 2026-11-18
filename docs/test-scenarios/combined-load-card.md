@@ -27,15 +27,18 @@ Tests: `tabs/loadCardModel.test.ts`, `tabs/LoadCard.test.tsx`.
 | G3 | the newest 30 min have no grid reading yet | gapSlots | not flagged (data lag) | unit | P1 | passing |
 | T1 | 1 kW, missing, 2 kW | kwh | 0.75 kWh | unit | P1 | passing |
 | T2 | 1, -, 2, - | cumulative | 0.25, 0.25, 0.75, null | unit | P1 | passing |
-| S1 | slot 0 past (inv .5, grid 1, EV 2), slot 1 future (P50 .4/.6, EV 3) | stackTops with forecast | past = actual stack; future = forecast stack without EV | unit | P0 | passing |
-| S2 | same | stackTops forecast off | future slot is empty | unit | P1 | passing |
-| S3 | a future slot, grid P50 0.1 and mean 0.4 | stackTops with energy = true / false | the grid layer is 0.4 / 0.1 (kWh uses the mean, kW the P50) | unit | P0 | passing |
+| S1 | slot 0 finished (inv .5, grid 1, EV 2), slot 1 in progress, slot 2 future | stackTops | slot 0 = actual stack; the slot in progress and the future are empty (no false drop to 0 kW at now; Nov 18 review) | unit | P0 | passing |
+| S2 | same, with forecasts on slots 1–2 | totalForecast (kW) | starts at the last actual total (3.5), then inverter P50 + grid P50 per slot; earlier slots empty; EV never forecast | unit | P0 | passing |
+| S3 | same, grid mean 0.9 on slot 2 | totalForecast (energy) | running kWh continuing from the actual total, grid from its mean | unit | P0 | passing |
+| S4 | every slot finished | totalForecast | all empty | unit | P2 | passing |
 
 ## Card (`LoadCard.tsx`)
 
 | ID | Given | When | Then | Type | P | Status |
 |---|---|---|---|---|---|---|
-| C1 | inverter, grid and EV data with forecasts | Line = All | the summed forecast = inverter P50 + grid P50, never EV | unit | P0 | passing |
+| C1 | inverter, grid and EV data with forecasts | Line = All | the summed forecast "Forecast (inverter + grid)" = inverter P50 + grid P50, never EV | unit | P0 | passing |
+| C11 | Line = All, 4 h into the day (Nov 18 review: the view was hard to read) | render | solid stacked actual only, no hatched forecast layers; the in-progress slot is empty in the stack; one dashed forecast line joined to the last actual total; the tooltip skips the join point | unit | P0 | passing |
+| C12 | EV plug exists but sent nothing in the window | Line = All | no EV layer or legend entry | unit | P2 | passing |
 | C2 | same | Line = EV | no forecast datasets | unit | P0 | passing |
 | C3 | a site with only grid data and no EV | render | no Line picker | unit | P1 | passing |
 | C4 | hours 24 | Window = Last 7 days, then Today | onHoursChange(168), then (24) | unit | P1 | passing |
