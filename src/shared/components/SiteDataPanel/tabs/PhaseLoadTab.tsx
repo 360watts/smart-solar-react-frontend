@@ -497,20 +497,23 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
     return () => { cancelled = true; };
   }, [siteId, hours]);
 
+  // keyed on the EV plug ids, not the list: the overview poll hands over a new smartDevices array every 30 s,
+  // which re-fetched the EV readings (uncached) and re-rendered the Load card each time (Nov 18)
+  const evIds = smartDevices.filter((d: any) => d.appliance_label === 'ev_charger').map((d: any) => d.id).join(',');
   useEffect(() => {
     let cancelled = false;
-    const evDevices = smartDevices.filter((d: any) => d.appliance_label === 'ev_charger');
-    if (evDevices.length === 0) {
-      setEvHistory([]);
+    const ids = evIds ? evIds.split(',').map(Number) : [];
+    if (ids.length === 0) {
+      setEvHistory(prev => (prev.length ? [] : prev));
       return;
     }
-    Promise.all(evDevices.map((d: any) => apiService.getSmartDeviceReadings(d.id, Math.max(hours, 24))))
+    Promise.all(ids.map(id => apiService.getSmartDeviceReadings(id, Math.max(hours, 24))))
       .then(results => {
         if (cancelled) return;
         const rows = results.flatMap((items, idx) =>
           (Array.isArray(items) ? items : []).map((row: any) => ({
             ...row,
-            __device_id: evDevices[idx]?.id,
+            __device_id: ids[idx],
           }))
         );
         setEvHistory(rows);
@@ -519,7 +522,7 @@ const PhaseLoadTab: React.FC<PhaseLoadTabProps> = ({ siteId, phaseLoad, loadFore
         if (!cancelled) setEvHistory([]);
       });
     return () => { cancelled = true; };
-  }, [smartDevices, hours]);
+  }, [evIds, hours]);
 
   const chartData = useMemo(() => {
     // For 24h view, clamp to solar day (6am IST → now) so the chart shows 6am→6am not a rolling window

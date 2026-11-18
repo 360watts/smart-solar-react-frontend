@@ -25,6 +25,18 @@ function formatAge(ts: string | null): string {
   return hr < 48 ? `${hr}h ago` : `${Math.floor(hr / 24)}d ago`;
 }
 
+// Inverter column of the Load popup's phase comparison, from the newest row (same fields the Overview tab uses).
+function inverterPhasesFromRow(r: TelemetryRow | undefined) {
+  if (!r) return undefined;
+  const n = (k: string) => (r[k] as number | null | undefined) ?? null;
+  const load = (i: number) => ({ power_w: n(`load_l${i}_power_w`), voltage_v: n(`load_l${i}_voltage_v`), current_a: n(`load_l${i}_current_a`) });
+  const grid = (i: number) => ({ voltage_v: n(`grid_l${i}_voltage_v`) ?? (i === 1 ? n('grid_voltage_v') : null), current_a: n(`grid_l${i}_current_a`) });
+  return {
+    l1: load(1), l2: load(2), l3: load(3), grid_l1: grid(1), grid_l2: grid(2), grid_l3: grid(3),
+    grid_frequency_hz: n('grid_frequency_hz'), grid_power_factor: n('grid_power_factor'),
+  };
+}
+
 export default function EnergyFlowSnapshot({ siteId, telemetry, win, smartDevices = [], ctReading }: Props) {
   const live = useMemo(() => latestFlowFromRow(telemetry[telemetry.length - 1]), [telemetry]);
   const cumulative = useMemo(() => computeCumulativeEnergy(telemetry), [telemetry]);
@@ -42,6 +54,7 @@ export default function EnergyFlowSnapshot({ siteId, telemetry, win, smartDevice
           pvKw={live.pvKw} loadKw={live.loadKw} gridKw={live.gridKw}
           battKw={live.battKw} battSoc={live.battSoc}
           siteId={siteId} smartDevices={smartDevices} ctReading={ctReading}
+          inverterPhases={inverterPhasesFromRow(telemetry[telemetry.length - 1])}
         />
       ) : (
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>

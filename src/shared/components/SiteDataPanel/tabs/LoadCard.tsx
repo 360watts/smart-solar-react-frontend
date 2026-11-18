@@ -207,6 +207,10 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
     return multiDay ? [d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', timeZone: IST }), t] : t;
   };
   const multiDay = win !== 'today';
+  // one stable data object: react-chartjs-2 redraws whenever labels change identity, i.e. on every parent re-render
+  const chartData = useMemo(() => ({ labels: slots.map(s => label(s.ms, multiDay)), datasets }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [slots, multiDay, datasets]);
   const pct = Math.min(100, Math.max(0, ((now - p.solarStartMs) / (24 * 3_600_000)) * 100));
   const nowText = `Now ${label(now, false)}${win === 'today' ? ` · ${pct.toFixed(0)}% of solar day` : ''}`;
   const overlayRef = useRef({ gaps: [] as number[], nowIdx: -1, nowText: '' });
@@ -414,7 +418,7 @@ const LoadCard: React.FC<LoadCardProps> = (p) => {
             <CJLine
               key={`${line}-${win}-${unit}`}
               ref={zoom.chartRef}
-              data={{ labels: slots.map(s => label(s.ms, multiDay)), datasets }}
+              data={chartData}
               options={options}
               plugins={[overlay]}
             />
