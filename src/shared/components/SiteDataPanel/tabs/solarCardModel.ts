@@ -100,8 +100,13 @@ export function todayKpis(slots: SolarSlot[]): TodayKpis {
   };
 }
 
-/** One row per IST day, oldest first, for `days` days ending today. */
-export function dailyTotals(ts: any[], nowMs: number, days = 7): SolarDay[] {
+/** Daily error-ratio band from the backend (`forecast-accuracy` `daily_range`): a day's range is its P50 × lo / hi. */
+export type DailyBand = { lo: number; hi: number } | null | undefined;
+const bandOf = (b: DailyBand) => (b && Number.isFinite(b.lo) && Number.isFinite(b.hi) && b.lo > 0 && b.hi >= b.lo ? b : null);
+
+/** One row per IST day, oldest first, for `days` days ending today. With `band`, the range is P50 × band, not summed slots. */
+export function dailyTotals(ts: any[], nowMs: number, days = 7, band?: DailyBand): SolarDay[] {
+  const bd = bandOf(band);
   const today = istMidnight(nowMs);
   const out: SolarDay[] = [];
   for (let d = days - 1; d >= 0; d--) {
@@ -110,20 +115,22 @@ export function dailyTotals(ts: any[], nowMs: number, days = 7): SolarDay[] {
     const partial = d === 0;
     // full days: forecast over the slots that were measured, so a data gap does not read as underperformance
     const fcRows = partial ? rows : rows.filter(r => num(r.actual_kw) != null);
-    const band = fcRows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
+    const slotBand = fcRows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
+    const p50 = kwh(fcRows.map(r => num(r.predicted_kw)));
     out.push({
       ms, partial,
       actual: kwh(rows.map(r => (slotOf(r) + SLOT_MS <= nowMs ? num(r.actual_kw) : null))),
-      p50: kwh(fcRows.map(r => num(r.predicted_kw))),
-      p10: band ? kwh(fcRows.map(r => num(r.p10_kw))) : null,
-      p90: band ? kwh(fcRows.map(r => num(r.p90_kw))) : null,
+      p50,
+      p10: bd ? (p50 > 0 ? p50 * bd.lo : null) : slotBand ? kwh(fcRows.map(r => num(r.p10_kw))) : null,
+      p90: bd ? (p50 > 0 ? p50 * bd.hi : null) : slotBand ? kwh(fcRows.map(r => num(r.p90_kw))) : null,
     });
   }
   return out;
 }
 
 /** The next `n` IST days from the forecast rows (forecast only); days without a forecast are left out. */
-export function forecastDays(forecast: any[], nowMs: number, n = 3): SolarDay[] {
+export function forecastDays(forecast: any[], nowMs: number, n = 3, band?: DailyBand): SolarDay[] {
+  const bd = bandOf(band);
   const today = istMidnight(nowMs);
   const out: SolarDay[] = [];
   for (let d = 1; d <= n; d++) {
@@ -134,12 +141,12 @@ export function forecastDays(forecast: any[], nowMs: number, n = 3): SolarDay[] 
     // sunset (zero forecast again). Otherwise a few morning hours would read as a whole-day forecast.
     const last = rows.reduce((a, b) => (slotOf(b) > slotOf(a) ? b : a));
     if ((num(last.p50_kw) ?? 0) > 0) continue;
-    const band = rows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
+    const slotBand = rows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
+    const p50 = kwh(rows.map(r => num(r.p50_kw)));
     out.push({
-      ms, actual: null, partial: false, future: true,
-      p50: kwh(rows.map(r => num(r.p50_kw))),
-      p10: band ? kwh(rows.map(r => num(r.p10_kw))) : null,
-      p90: band ? kwh(rows.map(r => num(r.p90_kw))) : null,
+      ms, actual: null, partial: false, future: true, p50,
+      p10: bd ? p50 * bd.lo : slotBand ? kwh(rows.map(r => num(r.p10_kw))) : null,
+      p90: bd ? p50 * bd.hi : slotBand ? kwh(rows.map(r => num(r.p90_kw))) : null,
     });
   }
   return out;

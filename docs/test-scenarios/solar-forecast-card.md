@@ -17,6 +17,7 @@ Data: `forecast-accuracy` `timeseries` (15-min `slot_ts`, `actual_kw`, `predicte
 | M5 | Model | no P10/P90 on a slot | `todayKpis` / band | range left out, nothing invented | unit | P2 | passing |
 | M6 | Model | forecast rows for the next days | `forecastDays` | next days only, forecast only, days without a forecast left out | unit | P1 | passing |
 | M7 | Model | 48 h horizon cuts the last day off before sunset (last slot still has a forecast) | `forecastDays` | that day is left out, so a few morning hours never read as a whole-day forecast | unit | P0 | passing |
+| M8 | Model | the backend sends `daily_range` {lo, hi} | `dailyTotals` / `forecastDays` | each day's range = P50 × lo / hi; no band (null, or lo ≤ 0) keeps the summed slot range | unit | P0 | passing |
 | U1 | Card | today data | render | three KPI tiles (Generated so far, Expected today, Accuracy so far); one chart: Actual solid, Forecast (P50) dashed, Likely range band | unit | P0 | passing |
 | U2 | Card | Last 7 days | click | chart shows daily kWh: Actual line through full days, a hollow dot for today so far (no link), P50 dashed, range band; tiles total 6 full days | unit | P0 | passing |
 | U3 | Card | Next days | click | forecast-only chart from the forecast rows after today; one tile per day | unit | P1 | passing |

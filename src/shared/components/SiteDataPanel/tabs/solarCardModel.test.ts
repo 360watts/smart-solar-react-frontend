@@ -94,4 +94,20 @@ describe('solarCardModel', () => {
     ];
     expect(forecastDays(f, now).map(x => x.ms)).toEqual([DAY + DAY_MS]);
   });
+
+  it('M8 daily range: with a backend band the range is P50 x lo/hi; without one the slot sums stay', () => {
+    const t0 = DAY + 12 * 3_600_000;
+    const ts = [0, 1].map(k => ({ slot_ts: iso(t0 + k * SLOT_MS), actual_kw: 2, predicted_kw: 4, p10_kw: 1, p90_kw: 9 }));
+    const now = DAY + DAY_MS + 3_600_000;          // the next IST day, so the rows above are a full past day
+    const day = (b?: any) => dailyTotals(ts, now, 2, b)[0];
+    expect(day().p10).toBeCloseTo(0.5);            // 2 slots x 1 kW x 0.25 h: summed slots
+    const d = day({ lo: 0.75, hi: 1.25 });
+    expect(d.p10).toBeCloseTo(d.p50 * 0.75);
+    expect(d.p90).toBeCloseTo(d.p50 * 1.25);
+    expect(day({ lo: 0, hi: 1 }).p10).toBeCloseTo(0.5);   // an unusable band is ignored
+    const fc = [0, 1].map(k => ({ forecast_for: iso(DAY + DAY_MS + 12 * 3_600_000 + k * SLOT_MS), p50_kw: 4, p10_kw: 1, p90_kw: 9 }))
+      .concat([{ forecast_for: iso(DAY + DAY_MS + 20 * 3_600_000), p50_kw: 0, p10_kw: 0, p90_kw: 0 }]);
+    const f = forecastDays(fc, DAY + 3_600_000, 3, { lo: 0.8, hi: 1.2 })[0];
+    expect(f.p90).toBeCloseTo(f.p50 * 1.2);
+  });
 });

@@ -66,9 +66,10 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
   const slots = useMemo(() => trimNight(buildSlots(dayMs, dayMs + DAY_MS, ts, p.forecast, now)),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [ts, p.forecast, dayMs, Math.floor(now / SLOT_MS)]);
-  const days = useMemo(() => [...dailyTotals(ts, now), ...forecastDays(p.forecast, now)],
+  const dailyBand = p.accuracy?.daily_range ?? null;   // null until calibrate_site has fitted one: slot sums are used then
+  const days = useMemo(() => [...dailyTotals(ts, now, 7, dailyBand), ...forecastDays(p.forecast, now, 3, dailyBand)],
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [ts, p.forecast, Math.floor(now / SLOT_MS)]);
+  [ts, p.forecast, dailyBand, Math.floor(now / SLOT_MS)]);
   const todayIdx = days.findIndex(d => d.partial);
 
   const daily = win === 'daily';
