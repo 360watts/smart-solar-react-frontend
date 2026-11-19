@@ -37,7 +37,7 @@ const labels = () => chartProps.data.datasets.map((d: any) => d.label as string)
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
 describe('LoadCard', () => {
-  beforeEach(() => { chartProps = null; });
+  beforeEach(() => { chartProps = null; localStorage.clear(); });
 
   it('C1 the summed forecast is inverter + grid, never EV', () => {
     setup();

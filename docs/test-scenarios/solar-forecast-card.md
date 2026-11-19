@@ -15,8 +15,10 @@ Data: `forecast-accuracy` `timeseries` (15-min `slot_ts`, `actual_kw`, `predicte
 | M3 | Model | finished slots with actual and P50 | `todayKpis` | so far = Σ actual × 0.25; expected = Σ P50 of the whole day; diff % over finished slots only; slots inside P10–P90 counted | unit | P0 | passing |
 | M4 | Model | 7 days of rows, today partial | `dailyTotals` | one row per IST day, oldest first; full days compare actual to P50 over the same slots; today flagged `partial` | unit | P0 | passing |
 | M5 | Model | no P10/P90 on a slot | `todayKpis` / band | range left out, nothing invented | unit | P2 | passing |
+| M6 | Model | forecast rows for the next days | `forecastDays` | next days only, forecast only, days without a forecast left out | unit | P1 | passing |
+| M7 | Model | 48 h horizon cuts the last day off before sunset (last slot still has a forecast) | `forecastDays` | that day is left out, so a few morning hours never read as a whole-day forecast | unit | P0 | passing |
 | U1 | Card | today data | render | three KPI tiles (Generated so far, Expected today, Accuracy so far); one chart: Actual solid, Forecast (P50) dashed, Likely range band | unit | P0 | passing |
-| U2 | Card | Last 7 days | click | chart shows daily kWh: Actual line through full days, dashed Today so-far link, P50 dashed, range band; tiles total 6 full days | unit | P0 | passing |
+| U2 | Card | Last 7 days | click | chart shows daily kWh: Actual line through full days, a hollow dot for today so far (no link), P50 dashed, range band; tiles total 6 full days | unit | P0 | passing |
 | U3 | Card | Next days | click | forecast-only chart from the forecast rows after today; one tile per day | unit | P1 | passing |
 | U4 | Card | any window | toggling | no refetch: windows reuse the loaded data; chart animation off; `tension` 0 | unit | P1 | passing |
 | U5 | Card | GHI off by default | click "+ Sunlight (GHI)" | GHI drawn on a right axis (Today / Next days only) | unit | P2 | passing |

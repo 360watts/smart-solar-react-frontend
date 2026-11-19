@@ -129,7 +129,11 @@ export function forecastDays(forecast: any[], nowMs: number, n = 3): SolarDay[] 
   for (let d = 1; d <= n; d++) {
     const ms = today + d * DAY_MS;
     const rows = (forecast ?? []).filter(r => { const t = slotOf(r); return t >= ms && t < ms + DAY_MS; });
-    if (!rows.some(r => num(r.p50_kw) != null)) continue;
+    if (!rows.some(r => (num(r.p50_kw) ?? 0) > 0)) continue;
+    // The forecast runs 48 h, so the last day is cut off mid-way: a day only counts once its last slot is past
+    // sunset (zero forecast again). Otherwise a few morning hours would read as a whole-day forecast.
+    const last = rows.reduce((a, b) => (slotOf(b) > slotOf(a) ? b : a));
+    if ((num(last.p50_kw) ?? 0) > 0) continue;
     const band = rows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
     out.push({
       ms, actual: null, partial: false, future: true,

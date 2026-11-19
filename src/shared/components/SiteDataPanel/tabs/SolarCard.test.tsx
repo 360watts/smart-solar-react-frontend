@@ -26,14 +26,15 @@ const dayRows = (d0: number, upTo: number) => Array.from({ length: 48 }, (_, i) 
 });
 const ts = [...[6, 5, 4, 3, 2, 1].flatMap(n => dayRows(DAY - n * DAY_MS, Infinity)), ...dayRows(DAY, NOW)];
 const forecast = Array.from({ length: 48 }, (_, i) => ({ forecast_for: iso(DAY + DAY_MS + 6 * 3_600_000 + i * SLOT_MS), p50_kw: 3, p10_kw: 2, p90_kw: 4, ghi_input_wm2: 600 }))
-  .concat([{ forecast_for: iso(DAY + 9 * 3_600_000), p50_kw: 2, p10_kw: 1, p90_kw: 3, ghi_input_wm2: 500 } as any]);
+  .concat([{ forecast_for: iso(DAY + DAY_MS + 19 * 3_600_000), p50_kw: 0, p10_kw: 0, p90_kw: 0, ghi_input_wm2: 0 } as any, // night: tomorrow is a complete day
+    { forecast_for: iso(DAY + 9 * 3_600_000), p50_kw: 2, p10_kw: 1, p90_kw: 3, ghi_input_wm2: 500 } as any]);
 
 const setup = (accuracy: any = { timeseries: ts }) => render(<SolarCard isDark={false} forecast={forecast} accuracy={accuracy} nowMs={NOW} />);
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 const labels = () => mockChart.props.data.datasets.map((d: any) => d.label);
 
 describe('SolarCard', () => {
-  beforeEach(() => { mockChart.props = null; });
+  beforeEach(() => { mockChart.props = null; localStorage.clear(); });
 
   it('U1 today: three tiles and one chart of actual, P50 and range', () => {
     setup();
@@ -46,7 +47,7 @@ describe('SolarCard', () => {
     expect(act.filter((v: any) => v != null)).toHaveLength(28);      // 06:00–13:00 finished, 13:00 slot in progress
   });
 
-  it('U2 daily: last 7 days, a dotted link to today, then the forecast days', () => {
+  it('U2 daily: last 7 days, a hollow dot for today so far, then the forecast days', () => {
     setup();
     click('Daily');
     expect(mockChart.props.data.labels).toHaveLength(8);           // 6 full days + today + tomorrow

@@ -75,11 +75,23 @@ describe('solarCardModel', () => {
     const f = [
       { forecast_for: iso(DAY + 13 * 3_600_000), p50_kw: 9 },                                   // today: not a next day
       { forecast_for: iso(DAY + DAY_MS + 12 * 3_600_000), p50_kw: 4, p10_kw: 2, p90_kw: 6 },
+      { forecast_for: iso(DAY + DAY_MS + 20 * 3_600_000), p50_kw: 0 },                          // night: day is complete
       { forecast_for: iso(DAY + 3 * DAY_MS + 12 * 3_600_000), p50_kw: 8 },
+      { forecast_for: iso(DAY + 3 * DAY_MS + 20 * 3_600_000), p50_kw: 0 },
     ];
     const d = forecastDays(f, now);
     expect(d.map(x => x.ms)).toEqual([DAY + DAY_MS, DAY + 3 * DAY_MS]);
     expect(d[0]).toMatchObject({ actual: null, future: true, p50: 1, p10: 0.5, p90: 1.5 });
     expect(d[1].p10).toBeNull();
+  });
+
+  it('M7 forecast days: a day cut off before sunset (48 h horizon) is left out', () => {
+    const now = DAY + 12 * 3_600_000;
+    const f = [
+      { forecast_for: iso(DAY + DAY_MS + 12 * 3_600_000), p50_kw: 4 },
+      { forecast_for: iso(DAY + DAY_MS + 20 * 3_600_000), p50_kw: 0 },
+      { forecast_for: iso(DAY + 2 * DAY_MS + 9 * 3_600_000), p50_kw: 3 },                       // last slot still sunny: partial
+    ];
+    expect(forecastDays(f, now).map(x => x.ms)).toEqual([DAY + DAY_MS]);
   });
 });

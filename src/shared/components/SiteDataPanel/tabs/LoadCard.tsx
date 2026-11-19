@@ -5,6 +5,7 @@
  * scenarios docs/test-scenarios/combined-load-card.md.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { usePersistedState } from '../../../hooks/usePersistedState';
 import { Line as CJLine } from 'react-chartjs-2';
 import type { ChartOptions, Plugin, TooltipItem } from 'chart.js';
 import { useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
@@ -61,11 +62,11 @@ const fmt = (v: number | null | undefined, unit: string) => (v == null ? '–' :
 
 const LoadCard: React.FC<LoadCardProps> = (p) => {
   const now = p.nowMs ?? Date.now();
-  const [win, setWin] = useState<LoadWindow>(p.hours >= 168 ? 'last7' : 'today');
-  const [lead, setLead] = useState<LoadLead>('latest');
-  const [unit, setUnit] = useState<'kw' | 'kwh'>('kw');
-  const [phases, setPhases] = useState(false);
-  const [picked, setPicked] = useState<LoadLine>('inv');
+  const [win, setWin] = usePersistedState<LoadWindow>('360w.load.window', p.hours >= 168 ? 'last7' : 'today', ['today', 'last7', 'next7']);
+  const [lead, setLead] = usePersistedState<LoadLead>('360w.load.lead', 'latest', ['off', 'latest', '1h', '6h', 'day']);
+  const [unit, setUnit] = usePersistedState<'kw' | 'kwh'>('360w.load.unit', 'kw', ['kw', 'kwh']);
+  const [phases, setPhases] = usePersistedState<boolean>('360w.load.phases', false);
+  const [picked, setPicked] = usePersistedState<LoadLine>('360w.load.line', 'inv', ['inv', 'grid', 'ev', 'all']);
   const zoom = useChartZoomState();
 
   // the old header offered 6 h / 12 h / 48 h; the card only knows the solar day and 7 days

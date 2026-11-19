@@ -5,6 +5,7 @@
  * "Forecast vs Actual" cards (Nov 18, 2026). Scenarios: docs/test-scenarios/solar-forecast-card.md.
  */
 import React, { useMemo, useRef, useState } from 'react';
+import { usePersistedState } from '../../../hooks/usePersistedState';
 import { Line as CJLine } from 'react-chartjs-2';
 import type { ChartOptions, Plugin, TooltipItem } from 'chart.js';
 import { useChartZoomState, ZoomResetButton, createDragZoomPlugins } from '../chartUtils';
@@ -52,10 +53,10 @@ function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) 
 const SolarCard: React.FC<SolarCardProps> = (p) => {
   const now = p.nowMs ?? Date.now();
   const today0 = istMidnight(now);
-  const [win, setWin] = useState<SolarWindow>('day');
+  const [win, setWin] = usePersistedState<SolarWindow>('360w.solar.window', 'day', ['day', 'daily']);
   const [dayMs, setDayMs] = useState(today0);
-  const [view, setView] = useState<'chart' | 'table'>('chart');
-  const [ghi, setGhi] = useState(false);
+  const [view, setView] = usePersistedState<'chart' | 'table'>('360w.solar.view', 'chart', ['chart', 'table']);
+  const [ghi, setGhi] = usePersistedState<boolean>('360w.solar.ghi', false);
   const zoom = useChartZoomState();
   const ts: any[] = p.accuracy?.timeseries ?? [];
   const isToday = dayMs === today0;
@@ -96,9 +97,9 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
             { ...base, ...edge, label: '_p10', data: days.map(d => d.p10) },
             { ...base, ...edge, label: 'Likely range', data: days.map(d => d.p90), fill: '-1', backgroundColor: `${FC}24`, pointStyle: 'rect' },
           ] : []),
-          { ...base, label: 'Forecast (P50)', data: days.map(d => d.p50), borderColor: FC, borderWidth: 2.2, borderDash: [6, 4], pointRadius: (c: any) => (days[c.dataIndex]?.future ? 4 : 0), pointBackgroundColor: FC, segment: fade },
+          { ...base, label: 'Forecast (P50)', data: days.map(d => d.p50), borderColor: FC, borderWidth: 2.2, borderDash: [6, 4], pointRadius: 4, pointStyle: 'circle', pointBackgroundColor: FC, segment: fade },
           { ...base, label: 'Actual', order: -1, data: days.map(d => (d.partial || d.future ? null : d.actual)), borderColor: ACT, backgroundColor: ACT, borderWidth: 2.6, pointRadius: 5, pointStyle: 'circle' },
-          { ...base, label: 'Today, so far', order: -1, data: days.map((d, i) => (i === todayIdx || i === todayIdx - 1 ? d.actual : null)), borderColor: ACT, borderWidth: 2, borderDash: [3, 4], pointRadius: (c: any) => (c.dataIndex === todayIdx ? 5 : 0), pointBackgroundColor: '#fff', pointStyle: 'circle' },
+          { ...base, label: 'Today, so far', order: -1, data: days.map((d, i) => (i === todayIdx ? d.actual : null)), borderColor: ACT, borderWidth: 2, pointRadius: 5, pointBackgroundColor: '#fff', pointStyle: 'circle' },
         ],
       };
     }
@@ -291,7 +292,7 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
           <Seg<'chart' | 'table'> label="View" value={view} isDark={p.isDark} onChange={setView} options={[['chart', 'Chart'], ['table', 'Table']]} />
           {!daily && view === 'chart' && (
             <div style={segWrap(p.isDark)}>
-              <button type="button" aria-pressed={ghi} onClick={() => setGhi(v => !v)} style={segBtn(ghi, true, p.isDark)}>+ Sunlight (GHI)</button>
+              <button type="button" aria-pressed={ghi} onClick={() => setGhi(!ghi)} style={segBtn(ghi, true, p.isDark)}>+ Sunlight (GHI)</button>
             </div>
           )}
           <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} />

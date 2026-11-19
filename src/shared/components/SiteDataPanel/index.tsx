@@ -16,6 +16,7 @@ import { EmptyState } from '../Feedback';
 import React, { useState, useEffect, useCallback, useMemo, useRef, useReducer, type FC } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useDebouncedValue } from '../../hooks/useDebounce';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement, BarElement,
@@ -223,7 +224,8 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // siteId change so callbacks don't set state on a stale/unmounted component.
   const analyticsStaleRef = useRef(false);
 
-  const [activeTabState, setActiveTab] = useState<TabId>(initialTab ?? 'overview');
+  // An explicit initialTab wins; otherwise reopen the tab last used (resolveTab falls back if this site lacks it).
+  const [activeTabState, setActiveTab] = usePersistedState<TabId>('360w.panel.tab', initialTab ?? 'overview');
   // The tab bar is the source of truth: a tab it does not list (e.g. meterOnly flipped) falls back to its first entry.
   // Smart plugs tab: from the overview's smart_devices (no extra request); hidden until that list has a plug.
   const hasPlugs = smartDevices.some(isPlug);
