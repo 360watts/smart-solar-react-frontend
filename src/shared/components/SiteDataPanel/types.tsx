@@ -20,8 +20,6 @@ export const TABS = [
 
 export type TabId = typeof TABS[number]['id'];
 
-export type HistorySeriesKey = 'PV' | 'Load' | 'Grid' | 'InvOut' | 'SOC';
-export type VsActualSeriesKey = 'Actual' | 'P50' | 'Delta';
 
 export interface Props {
   siteId: string;

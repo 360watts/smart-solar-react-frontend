@@ -1,476 +1,327 @@
-import { Target } from 'lucide-react';
-import { EmptyState } from '../../Feedback';
 /**
- * HistoryTab — extracted from SiteDataPanel.tsx
- * Contains: HistoryTable, VsActualTable, HistoryTab (default export)
+ * History tab (2026-11-19): chart first, then "Anything wrong?", then "Where energy went". Whole home where the site
+ * has the parts (inverter + grid board + EV), else "Inverter circuits only". Spec
+ * docs/superpowers/specs/2026-11-19-history-tab-redesign-design.md (mockups A3 + C); scenarios
+ * docs/test-scenarios/history-tab-redesign.md.
  */
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity } from 'lucide-react';
-import { Line as CJLine } from 'react-chartjs-2';
-import { type ChartOptions } from 'chart.js';
-import { makeGradient, useChartZoomState, ZoomResetButton } from '../chartUtils';
-import ChartCard from '../components/ChartCard';
-import { type HistorySeriesKey, type VsActualSeriesKey } from '../types';
-import { useTheme } from '../../../../contexts/ThemeContext';
+import { Bar as CJBar, Line as CJLine } from 'react-chartjs-2';
+import { BarController, Chart as ChartJS, LineController, type ChartOptions } from 'chart.js';
+import { apiService, type HouseDay, type HouseholdDay, type SiteEvent } from '../../../../services/api';
+import { useChartZoomState, ZoomResetButton } from '../chartUtils';
+import { ChartLegend, KpiRow, KpiTile, Seg, ink, inkMuted, legendFrom, segBtn, segWrap } from './cardParts';
+import { HistoryCalendar } from './HistoryCalendar';
+import {
+  addDays, balanceGap, buildFlags, change, customRange, dayStartMs, daysBetween, daysOf, fmtDay, istDay, periodRange, prevRange,
+  sentence, slotsToFlows, totals, unbalanced, weeks, type Metric, type Period, type Totals,
+} from './historyModel';
 
-// ── HISTORY_SERIES ─────────────────────────────────────────────────────────────
+// the 7-day bars mix a line ("Solar made") into a bar chart: both controllers must be registered
+ChartJS.register(BarController, LineController);
 
-export const HISTORY_SERIES = [
-  { key: 'PV', label: 'PV' },
-  { key: 'Load', label: 'Load' },
-  { key: 'Grid', label: 'Grid' },
-  { key: 'InvOut', label: 'Inv Out' },
-  { key: 'SOC', label: 'SOC' },
-] as const;
+const SOLAR = '#F07522', BATT = '#0F9F8F', GRID = '#3B82F6', MADE = '#9A3412';
+const MAX_DAYS = 400; // the daily route's cap
+const FLAG_ROWS = 3;  // "Anything wrong?" shows this many lines, then "Show all N"
+const k1 = (v: number) => v.toFixed(1);
+const signed = (v: number | null) => (v == null ? null : `${v > 0 ? '+' : ''}${v}%`);
 
-const VS_ACTUAL_SERIES = [
-  { key: 'Actual', label: 'Actual' },
-  { key: 'P50', label: 'P50' },
-  { key: 'Delta', label: 'Δ %' },
-] as const;
+interface Props { siteId: string; isDark: boolean; nowMs?: number }
 
-// ── HistoryTable ───────────────────────────────────────────────────────────────
+const HistoryTab: React.FC<Props> = ({ siteId, isDark, nowMs }) => {
+  const now = nowMs ?? Date.now();
+  const today = istDay(now);
+  const [period, setPeriod] = useState<Period>('today');
+  const [offset, setOffset] = useState(0);
+  const [pick, setPick] = useState(() => { const r = periodRange('30d', 0, now); return { start: r.start, end: r.end }; });
+  const [view, setView] = useState<'chart' | 'table'>('chart');
+  const [detail, setDetail] = useState(false);
+  const [metric, setMetric] = useState<Metric>('own');
+  const [picked, setPicked] = useState<string | null>(null);
+  const [showAllFlags, setShowAllFlags] = useState(false);
+  const [day, setDay] = useState<HouseholdDay | null>(null);
+  const [prevDay, setPrevDay] = useState<HouseholdDay | null>(null);
+  const [days, setDays] = useState<HouseDay[]>([]);
+  const [events, setEvents] = useState<SiteEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const zoom = useChartZoomState();
 
-const HistoryTable = ({ data }: { data: { time: string; 'PV (kW)': number; 'Load (kW)': number; 'Grid (kW)': number; 'Inv Out (kW)': number; 'Batt SOC (%)': number | null }[] }) => {
-  const { isDark } = useTheme();
-  const theadBg = 'var(--popover)';
-  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
+  const range = useMemo(() => (period === 'custom' ? customRange(pick.start, pick.end, offset) : periodRange(period, offset, dayStartMs(today))),
+    [period, offset, today, pick.start, pick.end]);
+  const prev = useMemo(() => prevRange(range), [range]);
 
-  return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'var(--border-strong)'}` }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
-        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
-          <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Time</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#8b5cf6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Load (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#3b82f6', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Grid (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#f43f5e', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Inv Out (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Batt SOC (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.time.replace(/\s*\|\|\s*/g, ' ')}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['PV (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Load (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Grid (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row['Inv Out (kW)']?.toFixed(2) ?? '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row['Batt SOC (%)'] != null ? `${row['Batt SOC (%)']}%` : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+  useEffect(() => {
+    let live = true;
+    setLoading(true); setError(null);
+    const back = Math.min(90, daysBetween(prev.start, today) + 1);
+    const jobs: Promise<unknown>[] = [
+      apiService.getSiteEvents(siteId, back).then(r => { if (live) setEvents(r.events); }).catch(() => { if (live) setEvents([]); }),
+    ];
+    if (period === 'today') {
+      jobs.push(apiService.getHouseholdDay(siteId, range.end).then(r => { if (live) setDay(r); }));
+      jobs.push(apiService.getHouseholdDay(siteId, prev.end).then(r => { if (live) setPrevDay(r); }));
+    } else {
+      // the route caps at 400 days: a long custom span skips the comparison
+      const from = range.len * 2 <= MAX_DAYS ? prev.start : range.start;
+      jobs.push(apiService.getHouseholdDaily(siteId, from, range.end).then(r => { if (live) setDays(r.days); }));
+    }
+    Promise.all(jobs)
+      .catch(e => {
+        if (!live) return;
+        const msg = e instanceof Error ? e.message : '';
+        // a 404 page means the server predates the household routes (backend not deployed yet); never show raw HTML
+        setError(/not found|<html/i.test(msg) ? "the server doesn't have the History data routes yet (backend update not deployed)"
+          : msg.startsWith('<') || !msg ? 'History is unavailable right now' : msg);
+      })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, [siteId, period, range.start, range.end, range.len, prev.start, prev.end, today]);
 
-// ── VsActualTable ──────────────────────────────────────────────────────────────
+  // ── numbers ──
+  const inRange = days.filter(d => d.date >= range.start && d.date <= range.end);
+  const inPrev = days.filter(d => d.date >= prev.start && d.date <= prev.end);
+  let cur: Totals;
+  let before: Totals | null;
+  if (period === 'today') {
+    const slots = day?.slots ?? [];
+    const lastMs = slots.length ? Date.parse(slots[slots.length - 1].ts) + 15 * 60_000 : 0;
+    cur = totals([slotsToFlows(slots)]);
+    // a running day compares with the same hours of the day before (spec decision)
+    before = prevDay ? totals([slotsToFlows(prevDay.slots, range.end === today ? lastMs - 864e5 : Infinity)]) : null;
+  } else {
+    cur = totals(inRange);
+    before = inPrev.length ? totals(inPrev) : null;
+  }
+  const hasBattery = period === 'today' ? (day?.slots ?? []).some(s => s.soc != null) : inRange.some(d => d.soc_max != null);
+  const { list: flags, checks } = buildFlags(period === 'today' ? [] : inRange, events, range, hasBattery, today);
+  const flagged = new Set(flags.flatMap(f => f.dates));
+  const openCount = flags.reduce((t, f) => t + f.open, 0);
+  const label = period === 'today' ? (range.end === today ? 'Today' : `On ${fmtDay(range.end)}`) : `Over these ${range.len} days`;
+  const empty = cur.counted === 0;
+  const weekly = period !== 'today' && range.len > 60;
 
-const VsActualTable = ({ data }: { data: { label: string; p50: number | null; actual: number | null; diffPct?: number | null }[] }) => {
-  const { isDark } = useTheme();
-  const theadBg = 'var(--popover)';
-  const rowBorder = isDark ? '1px solid rgba(148, 163, 184, 0.1)' : '1px solid var(--border)';
+  // ── chart ──
+  const chart = useMemo(() => {
+    if (period === 'today') {
+      const slots = day?.slots ?? [];
+      const labels = slots.map(s => new Date(s.ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }));
+      const area = (lab: string, key: 'from_solar_kw' | 'from_battery_kw' | 'from_grid_kw', c: string) =>
+        ({ label: lab, data: slots.map(s => s[key]), borderColor: c, backgroundColor: `${c}CC`, fill: true, stack: 'home', pointRadius: 0, borderWidth: 0, tension: 0, yAxisID: 'y' });
+      const ds: any[] = [
+        area('From solar', 'from_solar_kw', SOLAR), area('From battery', 'from_battery_kw', BATT), area('From grid', 'from_grid_kw', GRID),
+        { label: 'Solar made', data: slots.map(s => s.pv_kw), borderColor: MADE, borderWidth: 2.5, fill: false, stack: 'pv', pointRadius: 0, tension: 0, yAxisID: 'y' },
+        { label: 'Battery %', data: slots.map(s => s.soc), borderColor: BATT, borderDash: [6, 4], borderWidth: 2, fill: false, stack: 'soc', pointRadius: 0, tension: 0, yAxisID: 'soc' },
+      ];
+      if (detail) {
+        ds.push({ label: 'Inverter output', data: slots.map(s => s.inv_out_kw), borderColor: '#f43f5e', borderDash: [4, 2], borderWidth: 1.5, fill: false, stack: 'inv', pointRadius: 0, yAxisID: 'y' });
+        ds.push({ label: 'Inverter-side load', data: slots.map(s => s.inverter_kw), borderColor: '#8b5cf6', borderWidth: 1.5, fill: false, stack: 'invload', pointRadius: 0, yAxisID: 'y' });
+      }
+      return { labels, datasets: ds };
+    }
+    const rows = weekly ? weeks(inRange, range) : daysOf(range).map(d => inRange.find(x => x.date === d));
+    const bar = (lab: string, key: 'from_solar_kwh' | 'from_battery_kwh' | 'from_grid_kwh', c: string) =>
+      ({ type: 'bar' as const, label: lab, data: rows.map(r => r?.[key] ?? null), backgroundColor: rows.map(r => (r?.whole_home ? c : `${c}80`)), borderColor: c, stack: 'home' });
+    return {
+      labels: weekly ? rows.map(r => `Week of ${fmtDay(r!.date)}`) : daysOf(range).map(fmtDay),
+      datasets: [
+        bar('From solar', 'from_solar_kwh', SOLAR), bar('From battery', 'from_battery_kwh', BATT), bar('From grid', 'from_grid_kwh', GRID),
+        { type: 'line' as const, label: 'Solar made', data: rows.map(r => r?.pv_kwh ?? null), borderColor: MADE, backgroundColor: MADE, pointRadius: 4, borderWidth: 2.5, tension: 0.25, spanGaps: true, stack: 'pv' },
+      ],
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, day, days, detail, range.start, range.end, weekly]);
 
-  return (
-    <div style={{ maxHeight: 320, overflowY: 'auto', overflowX: 'auto', borderRadius: 12, border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'var(--border-strong)'}` }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.813rem', fontFamily: 'Inter, sans-serif', minWidth: 520 }}>
-        <thead style={{ position: 'sticky', top: 0, background: theadBg, zIndex: 1 }}>
-          <tr>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Time</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#F07522', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Actual PV (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: '#0F9F8F', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>P50 Forecast (kW)</th>
-            <th style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', borderBottom: `2px solid ${isDark ? 'rgba(148, 163, 184, 0.2)' : 'var(--border-strong)'}` }}>Δ %</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i} style={{ borderBottom: rowBorder }}>
-              <td style={{ padding: '10px 16px', color: '#0F9F8F', fontWeight: 700, fontFamily: 'Inter, sans-serif' }}>{row.label}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.actual != null ? row.actual.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-primary)' }}>{row.p50 != null ? row.p50.toFixed(2) : '—'}</td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontFamily: 'Fira Code, monospace', color: 'var(--text-secondary)' }}>{row.diffPct != null ? `${row.diffPct > 0 ? '+' : ''}${row.diffPct}%` : '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+  const options = useMemo<ChartOptions<any>>(() => ({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (it: any) => ` ${it.dataset.label}: ${it.parsed.y == null ? '–' : Number(it.parsed.y).toFixed(2)} ${it.dataset.yAxisID === 'soc' ? '%' : period === 'today' ? 'kW' : 'kWh'}` } },
+    },
+    scales: {
+      x: { stacked: true, ticks: { color: inkMuted(isDark), maxTicksLimit: 8, maxRotation: 0 }, grid: { display: false } },
+      y: { stacked: true, beginAtZero: true, ticks: { color: inkMuted(isDark) }, title: { display: true, text: period === 'today' ? 'kW' : 'kWh', color: inkMuted(isDark) } },
+      ...(period === 'today' ? { soc: { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false }, ticks: { color: inkMuted(isDark), callback: (v: any) => `${v}%` } } } : {}),
+    },
+  }), [isDark, period]);
 
-// ── HistoryTabProps ────────────────────────────────────────────────────────────
-
-interface HistoryTabProps {
-  telemetry: any[];
-  isDark: boolean;
-  isTouch: boolean;
-  historyError: string | null;
-  dateRange: string;
-  setDateRange: (v: string) => void;
-  customStartDate: string;
-  setCustomStartDate: (v: string) => void;
-  customEndDate: string;
-  setCustomEndDate: (v: string) => void;
-  historyView: 'chart' | 'table';
-  setHistoryView: (v: 'chart' | 'table') => void;
-  vsActualView: 'chart' | 'table';
-  setVsActualView: (v: 'chart' | 'table') => void;
-  vsActual7d: boolean;
-  setVsActual7d: (v: boolean) => void;
-  showHistorySeries: Record<HistorySeriesKey, boolean>;
-  setShowHistorySeries: React.Dispatch<React.SetStateAction<Record<HistorySeriesKey, boolean>>>;
-  showVsActualSeries: Record<VsActualSeriesKey, boolean>;
-  setShowVsActualSeries: React.Dispatch<React.SetStateAction<Record<VsActualSeriesKey, boolean>>>;
-  historyZoom: ReturnType<typeof useChartZoomState>;
-  vsActualZoom: ReturnType<typeof useChartZoomState>;
-  historyChartOptions: ChartOptions<'line'>;
-  vsActualChartOptions: ChartOptions<'line'>;
-  // Computed data passed from SiteDataPanel
-  historyData: any[];
-  historyResolutionLabel: string;
-  historyStatsVisible: {
-    pvTotal: number;
-    pvPeak: number;
-    invOutPeak: number;
-    invOutAvg: number;
-    loadTotal: number;
-    loadPeak: number;
-    gridImport: number;
-    gridExport: number;
-    socAvg: number | null;
-  } | null;
-  loading: boolean;
-  activeVsActualData: { label: string; p50: number | null; actual: number | null; diffPct?: number | null; fTs?: number }[];
-  siteId: string;
-  onToggleVsActual7d: () => void;
-}
-
-// ── HistoryTab ─────────────────────────────────────────────────────────────────
-
-const HistoryTab: React.FC<HistoryTabProps> = ({
-  isDark,
-  historyError,
-  historyView,
-  setHistoryView,
-  showHistorySeries,
-  setShowHistorySeries,
-  historyZoom,
-  historyData,
-  historyResolutionLabel,
-  loading,
-  historyChartOptions,
-  historyStatsVisible,
-  vsActual7d,
-  onToggleVsActual7d,
-  vsActualView,
-  setVsActualView,
-  showVsActualSeries,
-  setShowVsActualSeries,
-  vsActualZoom,
-  activeVsActualData,
-  vsActualChartOptions,
-  dateRange,
-}) => {
-  const tabTransition = { type: 'spring', stiffness: 320, damping: 30 };
+  // ── render ──
+  const card: React.CSSProperties = {
+    background: isDark ? 'rgba(15,23,42,0.6)' : 'rgba(255,255,255,0.85)', borderRadius: 20, padding: '16px 20px',
+    border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(15,159,143,0.18)'}`, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0,
+  };
+  const h2: React.CSSProperties = { margin: 0, fontFamily: 'Rubik, sans-serif', fontWeight: 700, fontSize: '0.95rem', color: ink(isDark) };
+  const muted: React.CSSProperties = { margin: 0, fontFamily: 'Rubik, sans-serif', fontSize: '0.8125rem', color: 'var(--muted-foreground)' };
+  const scope = cur.basis === 'inverter' ? 'Inverter circuits only'
+    : cur.counted < cur.of ? `Whole home on ${cur.counted} of ${cur.of} days` : 'Whole home: inverter circuits + grid-direct circuits';
+  const share = (v: number, of: number) => (of > 0 ? `${Math.round((v / of) * 100)}%` : '–');
+  const prevWord = period === 'today' ? 'the day before' : 'the period before';
+  const cmp = (c: number | null) => (c == null ? '' : ` · ${signed(c)} vs ${prevWord}`);
+  const gridChange = signed(change(cur.bought, before?.bought ?? null));
+  const note = day?.note && period === 'today' ? day.note : null;
 
   return (
-    <motion.div
-      key="history"
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={{
-        initial: { opacity: 0, x: -20 },
-        animate: { opacity: 1, x: 0 },
-        exit: { opacity: 0, x: 20 }
-      }}
-      transition={tabTransition}
-    >
-      {historyError && (
-        <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '0.78rem', fontFamily: 'Inter, sans-serif' }}>
-          History unavailable: {historyError}
-        </div>
-      )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['chart', 'table'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setHistoryView(mode)}
-              style={{
-                border: '1px solid rgba(15,159,143, 0.25)',
-                background: historyView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent',
-                color: historyView === mode ? '#0F9F8F' : 'var(--text-muted)',
-                borderRadius: 8,
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'Rubik, sans-serif',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {HISTORY_SERIES.map(series => (
-            <button
-              key={series.key}
-              onClick={() => setShowHistorySeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
-              style={{
-                border: '1px solid rgba(15,159,143, 0.25)',
-                background: showHistorySeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent',
-                color: showHistorySeries[series.key] ? '#0F9F8F' : 'var(--text-muted)',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'Rubik, sans-serif',
-              }}
-            >
-              {series.label}
-            </button>
-          ))}
-          <ZoomResetButton visible={historyZoom.isZoomed} onClick={historyZoom.resetZoom} />
-        </div>
-      </div>
-
-      <ChartCard
-        title="Power Flow"
-        subtitle={dateRange === '24h' ? `Solar day 06:00 → 06:00 IST · ${historyData.length} pts · drag to zoom` : `${historyData.length} data points · ${historyResolutionLabel} buckets · drag to zoom`}
-        isDark={isDark}
-        isLive={dateRange === '24h'}
-        isLoading={loading && historyData.length === 0}
-        height={360}
-        delay={0.1}
-        headerRight={
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '5px 10px',
-              borderRadius: 999,
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              fontFamily: 'Rubik, sans-serif',
-              color: historyResolutionLabel === '5 min' ? '#0F9F8F' : ('var(--muted-foreground)'),
-              background: historyResolutionLabel === '5 min'
-                ? (isDark ? 'rgba(15,159,143,0.14)' : 'rgba(15,159,143,0.08)')
-                : (isDark ? 'rgba(148,163,184,0.12)' : 'rgba(71,85,105,0.08)'),
-              border: `1px solid ${historyResolutionLabel === '5 min'
-                ? 'rgba(15,159,143,0.24)'
-                : (isDark ? 'rgba(148,163,184,0.18)' : 'rgba(71,85,105,0.14)')}`,
-            }}
-            aria-label={`History chart aggregation: ${historyResolutionLabel}`}
-          >
-            {historyResolutionLabel}
+    <motion.div key="history" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* toolbar */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+        <Seg<Period> label="Period" value={period} isDark={isDark} onChange={p => { setPeriod(p); setOffset(0); setPicked(null); zoom.resetZoom(); }}
+          options={[['today', 'Today'], ['7d', '7 days'], ['30d', '30 days'], ['custom', 'Pick dates']]} />
+        <div role="group" aria-label="Step" style={segWrap(isDark)}>
+          <button type="button" aria-label="Previous period" onClick={() => setOffset(o => o - 1)} style={segBtn(false, true, isDark)}>‹</button>
+          <span style={{ ...segBtn(false, false, isDark), cursor: 'default', display: 'inline-flex', alignItems: 'center' }}>
+            {range.len === 1 ? fmtDay(range.end) : `${fmtDay(range.start)} – ${fmtDay(range.end)}`}
           </span>
-        }
-      >
-        {historyData.length === 0 ? (
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif', fontSize: '0.875rem' }}>No history points for selected range.</p>
-        ) : historyView === 'chart' ? (
-          <div style={{ width: '100%', height: 360 }}>
-            <CJLine
-              ref={historyZoom.chartRef}
-              data={{
-                labels: historyData.map(d => d.time),
-                datasets: [
-                  showHistorySeries.PV && {
-                    label: 'PV', yAxisID: 'power',
-                    data: historyData.map(d => d['PV (kW)']),
-                    borderColor: '#F07522', borderWidth: 2, tension: 0.3, pointRadius: 0,
-                    fill: true,
-                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#F0752230'; return makeGradient(chart.ctx, chart.chartArea, '#F07522', 0.30, 0.02); },
-                  },
-                  showHistorySeries.Load && {
-                    label: 'Load', yAxisID: 'power',
-                    data: historyData.map(d => d['Load (kW)']),
-                    borderColor: '#8b5cf6', borderWidth: 2, tension: 0.3, pointRadius: 0,
-                    fill: true,
-                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#8b5cf620'; return makeGradient(chart.ctx, chart.chartArea, '#8b5cf6', 0.20, 0.01); },
-                  },
-                  showHistorySeries.Grid && {
-                    label: 'Grid', yAxisID: 'power',
-                    data: historyData.map(d => d['Grid (kW)']),
-                    borderColor: '#3b82f6', borderWidth: 2, tension: 0.3, pointRadius: 0,
-                    fill: false,
-                    borderDash: undefined,
-                  },
-                  showHistorySeries.InvOut && {
-                    label: 'Inv Out', yAxisID: 'power',
-                    data: historyData.map(d => d['Inv Out (kW)']),
-                    borderColor: '#f43f5e', borderWidth: 2, tension: 0.3, pointRadius: 0,
-                    fill: true, borderDash: [4, 2],
-                    backgroundColor: (ctx: any) => { const { chart } = ctx; if (!chart.chartArea) return '#f43f5e18'; return makeGradient(chart.ctx, chart.chartArea, '#f43f5e', 0.14, 0.01); },
-                  },
-                  showHistorySeries.SOC && {
-                    label: 'SOC', yAxisID: 'soc',
-                    data: historyData.map(d => d['Batt SOC (%)']),
-                    borderColor: '#0F9F8F', borderWidth: 2, tension: 0.3, pointRadius: 0, fill: false,
-                  },
-                ].filter(Boolean) as any[],
-              }}
-              options={historyChartOptions}
-            />
-          </div>
-        ) : (
-          <HistoryTable data={historyData} />
-        )}
-      </ChartCard>
-
-      {historyStatsVisible && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          {[
-            `☀ PV ${historyStatsVisible.pvTotal.toFixed(2)} kWh`,
-            `☀ PV Peak ${historyStatsVisible.pvPeak.toFixed(2)} kW`,
-            `⚡ Inv Peak ${historyStatsVisible.invOutPeak.toFixed(2)} kW`,
-            `⚡ Inv Avg ${historyStatsVisible.invOutAvg.toFixed(2)} kW`,
-            `Load ${historyStatsVisible.loadTotal.toFixed(2)} kWh`,
-            `Load Peak ${historyStatsVisible.loadPeak.toFixed(2)} kW`,
-            `Grid In ${historyStatsVisible.gridImport.toFixed(2)} kWh`,
-            `Grid Out ${historyStatsVisible.gridExport.toFixed(2)} kWh`,
-            historyStatsVisible.socAvg != null ? `SOC Avg ${historyStatsVisible.socAvg.toFixed(0)}%` : null,
-          ].filter(Boolean).map((chip, idx) => (
-            <span
-              key={`${chip}-${idx}`}
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                fontFamily: 'Rubik, sans-serif',
-                color: 'var(--text-muted)',
-                border: '1px solid rgba(15,159,143, 0.2)',
-                borderRadius: 999,
-                padding: '5px 10px',
-                background: isDark ? 'rgba(15,159,143, 0.08)' : 'rgba(15,159,143, 0.05)',
-              }}
-            >
-              {chip}
-            </span>
+          <button type="button" aria-label="Next period" disabled={offset >= 0} onClick={() => setOffset(o => Math.min(0, o + 1))}
+            style={{ ...segBtn(false, false, isDark), opacity: offset >= 0 ? 0.4 : 1 }}>›</button>
+        </div>
+      </div>
+      {period === 'custom' && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          {([['From', 'start'], ['To', 'end']] as const).map(([lab, key]) => (
+            <label key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: ink(isDark) }}>{lab}
+              <input type="date" value={pick[key]}
+                min={key === 'start' ? addDays(pick.end, -(MAX_DAYS - 1)) : pick.start} max={key === 'start' ? pick.end : today}
+                onChange={e => { const v = e.target.value; if (v) { setPick(p => ({ ...p, [key]: v })); setOffset(0); } }}
+                style={{ minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 10px', background: 'transparent', color: 'inherit', font: 'inherit' }} />
+            </label>
           ))}
         </div>
       )}
+      {error && <div role="alert" style={{ ...card, color: '#b91c1c' }}>History unavailable: {error}</div>}
 
-      {/* Forecast vs Actual section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, marginBottom: 10 }}>
-        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, fontFamily: 'Rubik, sans-serif', color: 'var(--text-primary)' }}>
-          Forecast vs Actual — {vsActual7d ? 'Last 7 Days' : 'Today'}
-        </p>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            onClick={onToggleVsActual7d}
-            aria-pressed={vsActual7d}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px', borderRadius: 8,
-              border: `1px solid ${vsActual7d ? (isDark ? 'rgba(245,158,11,0.5)' : 'rgba(245,158,11,0.4)') : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.2)')}`,
-              background: vsActual7d ? (isDark ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.1)') : 'transparent',
-              color: vsActual7d ? ('var(--warning)') : ('var(--muted-foreground)'),
-              cursor: 'pointer', fontWeight: 700,
-              fontFamily: 'Rubik, sans-serif', fontSize: '0.75rem',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Activity size={12} />
-            Last 7 Days
-          </button>
-          {(['chart', 'table'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setVsActualView(mode)}
-              style={{
-                border: '1px solid rgba(15,159,143, 0.25)',
-                background: vsActualView === mode ? 'rgba(15,159,143, 0.14)' : 'transparent',
-                color: vsActualView === mode ? '#0F9F8F' : 'var(--text-muted)',
-                borderRadius: 8,
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'Rubik, sans-serif',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {mode}
-            </button>
-          ))}
-          {VS_ACTUAL_SERIES.map(series => (
-            <button
-              key={series.key}
-              onClick={() => setShowVsActualSeries(prev => ({ ...prev, [series.key]: !prev[series.key] }))}
-              style={{
-                border: '1px solid rgba(15,159,143, 0.25)',
-                background: showVsActualSeries[series.key] ? 'rgba(15,159,143, 0.14)' : 'transparent',
-                color: showVsActualSeries[series.key] ? '#0F9F8F' : 'var(--text-muted)',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'Rubik, sans-serif',
-              }}
-            >
-              {series.label}
-            </button>
-          ))}
-          <ZoomResetButton visible={vsActualZoom.isZoomed} onClick={vsActualZoom.resetZoom} />
-        </div>
-      </div>
-
-      <div
-        style={{
-          padding: 16,
-          borderRadius: 16,
-          marginTop: 4,
-          background: isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-          border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15,159,143, 0.25)'}`,
-        }}
-      >
-        {activeVsActualData.length === 0 ? (
-          <EmptyState icon={Target} title={vsActual7d ? 'No scored forecast slots in the last 7 days' : 'Nothing to compare yet today'}
-            description={vsActual7d ? 'Slots are scored once real readings arrive for them.' : 'The chart fills in once readings overlap the forecast.'} />
-        ) : vsActualView === 'chart' ? (
-          <div style={{ width: '100%', height: 320 }}>
-            <CJLine
-              ref={vsActualZoom.chartRef}
-              data={{
-                labels: activeVsActualData.map(d => d.label),
-                datasets: [
-                  showVsActualSeries.Actual && {
-                    label: 'Actual',
-                    data: activeVsActualData.map(d => d.actual),
-                    borderColor: '#F07522', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
-                  },
-                  showVsActualSeries.P50 && {
-                    label: 'P50',
-                    data: activeVsActualData.map(d => d.p50),
-                    borderColor: '#0F9F8F', borderWidth: 2.2, tension: 0.3, pointRadius: 0, fill: false,
-                  },
-                  showVsActualSeries.Delta && {
-                    label: 'Δ %', yAxisID: 'pct',
-                    data: activeVsActualData.map(d => d.diffPct),
-                    borderColor: '#3b82f6', borderWidth: 1.7, tension: 0.3, pointRadius: 0,
-                    borderDash: [4, 4], fill: false,
-                  },
-                ].filter(Boolean) as any[],
-              }}
-              options={vsActualChartOptions}
-            />
+      {/* 1. chart */}
+      <section data-testid="history-chart" style={card}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={h2}>{period === 'today' ? 'Through the day' : period === '30d' ? '30 days at a glance' : weekly ? 'Week by week' : 'Day by day'}</h2>
+            <p style={muted}>{empty ? 'No readings yet' : `${cur.ownPct ?? '–'}% own power · bought ${k1(cur.bought)} kWh · exported ${k1(cur.exported)} kWh`}</p>
           </div>
-        ) : (
-          <VsActualTable data={activeVsActualData} />
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {period === 'today' && view === 'chart' && (
+              <div style={segWrap(isDark)}>
+                <button type="button" aria-pressed={detail} onClick={() => setDetail(!detail)} style={segBtn(detail, true, isDark)}>Inverter detail</button>
+              </div>
+            )}
+            {period !== '30d' && <Seg<'chart' | 'table'> label="View" value={view} isDark={isDark} onChange={setView} options={[['chart', 'Chart'], ['table', 'Table']]} />}
+            <ZoomResetButton visible={zoom.isZoomed} onClick={zoom.resetZoom} />
+          </div>
+        </div>
+        {loading && empty ? <p style={muted}>Loading history…</p>
+          : period === 'today' && day?.reason === 'older_than_90_days' ? <p style={muted}>Detailed readings are kept for 90 days. Use 7 days, 30 days or Pick dates to see this day's totals.</p>
+          : period === '30d' ? (
+            <HistoryCalendar days={inRange} range={range} flagged={flagged} isDark={isDark} metric={metric} onMetric={setMetric}
+              picked={picked} onPick={setPicked}
+              onOpen={d => { setPeriod('today'); setPicked(null); setOffset(-daysBetween(d, today)); }} />
+          ) : view === 'table' ? (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem', minWidth: 520 }}>
+                <thead><tr>{[period === 'today' ? 'Time' : weekly ? 'Week' : 'Day', 'Solar made', 'Home', 'From solar', 'From battery', 'From grid'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: 8, borderBottom: '2px solid var(--border)' }}>{h}</th>))}</tr></thead>
+                <tbody>{chart.labels.map((l: string, i: number) => (
+                  <tr key={l + i}><td style={{ padding: 8 }}>{l}</td>
+                    {[3, -1, 0, 1, 2].map(j => {
+                      const v = j < 0 ? chart.datasets.slice(0, 3).reduce((t: number, d: any) => t + (d.data[i] ?? 0), 0) : chart.datasets[j].data[i];
+                      return <td key={j} style={{ padding: 8, fontFamily: 'Fira Code, monospace' }}>{v == null ? '–' : Number(v).toFixed(2)}</td>;
+                    })}</tr>))}</tbody>
+              </table>
+            </div>
+          ) : (
+            <div>
+              <ChartLegend items={legendFrom(chart.datasets.map((d: any) => ({ ...d, fill: false, backgroundColor: d.borderColor })))} />
+              <div style={{ height: 320 }}>
+                {period === 'today'
+                  ? <CJLine ref={zoom.chartRef} data={chart as any} options={options} />
+                  : <CJBar ref={zoom.chartRef} data={chart as any} options={options} />}
+              </div>
+            </div>
+          )}
+      </section>
+
+      {/* 2. anything wrong */}
+      <section data-testid="history-flags" style={{ ...card, gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <h2 style={h2}>Anything wrong?</h2>
+          <span style={{ ...muted, fontWeight: 600, color: flags.length ? (isDark ? '#FBBF24' : '#B45309') : 'var(--muted-foreground)' }}>
+            {flags.length === 0 ? `All clear · ${checks} checks`
+              : `${flags.length} ${flags.length === 1 ? 'issue' : 'issues'}${openCount ? ` · ${openCount} open` : ''} · ${checks - new Set(flags.map(f => f.kind)).size} of ${checks} checks passed`}
+          </span>
+        </div>
+        {flags.length > 0 && (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
+            {(showAllFlags ? flags : flags.slice(0, FLAG_ROWS)).map((f, i) => (
+              <li key={f.kind + f.title} style={{ borderTop: i ? '1px solid var(--border)' : undefined }}>
+                <details>
+                  <summary style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, cursor: 'pointer', listStyle: 'none', color: ink(isDark) }}>
+                    <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', flex: 'none', background: f.tone === 'amber' ? '#F59E0B' : '#94A3B8' }} />
+                    <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, fontSize: '0.9375rem' }} title={f.title}>{f.title}</span>
+                    {f.count > 1 && <span style={{ flex: 'none', fontFamily: 'Fira Code, monospace', fontSize: '0.8125rem', fontWeight: 700, padding: '1px 8px', borderRadius: 999, background: isDark ? 'rgba(148,163,184,0.15)' : '#F1F5F9' }}>×{f.count}</span>}
+                    {f.open > 0 && <span style={{ flex: 'none', fontSize: '0.75rem', fontWeight: 700, color: isDark ? '#FBBF24' : '#B45309' }}>open</span>}
+                    <span style={{ ...muted, flex: 'none', whiteSpace: 'nowrap' }}>{f.when}</span>
+                  </summary>
+                  <p style={{ ...muted, padding: '0 0 10px 18px' }}>{f.detail}</p>
+                </details>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+        {flags.length > FLAG_ROWS && (
+          <button type="button" onClick={() => setShowAllFlags(v => !v)}
+            style={{ alignSelf: 'flex-start', minHeight: 36, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: 'var(--brand-green)' }}>
+            {showAllFlags ? 'Show fewer' : `Show all ${flags.length}`}
+          </button>
+        )}
+      </section>
+
+      {/* 3. where energy went */}
+      <section data-testid="history-where" style={card}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }}>
+          <h2 style={h2}>Where energy went</h2>
+          <span style={muted}>{scope}{note ? ` · ${note}` : ''}</span>
+        </div>
+        {empty ? <p style={muted}>No readings for this period yet.</p> : (
+          <>
+            <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.45, color: ink(isDark) }}>{sentence(cur, before, label)}</p>
+            {unbalanced(cur) && (
+              <p style={muted} title="Solar made minus (to the home + into the battery + exported)">
+                Figures don't fully balance: solar made and where it went differ by {k1(Math.abs(balanceGap(cur)))} kWh.
+              </p>
+            )}
+            {[
+              { title: `Solar made ${k1(cur.pv)} kWh`, sub: cmp(change(cur.pv, before?.pv ?? null)), parts: [
+                [cur.fromSolar, SOLAR, `${k1(cur.fromSolar)} kWh to the home (${share(cur.fromSolar, cur.pv)})`],
+                [cur.toBattery, BATT, `${k1(cur.toBattery)} kWh into the battery (${share(cur.toBattery, cur.pv)})`],
+                [cur.exported, '#FCD9BF', `${k1(cur.exported)} kWh exported (${share(cur.exported, cur.pv)})`]] as const },
+              { title: `Home used ${k1(cur.home)} kWh`, sub: cmp(change(cur.home, before?.home ?? null)), parts: [
+                [cur.fromSolar, SOLAR, `${k1(cur.fromSolar)} kWh from solar (${share(cur.fromSolar, cur.home)})`],
+                [cur.fromBattery, BATT, `${k1(cur.fromBattery)} kWh from the battery (${share(cur.fromBattery, cur.home)})`],
+                [cur.fromGrid, GRID, `${k1(cur.fromGrid)} kWh from the grid (${share(cur.fromGrid, cur.home)})`]] as const },
+            ].map(b => (
+              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.9375rem', color: ink(isDark) }}>{b.title}<span style={{ ...muted, display: 'inline' }}>{b.sub}</span></div>
+                <div style={{ display: 'flex', height: 24, borderRadius: 8, overflow: 'hidden', gap: 2 }} aria-hidden="true">
+                  {b.parts.map(([v, c]) => <div key={c} style={{ flex: Math.max(0, v), background: c }} />)}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: '0.8125rem', color: ink(isDark) }}>
+                  {b.parts.map(([, c, t]) => (
+                    <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <KpiRow>
+              <KpiTile isDark={isDark} tone="orange" label="Own power" value={cur.ownPct ?? '–'} unit={cur.ownPct != null ? '%' : undefined}
+                sub={before?.ownPct != null ? `${before.ownPct}% ${prevWord}` : undefined} />
+              <KpiTile isDark={isDark} tone="blue" label="Bought from grid" value={k1(cur.bought)} unit="kWh"
+                sub={gridChange ? `${gridChange} vs ${prevWord}` : undefined} />
+              <KpiTile isDark={isDark} label="Exported" value={k1(cur.exported)} unit="kWh" />
+              <KpiTile isDark={isDark} tone="teal" label="Battery" value={k1(cur.fromBattery)} unit="kWh used" sub={`${k1(cur.toBattery)} kWh stored`} />
+            </KpiRow>
+          </>
+        )}
+      </section>
     </motion.div>
   );
 };

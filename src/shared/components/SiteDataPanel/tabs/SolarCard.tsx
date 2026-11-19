@@ -4,7 +4,7 @@
  * 7 days and the next forecast days, in kWh). Replaced the "Solar Generation Forecast" and
  * "Forecast vs Actual" cards (Nov 18, 2026). Scenarios: docs/test-scenarios/solar-forecast-card.md.
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistedState } from '../../../hooks/usePersistedState';
 import { Line as CJLine } from 'react-chartjs-2';
 import type { ChartOptions, Plugin, TooltipItem } from 'chart.js';
@@ -13,7 +13,7 @@ import { resolveCssVar } from '../../../lib/resolveCssVar';
 import { IST_TIMEZONE } from '../../../../app/constants';
 import { ChartLegend, KpiRow, KpiTile, Seg, groupLabel, groupRow, ink, inkMuted, legendFrom, segBtn, segWrap } from './cardParts';
 import {
-  buildSlots, dailyTotals, forecastDays, istMidnight, todayKpis, trimNight, DAY_MS, SLOT_MS, type SolarWindow,
+  bandOf, buildSlots, dailyTotals, forecastDays, istMidnight, todayDot, todayKpis, trimNight, DAY_MS, SLOT_MS, type SolarWindow,
 } from './solarCardModel';
 
 const IST = IST_TIMEZONE;
@@ -21,6 +21,8 @@ const ACT = '#F07522';
 const FC_LIGHT = '#0F9F8F';
 const FC_DARK = '#2dd4bf'; // the light teal at 40% vanished on navy
 const GHI = '#eab308';
+
+// Shown in the dev logs so you can tell which build the browser is running.
 
 export interface SolarCardProps {
   isDark: boolean;
@@ -75,6 +77,12 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
   const daily = win === 'daily';
   const nowIdx = daily ? todayIdx : isToday ? slots.findIndex(s => s.ms <= now && now < s.ms + SLOT_MS) : -1;
   const nowRef = useRef(nowIdx); nowRef.current = nowIdx;
+  // Daily: today's hollow dot travels along the dotted link from yesterday's actual to today's forecast with the clock
+  const dayFrac = Math.min(Math.max((now - today0) / DAY_MS, 0), 1);
+  const dayFracRef = useRef(dayFrac); dayFracRef.current = dayFrac;
+  const todayIdxRef = useRef(todayIdx); todayIdxRef.current = todayIdx;
+  const isDailyRef = useRef(false); isDailyRef.current = win === 'daily';
+
   const slotsRef = useRef(slots); slotsRef.current = slots;
   const daysRef = useRef(days); daysRef.current = days;
   const ghiOn = ghi && !daily && slots.some(s => s.ghi != null);
@@ -100,7 +108,8 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
           ] : []),
           { ...base, label: 'Forecast (P50)', data: days.map(d => d.p50), borderColor: FC, borderWidth: 2.2, borderDash: [6, 4], pointRadius: 4, pointStyle: 'circle', pointBackgroundColor: FC, segment: fade },
           { ...base, label: 'Actual', order: -1, data: days.map(d => (d.partial || d.future ? null : d.actual)), borderColor: ACT, backgroundColor: ACT, borderWidth: 2.6, pointRadius: 5, pointStyle: 'circle' },
-          { ...base, label: 'Today, so far', order: -1, data: days.map((d, i) => (i === todayIdx ? d.actual : null)), borderColor: ACT, borderWidth: 2, pointRadius: 5, pointBackgroundColor: '#fff', pointStyle: 'circle' },
+          // legend entry only: the plugin draws this line through today's moving dot (a category scale can't take fractional x)
+          { ...base, label: 'Today, so far', order: -1, data: days.map(() => null), borderColor: ACT, borderWidth: 2.4, borderDash: [3, 4], pointRadius: 0, pointHoverRadius: 0, pointBackgroundColor: '#fff', pointStyle: 'circle' },
         ],
       };
     }
@@ -128,7 +137,9 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
       const i = nowRef.current;
       if (!scales?.x || !a || i < 0) return;
       const px = scales.x.getPixelForValue(i);
+      if (!(px >= a.left - 0.5 && px <= a.right + 0.5)) return;   // zoomed past it: draw nothing, not over the axes
       ctx.save();
+      ctx.beginPath(); ctx.rect(a.left, a.top, a.right - a.left, a.bottom - a.top); ctx.clip();
       ctx.strokeStyle = ink(p.isDark); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
       ctx.setLineDash([]); ctx.fillStyle = ink(p.isDark); ctx.font = '600 12px Rubik, sans-serif';
@@ -137,11 +148,40 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
       ctx.fillText(nowText, ctx.textAlign === 'right' ? px - 6 : px + 6, a.top + 12);
       ctx.restore();
     },
+    // Daily: yesterday's actual -> today's hollow dot -> today's forecast, one dotted line through the dot
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: a, scales } = chart as any;
+      const ds = daysRef.current, ti = todayIdxRef.current, t = ds[ti];
+      const dot = todayDot(ds, ti, dayFracRef.current);
+      if (!scales?.x || !scales?.y || !a || !t || !dot || !isDailyRef.current) return;
+      const X = (v: number) => scales.x.getPixelForValue(v), Y = (v: number) => scales.y.getPixelForValue(v);
+      const px = X(dot.x), py = Y(dot.y);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(a.left - 6, a.top - 14, a.right - a.left + 12, a.bottom - a.top + 14); ctx.clip();
+      if (dot.link) {
+        ctx.strokeStyle = ACT; ctx.lineWidth = 2.4; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(X(ti - 1), Y(ds[ti - 1].actual ?? 0)); ctx.lineTo(px, py); ctx.lineTo(X(ti), Y(t.p50)); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = ACT; ctx.lineWidth = 2; ctx.stroke();
+      // label: a pill above-left of the dot, so it never sits on the forecast dot or the Today line
+      const txt = `${(t.actual ?? 0).toFixed(1)} kWh`;
+      ctx.font = '600 11px Fira Code, monospace';
+      const tw = ctx.measureText?.(txt)?.width ?? 0, w = tw + 12, h = 18;
+      const x0 = Math.max(a.left, Math.min(px - 10 - w, a.right - w)), y0 = Math.max(a.top - 4, py - 12 - h);
+      ctx.fillStyle = resolveCssVar('--popover'); ctx.strokeStyle = p.isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)'; ctx.lineWidth = 1;
+      ctx.beginPath(); (ctx.roundRect ? ctx.roundRect(x0, y0, w, h, 6) : ctx.rect(x0, y0, w, h)); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = ink(p.isDark); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(txt, x0 + 6, y0 + h / 2);
+      ctx.restore();
+    },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [nowText, p.isDark]);
 
   const options = useMemo<ChartOptions<'line'>>(() => ({
     responsive: true, maintainAspectRatio: false, animation: false,
+    layout: { padding: daily ? { left: 8, right: 18, top: 4 } : undefined },
     interaction: { mode: 'index', intersect: false },
     // daily: a click opens that day in 15-min detail
     onClick: (_e: any, els: any[]) => {
@@ -156,7 +196,7 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
         backgroundColor: resolveCssVar('--popover'), titleColor: ink(p.isDark), bodyColor: inkMuted(p.isDark),
         borderColor: p.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
         titleFont: { family: 'Rubik, sans-serif', weight: 'bold' as const, size: 12 }, bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        filter: (it: TooltipItem<'line'>) => !String(it.dataset.label).startsWith('_') && it.parsed.y != null,
+        filter: (it: TooltipItem<'line'>) => !String(it.dataset.label).startsWith('_') && it.dataset.label !== 'Today, so far' && it.parsed.y != null,
         callbacks: {
           title: (items: TooltipItem<'line'>[]) => {
             if (daily) { const d = daysRef.current[items[0]?.dataIndex ?? -1]; return d ? `${day(d.ms)}${d.partial ? ' (so far)' : d.future ? ' (forecast)' : ''}` : ''; }
@@ -174,21 +214,26 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
             return ` ${lab}: ${y.toFixed(daily ? 1 : 2)} ${u}`;
           },
           footer: (items: TooltipItem<'line'>[]) => {
-            if (daily) return ['Click to see this day in 15-min detail'];
+            if (daily) {
+              const d = daysRef.current[items[0]?.dataIndex ?? -1];
+              const sofar = d?.partial ? [`So far: ${(d.actual ?? 0).toFixed(1)} of ${d.p50.toFixed(1)} kWh`] : [];
+              return [...sofar, 'Click to see this day in 15-min detail'];
+            }
             const s = slotsRef.current[items[0]?.dataIndex ?? -1];
             return s?.physics != null ? [`Physics estimate: ${s.physics.toFixed(2)} kW`] : [];
           },
         },
       },
-      zoom: createDragZoomPlugins(() => zoom.onZoomComplete.current()),
+      zoom: daily ? { zoom: { wheel: { enabled: false }, drag: { enabled: false }, pinch: { enabled: false } }, pan: { enabled: false } }
+        : createDragZoomPlugins(() => zoom.onZoomComplete.current()),
     } as any,
     scales: {
-      // offset: the first and last points sit half a step in from the axes instead of on them
-      x: { offset: true, ticks: { color: inkMuted(p.isDark), font: { family: 'Rubik, sans-serif', size: 12 }, maxRotation: 0, autoSkip: true, maxTicksLimit: daily ? 12 : 8 }, grid: { display: false } },
+      // offset: the first and last points sit half a step in from the axes (Daily: on them, with padding, so no dead strips)
+      x: { offset: !daily,  ticks: { color: inkMuted(p.isDark), font: { family: 'Rubik, sans-serif', size: 12 }, maxRotation: 0, autoSkip: true, maxTicksLimit: daily ? 12 : 8 }, grid: { display: false } },
       y: {
         beginAtZero: true, grace: '8%', // headroom: the range and the peak never touch the top edge
         title: { display: true, text: daily ? 'kWh per day' : 'kW', color: inkMuted(p.isDark), font: { family: 'Rubik, sans-serif', size: 12, weight: 700 as any } },
-        ticks: { color: inkMuted(p.isDark), font: { family: 'Fira Code, monospace', size: 11 } },
+        ticks: { color: inkMuted(p.isDark), font: { family: 'Fira Code, monospace', size: 11 }, padding: daily ? 16 : 3 },   // Daily: a gap between the numbers and the first day
         grid: { display: true, color: p.isDark ? 'rgba(148,163,184,0.09)' : 'rgba(15,23,42,0.06)' }, border: { display: false },
       },
       ...(ghiOn ? { ghi: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'W/m²', color: GHI }, ticks: { color: GHI, font: { size: 11 } }, grid: { drawOnChartArea: false } } } : {}),
@@ -201,6 +246,8 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
   let tiles: React.ReactNode;
   if (!daily) {
     const k = todayKpis(slots);
+    const bd = bandOf(dailyBand);   // the day's total range is the daily band, not summed slot quantiles (those read too wide)
+    if (bd && k.expected > 0) { k.lo = k.expected * bd.lo; k.hi = k.expected * bd.hi; }
     const pct = k.expected > 0 ? Math.round((k.soFar / k.expected) * 100) : null;
     tiles = (
       <KpiRow>
@@ -263,10 +310,12 @@ const SolarCard: React.FC<SolarCardProps> = (p) => {
           : [time(s.ms), f2(s.actual), f2(s.p50), range(s.p10, s.p90), s.actual != null && s.p50 ? signed(Math.round(((s.actual - s.p50) / s.p50) * 100)) : '—']))} />;
   }
 
-  const hint = daily
-    ? 'Full days compare only the slots that were measured, so a data gap does not read as underperformance. Click a day to see it in 15-min detail.'
+  const acNote = ts.some(r => r.actual_ac_kw != null) ? ' Actual is AC output, like the forecast.' : '';
+  const hintBase = daily
+    ? 'Full days count only measured slots. Click a day for 15-min detail.'
     : isFuture ? 'Forecast only. Hover a slot for the physics estimate.'
       : `${isToday ? 'The forecast before now is faded: it shows what was predicted. ' : ''}Hover a slot for the physics estimate. Drag across the chart to zoom.`;
+  const hint = hintBase + (isFuture ? '' : acNote);
 
   return (
     <div style={{

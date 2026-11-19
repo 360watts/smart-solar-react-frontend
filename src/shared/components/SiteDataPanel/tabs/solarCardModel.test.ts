@@ -1,4 +1,4 @@
-import { buildSlots, dailyTotals, forecastDays, istMidnight, todayKpis, trimNight, DAY_MS, SLOT_MS, type SolarSlot } from './solarCardModel';
+import { buildSlots, dailyTotals, forecastDays, istMidnight, todayDot, todayKpis, trimNight, DAY_MS, SLOT_MS, type SolarSlot } from './solarCardModel';
 
 // scenarios: docs/test-scenarios/solar-forecast-card.md (M1-M5)
 const DAY = Date.UTC(2026, 10, 17, 18, 30); // Nov 18 00:00 IST
@@ -109,5 +109,28 @@ describe('solarCardModel', () => {
       .concat([{ forecast_for: iso(DAY + DAY_MS + 20 * 3_600_000), p50_kw: 0, p10_kw: 0, p90_kw: 0 }]);
     const f = forecastDays(fc, DAY + 3_600_000, 3, { lo: 0.8, hi: 1.2 })[0];
     expect(f.p90).toBeCloseTo(f.p50 * 1.2);
+  });
+
+  it('M9 actual is PV-AC when the backend sends it, the DC reading otherwise', () => {
+    const t0 = DAY + 12 * 3_600_000;
+    const mk = (extra: object) => [0, 1].map(k => ({ slot_ts: iso(t0 + k * SLOT_MS), actual_kw: 2, predicted_kw: 2, ...extra }));
+    const now = DAY + DAY_MS + 3_600_000;
+    expect(dailyTotals(mk({ actual_ac_kw: 1.9 }), now, 2)[0].actual).toBeCloseTo(0.95);   // 2 slots x 1.9 kW x 0.25 h
+    expect(dailyTotals(mk({}), now, 2)[0].actual).toBeCloseTo(1.0);                         // older backend: DC
+    const s = buildSlots(DAY, DAY + DAY_MS, mk({ actual_ac_kw: 1.9 }), [], now);
+    expect(s[48].actual).toBe(1.9);
+  });
+
+  it('M10 the dot for today sits at its true value: x is the time of day, y the kWh so far', () => {
+    const mk = (o: any) => ({ ms: 0, partial: false, future: false, actual: null, p10: null, p90: null, p50: 0, ...o });
+    const prev = mk({ actual: 20, p50: 22 });
+    const today = (actual: number) => mk({ partial: true, actual, p50: 30 });
+    expect(todayDot([prev, today(0)], 1, 0)).toEqual({ x: 0, y: 0, link: true });         // midnight: yesterday's tick, nothing generated
+    expect(todayDot([prev, today(16)], 1, 0.5)).toEqual({ x: 0.5, y: 16, link: true });   // noon: halfway across, at the real 16 kWh
+    expect(todayDot([prev, today(30)], 1, 1)).toEqual({ x: 1, y: 30, link: true });       // end of day: on the forecast dot
+    expect(todayDot([prev, today(6)], 1, 7)?.x).toBe(1);                                  // clamped
+    expect(todayDot([today(6)], 0, 0.5)).toEqual({ x: 0, y: 6, link: false });            // no yesterday: stays on Today
+    expect(todayDot([mk({ actual: null, p50: 22 }), today(6)], 1, 0.5)?.link).toBe(false); // yesterday has no data
+    expect(todayDot([prev, today(6)], 5, 0.5)).toBeNull();
   });
 });

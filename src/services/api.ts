@@ -1187,6 +1187,17 @@ class ApiService {
     return this.request(`/sites/${encodeURIComponent(siteId)}/events/?days=${days}`);
   }
 
+  // History tab: one IST day of whole-home 15-min slots / whole-home daily totals. 5-min cache: toggling is instant.
+  async getHouseholdDay(siteId: string, date: string): Promise<HouseholdDay> {
+    return cacheService.dedup(`household_day_${siteId}_${date}`,
+      () => this.request(`/sites/${encodeURIComponent(siteId)}/household/day/?date=${date}`), 5 * 60 * 1000);
+  }
+
+  async getHouseholdDaily(siteId: string, start: string, end: string): Promise<HouseholdDaily> {
+    return cacheService.dedup(`household_daily_${siteId}_${start}_${end}`,
+      () => this.request(`/sites/${encodeURIComponent(siteId)}/household/daily/?start=${start}&end=${end}`), 5 * 60 * 1000);
+  }
+
   // Viewer Profile: operations the signed-in person ran, newest first (max 200). Throws so the page can offer a retry.
   async getMyOperations(days = 30): Promise<MyOperations> {
     return this.request(`/me/operations/?days=${days}`);
@@ -2493,9 +2504,27 @@ export interface SiteEvent {
   actor: { id: number; name: string } | null;
   device_id: number | null;
   serial: string | null;
+  ended?: string | null; // incidents: when it cleared (null while open)
 }
 
 export interface SiteEvents { days: number; events: SiteEvent[] }
+
+// History tab (backend api/services/household_history.py). kW per 15-min slot, kWh per IST day.
+// from_* = what reached the home (they add up to home); bought = everything taken from the utility (also battery top-up).
+export interface HouseSlot {
+  ts: string; whole_home: boolean;
+  pv_kw: number | null; home_kw: number | null; from_solar_kw: number | null; from_battery_kw: number | null;
+  from_grid_kw: number | null; bought_kw: number | null; solar_to_battery_kw: number | null; exported_kw: number | null;
+  inverter_kw: number | null; grid_board_kw: number | null; inv_out_kw: number | null; soc: number | null;
+}
+export interface HouseholdDay { date: string; parts: string[]; whole_home: boolean; note: string | null; reason?: string; slots: HouseSlot[] }
+export interface HouseDay {
+  date: string; source: '5min' | 'daily_table'; whole_home: boolean; coverage: number | null;
+  pv_kwh: number | null; home_kwh: number | null; from_solar_kwh: number | null; from_battery_kwh: number | null;
+  from_grid_kwh: number | null; bought_kwh: number | null; solar_to_battery_kwh: number | null; exported_kwh: number | null;
+  soc_min: number | null; soc_max: number | null;
+}
+export interface HouseholdDaily { start: string; end: string; parts: string[]; note: string | null; days: HouseDay[] }
 
 export interface MyOperation {
   at: string;

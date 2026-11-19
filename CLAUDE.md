@@ -140,6 +140,11 @@ See [`THEME_MIGRATION_STATUS.md`](./THEME_MIGRATION_STATUS.md) for migration his
 - `Teams.tsx` — teams manager (renamed from Departments, 2026-10-08)
 - `GatewayActivity.tsx` — firmware V2 gateway card on the staff device detail and the viewer device page: Wi-Fi failure / refused-settings notes, backup battery, event history (`/devices/<id>/events/`), APN form (staff page, `device_control` only). Scenarios: `docs/test-scenarios/gateway-activity.md`
 - `SiteDataPanel/tabs/LoadCard.tsx` (+ pure `loadCardModel.ts`) — the Phase Load tab's one Load card (2026-11-17): Line (Inverter / Grid / EV / All, stacked) × Window (Today / Last 7 days / Next 7 days) × Forecast lead (Off / Latest / 1 h / 6 h / Day-ahead); inverter forecast from `load-forecast-accuracy` + `load-forecast`, grid = kernel-analog forecast from `load-forecast-accuracy?line=grid` (kWh from its `mean_kw`), EV measured only; missing readings tinted red, total marked incomplete. Replaced the Load Profile and Forecast vs Actual cards. Spec `docs/superpowers/specs/2026-11-17-combined-load-card-design.md`, scenarios `docs/test-scenarios/combined-load-card.md`
+- `SiteDataPanel/tabs/HistoryTab.tsx` (+ pure `historyModel.ts`, `HistoryCalendar.tsx`) is the History tab (2026-11-19). It fetches its own data; the panel's header date picker is gone.
+  - Periods: Today / 7 days / 30 days (a calendar) / Pick dates (weekly bars over 60 days), each stepped with ‹ ›.
+  - Order: chart first, then "Anything wrong?" (incidents, missing readings, battery barely used), then "Where energy went": a sentence, two split bars and four tiles, each with its change vs the previous period.
+  - Whole home = inverter + grid board + EV, from `GET /sites/<id>/household/day|daily/`. A period mixing whole-home and inverter-only days counts only the whole-home days ("Whole home on N of M days").
+  - Spec `docs/superpowers/specs/2026-11-19-history-tab-redesign-design.md`, scenarios `docs/test-scenarios/history-tab-redesign.md`.
 
 ### Customer Portal Decommission
 

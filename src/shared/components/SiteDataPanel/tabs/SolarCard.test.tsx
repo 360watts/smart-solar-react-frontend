@@ -47,7 +47,7 @@ describe('SolarCard', () => {
     expect(act.filter((v: any) => v != null)).toHaveLength(28);      // 06:00–13:00 finished, 13:00 slot in progress
   });
 
-  it('U2 daily: last 7 days, a hollow dot for today so far, then the forecast days', () => {
+  it('U2 daily: last 7 days, a hollow dot for today so far on a dotted link, then the forecast days', () => {
     setup();
     click('Daily');
     expect(mockChart.props.data.labels).toHaveLength(8);           // 6 full days + today + tomorrow
@@ -62,6 +62,27 @@ describe('SolarCard', () => {
     expect(screen.getByText('Generated · 6 full days')).toBeInTheDocument();
     expect(screen.getByText('vs forecast · 6 of 6 days in range')).toBeInTheDocument();
     expect(screen.getByText('Next day')).toBeInTheDocument();
+  });
+
+  it('U8 daily: the dotted line through the dot for today is drawn by the plugin; zoom is off; ends sit on the axes', () => {
+    setup();
+    click('Daily');
+    const link = mockChart.props.data.datasets.find((d: any) => d.label === 'Today, so far');
+    expect(link.data.every((v: any) => v == null)).toBe(true);    // legend entry only
+    expect(link.borderDash).toBeTruthy();
+    expect(link.pointBackgroundColor).toBe('#fff');
+    const f = mockChart.props.options.plugins.tooltip.filter;
+    expect(f({ dataset: { label: 'Today, so far' }, parsed: { y: 1 } })).toBe(false);
+    expect(f({ dataset: { label: 'Actual' }, parsed: { y: 1 } })).toBe(true);
+    expect(mockChart.props.options.plugins.zoom.zoom.drag.enabled).toBe(false);
+    expect(mockChart.props.options.scales.x.offset).toBe(false);
+    click('Today');
+    expect(mockChart.props.options.scales.x.offset).toBe(true);
+  });
+
+  it('U9 the Expected tile range is the daily band times the total, matching the Daily chart; no band keeps the slot sums', () => {
+    setup({ timeseries: ts, daily_range: { lo: 0.8, hi: 1.2 } });
+    expect(screen.getByText('Likely 19.2–28.8 kWh')).toBeInTheDocument();   // 24.0 x 0.8 .. x 1.2
   });
 
   it('U3 clicking a forecast day opens it, forecast only, and Back to today returns', () => {
@@ -90,7 +111,7 @@ describe('SolarCard', () => {
     expect(mockChart.props.options.plugins.legend.display).toBe(false);
     expect(mockChart.props.options.scales.x.offset).toBe(true);
     click('Daily');
-    expect(mockChart.props.options.scales.x.offset).toBe(true);
+    expect(mockChart.props.options.scales.x.offset).toBe(false);   // Daily: points on the axes, with padding
   });
 
   it('U5 GHI is off until asked for', () => {

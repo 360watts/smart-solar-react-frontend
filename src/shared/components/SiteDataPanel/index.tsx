@@ -15,13 +15,11 @@ import { EmptyState } from '../Feedback';
  */
 import React, { useState, useEffect, useCallback, useMemo, useRef, useReducer, type FC } from 'react';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useDebouncedValue } from '../../hooks/useDebounce';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement, BarElement,
   Title, Tooltip as CJTooltip, Legend as CJLegend, Filler,
-  type ChartOptions, type TooltipItem,
 } from 'chart.js';
 import ZoomPlugin from 'chartjs-plugin-zoom';
 
@@ -33,20 +31,18 @@ ChartJS.register(
 import { RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../../../services/api';
-import { resolveCssVar } from '../../lib/resolveCssVar';
 import { cacheService } from '../../../services/cacheService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { IST_TIMEZONE } from '../../../app/constants';
 import { istDate, startOfSolarDayIST } from './istDate';
 import DetailsTab from '../../../features/staff/DetailsTab';
 import { SystemHealthPanel } from '../../../features/staff/EnergyFlowHealthRow';
-import { useChartZoomState } from './chartUtils';
 
 // Tab components
 import OverviewTab from './tabs/OverviewTab';
 import WeatherTab from './tabs/WeatherTab';
-import { TABS, type TabId, type HistorySeriesKey, type VsActualSeriesKey } from './types';
-import HistoryTab, { HISTORY_SERIES } from './tabs/HistoryTab';
+import { TABS, type TabId } from './types';
+import HistoryTab from './tabs/HistoryTab';
 import ForecastTab from './tabs/ForecastTab';
 import PhaseLoadTab from './tabs/PhaseLoadTab';
 import UsageTab from './tabs/UsageTab';
@@ -80,32 +76,8 @@ function getTelemetryAggregateForRange(range: string, start?: string, end?: stri
   return undefined;
 }
 
-function getHistoryResolutionLabel(range: string, start?: string, end?: string): '5 min' | '15 min' {
-  return getTelemetryAggregateForRange(range, start, end) === '5min' ? '5 min' : '15 min';
-}
 
-function fmt(ts: string, range: string): string {
-  try {
-    const d = new Date(ts);
-    if (range === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-    if (range === '7d')  return d.toLocaleDateString([], { weekday: 'short', timeZone: IST }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: IST });
-  } catch { return ts; }
-}
 
-function inferBucketHours(rows: any[]): number {
-  if (!rows || rows.length < 2) return 0.25;
-  const gaps: number[] = [];
-  for (let i = 1; i < rows.length; i++) {
-    const prev = new Date(rows[i - 1].timestamp).getTime();
-    const curr = new Date(rows[i].timestamp).getTime();
-    const diffHours = (curr - prev) / 3600000;
-    if (Number.isFinite(diffHours) && diffHours > 0) gaps.push(diffHours);
-  }
-  if (!gaps.length) return 0.25;
-  gaps.sort((a, b) => a - b);
-  return gaps[Math.floor(gaps.length / 2)];
-}
 
 const formatPowerForKpi = (kw: number | null | undefined): { value: string; unit: string } => {
   if (kw == null || Number.isNaN(kw)) return { value: '—', unit: 'kW' };
@@ -218,7 +190,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     seededSiteRef.current = siteId;
     dispatchFetch({ type: 'RESET', siteId });
   }, [siteId]);
-  const { telemetry, forecast, weather, smartDevices, meterOnly, hasMeter, overviewDone, loading, error, historyError, lastUpdated, secondsSinceUpdate } = fetchState;
+  const { telemetry, forecast, weather, smartDevices, meterOnly, hasMeter, overviewDone, loading, error, lastUpdated, secondsSinceUpdate } = fetchState;
   const isInitialLoad = useRef(true);
   // Guards the fire-and-forget analytics Promise: set to true on unmount or
   // siteId change so callbacks don't set state on a stale/unmounted component.
@@ -235,102 +207,15 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   // Set once the person picks a tab (or the caller names one), so the meter-only auto-switch never overrides them.
   const pickedTabRef = useRef(initialTab != null);
   const analyticsLoadedRef = useRef<{ weatherForecast: boolean; phaseLoad: boolean }>({ weatherForecast: false, phaseLoad: false });
-  const [showHistorySeries, setShowHistorySeries] = useState<Record<HistorySeriesKey, boolean>>({
-    PV: true,
-    Load: true,
-    Grid: true,
-    InvOut: false,
-    SOC: true,
-  });
-  const [showVsActualSeries, setShowVsActualSeries] = useState<Record<VsActualSeriesKey, boolean>>({
-    Actual: true,
-    P50: true,
-    Delta: true,
-  });
-  const [dateRange, setDateRange] = useState('24h');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const debouncedStart = useDebouncedValue(customStartDate, { delay: 600 });
-  const debouncedEnd = useDebouncedValue(customEndDate, { delay: 600 });
+  // The panel's own telemetry window is always today (it feeds `latest`, today's kWh and noData). The History tab
+  // picks its own periods and fetches its own data since 2026-11-19 (tabs/HistoryTab.tsx).
+  // ponytail: the 7d/30d/custom branches in fetchHistory below are now unreachable; delete them in a later cleanup.
+  const dateRange: string = '24h';
+  const debouncedStart = '';
+  const debouncedEnd = '';
 
-  const [historyView, setHistoryView] = useState<'chart' | 'table'>('chart');
-  const [vsActualView, setVsActualView] = useState<'chart' | 'table'>('chart');
-  const [vsActual7d, setVsActual7d] = useState(false);
 
-  const historyZoom = useChartZoomState();
-  const vsActualZoom = useChartZoomState();
 
-  // Chart.js draws on canvas, whose fillStyle can't resolve CSS var() — must be literal
-  // computed colors, re-read whenever the theme flips (isDark drives the re-render).
-  const tickColor   = resolveCssVar('--muted-foreground');
-  const gridColor   = resolveCssVar('--border');
-  const ttBg        = resolveCssVar('--popover');
-  const ttTitle     = resolveCssVar('--foreground');
-  const ttBody      = resolveCssVar('--muted-foreground');
-  const ttBorder    = isDark ? 'rgba(148,163,184,0.2)'  : 'rgba(15,159,143,0.2)';
-  const legendColor = resolveCssVar('--muted-foreground');
-
-  const historyChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: true, labels: { color: legendColor, font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
-      tooltip: {
-        backgroundColor: ttBg, titleColor: ttTitle, bodyColor: ttBody,
-        borderColor: ttBorder, borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'SOC' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'SOC' ? 0 : 3)} ${unit}`; } },
-      },
-      zoom: {
-        zoom: {
-          wheel: { enabled: true, speed: 0.08 },
-          drag: { enabled: true, backgroundColor: 'rgba(15,159,143,0.14)', borderColor: 'rgba(15,159,143,0.7)', borderWidth: 1 },
-          pinch: { enabled: true },
-          mode: 'x' as const,
-          onZoomComplete: () => historyZoom.onZoomComplete.current(),
-        },
-        pan: { enabled: false, mode: 'x' as const },
-      },
-    } as any,
-    scales: {
-      x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      power: { type: 'linear', position: 'left', ticks: { color: tickColor, font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
-      soc: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { color: resolveCssVar('--success'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
-
-  const vsActualChartOptions = useMemo<ChartOptions<'line'>>(() => ({
-    responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: true, labels: { color: legendColor, font: { family: 'Rubik, sans-serif', size: 11 }, boxWidth: 10, pointStyle: 'circle', usePointStyle: true, padding: 14 } },
-      tooltip: {
-        backgroundColor: ttBg, titleColor: ttTitle, bodyColor: ttBody,
-        borderColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(59,130,246,0.2)', borderWidth: 1.5, padding: 10, cornerRadius: 10,
-        titleFont: { family: 'Rubik, sans-serif', weight: 'bold', size: 12 },
-        bodyFont: { family: 'Fira Code, monospace', size: 11 },
-        callbacks: { label: (item: TooltipItem<'line'>) => { const unit = item.dataset.label === 'Δ %' ? '%' : 'kW'; return ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(item.dataset.label === 'Δ %' ? 0 : 3)} ${unit}`; } },
-      },
-      zoom: {
-        zoom: {
-          wheel: { enabled: true, speed: 0.08 },
-          drag: { enabled: true, backgroundColor: 'rgba(15,159,143,0.14)', borderColor: 'rgba(15,159,143,0.7)', borderWidth: 1 },
-          pinch: { enabled: true },
-          mode: 'x' as const,
-          onZoomComplete: () => vsActualZoom.onZoomComplete.current(),
-        },
-        pan: { enabled: false, mode: 'x' as const },
-      },
-    } as any,
-    scales: {
-      x: { ticks: { color: tickColor, font: { family: 'Inter, sans-serif', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-      y: { ticks: { color: tickColor, font: { family: 'Fira Code, monospace', size: 11 } }, grid: { display: false } },
-      delta: { type: 'linear', position: 'right', ticks: { color: resolveCssVar('--destructive'), font: { size: 11 }, callback: (v: any) => `${v}%` }, grid: { drawOnChartArea: false } },
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [isDark]);
 
   // Analytics data
   const [phaseLoad, setPhaseLoad] = useState<any[]>([]);
@@ -604,14 +489,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     return () => clearInterval(tick);
   }, [lastUpdated]);
 
-  useEffect(() => {
-    historyZoom.resetZoom();
-  }, [dateRange]);
-
-  // Overview has no range picker and its solar curve is today-only: a range picked on History must not leak into it.
-  useEffect(() => {
-    if (activeTab === 'overview' && dateRange !== '24h') setDateRange('24h');
-  }, [activeTab, dateRange]);
 
   useEffect(() => {
     // Only needed by the Phase-Load tab — skip firing on every mount/hours-change
@@ -801,129 +678,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
     : invTemp > 45 ? '#f59e0b'
     : '#0F9F8F';
 
-  // ── Chart data for HistoryTab ──────────────────────────────────────────────
-  const historyData = useMemo(() => {
-    return telemetry.map(row => {
-      const d = new Date(row.timestamp);
-      const timeLabel = dateRange === '7d'
-        ? `${d.toLocaleDateString([], { weekday: 'short', timeZone: IST })} || ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST })}`
-        : fmt(row.timestamp, dateRange);
-      return {
-        time: timeLabel,
-        'PV (kW)': +(((row.pv1_power_w ?? 0) + (row.pv2_power_w ?? 0) + (row.pv3_power_w ?? 0) + (row.pv4_power_w ?? 0)) / 1000).toFixed(2),
-        'Load (kW)': +((row.load_power_w ?? 0) / 1000).toFixed(2),
-        'Grid (kW)': +((row.grid_power_w ?? 0) / 1000).toFixed(2),
-        // inv_total_power_w is the real total; ac_output_power_w is phase-L1-only (FAULT_LOG.md F-048)
-        'Inv Out (kW)': +(((row.inv_total_power_w ?? row.ac_output_power_w ?? 0)) / 1000).toFixed(2),
-        'Batt SOC (%)': row.battery_soc_percent ?? null,
-      };
-    });
-  }, [telemetry, dateRange]);
-
-  const historyStatsVisible = useMemo(() => {
-    const data = historyData;
-    if (!data.length) return null;
-    const intervalH = inferBucketHours(telemetry);
-    const pvs     = data.map(d => d['PV (kW)'] as number).filter(v => v != null);
-    const loads   = data.map(d => d['Load (kW)'] as number).filter(v => v != null);
-    const grids   = data.map(d => d['Grid (kW)'] as number).filter(v => v != null);
-    const invOuts = data.map(d => d['Inv Out (kW)'] as number).filter(v => v != null);
-    const socs    = data.map(d => d['Batt SOC (%)'] as number | null).filter((v): v is number => v != null);
-    const pvTotal    = pvs.reduce((s, v) => s + v, 0) * intervalH;
-    const pvPeak     = pvs.length ? Math.max(...pvs) : 0;
-    const loadTotal  = loads.reduce((s, v) => s + v, 0) * intervalH;
-    const loadPeak   = loads.length ? Math.max(...loads) : 0;
-    const loadAvg    = loads.length ? loads.reduce((s, v) => s + v, 0) / loads.length : 0;
-    const invOutPeak = invOuts.length ? Math.max(...invOuts) : 0;
-    const invOutAvg  = invOuts.length ? invOuts.reduce((s, v) => s + v, 0) / invOuts.length : 0;
-    const gridExportStat = grids.filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0) * intervalH;
-    const gridImportStat = grids.filter(v => v > 0).reduce((s, v) => s + v, 0) * intervalH;
-    const socMin = socs.length ? Math.min(...socs) : null;
-    const socMax = socs.length ? Math.max(...socs) : null;
-    const socAvg = socs.length ? socs.reduce((s, v) => s + v, 0) / socs.length : null;
-    return { pvTotal, pvPeak, loadTotal, loadPeak, loadAvg, invOutPeak, invOutAvg, gridImport: gridImportStat, gridExport: gridExportStat, socMin, socMax, socAvg };
-  }, [historyData, telemetry]);
-
-  const historyResolutionLabel = useMemo(
-    () => getHistoryResolutionLabel(dateRange, debouncedStart, debouncedEnd),
-    [dateRange, debouncedStart, debouncedEnd]
-  );
-
-  // activeVsActualData for HistoryTab (today vs-actual from forecast+telemetry overlap)
-  const vsActualData = useMemo(() => {
-    const todayISTStr = istDate(new Date());
-    const todayForecast = forecast.filter(row => {
-      const clean = row.forecast_for || row.timestamp.replace('FORECAST#', '');
-      return istDate(new Date(clean)) === todayISTStr && row.p50_kw != null;
-    });
-    if (!todayForecast.length || !telemetry.length) return [];
-
-    const WINDOW_MS = 15 * 60 * 1000;
-    const telTs = telemetry.map(t => ({ ms: new Date(t.timestamp).getTime(), row: t }));
-    telTs.sort((a, b) => a.ms - b.ms);
-    const tsMsArr = telTs.map(t => t.ms);
-
-    return todayForecast.map(frow => {
-      const clean = frow.forecast_for || frow.timestamp.replace('FORECAST#', '');
-      const fTs = new Date(clean).getTime();
-      const label = new Date(clean).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: IST });
-
-      let lo = 0, hi = tsMsArr.length;
-      while (lo < hi) { const mid = (lo + hi) >> 1; if (tsMsArr[mid] < fTs) lo = mid + 1; else hi = mid; }
-      let nearest: any = null;
-      let minDiff = Infinity;
-      for (const idx of [lo - 1, lo]) {
-        if (idx < 0 || idx >= telTs.length) continue;
-        const diff = Math.abs(telTs[idx].ms - fTs);
-        if (diff < minDiff && diff <= WINDOW_MS) { minDiff = diff; nearest = telTs[idx].row; }
-      }
-
-      const actualKw = nearest
-        ? +(((nearest.pv1_power_w ?? 0) + (nearest.pv2_power_w ?? 0) + (nearest.pv3_power_w ?? 0) + (nearest.pv4_power_w ?? 0)) / 1000).toFixed(2)
-        : null;
-      const p50 = +Number(frow.p50_kw).toFixed(2);
-      const diffPct = actualKw != null && p50 > 0
-        ? Math.round(((actualKw - p50) / p50) * 100)
-        : null;
-
-      return { label, fTs, p50, actual: actualKw, diffPct };
-    });
-  }, [forecast, telemetry]);
-
-  const vsActual7dData = useMemo(() => {
-    const ts: any[] = forecastAccuracy?.timeseries ?? [];
-    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const BUCKET_MS = 15 * 60 * 1000;
-    const bucketMap = new Map<number, { sumActual: number; count: number; predicted_kw: number | null }>();
-    ts
-      .filter((r: any) => r.actual_kw != null && !!r.slot_ts)
-      .map((r: any) => ({ ...r, __ms: new Date(r.slot_ts).getTime() }))
-      .filter((r: any) => !Number.isNaN(r.__ms) && r.__ms >= cutoffMs)
-      .forEach((r: any) => {
-        const bMs = Math.floor(r.__ms / BUCKET_MS) * BUCKET_MS;
-        const b = bucketMap.get(bMs) ?? { sumActual: 0, count: 0, predicted_kw: r.predicted_kw ?? null };
-        b.sumActual += r.actual_kw; b.count += 1;
-        if (b.predicted_kw == null && r.predicted_kw != null) b.predicted_kw = r.predicted_kw;
-        bucketMap.set(bMs, b);
-      });
-    return Array.from(bucketMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([bMs, b]) => {
-        const actual = b.count > 0 ? +Number(b.sumActual / b.count).toFixed(2) : null;
-        return {
-          label: new Date(bMs).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: IST }),
-          fTs: bMs,
-          p50: b.predicted_kw != null ? +Number(b.predicted_kw).toFixed(2) : null,
-          actual,
-          diffPct: actual != null && b.predicted_kw != null && b.predicted_kw > 0
-            ? Math.round(((actual - b.predicted_kw) / b.predicted_kw) * 100)
-            : null,
-        };
-      });
-  }, [forecastAccuracy]);
-
-  const activeVsActualData = vsActual7d ? vsActual7dData : vsActualData;
-
   const achievedPct = useMemo(() => {
     const todayISTStr = istDate(new Date());
     if (!latest?.timestamp || istDate(new Date(latest.timestamp)) !== todayISTStr) return null;
@@ -971,9 +725,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
       ? Math.min(999, Math.round((todayKwh / fcastP50UpToNow) * 100))
       : null;
   }, [forecast, todayKwh, latest]);
-
-  // the 30-day accuracy response already holds the 7-day series: toggling needs no refetch (Nov 18)
-  const onToggleVsActual7d = useCallback(() => setVsActual7d(v => !v), []);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   // A meter-only site never has inverter telemetry or a forecast; its tabs still need to show.
@@ -1035,67 +786,6 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
   const headerControls = hideHeader ? null : (
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {activeTab === 'history' && (
-              <>
-                <select
-                  value={dateRange}
-                  onChange={e => setDateRange(e.target.value)}
-                  style={{
-                    backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid rgba(15,159,143, 0.3)',
-                    borderRadius: 8,
-                    padding: '6px 30px 6px 12px',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontFamily: 'Rubik, sans-serif',
-                    fontWeight: 600,
-                  }}
-                >
-                  <option value="24h">Today</option>
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="custom">Custom range</option>
-                </select>
-                {dateRange === 'custom' && (
-                  <>
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={e => setCustomStartDate(e.target.value)}
-                      style={{
-                        background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid rgba(15,159,143, 0.3)',
-                        borderRadius: 8,
-                        padding: '6px 12px',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-primary)',
-                        fontFamily: 'Rubik, sans-serif',
-                        fontWeight: 600,
-                      }}
-                    />
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>to</span>
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={e => setCustomEndDate(e.target.value)}
-                      style={{
-                        background: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                        border: '1px solid rgba(15,159,143, 0.3)',
-                        borderRadius: 8,
-                        padding: '6px 12px',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-primary)',
-                        fontFamily: 'Rubik, sans-serif',
-                        fontWeight: 600,
-                      }}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </div>
           {lastUpdated && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'Rubik, sans-serif' }}>
               <span style={{
@@ -1310,40 +1000,7 @@ const SiteDataPanel: React.FC<Props> = ({ siteId, autoRefresh = false, inverterC
             )}
 
             {activeTab === 'history' && (
-              <HistoryTab
-                key="history"
-                telemetry={telemetry}
-                isDark={isDark}
-                isTouch={isTouch}
-                historyError={historyError}
-                dateRange={dateRange}
-                setDateRange={setDateRange}
-                customStartDate={customStartDate}
-                setCustomStartDate={setCustomStartDate}
-                customEndDate={customEndDate}
-                setCustomEndDate={setCustomEndDate}
-                historyView={historyView}
-                setHistoryView={setHistoryView}
-                vsActualView={vsActualView}
-                setVsActualView={setVsActualView}
-                vsActual7d={vsActual7d}
-                setVsActual7d={setVsActual7d}
-                showHistorySeries={showHistorySeries}
-                setShowHistorySeries={setShowHistorySeries}
-                showVsActualSeries={showVsActualSeries}
-                setShowVsActualSeries={setShowVsActualSeries}
-                historyZoom={historyZoom}
-                vsActualZoom={vsActualZoom}
-                historyChartOptions={historyChartOptions}
-                vsActualChartOptions={vsActualChartOptions}
-                historyData={historyData}
-                historyResolutionLabel={historyResolutionLabel}
-                historyStatsVisible={historyStatsVisible}
-                loading={loading}
-                activeVsActualData={activeVsActualData}
-                siteId={siteId}
-                onToggleVsActual7d={onToggleVsActual7d}
-              />
+              <HistoryTab key="history" siteId={siteId} isDark={isDark} />
             )}
 
             {activeTab === 'forecast' && (

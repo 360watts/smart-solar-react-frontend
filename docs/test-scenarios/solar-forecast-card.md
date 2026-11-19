@@ -18,13 +18,19 @@ Data: `forecast-accuracy` `timeseries` (15-min `slot_ts`, `actual_kw`, `predicte
 | M6 | Model | forecast rows for the next days | `forecastDays` | next days only, forecast only, days without a forecast left out | unit | P1 | passing |
 | M7 | Model | 48 h horizon cuts the last day off before sunset (last slot still has a forecast) | `forecastDays` | that day is left out, so a few morning hours never read as a whole-day forecast | unit | P0 | passing |
 | M8 | Model | the backend sends `daily_range` {lo, hi} | `dailyTotals` / `forecastDays` | each day's range = P50 × lo / hi; no band (null, or lo ≤ 0) keeps the summed slot range | unit | P0 | passing |
+| M9 | Model | rows carry `actual_ac_kw` (PV-AC) | `buildSlots` / `dailyTotals` | actual uses it; rows without it fall back to `actual_kw` (DC) so an older backend still works | unit | P0 | passing |
+| M10 | Model | today's dot with a full yesterday | `todayDot` | x is the time of day (yesterday's tick at midnight to today's tick at the end of the day, clamped), y is the kWh so far; it meets the forecast dot at the end of the day if the forecast was right; with no usable yesterday it stays on Today | unit | P0 | passing |
 | U1 | Card | today data | render | three KPI tiles (Generated so far, Expected today, Accuracy so far); one chart: Actual solid, Forecast (P50) dashed, Likely range band | unit | P0 | passing |
-| U2 | Card | Last 7 days | click | chart shows daily kWh: Actual line through full days, a hollow dot for today so far (no link), P50 dashed, range band; tiles total 6 full days | unit | P0 | passing |
+| U2 | Card | Last 7 days | click | chart shows daily kWh: Actual line through full days, a hollow dot for today so far on a dotted link from yesterday's actual to today's forecast, P50 dashed, range band; tiles total 6 full days | unit | P0 | passing |
 | U3 | Card | Next days | click | forecast-only chart from the forecast rows after today; one tile per day | unit | P1 | passing |
 | U4 | Card | any window | toggling | no refetch: windows reuse the loaded data; chart animation off; `tension` 0 | unit | P1 | passing |
 | U5 | Card | GHI off by default | click "+ Sunlight (GHI)" | GHI drawn on a right axis (Today / Next days only) | unit | P2 | passing |
 | U6 | Card | no timeseries | render | empty state, no crash | unit | P1 | passing |
 | U7 | Card | Table view | click Table | Today: slot table with actual / P50 / Δ; Last 7 days: daily table; Next days: forecast table | unit | P2 | passing |
+| U8 | Card | Last 7 days | click | a dotted link joins yesterday's actual to today's forecast dot; its tooltip line is hidden; the dot is drawn on it by the plugin | unit | P1 | passing |
+| U9 | Card | Today / one day, backend sends `daily_range` | render | the Expected tile's "Likely" range is the day's forecast total x lo..hi (same as the Daily chart); without a band it stays the summed slot range; the chart's per-slot band is unchanged | unit | P1 | passing |
 | L1 | Live | coim_002, mid-day | open Forecast tab | tiles readable, actual stops at now, P50 runs to sunset, band shaded | live | P0 | planned |
 | L2 | Live | | switch windows | instant, no spinner, no network call | live | P1 | planned |
 | L3 | Live | dark mode | view | tiles and legend readable | live | P2 | planned |
+| L4 | Live | Daily window | view through the day | today's hollow dot is at its true value: near the bottom just after midnight, about halfway across at noon IST at the kWh generated so far (below the dotted link until late), and on the forecast dot at the end of the day; label "x kWh"; hover shows "So far" | live | P1 | planned |
+| L5 | Live | after the backend deploy | open the Solar card | the tiles' Accuracy for the last full days is about 3 points lower than before (AC, not DC, against the forecast); `forecast-accuracy` rows carry `actual_ac_kw` ≈ 0.97 × `actual_kw` | live | P0 | planned |

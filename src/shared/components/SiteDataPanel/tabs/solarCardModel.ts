@@ -57,7 +57,7 @@ export function buildSlots(start: number, end: number, ts: any[], forecast: any[
     if (num(r.p10_kw) != null) s.p10 = num(r.p10_kw);
     if (num(r.p90_kw) != null) s.p90 = num(r.p90_kw);
     if (num(r.physics_baseline_kw) != null) s.physics = num(r.physics_baseline_kw);
-    if (num(r.actual_kw) != null && s.ms + SLOT_MS <= nowMs) s.actual = num(r.actual_kw);
+    if (actualOf(r) != null && s.ms + SLOT_MS <= nowMs) s.actual = actualOf(r);
   }
   return Array.from(byMs.values());
 }
@@ -71,6 +71,9 @@ export function trimNight(slots: SolarSlot[]): SolarSlot[] {
   while (last > first && !lit(slots[last])) last--;
   return slots.slice(Math.max(0, first - 1), Math.min(slots.length, last + 2));
 }
+
+/** Measured power of a slot: PV-AC (what the forecast predicts); the DC reading only for a backend that doesn't send it. */
+const actualOf = (r: any) => num(r.actual_ac_kw) ?? num(r.actual_kw);
 
 const kwh = (vals: (number | null)[]) => vals.reduce<number>((t, v) => t + (v ?? 0), 0) * (SLOT_MS / 3_600_000);
 
@@ -102,7 +105,7 @@ export function todayKpis(slots: SolarSlot[]): TodayKpis {
 
 /** Daily error-ratio band from the backend (`forecast-accuracy` `daily_range`): a day's range is its P50 × lo / hi. */
 export type DailyBand = { lo: number; hi: number } | null | undefined;
-const bandOf = (b: DailyBand) => (b && Number.isFinite(b.lo) && Number.isFinite(b.hi) && b.lo > 0 && b.hi >= b.lo ? b : null);
+export const bandOf = (b: DailyBand) => (b && Number.isFinite(b.lo) && Number.isFinite(b.hi) && b.lo > 0 && b.hi >= b.lo ? b : null);
 
 /** One row per IST day, oldest first, for `days` days ending today. With `band`, the range is P50 × band, not summed slots. */
 export function dailyTotals(ts: any[], nowMs: number, days = 7, band?: DailyBand): SolarDay[] {
@@ -114,12 +117,12 @@ export function dailyTotals(ts: any[], nowMs: number, days = 7, band?: DailyBand
     const rows = (ts ?? []).map(r => ({ r, t: slotOf(r) })).filter(({ t }) => t >= ms && t < ms + DAY_MS).map(({ r }) => r);
     const partial = d === 0;
     // full days: forecast over the slots that were measured, so a data gap does not read as underperformance
-    const fcRows = partial ? rows : rows.filter(r => num(r.actual_kw) != null);
+    const fcRows = partial ? rows : rows.filter(r => actualOf(r) != null);
     const slotBand = fcRows.some(r => num(r.p10_kw) != null && num(r.p90_kw) != null);
     const p50 = kwh(fcRows.map(r => num(r.predicted_kw)));
     out.push({
       ms, partial,
-      actual: kwh(rows.map(r => (slotOf(r) + SLOT_MS <= nowMs ? num(r.actual_kw) : null))),
+      actual: kwh(rows.map(r => (slotOf(r) + SLOT_MS <= nowMs ? actualOf(r) : null))),
       p50,
       p10: bd ? (p50 > 0 ? p50 * bd.lo : null) : slotBand ? kwh(fcRows.map(r => num(r.p10_kw))) : null,
       p90: bd ? (p50 > 0 ? p50 * bd.hi : null) : slotBand ? kwh(fcRows.map(r => num(r.p90_kw))) : null,
@@ -150,4 +153,20 @@ export function forecastDays(forecast: any[], nowMs: number, n = 3, band?: Daily
     });
   }
   return out;
+}
+
+/**
+ * Where today's hollow dot sits, at its true position on both axes. x is the time of day: with a full yesterday it
+ * runs from yesterday's tick at midnight to today's tick at the end of the day (`frac` 0..1 of the IST day), so the
+ * dotted link from yesterday's actual to today's forecast is the guide it is heading along. y is the kWh generated
+ * so far, so it climbs from the bottom and meets the forecast dot at the end of the day if the forecast was right.
+ * Without a usable yesterday it stays on Today. x is a category position (may be fractional), y is kWh.
+ */
+export function todayDot(days: SolarDay[], todayIdx: number, frac: number): { x: number; y: number; link: boolean } | null {
+  const t = days[todayIdx];
+  if (!t) return null;
+  const f = Math.min(Math.max(frac, 0), 1);
+  const prev = todayIdx > 0 ? days[todayIdx - 1] : null;
+  const link = !!(prev && !prev.partial && prev.actual != null && t.p50 > 0);
+  return { x: link ? todayIdx - 1 + f : todayIdx, y: t.actual ?? 0, link };
 }

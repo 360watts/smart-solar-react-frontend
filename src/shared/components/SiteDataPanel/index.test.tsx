@@ -10,7 +10,7 @@ jest.mock('../../../features/staff/EnergyFlowHealthRow', () => ({ SystemHealthPa
 jest.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
 jest.mock('./tabs/OverviewTab', () => () => <div>OVERVIEW-CONTENT</div>);
 jest.mock('./tabs/WeatherTab', () => () => null);
-jest.mock('./tabs/HistoryTab', () => ({ __esModule: true, default: () => null, HISTORY_SERIES: [] }));
+jest.mock('./tabs/HistoryTab', () => ({ __esModule: true, default: () => null }));
 jest.mock('./tabs/ForecastTab', () => () => null);
 jest.mock('./tabs/PhaseLoadTab', () => () => null);
 jest.mock('./tabs/UsageTab', () => () => <div>USAGE-CONTENT</div>);
